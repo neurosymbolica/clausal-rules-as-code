@@ -1,0 +1,114 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_risk_governance_and_framework_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_risk_governance_and_framework_dora_ict_risk_governance_and_framework, [decide_dora_ict_risk_governance_and_framework/2, ict_risk_governance_duties_required/3, ict_risk_governance_duties_complete/3, ict_risk_governance_duties_outstanding/3]).
+:- use_module(m__eu_dora_ict_risk_governance_and_framework_fixtures, [dora_ict_risk_governance_and_framework_subject/1, dora_ict_risk_governance_and_framework_profile_for/2]).
+
+subject_classifies(Subject) :-
+    dora_ict_risk_governance_and_framework_subject(Subject),
+    dora_ict_risk_governance_and_framework_profile_for(Subject, Profile),
+    decide_dora_ict_risk_governance_and_framework(Profile, _Verdict).
+
+all_subjects(Subjects) :-
+    findall(Subject, dora_ict_risk_governance_and_framework_subject(Subject), Subjects).
+
+query_answers(Query, Subject, Answers) :-
+    dora_ict_risk_governance_and_framework_profile_for(Subject, Profile),
+    findall(Result - Citations, call(Query, Profile, Result, Citations), Answers).
+
+answers_once(Subject) :-
+    query_answers(ict_risk_governance_duties_required, Subject, [_]),
+    query_answers(ict_risk_governance_duties_complete, Subject, [_]),
+    query_answers(ict_risk_governance_duties_outstanding, Subject, [_]),
+    query_answers(decide_wrapped, Subject, [_]).
+
+decide_wrapped(Profile, Status, Citations) :-
+    decide_dora_ict_risk_governance_and_framework(Profile, dora_ict_risk_governance_and_framework_verdict(Status, Citations)).
+
+answer_shape(indeterminate([_]), []).
+answer_shape(needs_legal_review(open_textured(_, cite(_)), [inputs_relied_on(_)]), []).
+answer_shape(input_problems([_|_]), []).
+answer_shape(complete, [_|_]).
+answer_shape(incomplete, [_|_]).
+answer_shape(none_outstanding, [_|_]).
+answer_shape(simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+answer_shape(required([_|_]), [_|_]).
+answer_shape(outstanding([_|_]), [_|_]).
+
+well_shaped(Subject) :-
+    query_answers(ict_risk_governance_duties_required, Subject, [RequiredResult - RequiredCitations]),
+    answer_shape(RequiredResult, RequiredCitations),
+    query_answers(ict_risk_governance_duties_complete, Subject, [CompleteResult - CompleteCitations]),
+    answer_shape(CompleteResult, CompleteCitations),
+    query_answers(ict_risk_governance_duties_outstanding, Subject, [OutstandingResult - OutstandingCitations]),
+    answer_shape(OutstandingResult, OutstandingCitations).
+
+duty_order([internal_governance_and_control_framework, management_body_framework_responsibility, management_body_ultimate_ict_risk_responsibility, data_security_policies, ict_roles_and_governance_arrangements, resilience_strategy_and_risk_tolerance_approval, business_continuity_policy_oversight, ict_audit_plan_approval, resilience_budget_allocation, third_party_policy_approval, management_body_reporting_channels, third_party_monitoring_role, management_body_ict_knowledge_and_training, ict_risk_management_framework, protection_of_information_and_ict_assets, ict_risk_impact_minimisation, ict_risk_information_to_authority, ict_risk_control_function, segregation_of_risk_control_and_audit_functions, annual_framework_review, periodic_framework_review, event_driven_framework_review_and_improvement, framework_review_report_to_authority, internal_audit_of_framework, audit_follow_up_process, digital_operational_resilience_strategy, ict_systems_protocols_and_tools, identification_and_classification, identification_of_ict_risk_sources, risk_assessment_upon_major_change, asset_identification_and_mapping, third_party_dependency_identification, inventories_maintained, legacy_systems_risk_assessment]).
+
+subsequence([], _).
+subsequence([Element|Elements], [Element|Others]) :-
+    subsequence(Elements, Others).
+subsequence([Element|Elements], [Other|Others]) :-
+    dif(Element, Other),
+    subsequence([Element|Elements], Others).
+
+in_duty_order(Duties) :-
+    duty_order(Order),
+    subsequence(Duties, Order).
+
+result_in_duty_order(required(Duties)) :-
+    in_duty_order(Duties).
+result_in_duty_order(outstanding(Duties)) :-
+    in_duty_order(Duties).
+result_in_duty_order(Result) :-
+    answer_shape(Result, _),
+    functor(Result, Name, _),
+    dif(Name, required),
+    dif(Name, outstanding).
+
+ordered_lists(Subject) :-
+    query_answers(ict_risk_governance_duties_required, Subject, [RequiredResult - _]),
+    result_in_duty_order(RequiredResult),
+    query_answers(ict_risk_governance_duties_outstanding, Subject, [OutstandingResult - _]),
+    result_in_duty_order(OutstandingResult).
+
+test(totality_every_subject_classifies) :-
+    all_subjects(Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(there_are_subjects) :-
+    all_subjects([_, _|_]).
+test(determinism_every_query_answers_once_for_every_subject) :-
+    all_subjects(Subjects),
+    maplist(answers_once, Subjects).
+test(every_answer_has_its_citation_shape) :-
+    all_subjects(Subjects),
+    maplist(well_shaped, Subjects).
+test(every_duty_list_is_in_duty_order) :-
+    all_subjects(Subjects),
+    maplist(ordered_lists, Subjects).
+test(the_duty_order_has_thirty_four_duties) :-
+    duty_order(Order),
+    length(Order, 34),
+    sort(Order, Distinct),
+    length(Distinct, 34).
+
+test(a_reversed_list_is_not_in_duty_order, fail) :-
+    in_duty_order([inventories_maintained, data_security_policies]).
+test(a_status_with_citations_is_not_well_shaped, fail) :-
+    answer_shape(indeterminate([major_change_occurred]), [cite(eu_reg_2022_2554_art_8_3)]).
+test(a_final_answer_without_citations_is_not_well_shaped, fail) :-
+    answer_shape(complete, []).
+
+cp_test_names([totality_every_subject_classifies, there_are_subjects, determinism_every_query_answers_once_for_every_subject, every_answer_has_its_citation_shape, every_duty_list_is_in_duty_order, the_duty_order_has_thirty_four_duties]).
+cp_test_fail_names([a_reversed_list_is_not_in_duty_order, a_status_with_citations_is_not_well_shaped, a_final_answer_without_citations_is_not_well_shaped]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

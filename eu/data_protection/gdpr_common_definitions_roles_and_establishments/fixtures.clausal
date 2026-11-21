@@ -1,9 +1,39 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% fixtures.clausal -- representative profiles for
-% eu/data_protection/gdpr_common_definitions_roles_and_establishments.
-% A profile is an attribute list [attribute(Key, Value), ...].
-% Each route has a positive case and a near-miss control.
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_common_definitions_roles_and_establishments.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). There are no numeric thresholds in these pins, so
+% the near-miss controls are one-KEY changes: each positive subject is paired
+% with a control that differs in one value and gets the opposite verdict for
+% the relation it exercises (expected answers are asserted in
+% tests/test_public_interface.clausal).
+%
+% Routes covered (relation: positive / near-miss):
+%   party_is_controller: controller_by_judgement / controller_judgement_false;
+%     law_designated_controller_attested / law_designated_controller_attested_false;
+%     law_designated_controller_unattested (outside fact refers).
+%   party_is_processor: cloud_processor / not_on_behalf_of_controller.
+%   genetic_data: genetic_test_laboratory / genetic_data_not_personal.
+%   biometric_data: biometric_access_control / biometric_personal_data_unsure.
+%   data_concerning_health: hospital_health_data / health_status_not_revealed.
+%   main_establishment: controller_with_deciding_establishment,
+%     controller_central_administration / controller_without_main_establishment;
+%     controller_power_to_implement_unsure (reading 13);
+%     single_member_state_party (step 1);
+%     cloud_processor_two_member_states / processor_without_specific_obligations.
+%   enterprise: trading_partnership / partnership_without_economic_activity.
+%   group_of_undertakings: holding_group / undertakings_without_control.
+%   supervisory_authority_concerned: complaint_only_authority / authority_not_concerned;
+%     complaint_with_unsure_effect (reading 12).
+%   cross_border_processing: establishments_in_several_member_states,
+%     single_establishment_cross_border / single_establishment_local_effect.
+%   relevant_and_reasoned_objection: reasoned_objection / objection_incomplete;
+%     objection_risks_unsure.
+%   input check: malformed_profile_duplicate_and_unknown.
 % =====================================================================
 
 :- module(fixtures, [
@@ -15,90 +45,208 @@
 :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/gdpr_common_definitions_roles_and_establishments, [decide_gdpr_common_definitions_roles_and_establishments/2]).
 
 % ---- Subject registry ------------------------------------------------
-gdpr_common_definitions_roles_and_establishments_subject(controller_determines).
-gdpr_common_definitions_roles_and_establishments_subject(controller_by_law).
-gdpr_common_definitions_roles_and_establishments_subject(controller_law_not_provided).
-gdpr_common_definitions_roles_and_establishments_subject(controller_law_unattested).
-gdpr_common_definitions_roles_and_establishments_subject(controller_judgement_unsure).
-gdpr_common_definitions_roles_and_establishments_subject(controller_nothing_stated).
-gdpr_common_definitions_roles_and_establishments_subject(processor_on_behalf).
-gdpr_common_definitions_roles_and_establishments_subject(processor_not_on_behalf).
-gdpr_common_definitions_roles_and_establishments_subject(genetic_data_met).
-gdpr_common_definitions_roles_and_establishments_subject(genetic_data_not_genetic).
-gdpr_common_definitions_roles_and_establishments_subject(genetic_personal_data_unsure).
-gdpr_common_definitions_roles_and_establishments_subject(biometric_data_met).
-gdpr_common_definitions_roles_and_establishments_subject(biometric_not_personal_data).
-gdpr_common_definitions_roles_and_establishments_subject(health_data_met).
-gdpr_common_definitions_roles_and_establishments_subject(health_data_not_health).
-gdpr_common_definitions_roles_and_establishments_subject(main_decisions_elsewhere).
-gdpr_common_definitions_roles_and_establishments_subject(main_central_administration).
-gdpr_common_definitions_roles_and_establishments_subject(main_no_place).
-gdpr_common_definitions_roles_and_establishments_subject(main_processor_central).
-gdpr_common_definitions_roles_and_establishments_subject(main_processor_main_activities).
-gdpr_common_definitions_roles_and_establishments_subject(main_processor_not_subject).
-gdpr_common_definitions_roles_and_establishments_subject(main_single_member_state).
-gdpr_common_definitions_roles_and_establishments_subject(main_role_missing).
-gdpr_common_definitions_roles_and_establishments_subject(main_power_unsure).
-gdpr_common_definitions_roles_and_establishments_subject(enterprise_met).
-gdpr_common_definitions_roles_and_establishments_subject(enterprise_not_economic).
-gdpr_common_definitions_roles_and_establishments_subject(group_met).
-gdpr_common_definitions_roles_and_establishments_subject(group_not_met).
-gdpr_common_definitions_roles_and_establishments_subject(authority_established).
-gdpr_common_definitions_roles_and_establishments_subject(authority_affected).
-gdpr_common_definitions_roles_and_establishments_subject(authority_complaint).
-gdpr_common_definitions_roles_and_establishments_subject(authority_none).
-gdpr_common_definitions_roles_and_establishments_subject(cross_border_several).
-gdpr_common_definitions_roles_and_establishments_subject(cross_border_single).
-gdpr_common_definitions_roles_and_establishments_subject(cross_border_none).
-gdpr_common_definitions_roles_and_establishments_subject(objection_met).
-gdpr_common_definitions_roles_and_establishments_subject(objection_no_risk).
-gdpr_common_definitions_roles_and_establishments_subject(objection_risk_unsure).
-gdpr_common_definitions_roles_and_establishments_subject(unknown_key_profile).
-gdpr_common_definitions_roles_and_establishments_subject(wrong_type_profile).
-gdpr_common_definitions_roles_and_establishments_subject(not_an_attribute_list).
+gdpr_common_definitions_roles_and_establishments_subject(controller_by_judgement).
+gdpr_common_definitions_roles_and_establishments_subject(controller_judgement_false).
+gdpr_common_definitions_roles_and_establishments_subject(law_designated_controller_attested).
+gdpr_common_definitions_roles_and_establishments_subject(law_designated_controller_attested_false).
+gdpr_common_definitions_roles_and_establishments_subject(law_designated_controller_unattested).
+gdpr_common_definitions_roles_and_establishments_subject(cloud_processor).
+gdpr_common_definitions_roles_and_establishments_subject(not_on_behalf_of_controller).
+gdpr_common_definitions_roles_and_establishments_subject(genetic_test_laboratory).
+gdpr_common_definitions_roles_and_establishments_subject(genetic_data_not_personal).
+gdpr_common_definitions_roles_and_establishments_subject(biometric_access_control).
+gdpr_common_definitions_roles_and_establishments_subject(biometric_personal_data_unsure).
+gdpr_common_definitions_roles_and_establishments_subject(hospital_health_data).
+gdpr_common_definitions_roles_and_establishments_subject(health_status_not_revealed).
+gdpr_common_definitions_roles_and_establishments_subject(controller_with_deciding_establishment).
+gdpr_common_definitions_roles_and_establishments_subject(controller_central_administration).
+gdpr_common_definitions_roles_and_establishments_subject(controller_without_main_establishment).
+gdpr_common_definitions_roles_and_establishments_subject(controller_power_to_implement_unsure).
+gdpr_common_definitions_roles_and_establishments_subject(single_member_state_party).
+gdpr_common_definitions_roles_and_establishments_subject(cloud_processor_two_member_states).
+gdpr_common_definitions_roles_and_establishments_subject(processor_without_specific_obligations).
+gdpr_common_definitions_roles_and_establishments_subject(trading_partnership).
+gdpr_common_definitions_roles_and_establishments_subject(partnership_without_economic_activity).
+gdpr_common_definitions_roles_and_establishments_subject(holding_group).
+gdpr_common_definitions_roles_and_establishments_subject(undertakings_without_control).
+gdpr_common_definitions_roles_and_establishments_subject(complaint_only_authority).
+gdpr_common_definitions_roles_and_establishments_subject(authority_not_concerned).
+gdpr_common_definitions_roles_and_establishments_subject(complaint_with_unsure_effect).
+gdpr_common_definitions_roles_and_establishments_subject(establishments_in_several_member_states).
+gdpr_common_definitions_roles_and_establishments_subject(single_establishment_cross_border).
+gdpr_common_definitions_roles_and_establishments_subject(single_establishment_local_effect).
+gdpr_common_definitions_roles_and_establishments_subject(reasoned_objection).
+gdpr_common_definitions_roles_and_establishments_subject(objection_incomplete).
+gdpr_common_definitions_roles_and_establishments_subject(objection_risks_unsure).
+gdpr_common_definitions_roles_and_establishments_subject(malformed_profile_duplicate_and_unknown).
 
 % ---- Profiles --------------------------------------------------------
-gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, [attribute(party_determines_purposes_and_means, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_law, [attribute(party_determines_purposes_and_means, false), attribute(purposes_and_means_determined_by_law, true), attribute(party_provided_for_as_controller_by_law, attested(true, attestation(host_layer, attested_2026_11_07, operator_ruling, none)))]).
-gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_not_provided, [attribute(party_determines_purposes_and_means, false), attribute(purposes_and_means_determined_by_law, true), attribute(party_provided_for_as_controller_by_law, attested(false, attestation(host_layer, attested_2026_11_07, operator_ruling, none)))]).
-gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_unattested, [attribute(party_determines_purposes_and_means, false), attribute(purposes_and_means_determined_by_law, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(controller_judgement_unsure, [attribute(party_determines_purposes_and_means, unsure), attribute(purposes_and_means_determined_by_law, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(controller_nothing_stated, []).
-gdpr_common_definitions_roles_and_establishments_profile_for(processor_on_behalf, [attribute(party_processes_on_behalf_of_controller, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(processor_not_on_behalf, [attribute(party_processes_on_behalf_of_controller, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, [attribute(data_are_personal_data, true), attribute(data_relate_to_genetic_characteristics_giving_unique_information, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_not_genetic, [attribute(data_are_personal_data, true), attribute(data_relate_to_genetic_characteristics_giving_unique_information, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(genetic_personal_data_unsure, [attribute(data_are_personal_data, unsure), attribute(data_relate_to_genetic_characteristics_giving_unique_information, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(biometric_data_met, [attribute(data_are_personal_data, true), attribute(data_result_from_technical_processing_allowing_unique_identification, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(biometric_not_personal_data, [attribute(data_are_personal_data, false), attribute(data_result_from_technical_processing_allowing_unique_identification, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(health_data_met, [attribute(data_are_personal_data, true), attribute(data_relate_to_health_and_reveal_health_status, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(health_data_not_health, [attribute(data_are_personal_data, true), attribute(data_relate_to_health_and_reveal_health_status, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_decisions_elsewhere, [attribute(party_role, controller), attribute(established_in_more_than_one_member_state, true), attribute(decisions_taken_in_other_union_establishment, true), attribute(other_establishment_can_have_decisions_implemented, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_central_administration, [attribute(party_role, controller), attribute(established_in_more_than_one_member_state, true), attribute(decisions_taken_in_other_union_establishment, false), attribute(central_administration_in_union, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_no_place, [attribute(party_role, controller), attribute(established_in_more_than_one_member_state, true), attribute(decisions_taken_in_other_union_establishment, false), attribute(central_administration_in_union, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_processor_central, [attribute(party_role, processor), attribute(established_in_more_than_one_member_state, true), attribute(central_administration_in_union, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_processor_main_activities, [attribute(party_role, processor), attribute(established_in_more_than_one_member_state, true), attribute(central_administration_in_union, false), attribute(processor_subject_to_specific_obligations, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_processor_not_subject, [attribute(party_role, processor), attribute(established_in_more_than_one_member_state, true), attribute(central_administration_in_union, false), attribute(processor_subject_to_specific_obligations, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_single_member_state, [attribute(party_role, controller), attribute(established_in_more_than_one_member_state, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_role_missing, [attribute(established_in_more_than_one_member_state, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(main_power_unsure, [attribute(party_role, controller), attribute(established_in_more_than_one_member_state, true), attribute(decisions_taken_in_other_union_establishment, true), attribute(other_establishment_can_have_decisions_implemented, unsure)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(enterprise_met, [attribute(entity_is_person_partnership_or_association, true), attribute(entity_engaged_in_economic_activity, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(enterprise_not_economic, [attribute(entity_is_person_partnership_or_association, true), attribute(entity_engaged_in_economic_activity, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(group_met, [attribute(controlling_undertaking_and_controlled_undertakings, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(group_not_met, [attribute(controlling_undertaking_and_controlled_undertakings, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(authority_established, [attribute(party_established_in_authority_member_state, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(authority_affected, [attribute(party_established_in_authority_member_state, false), attribute(data_subjects_in_authority_member_state_substantially_affected, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(authority_complaint, [attribute(party_established_in_authority_member_state, false), attribute(data_subjects_in_authority_member_state_substantially_affected, false), attribute(complaint_lodged_with_authority, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(authority_none, [attribute(party_established_in_authority_member_state, false), attribute(data_subjects_in_authority_member_state_substantially_affected, false), attribute(complaint_lodged_with_authority, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(cross_border_several, [attribute(established_in_more_than_one_member_state, true), attribute(processing_in_context_of_establishments_in_more_than_one_member_state, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(cross_border_single, [attribute(established_in_more_than_one_member_state, false), attribute(processing_in_context_of_single_union_establishment, true), attribute(substantially_affects_data_subjects_in_more_than_one_member_state, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(cross_border_none, [attribute(established_in_more_than_one_member_state, false), attribute(processing_in_context_of_single_union_establishment, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(objection_met, [attribute(objection_to_draft_decision, true), attribute(objection_concerns_infringement_or_envisaged_action, true), attribute(objection_demonstrates_significance_of_risks, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(objection_no_risk, [attribute(objection_to_draft_decision, true), attribute(objection_concerns_infringement_or_envisaged_action, true), attribute(objection_demonstrates_significance_of_risks, false)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(objection_risk_unsure, [attribute(objection_to_draft_decision, true), attribute(objection_concerns_infringement_or_envisaged_action, true), attribute(objection_demonstrates_significance_of_risks, unsure)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(unknown_key_profile, [attribute(not_a_contract_key, true)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(wrong_type_profile, [attribute(party_role, banker)]).
-gdpr_common_definitions_roles_and_establishments_profile_for(not_an_attribute_list, not_a_list).
+% Art 4(7) controller.
+gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_judgement, [
+    attribute(party_determines_purposes_and_means, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(controller_judgement_false, [
+    attribute(party_determines_purposes_and_means, false),
+    attribute(purposes_and_means_determined_by_law, false)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_attested, [
+    attribute(party_determines_purposes_and_means, false),
+    attribute(purposes_and_means_determined_by_law, true),
+    attribute(party_provided_for_as_controller_by_law, attested(true, attestation(by, at, reason, none)))
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_attested_false, [
+    attribute(party_determines_purposes_and_means, false),
+    attribute(purposes_and_means_determined_by_law, true),
+    attribute(party_provided_for_as_controller_by_law, attested(false, attestation(by, at, reason, none)))
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_unattested, [
+    attribute(party_determines_purposes_and_means, false),
+    attribute(purposes_and_means_determined_by_law, true)
+]).
+% Art 4(8) processor.
+gdpr_common_definitions_roles_and_establishments_profile_for(cloud_processor, [
+    attribute(party_processes_on_behalf_of_controller, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(not_on_behalf_of_controller, [
+    attribute(party_processes_on_behalf_of_controller, false)
+]).
+% Art 4(13) genetic data.
+gdpr_common_definitions_roles_and_establishments_profile_for(genetic_test_laboratory, [
+    attribute(data_are_personal_data, true),
+    attribute(data_relate_to_genetic_characteristics_giving_unique_information, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_not_personal, [
+    attribute(data_are_personal_data, false),
+    attribute(data_relate_to_genetic_characteristics_giving_unique_information, true)
+]).
+% Art 4(14) biometric data.
+gdpr_common_definitions_roles_and_establishments_profile_for(biometric_access_control, [
+    attribute(data_are_personal_data, true),
+    attribute(data_result_from_technical_processing_allowing_unique_identification, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(biometric_personal_data_unsure, [
+    attribute(data_are_personal_data, unsure),
+    attribute(data_result_from_technical_processing_allowing_unique_identification, true)
+]).
+% Art 4(15) data concerning health.
+gdpr_common_definitions_roles_and_establishments_profile_for(hospital_health_data, [
+    attribute(data_are_personal_data, true),
+    attribute(data_relate_to_health_and_reveal_health_status, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(health_status_not_revealed, [
+    attribute(data_are_personal_data, true),
+    attribute(data_relate_to_health_and_reveal_health_status, false)
+]).
+% Art 4(16) main establishment.
+gdpr_common_definitions_roles_and_establishments_profile_for(controller_with_deciding_establishment, [
+    attribute(party_role, controller),
+    attribute(established_in_more_than_one_member_state, true),
+    attribute(decisions_taken_in_other_union_establishment, true),
+    attribute(other_establishment_can_have_decisions_implemented, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(controller_central_administration, [
+    attribute(party_role, controller),
+    attribute(established_in_more_than_one_member_state, true),
+    attribute(central_administration_in_union, true),
+    attribute(decisions_taken_in_other_union_establishment, false)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(controller_without_main_establishment, [
+    attribute(party_role, controller),
+    attribute(established_in_more_than_one_member_state, true),
+    attribute(central_administration_in_union, false),
+    attribute(decisions_taken_in_other_union_establishment, false)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(controller_power_to_implement_unsure, [
+    attribute(party_role, controller),
+    attribute(established_in_more_than_one_member_state, true),
+    attribute(decisions_taken_in_other_union_establishment, true),
+    attribute(other_establishment_can_have_decisions_implemented, unsure)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(single_member_state_party, [
+    attribute(established_in_more_than_one_member_state, false)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(cloud_processor_two_member_states, [
+    attribute(party_processes_on_behalf_of_controller, true),
+    attribute(party_role, processor),
+    attribute(established_in_more_than_one_member_state, true),
+    attribute(central_administration_in_union, false),
+    attribute(processor_subject_to_specific_obligations, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(processor_without_specific_obligations, [
+    attribute(party_processes_on_behalf_of_controller, true),
+    attribute(party_role, processor),
+    attribute(established_in_more_than_one_member_state, true),
+    attribute(central_administration_in_union, false),
+    attribute(processor_subject_to_specific_obligations, false)
+]).
+% Art 4(18) enterprise.
+gdpr_common_definitions_roles_and_establishments_profile_for(trading_partnership, [
+    attribute(entity_is_person_partnership_or_association, true),
+    attribute(entity_engaged_in_economic_activity, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(partnership_without_economic_activity, [
+    attribute(entity_is_person_partnership_or_association, true),
+    attribute(entity_engaged_in_economic_activity, false)
+]).
+% Art 4(19) group of undertakings.
+gdpr_common_definitions_roles_and_establishments_profile_for(holding_group, [
+    attribute(controlling_undertaking_and_controlled_undertakings, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(undertakings_without_control, [
+    attribute(controlling_undertaking_and_controlled_undertakings, false)
+]).
+% Art 4(22) supervisory authority concerned.
+gdpr_common_definitions_roles_and_establishments_profile_for(complaint_only_authority, [
+    attribute(party_established_in_authority_member_state, false),
+    attribute(data_subjects_in_authority_member_state_substantially_affected, false),
+    attribute(complaint_lodged_with_authority, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(authority_not_concerned, [
+    attribute(party_established_in_authority_member_state, false),
+    attribute(data_subjects_in_authority_member_state_substantially_affected, false),
+    attribute(complaint_lodged_with_authority, false)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(complaint_with_unsure_effect, [
+    attribute(data_subjects_in_authority_member_state_substantially_affected, unsure),
+    attribute(complaint_lodged_with_authority, true)
+]).
+% Art 4(23) cross-border processing.
+gdpr_common_definitions_roles_and_establishments_profile_for(establishments_in_several_member_states, [
+    attribute(established_in_more_than_one_member_state, true),
+    attribute(processing_in_context_of_establishments_in_more_than_one_member_state, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(single_establishment_cross_border, [
+    attribute(processing_in_context_of_establishments_in_more_than_one_member_state, false),
+    attribute(processing_in_context_of_single_union_establishment, true),
+    attribute(substantially_affects_data_subjects_in_more_than_one_member_state, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(single_establishment_local_effect, [
+    attribute(processing_in_context_of_establishments_in_more_than_one_member_state, false),
+    attribute(processing_in_context_of_single_union_establishment, true),
+    attribute(substantially_affects_data_subjects_in_more_than_one_member_state, false)
+]).
+% Art 4(24) relevant and reasoned objection.
+gdpr_common_definitions_roles_and_establishments_profile_for(reasoned_objection, [
+    attribute(objection_to_draft_decision, true),
+    attribute(objection_concerns_infringement_or_envisaged_action, true),
+    attribute(objection_demonstrates_significance_of_risks, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(objection_incomplete, [
+    attribute(objection_to_draft_decision, false),
+    attribute(objection_concerns_infringement_or_envisaged_action, true),
+    attribute(objection_demonstrates_significance_of_risks, true)
+]).
+gdpr_common_definitions_roles_and_establishments_profile_for(objection_risks_unsure, [
+    attribute(objection_to_draft_decision, true),
+    attribute(objection_concerns_infringement_or_envisaged_action, true),
+    attribute(objection_demonstrates_significance_of_risks, unsure)
+]).
+% The input check: a repeated contract key and a key outside the contract.
+gdpr_common_definitions_roles_and_establishments_profile_for(malformed_profile_duplicate_and_unknown, [
+    attribute(party_role, controller),
+    attribute(party_role, processor),
+    attribute(stray, true)
+]).
 
 % ---- Convenience wrapper ---------------------------------------------
 gdpr_common_definitions_roles_and_establishments_assess(Subject, Result) :-

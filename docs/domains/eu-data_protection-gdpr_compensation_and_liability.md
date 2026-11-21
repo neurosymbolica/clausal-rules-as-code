@@ -1,4 +1,4 @@
-# For ONE claim against ONE party (the caller, stated to be EITHER the controller OR the processor of the processing in question), whether that party is liable to ...
+# For ONE claim against ONE party (the caller, who states that it is the controller or the processor of the processing in question): is the caller liable under Article ...
 
 `eu/data_protection/gdpr_compensation_and_liability`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 207/207 | none (no provision-tracking ledger) | pass | pass | pass |
+| 192/192 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-For ONE claim against ONE party (the caller, stated to be EITHER the controller OR the processor of the processing in question), whether that party is liable to compensate damage under Article 82(1) to (3) of Regulation (EU) 2016/679 (GDPR): the three conditions of Art 82(1) (damage, an infringement, the damage resulting from it) are the caller's tri-state judgements and are never decided here; Art 82(2) is read as the controller limb (involvement in the processing) and the processor limb (a breach of processor obligations or acting outside or contrary to lawful instructions), both crisp statements of the caller; the Art 82(3) exemption is an attested outside fact that the order copies and never assesses. Answers are right_not_established, not_liable_for_damage, exempt_from_liability or liable_for_damage, or a non-final indeterminate([KEY]), needs_legal_review (open_textured or cross_reference_unresolved) or input_problems. Out of scope: the amount of compensation, joint liability for the entire damage and recourse (Art 82(4) and (5), deferred), the competent court (Art 82(6) and Art 79, deferred or excluded), fines (Arts 83 and 84), who is a controller or processor (Art 4(7), ...
+For ONE claim against ONE party (the caller, who states that it is the controller or the processor of the processing in question): is the caller liable under Article 82(1) to (3) GDPR to compensate a person for material or non-material damage? Decided here: the three conditions of Art 82(1) (damage, infringement, causal link) read as the caller's tri-state judgements and never tested; the controller and processor limbs of Art 82(2) read from the caller's crisp statements; the exemption of Art 82(3) read from an attested outside statement that is copied and never decided. Answers: right_not_established, not_liable_for_damage, exempt_from_liability, liable_for_damage, or indeterminate / needs_legal_review / input_problems. Out of scope: the amount of compensation, joint liability for the entire damage and recourse (Art 82(4) and (5), deferred), the competent courts (Art 82(6), deferred; Art 79), fines (Arts 83 and 84), who is a controller or processor (Art 4(7) and (8)) and which obligations are directed to processors (Art 28): handed to the caller or a lawyer.
 
 ## Pinned sources
 

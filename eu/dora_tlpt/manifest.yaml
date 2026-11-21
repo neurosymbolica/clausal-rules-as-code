@@ -1,0 +1,646 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_tlpt
+shape_family: eligibility
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_tlpt"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. Atoms are never exported: the bare atoms the
+# scorer reads as package-root module attributes are listed under
+# root_atoms below.
+public_interface:
+  # -- kernel.clausal (re-exported by queries.clausal) --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_tlpt.clausal --
+  - "decide_dora_tlpt/2"
+  - "dora_tlpt_status/2"
+  - "dora_tlpt_checklist/2"
+  - "dora_tlpt_decision_resolvable/1"
+  - "dora_tlpt_status_values/1"
+  # -- queries.clausal --
+  - "tlpt_identification_basis/3"
+  - "tlpt_duty/3"
+  - "dora_tlpt_input_problems/2"
+  - "dora_tlpt_profile_keys/1"
+  - "dora_tlpt_what_if/4"
+  - "not_listed_for_tlpt/0"
+  - "excluded_from_tlpt/1"
+  - "listed_for_tlpt/1"
+  - "no_tlpt_duty/1"
+  - "tlpt_required/1"
+  - "indeterminate/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+
+# root_atoms: the bare atoms of root_exports the scorer reads as package-root
+# module attributes. They are atoms, not predicates: no module exports them.
+root_atoms:
+  # -- profile keys --
+  - "financial_entity_is_article_16_1_entity"
+  - "financial_entity_is_microenterprise"
+  - "dora_entity_type"
+  - "credit_institution_is_or_is_part_of_g_sii_or_o_sii"
+  - "payment_transactions_total_value_eur_first_preceding_calendar_year"
+  - "payment_transactions_total_value_eur_second_preceding_calendar_year"
+  - "outstanding_electronic_money_eur_first_preceding_calendar_year"
+  - "outstanding_electronic_money_eur_second_preceding_calendar_year"
+  - "trading_venue_has_electronic_trading_system"
+  - "trading_venue_has_highest_national_turnover_share_in_both_preceding_years"
+  - "trading_venue_union_turnover_share_exceeds_5_percent_in_both_preceding_years"
+  - "insurance_undertaking_activities"
+  - "gross_written_premium_eur"
+  - "technical_provisions_eur"
+  - "total_assets_share_of_member_state_insurance_sector_basis_points"
+  - "identified_by_tlpt_authority_as_required_to_perform_tlpt"
+  - "tlpt_frequency_changed_by_competent_authority"
+  # -- dora_entity_type values --
+  - "credit_institution"
+  - "institution_exempted_pursuant_to_directive_2013_36"
+  - "payment_institution"
+  - "exempted_payment_institution"
+  - "account_information_service_provider"
+  - "electronic_money_institution"
+  - "exempted_electronic_money_institution"
+  - "investment_firm"
+  - "crypto_asset_service_provider"
+  - "issuer_of_asset_referenced_tokens"
+  - "central_securities_depository"
+  - "central_counterparty"
+  - "trading_venue"
+  - "trade_repository"
+  - "manager_of_alternative_investment_funds"
+  - "management_company"
+  - "data_reporting_service_provider"
+  - "insurance_undertaking"
+  - "reinsurance_undertaking"
+  - "insurance_intermediary"
+  - "reinsurance_intermediary"
+  - "ancillary_insurance_intermediary"
+  - "institution_for_occupational_retirement_provision"
+  - "credit_rating_agency"
+  - "administrator_of_critical_benchmarks"
+  - "crowdfunding_service_provider"
+  - "securitisation_repository"
+  - "ict_third_party_service_provider"
+  - "none_of_the_listed_types"
+  # -- insurance_undertaking_activities values --
+  - "life_only"
+  - "life_and_non_life"
+  - "non_life_only"
+  # -- result atom and result arguments --
+  - "not_listed_for_tlpt"
+  - "article_16_1_entity"
+  - "microenterprise"
+  - "not_identified"
+  - "point_a"
+  - "point_b"
+  - "point_c"
+  - "point_d"
+  - "point_e"
+  - "point_f"
+  - "point_g"
+  - "at_least_every_three_years"
+  - "frequency_set_by_competent_authority"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only the kit (formalize_lib), no shared
+# backbone package.
+uses: []
+
+scope: "Who must carry out advanced testing by means of threat-led penetration
+  testing (TLPT) under Regulation (EU) 2022/2554 (DORA), and how often: Article
+  26(1) and Article 26(8), third subparagraph, points (a) to (c), of the
+  Regulation, and Article 2(1) and (2) of Commission Delegated Regulation (EU)
+  2025/1190 (the TLPT RTS). For one financial entity, tlpt_identification_basis
+  answers whether a carve-out of Art 26(1) (an Article 16(1) entity, a
+  microenterprise) excludes it from TLPT and otherwise whether it falls within a
+  point (a) to (g) of Article 2(2) of the TLPT RTS (listed_for_tlpt, which is not
+  the duty: the authority shall require TLPT unless its assessment shows it is
+  not justified); tlpt_duty answers whether the entity, once identified by the
+  authority, must carry out TLPT at least every three years or at the frequency
+  the competent authority has set. Out of scope: the requirements for the test
+  and the testers (Art 26(2) to (8), first and second subparagraphs, Article 27,
+  Articles 7 and 15 of the TLPT RTS; order eu/dora-tlpt-testers-and-tests), the
+  steps of the testing process (Articles 4 to 6 and 8 to 13 of the TLPT RTS;
+  order eu/dora-tlpt-process), the authority's own assessment under Article 2(1)
+  and its group decision under Article 2(3) (caller facts), and the due date of
+  the next test. A financial entity within the scope of the Regulation is
+  presupposed. Every reading is the drafter's, not a lawyer's."
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of
+    14 December 2022 on digital operational resilience for the financial sector
+    (DORA), OJ L 333, 27.12.2022, p. 1: Article 26(1) and Article 26(8), third
+    subparagraph, points (a) to (c)"
+  - "Commission Delegated Regulation (EU) 2025/1190 supplementing Regulation (EU)
+    2022/2554 with regard to regulatory technical standards specifying the
+    criteria used for identifying financial entities required to perform
+    threat-led penetration testing (the TLPT RTS), OJ L series: Article 2(1)
+    and Article 2(2), points (a) to (g) with their sub-points and closing
+    subparagraphs"
+
+query_interface:
+  2: "dora_tlpt_status/2"      # eligibility: the RESULT of tlpt_duty/3
+  7: "dora_tlpt_checklist/2"   # justification: checklist items each carry cite(...)
+  16: "dora_tlpt_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_026
+  - 32025R1190#art_002
+  reason: The heading of Article 26 of the Regulation and the heading of Article 2
+    of the TLPT RTS carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: article_26_8_testers
+  units:
+  - 32022R2554#parag_026.008
+  partial: true
+  reason: 'Art 26(8), third subparagraph (the competent authorities identify the financial
+    entities required to perform TLPT), with its points (a) to (c), is formalised
+    (readings (2), (11), (13)). Not formalised here: the first subparagraph (financial
+    entities contract testers in accordance with Article 27, and contract external
+    testers every three tests where they use internal testers) and the second subparagraph
+    (significant credit institutions use only external testers). They are requirements
+    for the testers, left to the order eu/dora-tlpt-testers-and-tests.'
+  consequence: The answers say nothing on who may test; tlpt_required does not check
+    the testers.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised in the order eu/dora-tlpt-testers-and-tests (open question (Q16)).
+- what: article_26_test_requirements
+  units:
+  - 32022R2554#parag_026.002
+  - 32022R2554#parag_026.003
+  - 32022R2554#parag_026.004
+  - 32022R2554#parag_026.005
+  - 32022R2554#parag_026.006
+  - 32022R2554#parag_026.007
+  reason: 'Art 26(2) to (7): the scope of each test and its assessment, the participation
+    of ICT third-party service providers, pooled testing, risk management controls,
+    the summary of findings, remediation plans and documentation for the authority,
+    and the notification of the attestation. They are requirements for the test, left
+    to the order eu/dora-tlpt-testers-and-tests.'
+  consequence: tlpt_required says that TLPT must be carried out, not how; no answer
+    checks a test.
+  declaration: not_an_exception
+  debt: true
+  open: formalised in the order eu/dora-tlpt-testers-and-tests.
+- what: article_27_testers
+  units:
+  - 32022R2554#art_027
+  - 32022R2554#parag_027.001
+  - 32022R2554#point_027.001_a
+  - 32022R2554#point_027.001_b
+  - 32022R2554#point_027.001_c
+  - 32022R2554#point_027.001_d
+  - 32022R2554#point_027.001_e
+  - 32022R2554#parag_027.002
+  - 32022R2554#point_027.002_a
+  - 32022R2554#point_027.002_b
+  - 32022R2554#point_027.002_c
+  - 32022R2554#parag_027.003
+  reason: 'Article 27: the requirements for testers, the conditions for internal testers
+    and the contracts with external testers, left to the order eu/dora-tlpt-testers-and-tests.'
+  consequence: No answer checks a tester.
+  declaration: not_an_exception
+  debt: true
+  open: formalised in the order eu/dora-tlpt-testers-and-tests.
+- what: article_26_authorities
+  units:
+  - 32022R2554#parag_026.009
+  - 32022R2554#parag_026.010
+  - 32022R2554#parag_026.011
+  - 32022R2554#point_026.011_a
+  - 32022R2554#point_026.011_b
+  - 32022R2554#point_026.011_c
+  - 32022R2554#point_026.011_c_i
+  - 32022R2554#point_026.011_c_ii
+  - 32022R2554#point_026.011_c_iii
+  - 32022R2554#point_026.011_d
+  reason: Art 26(9) and (10) (the single public authority a Member State may designate,
+    and the delegation of tasks) and Art 26(11) with its points (the mandate for the
+    regulatory technical standards) address the Member States, the authorities, the
+    ESAs and the Commission.
+  consequence: 'None for these answers: the identification by whichever authority
+    is competent is the caller''s fact identified_by_tlpt_authority_as_required_to_perform_tlpt.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: rts_article_2_3_groups
+  units:
+  - 32025R1190#parag_002.003
+  reason: 'Art 2(3) of the TLPT RTS: where several financial entities of a group sharing
+    ICT systems, or using the same ICT intra-group service provider, meet the criteria
+    of Art 2(2), the TLPT authorities decide whether TLPT on an individual basis is
+    relevant, consulting the authority of the parent undertaking. A decision of the
+    authorities (reading (12)).'
+  consequence: listed_for_tlpt is given for each entity of such a group that meets
+    a point; the authorities' decision reaches tlpt_duty only through identified_by_tlpt_authority_as_required_to_perform_tlpt
+    (open question (Q11)).
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: rts_definitions
+  units:
+  - 32025R1190#art_001
+  - 32025R1190#point_001_1
+  - 32025R1190#point_001_2
+  - 32025R1190#point_001_3
+  - 32025R1190#point_001_4
+  - 32025R1190#point_001_5
+  - 32025R1190#point_001_6
+  - 32025R1190#point_001_7
+  - 32025R1190#point_001_7_a
+  - 32025R1190#point_001_7_b
+  - 32025R1190#point_001_7_c
+  - 32025R1190#point_001_8
+  - 32025R1190#point_001_9
+  - 32025R1190#point_001_10
+  - 32025R1190#point_001_11
+  - 32025R1190#point_001_12
+  - 32025R1190#point_001_13
+  - 32025R1190#point_001_14
+  - 32025R1190#point_001_15
+  - 32025R1190#point_001_16
+  - 32025R1190#point_001_17
+  - 32025R1190#point_001_18
+  reason: Article 1 of the TLPT RTS defines the words of the testing process (control
+    team, blue team, red team, TLPT authority, threat intelligence provider, pooled
+    and joint TLPT and others). No limb of this order reads them; the orders eu/dora-tlpt-testers-and-tests
+    and eu/dora-tlpt-process read them.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  debt: true
+  open: read in the orders eu/dora-tlpt-testers-and-tests and eu/dora-tlpt-process.
+- what: rts_testers
+  units:
+  - 32025R1190#art_007
+  - 32025R1190#parag_007.001
+  - 32025R1190#point_007.001_a
+  - 32025R1190#point_007.001_b
+  - 32025R1190#point_007.001_c
+  - 32025R1190#point_007.001_d
+  - 32025R1190#point_007.001_e
+  - 32025R1190#point_007.001_e_i
+  - 32025R1190#point_007.001_e_ii
+  - 32025R1190#point_007.001_e_ii_1
+  - 32025R1190#point_007.001_e_ii_2
+  - 32025R1190#point_007.001_e_ii_3
+  - 32025R1190#point_007.001_e_iii
+  - 32025R1190#point_007.001_e_iv
+  - 32025R1190#point_007.001_e_v
+  - 32025R1190#point_007.001_f
+  - 32025R1190#point_007.001_f_i
+  - 32025R1190#point_007.001_f_ii
+  - 32025R1190#point_007.001_f_iii
+  - 32025R1190#point_007.001_f_iv
+  - 32025R1190#point_007.001_f_v
+  - 32025R1190#point_007.001_g
+  - 32025R1190#point_007.001_h
+  - 32025R1190#point_007.001_h_i
+  - 32025R1190#point_007.001_h_ii
+  - 32025R1190#point_007.001_h_iii
+  - 32025R1190#point_007.001_h_iv
+  - 32025R1190#point_007.001_h_v
+  - 32025R1190#point_007.001_h_vi
+  - 32025R1190#point_007.001_i
+  - 32025R1190#point_007.001_i_i
+  - 32025R1190#point_007.001_i_ii
+  - 32025R1190#point_007.001_i_iii
+  - 32025R1190#point_007.001_i_iv
+  - 32025R1190#point_007.001_i_v
+  - 32025R1190#parag_007.002
+  - 32025R1190#art_015
+  - 32025R1190#parag_015.001
+  - 32025R1190#point_015.001_a~1
+  - 32025R1190#point_015.001_b~1
+  - 32025R1190#point_015.001_c~1
+  - 32025R1190#point_015.001_a~2
+  - 32025R1190#point_015.001_b~2
+  - 32025R1190#point_015.001_c~2
+  - 32025R1190#point_015.001_d
+  - 32025R1190#point_015.001_e
+  - 32025R1190#parag_015.002
+  - 32025R1190#parag_015.003
+  - 32025R1190#point_015.003_a
+  - 32025R1190#point_015.003_b
+  - 32025R1190#point_015.003_c
+  - 32025R1190#parag_015.004
+  reason: 'Article 7 (selection of TLPT providers) and Article 15 (use of internal
+    testers) of the TLPT RTS: requirements for the testers and the threat intelligence
+    providers, left to the order eu/dora-tlpt-testers-and-tests.'
+  consequence: No answer checks a tester.
+  declaration: not_an_exception
+  debt: true
+  open: formalised in the order eu/dora-tlpt-testers-and-tests.
+- what: rts_testing_process
+  units:
+  - 32025R1190#art_004
+  - 32025R1190#parag_004.001
+  - 32025R1190#parag_004.002
+  - 32025R1190#point_004.002_a
+  - 32025R1190#point_004.002_b
+  - 32025R1190#point_004.002_c
+  - 32025R1190#point_004.002_d
+  - 32025R1190#point_004.002_e
+  - 32025R1190#point_004.002_f
+  - 32025R1190#art_005
+  - 32025R1190#parag_005.001
+  - 32025R1190#point_005.001_a
+  - 32025R1190#point_005.001_b
+  - 32025R1190#parag_005.002
+  - 32025R1190#point_005.002_a
+  - 32025R1190#point_005.002_b
+  - 32025R1190#point_005.002_c
+  - 32025R1190#point_005.002_d
+  - 32025R1190#point_005.002_e
+  - 32025R1190#point_005.002_f
+  - 32025R1190#art_006
+  - 32025R1190#parag_006.001
+  - 32025R1190#parag_006.002
+  - 32025R1190#art_008
+  - 32025R1190#parag_008.001
+  - 32025R1190#parag_008.002
+  - 32025R1190#art_009
+  - 32025R1190#parag_009.001
+  - 32025R1190#parag_009.002
+  - 32025R1190#point_009.002_a
+  - 32025R1190#point_009.002_b
+  - 32025R1190#point_009.002_c
+  - 32025R1190#point_009.002_d
+  - 32025R1190#point_009.002_e
+  - 32025R1190#parag_009.003
+  - 32025R1190#parag_009.004
+  - 32025R1190#point_009.004_a
+  - 32025R1190#point_009.004_b
+  - 32025R1190#point_009.004_c
+  - 32025R1190#point_009.004_d
+  - 32025R1190#point_009.004_e
+  - 32025R1190#point_009.004_f
+  - 32025R1190#point_009.004_g
+  - 32025R1190#parag_009.005
+  - 32025R1190#parag_009.006
+  - 32025R1190#parag_009.007
+  - 32025R1190#point_009.007_a
+  - 32025R1190#point_009.007_b
+  - 32025R1190#point_009.007_c
+  - 32025R1190#point_009.007_d
+  - 32025R1190#point_009.007_e
+  - 32025R1190#point_009.007_f
+  - 32025R1190#point_009.007_g
+  - 32025R1190#parag_009.008
+  - 32025R1190#parag_009.009
+  - 32025R1190#parag_009.010
+  - 32025R1190#parag_009.011
+  - 32025R1190#parag_009.012
+  - 32025R1190#art_010
+  - 32025R1190#parag_010.001
+  - 32025R1190#parag_010.002
+  - 32025R1190#parag_010.003
+  - 32025R1190#point_010.003_a
+  - 32025R1190#point_010.003_b
+  - 32025R1190#point_010.003_c
+  - 32025R1190#point_010.003_d
+  - 32025R1190#parag_010.004
+  - 32025R1190#parag_010.005
+  - 32025R1190#parag_010.006
+  - 32025R1190#art_011
+  - 32025R1190#parag_011.001
+  - 32025R1190#parag_011.002
+  - 32025R1190#parag_011.003
+  - 32025R1190#parag_011.004
+  - 32025R1190#parag_011.005
+  - 32025R1190#parag_011.006
+  - 32025R1190#parag_011.007
+  - 32025R1190#parag_011.008
+  - 32025R1190#parag_011.009
+  - 32025R1190#parag_011.010
+  - 32025R1190#art_012
+  - 32025R1190#parag_012.001
+  - 32025R1190#parag_012.002
+  - 32025R1190#parag_012.003
+  - 32025R1190#parag_012.004
+  - 32025R1190#parag_012.005
+  - 32025R1190#parag_012.006
+  - 32025R1190#parag_012.007
+  - 32025R1190#art_013
+  - 32025R1190#parag_013.001
+  - 32025R1190#parag_013.002
+  - 32025R1190#point_013.002_a
+  - 32025R1190#point_013.002_b
+  - 32025R1190#point_013.002_c
+  - 32025R1190#point_013.002_d
+  - 32025R1190#point_013.002_e
+  reason: 'Articles 4 to 6 and 8 to 13 of the TLPT RTS: the organisational arrangements,
+    risk management, pooled and joint TLPT, the preparation phase, threat intelligence,
+    the red team test, the closure phase and the remediation plan, left to the order
+    eu/dora-tlpt-process.'
+  consequence: tlpt_required says that TLPT must be carried out, not how; no answer
+    checks a step of the process.
+  declaration: not_an_exception
+  debt: true
+  open: formalised in the order eu/dora-tlpt-process.
+- what: rts_authorities
+  units:
+  - 32025R1190#art_003
+  - 32025R1190#parag_003.001
+  - 32025R1190#parag_003.002
+  - 32025R1190#parag_003.003
+  - 32025R1190#parag_003.004
+  - 32025R1190#parag_003.005
+  - 32025R1190#art_014
+  - 32025R1190#parag_014.001
+  - 32025R1190#parag_014.002
+  - 32025R1190#art_016
+  - 32025R1190#parag_016.001
+  - 32025R1190#point_016.001_a
+  - 32025R1190#point_016.001_b
+  - 32025R1190#point_016.001_c
+  - 32025R1190#parag_016.002
+  - 32025R1190#parag_016.003
+  - 32025R1190#point_016.003_a
+  - 32025R1190#point_016.003_b
+  - 32025R1190#point_016.003_c
+  - 32025R1190#parag_016.004
+  - 32025R1190#parag_016.005
+  - 32025R1190#point_016.005_a
+  - 32025R1190#point_016.005_b
+  - 32025R1190#point_016.005_c
+  - 32025R1190#parag_016.006
+  reason: Article 3 (the TLPT cyber team and the test managers), Article 14 (the attestation)
+    and Article 16 (cooperation and mutual recognition) of the TLPT RTS address the
+    TLPT authorities.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: rts_entry_into_force
+  units:
+  - 32025R1190#art_017
+  reason: 'Article 17 of the TLPT RTS: entry into force on the twentieth day following
+    publication. The publication date is not in the pinned text; the order reads no
+    date (reading (16)).'
+  consequence: The answers take the TLPT RTS as in force (open question (Q17)).
+  declaration: answered_with_caveat
+  debt: true
+  open: a date of application would need the publication date pinned.
+- what: article_26_8_assessment_points
+  units:
+  - 32022R2554#point_026.008_a
+  - 32022R2554#point_026.008_b
+  - 32022R2554#point_026.008_c
+  reason: 'Art 26(8), third subparagraph, points (a) to (c): the impact-related factors,
+    the financial stability concerns and the ICT risk profile on which the competent
+    authority bases its identification. They are the authority''s assessment, for
+    which no key stands (reading (11), open question (Q12)); no citation key of the
+    order names these points separately, and they are cited through cite(eu_reg_2022_2554_art_26_8).'
+  consequence: The assessment reaches tlpt_duty only through the caller's fact identified_by_tlpt_authority_as_required_to_perform_tlpt.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: rts_article_2_1_assessment_criteria
+  units:
+  - 32025R1190#point_002.001_a~1
+  - 32025R1190#point_002.001_a_i
+  - 32025R1190#point_002.001_a_ii
+  - 32025R1190#point_002.001_a_iii
+  - 32025R1190#point_002.001_a_iv
+  - 32025R1190#point_002.001_a_v
+  - 32025R1190#point_002.001_a_vi
+  - 32025R1190#point_002.001_b~1
+  - 32025R1190#point_002.001_b_i
+  - 32025R1190#point_002.001_b_ii
+  - 32025R1190#point_002.001_b_iii
+  - 32025R1190#point_002.001_b_iv
+  - 32025R1190#point_002.001_b_v
+  - 32025R1190#point_002.001_b_vi
+  - 32025R1190#point_002.001_b_vii
+  - 32025R1190#point_002.001_b_viii
+  - 32025R1190#point_002.001_b_viii_1
+  - 32025R1190#point_002.001_b_viii_2
+  - 32025R1190#point_002.001_b_viii_3
+  - 32025R1190#point_002.001_b_viii_4
+  - 32025R1190#point_002.001_b_ix
+  - 32025R1190#point_002.001_a~2
+  - 32025R1190#point_002.001_b~2
+  - 32025R1190#point_002.001_c
+  - 32025R1190#point_002.001_a~3
+  - 32025R1190#point_002.001_b~3
+  reason: 'Art 2(1) of the TLPT RTS, points (a) and (b) with their sub-points and
+    the points for the purposes of points (a)(i) and (a)(v): the criteria of the TLPT
+    authority''s assessment of impact, systemic character and ICT risk profile. They
+    are the authority''s assessment, for which no key stands (reading (11), open questions
+    (Q10), (Q12)); they are cited through cite(eu_reg_2025_1190_art_2_1), which no
+    citation key of the order splits by point.'
+  consequence: not_listed_for_tlpt does not mean that the entity need not carry out
+    TLPT; the authority may still identify it on its assessment.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: rts_article_2_2_sub_points
+  units:
+  - 32025R1190#point_002.002_a_i
+  - 32025R1190#point_002.002_a_ii
+  - 32025R1190#point_002.002_a_iii
+  - 32025R1190#point_002.002_f_i
+  - 32025R1190#point_002.002_f_i_1
+  - 32025R1190#point_002.002_f_i_2
+  - 32025R1190#point_002.002_f_i_3
+  - 32025R1190#point_002.002_f_i_4
+  - 32025R1190#point_002.002_f_i_5
+  - 32025R1190#point_002.002_f_ii
+  - 32025R1190#point_002.002_f_ii_1
+  - 32025R1190#point_002.002_f_ii_2
+  - 32025R1190#point_002.002_f_ii_3
+  - 32025R1190#point_002.002_f_ii_4
+  - 32025R1190#point_002.002_f_ii_5
+  - 32025R1190#point_002.002_g_i
+  - 32025R1190#point_002.002_g_ii
+  - 32025R1190#point_002.002_g_iii
+  - 32025R1190#point_002.002_a~2
+  - 32025R1190#point_002.002_b~2
+  - 32025R1190#point_002.002_c~2
+  reason: 'The sub-points of Art 2(2)(a), (f) and (g) of the TLPT RTS and the three
+    criteria of THE SECOND LIST of point (g). No citation key of the order names them
+    separately: their rule is decided within the point they belong to and cited by
+    that point''s key (cite(eu_reg_2025_1190_art_2_2_a), cite(eu_reg_2025_1190_art_2_2_f),
+    cite(eu_reg_2025_1190_art_2_2_g); readings (5), (8), (9)). Points (a)(i) to (iii)
+    are read as one caller fact; the market-share sub-points of (f) are the caller''s
+    two facts; the thresholds of (g)(i) to (iii) and of the second list are the constants
+    of dora_tlpt.clausal.'
+  consequence: The sub-points are answered through their point; no answer names a
+    sub-point on its own.
+  declaration: answered_with_caveat
+  not_formalized_because: structural
+
+excluded_set:
+- what: scope_and_entity_types
+  instrument: Regulation (EU) 2022/2554 Articles 2 and 3
+  cites:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: Not pinned in this domain. A financial entity within the scope of the Regulation
+    is presupposed; the type atoms are those of the order on scope and entity types;
+    the microenterprise of Article 3(60) is the caller's statement (readings (3),
+    (4)).
+  consequence: The answers presuppose a financial entity within scope (open question
+    (Q14)).
+- what: proportionality_and_simplified_framework
+  instrument: Regulation (EU) 2022/2554 Articles 4 and 16
+  cites:
+  - 32022R2554#art_004
+  - 32022R2554#art_016
+  reason: Not pinned in this domain. The criteria of Article 4(2), named in Art 26(8),
+    third subparagraph, are part of the authority's assessment (reading (11)); whether
+    an entity is one referred to in Article 16(1), first subparagraph, is the caller's
+    statement (reading (3)). Both articles are formalised in the order on proportionality
+    and the simplified framework.
+  consequence: The answers take the Article 16(1) status as given.
+- what: resilience_testing_programme
+  instrument: Regulation (EU) 2022/2554 Articles 24 and 25
+  cites:
+  - 32022R2554#art_024
+  - 32022R2554#art_025
+  reason: Not pinned in this domain. The general requirements for digital operational
+    resilience testing and the testing of ICT tools and systems are formalised in
+    the order on the resilience testing programme, which reads the carve-outs of Art
+    26(1) as not reaching Articles 24 and 25 (reading (3)).
+  consequence: An answer outside TLPT says nothing on the duties of Articles 24 and
+    25 (open question (Q5)).
+- what: referenced_union_acts
+  instrument: Directive 2013/36/EU Article 131, Directive (EU) 2015/2366 Article 4,
+    Directive 2014/65/EU, Regulation (EU) No 600/2014, Directive 2009/138/EC Article
+    75, Regulation (EU) No 1024/2013 Article 6(4)
+  cites:
+  - 32013L0036#art_131
+  - 32015L2366#art_004
+  - 32009L0138#art_075
+  reason: Not pinned in this domain. The identification as G-SII or O-SII, the total
+    value of payment transactions, the kinds of instrument, the valuation of total
+    assets and the classification of credit institutions as significant are the caller's
+    facts and figures (readings (5), (6), (8), (9), (17)).
+  consequence: The answers take those facts and figures as given.
+- what: date_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64
+  cites:
+  - 32022R2554#art_064
+  reason: Not pinned in this domain. The Regulation applies from 17 January 2025;
+    the order reads no date (reading (16)).
+  consequence: No answer depends on a date (open question (Q17)).

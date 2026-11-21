@@ -2,63 +2,62 @@
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/cra_art14_manufacturer_reporting (temporal family).
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. The one exception is the
-% scaffold's input check cra_art14_manufacturer_reporting_input_problems/2,
-% which is written here from the order's typed input contract and exported
-% for the slice and queries to import.
+% PREDICATES that two or more files CALL.
 %
-% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), pinned unit text
-% of 32024R2847 (original OJ text, OJ L, 2024/2847, 20.11.2024):
-%   Art 14(5), with points (a) and (b): severity of an incident;
-%   Art 14(2)(a)-(c), Art 14(4)(a)-(c) and Art 14(6): the reporting steps;
-%   Art 71(2), second sentence: Article 14 applies from 11 September 2026.
-% The input check itself decides no statutory condition: it is plumbing,
-% and carries no implements/1 marker.
+% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), Article 14
+% (reporting obligations of manufacturers), paragraphs (1) to (6), with
+% the definitions of Article 3 (points (1), (13), (40), (42), (43), (44))
+% that Article 14 uses and the date of application of Article 14 in
+% Article 71(2); pinned unit text of 32024R2847, OJ L, 2024/2847,
+% 20.11.2024 (raw sha256 fe0cca4a0caec50e7cf5a91432b94a19b211f86be8584fdba56372bdcea571ed).
 %
-% NOTHING SINGLE-CALLER LIVES HERE. This package has ONE determination
-% slice (cra_art14_manufacturer_reporting.clausal), so no domain predicate
-% is shared and none is defined here. Move a predicate here only when a
-% SECOND file calls it, and import it by full path:
-%   :- use_module(eu/cra_art14_manufacturer_reporting/kernel, [shared_predicate/2]).
+% This domain has ONE determination slice
+% (cra_art14_manufacturer_reporting.clausal), so no domain predicate is
+% shared and none lives here. The only exported predicate is the
+% scaffold's typed input check of the PROFILE,
+% cra_art14_manufacturer_reporting_input_problems/2, which the slice
+% imports and calls first. The ARGUMENT checks (wrong_type(event),
+% wrong_type(awareness_date), wrong_type(step), wrong_type(hours_elapsed))
+% are not profile checks: the slice appends them after these problems,
+% in argument order, at step 0 of the query that takes the argument.
 %
-% Atoms and data terms need NO declaration and NO import. The block below
-% only RECORDS the result terms, so that every file spells them alike.
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them
+% alike (spelled exactly as the order pins them):
 %
-% Result term of the slice (the facade verdict):
-%   cra_art14_manufacturer_reporting_verdict(Status, Citations)
-%     Status    -- the severity status of severe_incident_status/3: the atom
-%                  severe or not_severe, or one non-final compound below;
-%     Citations -- a set-like list of cite(Key) terms; [] on every
-%                  non-final Status.
-%
-% Answers of the three contract queries:
 %   severe_incident_status(Profile, Status, Citations)
-%     severe      with [cite(eu_reg_2024_2847_art_14_5)]
-%     not_severe  with [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]
+%     Status: the atom severe | the atom not_severe | indeterminate([Key])
+%       | needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                            [inputs_relied_on([Key-Value, ...])])
+%       | input_problems(Problems)
+%     Citations: a flat set-like list of cite(CitationKey);
+%       [cite(eu_reg_2024_2847_art_14_5)] when severe,
+%       [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]
+%       when not_severe, [] for every status compound.
+%
 %   manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps)
-%     Steps is [] or a list of step_due(Step, Limit, cite(Key)):
-%       Step  -- early_warning | notification | final_report | intermediate_report
-%       Limit -- hours_after_awareness(N) (N 24 or 72),
-%                days_after_measure_available(14),
-%                months_after_notification(1),
-%                or the atom on_request_of_coordinator_csirt
-%     or a non-final compound alone.
+%     Steps: [] | a flat list of step_due(Step, Limit, cite(CitationKey)),
+%       Step one of early_warning, notification, final_report,
+%       intermediate_report (in that order); Limit one of
+%       hours_after_awareness(24), hours_after_awareness(72),
+%       days_after_measure_available(14), months_after_notification(1),
+%       the atom on_request_of_coordinator_csirt
+%       | a bare status compound (indeterminate/1, needs_legal_review/2,
+%       input_problems/1).
+%
 %   manufacturer_reporting_step_timeliness(Profile, Event, Step, HoursElapsed, Result)
-%     Result is on_time, late(hour_limit), late(without_undue_delay),
-%     or a non-final compound.
+%     Result: the atom on_time | late(hour_limit) | late(without_undue_delay)
+%       | a bare status compound.
 %
-% Non-final compounds (never the bare atoms):
-%   indeterminate([Key])           -- exactly one absent key;
-%   needs_legal_review(open_textured(Key, cite(CitationKey)),
-%                      [inputs_relied_on(Pairs)])
-%                                  -- Pairs are Key-Value pairs of the
-%                                     judgement keys read, root_exports order;
-%   input_problems(Problems)       -- Problems a list of duplicate_key(Key),
-%                                     wrong_type(Key) and unknown_key(Key).
+%   The facade verdict term of the slice:
+%     cra_art14_manufacturer_reporting_verdict(Status, Citations)
+%     with Status and Citations as severe_incident_status/3 gives them.
 %
-% Arguments (not profile keys): Event is actively_exploited_vulnerability
-% or incident_impacting_product_security; Step is early_warning or
-% notification; the judgement value besides true and false is unsure.
+%   Input problem terms: duplicate_key(Key), wrong_type(Key), unknown_key(Key).
+%   The judgement value besides true and false: unsure.
+%
+% NOTHING SINGLE-CALLER LIVES HERE. Move a predicate here the moment a
+% SECOND file calls it, and only then.
 % =====================================================================
 
 :- module(kernel, [cra_art14_manufacturer_reporting_input_problems/2]).
@@ -72,20 +71,19 @@
 % Each public query calls this check first: it gives its normal answer only when
 % Problems = [], and when Problems is not [] it gives the answer the order states for
 % a profile with input problems.
-% It gives exactly one answer for every Profile:
-% - a Profile that is not an attribute list [attribute(Key, Value), ...] (an unbound
-%   Profile, a partial list, a list with an unbound element or with an element that is
-%   not attribute(Key, Value)) gives [wrong_type(profile)];
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
 % - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
 %   the key occurs more than once in Profile (whatever its values: none of them is read,
 %   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
-%   outside its type (an unbound value included); then unknown_key(Key) for each key
-%   outside the contract, in the order of its first occurrence in Profile. Each key is
-%   named once. An absent key is not a problem.
-% The order's INPUT CHECK: a KEY that is not an atom (a number, a string, a compound,
-% an unbound variable) is a key outside the four, unknown_key(KEY) as given; so an
-% element attribute(Key, Value) is an attribute whatever Key is, and keys are compared
-% by identity (==), never by unification.
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
 % Every step is complementary clauses: exactly one clause holds for each input.
 cra_art14_manufacturer_reporting_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -103,8 +101,8 @@ key_type(leads_to_malicious_code_in_product_or_user_systems, judgement).
 key_type(early_warning_without_undue_delay, judgement).
 key_type(notification_without_undue_delay, judgement).
 
-% attribute_list_t(Term, T): T is true when Term is a proper list of attribute(Key, Value)
-% items; false for anything else, an unbound Term or a partial list included.
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
 attribute_list_t(Term, false) :-
     var(Term).
 attribute_list_t(Term, true) :-
@@ -120,8 +118,6 @@ attribute_list_t(Term, false) :-
     Term \== [],
     Term \= [_|_].
 
-% attribute_t(Element, T): an unbound element is not an attribute; any
-% attribute(Key, Value) is one, whatever Key is (a non-atom Key is an unknown key).
 attribute_t(Element, false) :-
     var(Element).
 attribute_t(Element, true) :-
@@ -131,20 +127,20 @@ attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
-% Unknown keys, in profile order, each once: Known grows by each key named.
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    known_key_t(Key, Known, IsKnown),
+    known_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
 
-% known_key_t(Key, Known, T): T is true when Key is identical (==) to a member of
-% Known; it never binds Key, so an unbound Key gives one answer.
-known_key_t(_, [], false).
-known_key_t(Key, [KnownKey|_], true) :-
-    Key == KnownKey.
-known_key_t(Key, [KnownKey|KnownKeys], T) :-
-    Key \== KnownKey,
-    known_key_t(Key, KnownKeys, T).
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
     unknown_keys(Elements, Known, Problems).

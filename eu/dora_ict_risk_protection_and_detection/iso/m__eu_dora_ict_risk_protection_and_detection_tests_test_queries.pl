@@ -1,0 +1,81 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_risk_protection_and_detection_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_risk_protection_and_detection_queries, [dora_ict_risk_protection_and_detection_profile_keys/1, dora_ict_risk_protection_and_detection_what_if/4, complete/0, incomplete/0, none_outstanding/0, simplified_framework_entity/0, unsure/0, data_reporting_service_provider/0, financial_entity_is_article_16_1_entity/0, trade_report_checking_systems_in_place/0, monitoring_and_control_of_ict_systems/0, trade_report_checking_systems/0]).
+:- use_module(m__eu_dora_ict_risk_protection_and_detection_kernel, [dora_ict_risk_protection_and_detection_input_problems/2]).
+:- use_module(m__eu_dora_ict_risk_protection_and_detection_fixtures, [dora_ict_risk_protection_and_detection_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_ict_risk_protection_and_detection_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_is_article_16_1_entity, dora_entity_type, monitors_and_controls_security_and_functioning_of_ict_systems, deploys_ict_security_tools_policies_and_procedures, ict_security_policies_procedures_protocols_and_tools_implemented, uses_appropriate_ict_solutions_and_processes, ict_solutions_ensure_security_of_data_transfer, ict_solutions_minimise_data_corruption_loss_unauthorised_access_and_flaws, ict_solutions_prevent_unavailability_impairment_breaches_and_data_loss, ict_solutions_protect_data_from_data_management_risks, information_security_policy_developed_and_documented, network_and_infrastructure_management_structure_established, access_limiting_policies_and_access_rights_controls_implemented, strong_authentication_and_cryptographic_key_protection_implemented, ict_change_management_policies_procedures_and_controls_implemented, patch_and_update_policies_documented, network_connection_infrastructure_can_be_severed_or_segmented, ict_change_management_process_approved_with_specific_protocols, anomaly_detection_mechanisms_in_place, mechanisms_to_identify_single_points_of_failure_in_place, detection_mechanisms_regularly_tested, detection_mechanisms_enable_control_layers_alert_thresholds_and_automatic_alerts, sufficient_resources_devoted_to_monitoring_user_activity_anomalies_and_incidents, trade_report_checking_systems_in_place].
+test(the_re_exported_input_check_accepts_a_good_profile) :-
+    dora_ict_risk_protection_and_detection_profile_for(credit_institution_all_duties_performed, Profile),
+    dora_ict_risk_protection_and_detection_input_problems(Profile, []).
+test(the_re_exported_input_check_names_an_unknown_key) :-
+    dora_ict_risk_protection_and_detection_input_problems([attribute(colour, true)], [unknown_key(colour)]).
+test(what_if_one_duty_not_performed_is_incomplete) :-
+    dora_ict_risk_protection_and_detection_profile_for(credit_institution_all_duties_performed, Profile),
+    dora_ict_risk_protection_and_detection_what_if(Profile, patch_and_update_policies_documented, false, incomplete).
+test(what_if_the_gate_true_is_simplified_framework_entity) :-
+    dora_ict_risk_protection_and_detection_profile_for(credit_institution_all_duties_performed, Profile),
+    dora_ict_risk_protection_and_detection_what_if(Profile, financial_entity_is_article_16_1_entity, true, simplified_framework_entity).
+test(what_if_a_provider_reads_the_trade_report_duty) :-
+    dora_ict_risk_protection_and_detection_profile_for(credit_institution_trade_report_checking_not_in_place, Profile),
+    dora_ict_risk_protection_and_detection_what_if(Profile, dora_entity_type, data_reporting_service_provider, incomplete).
+test(what_if_the_override_removes_a_duplicate) :-
+    dora_ict_risk_protection_and_detection_profile_for(anomaly_detection_given_twice, Profile),
+    dora_ict_risk_protection_and_detection_what_if(Profile, anomaly_detection_mechanisms_in_place, true, complete).
+test(what_if_an_unknown_key_is_an_input_problem) :-
+    dora_ict_risk_protection_and_detection_profile_for(credit_institution_all_duties_performed, Profile),
+    dora_ict_risk_protection_and_detection_what_if(Profile, colour, true, input_problems([unknown_key(colour)])).
+test(what_if_yields_exactly_one_status) :-
+    dora_ict_risk_protection_and_detection_profile_for(credit_institution_all_duties_performed, Profile),
+    findall(Status, dora_ict_risk_protection_and_detection_what_if(Profile, detection_mechanisms_regularly_tested, unsure, Status), Statuses),
+    Statuses = [needs_legal_review(open_textured(detection_mechanisms_regularly_tested, cite(eu_reg_2022_2554_art_10_1)), [inputs_relied_on(_)])].
+test(the_result_atoms_are_defined) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    simplified_framework_entity,
+    unsure,
+    data_reporting_service_provider,
+    financial_entity_is_article_16_1_entity,
+    trade_report_checking_systems_in_place,
+    monitoring_and_control_of_ict_systems,
+    trade_report_checking_systems.
+test(the_result_constructors_build_and_destructure) :-
+    Required = required([monitoring_and_control_of_ict_systems]),
+    functor(Required, required, 1),
+    Outstanding = outstanding([trade_report_checking_systems]),
+    functor(Outstanding, outstanding, 1),
+    Missing = indeterminate([dora_entity_type]),
+    Missing = indeterminate([MissingKey]),
+    MissingKey == dora_entity_type,
+    Review = needs_legal_review(open_textured(dora_entity_type, cite(eu_reg_2022_2554_art_10_4)), [inputs_relied_on([])]),
+    Review = needs_legal_review(open_textured(ReviewKey, ReviewCitation), [inputs_relied_on(Pairs)]),
+    ReviewKey == dora_entity_type,
+    ReviewCitation == cite(eu_reg_2022_2554_art_10_4),
+    Pairs == [],
+    Provenance = provenance(clause, []),
+    functor(Provenance, provenance, 2),
+    Problems = input_problems([unknown_key(colour), wrong_type(profile), duplicate_key(dora_entity_type)]),
+    Problems = input_problems([unknown_key(Unknown), wrong_type(Wrong), duplicate_key(Duplicate)]),
+    Unknown == colour,
+    Wrong == profile,
+    Duplicate == dora_entity_type.
+
+test(what_if_every_duty_performed_is_not_incomplete, fail) :-
+    dora_ict_risk_protection_and_detection_profile_for(credit_institution_all_duties_performed, Profile),
+    dora_ict_risk_protection_and_detection_what_if(Profile, patch_and_update_policies_documented, true, incomplete).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_re_exported_input_check_accepts_a_good_profile, the_re_exported_input_check_names_an_unknown_key, what_if_one_duty_not_performed_is_incomplete, what_if_the_gate_true_is_simplified_framework_entity, what_if_a_provider_reads_the_trade_report_duty, what_if_the_override_removes_a_duplicate, what_if_an_unknown_key_is_an_input_problem, what_if_yields_exactly_one_status, the_result_atoms_are_defined, the_result_constructors_build_and_destructure]).
+cp_test_fail_names([what_if_every_duty_performed_is_not_incomplete]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

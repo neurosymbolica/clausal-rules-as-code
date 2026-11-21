@@ -1,0 +1,207 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_accountability_security
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_accountability_security"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal. The order's root_exports (profile keys, duty atoms, topic
+# atoms, unsure) and its result atoms/constructors are exported by queries.clausal
+# as constructor facts so the package root carries each of them.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_accountability_security.clausal --
+  - "duty_status/5"
+  - "non_binding_items/3"
+  - "joint_controller_arrangement/3"
+  - "joint_controller_arrangement_content/4"
+  - "decide_gdpr_accountability_security/2"
+  - "gdpr_accountability_security_status/2"
+  - "gdpr_accountability_security_checklist/2"
+  - "gdpr_accountability_security_decision_resolvable/1"
+  - "gdpr_accountability_security_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_accountability_security_profile_keys/1"
+  - "gdpr_accountability_security_input_problems/2"
+  - "gdpr_accountability_security_what_if/4"
+  - "met/0"
+  - "not_met/0"
+  - "not_joint_controllers/0"
+  - "arrangement_not_required/0"
+  - "arrangement_in_place/0"
+  - "arrangement_missing/0"
+  - "content_requirements_met/0"
+  - "content_requirements_not_met/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "non_binding_item/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "accountability_demonstrated/0"
+  - "controller_measures_implemented_and_reviewed/0"
+  - "data_protection_policies_implemented/0"
+  - "by_design_measures_implemented/0"
+  - "by_default_only_necessary_data_processed/0"
+  - "security_level_appropriate_to_risk/0"
+  - "authorised_persons_process_only_on_instructions/0"
+  - "controllers_jointly_determine_purposes_and_means/0"
+  - "responsibilities_set_by_union_or_member_state_law/0"
+  - "arrangement_between_controllers_exists/0"
+  - "arrangement_reflects_roles_and_relationships/0"
+  - "essence_of_arrangement_made_available/0"
+  - "by_default_amount_collected_limited_to_necessary/0"
+  - "by_default_extent_of_processing_limited_to_necessary/0"
+  - "by_default_storage_period_limited_to_necessary/0"
+  - "by_default_accessibility_limited_to_necessary/0"
+  - "by_default_not_accessible_to_indefinite_number_without_intervention/0"
+  - "accountability/0"
+  - "controller_measures/0"
+  - "data_protection_policies/0"
+  - "data_protection_by_design/0"
+  - "data_protection_by_default/0"
+  - "security_of_processing/0"
+  - "processing_on_instructions/0"
+  - "accountability_principles/0"
+  - "security_measures/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "gdpr_accountability_security_subject/1"
+  - "gdpr_accountability_security_profile_for/2"
+  - "gdpr_accountability_security_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only the kit (formalize_lib, library(reif)), no
+# shared domain backbone.
+uses: []
+
+scope: "Regulation (EU) 2016/679 (GDPR) Art 5(2), 24(1) and (2), 25(1) and (2), 26(1)
+  and (2), 32(1), (2) and (4): for the caller (controller or processor, as given),
+  whether each of seven accountability and security duties is met, read from one
+  attested outside statement per duty (Art 25(2) also from five optional keys that
+  can only give not_met); whether joint controllers need and have an arrangement
+  (Art 26(1)); whether the arrangement meets its content requirements (Art 26(2));
+  and the fixed lists of non-binding items of Art 5(1)(a)-(f) and Art 32(1)(a)-(d).
+  The order never decides 'appropriate' or 'jointly determine': those judgements are
+  handed to the user (attested statements, the unsure value) or to a lawyer. Out of
+  scope: roles (sibling order on definitions and roles), lawfulness and the other
+  Art 5(1) principles (sibling orders), codes of conduct and certification (Art
+  24(3), 25(3), 32(3), deferred), the data subject's rights against each joint
+  controller (Art 26(3), deferred), liability allocation."
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504 (pinned 2026-11-11): Art 5(1)(a)-(f) and 5(2), Art 24(1) and (2), Art 25(1) and (2), Art 26(1) and (2), Art 32(1)(a)-(d), (2) and (4)"
+
+query_interface:
+  2: "gdpr_accountability_security_status/2"       # eligibility: compliant | review_required | not_compliant | input_problems(_)
+  7: "gdpr_accountability_security_checklist/2"    # justification: one cited item(Duty, Status, cite(Key)) per duty
+  16: "gdpr_accountability_security_what_if/4"     # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_005
+  - 02016R0679-20160504#art_024
+  - 02016R0679-20160504#art_025
+  - 02016R0679-20160504#art_026
+  - 02016R0679-20160504#art_032
+  reason: 'The titles of Articles 5, 24, 25, 26 and 32 carry no obligation: document
+    structure. Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the titles carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: codes_of_conduct_and_certification_as_demonstration
+  units:
+  - 02016R0679-20160504#parag_024.003
+  - 02016R0679-20160504#parag_025.003
+  - 02016R0679-20160504#parag_032.003
+  reason: Art 24(3), 25(3) and 32(3) say adherence to an approved code of conduct
+    (Art 40) or certification mechanism (Art 42) MAY be used as an element to demonstrate
+    compliance. They create no duty and no limb of this order reads them.
+  consequence: 'None for a caller: adherence is not treated as demonstrating anything;
+    the statements of the outside facts carry that.'
+  declaration: not_an_exception
+  debt: true
+- what: data_subject_rights_against_each_joint_controller
+  units:
+  - 02016R0679-20160504#parag_026.003
+  reason: Art 26(3) says that irrespective of the arrangement the data subject may
+    exercise rights against each controller. It states a right that holds whatever
+    the arrangement says and is not a limb of either joint-controller query.
+  consequence: The answers never say that a data subject may or may not exercise a
+    right against a joint controller; the data-subject-rights orders carry that.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; a later change could add a query; the deferral stands for this
+    run.
+- what: security_risk_factors
+  partial: true
+  units:
+  - 02016R0679-20160504#parag_032.002
+  reason: Art 32(2) names the risks to take into account in assessing the appropriate
+    level of security (accidental or unlawful destruction, loss, alteration, unauthorised
+    disclosure or access). It is read only as part of the statement security_level_appropriate_to_risk
+    (reading (4)); the order does not assess risk.
+  consequence: The answers never say what the risk is or whether a measure is adequate
+    to it.
+  declaration: answered_with_caveat
+  debt: true
+  open: 'open-textured by design: the appropriateness statement stays an outside
+    fact.'
+
+excluded_set:
+- what: roles_controller_processor_joint
+  instrument: Regulation (EU) 2016/679 Art 4(7) and (8)
+  cites:
+  - 02016R0679-20160504#art_004
+  reason: Whether the caller is a controller or a processor, and whether another person
+    is a controller, is decided by the sibling order on roles; this order takes the
+    position of the caller as given.
+  consequence: The caller establishes its role first.
+- what: lawfulness_and_other_principles_of_article_5_1
+  instrument: Regulation (EU) 2016/679 Arts 6 to 11 and 89
+  cites:
+  - 02016R0679-20160504#art_006
+  - 02016R0679-20160504#art_009
+  - 02016R0679-20160504#art_089
+  reason: Whether processing is lawful, minimised, accurate or limited in storage
+    is for the sibling orders (Art 6, Art 9, Art 89) or for a lawyer; the principles
+    of Art 5(1) are reported as non-binding items, never applied.
+  consequence: The answers never say whether a principle of Art 5(1) is breached.
+- what: codes_of_conduct_and_certification
+  instrument: Regulation (EU) 2016/679 Arts 40 and 42
+  cites:
+  - 02016R0679-20160504#art_040
+  - 02016R0679-20160504#art_042
+  reason: Approved codes of conduct and certification mechanisms are not modelled;
+    Art 24(3), 25(3) and 32(3) are deferred.
+  consequence: None for a caller.

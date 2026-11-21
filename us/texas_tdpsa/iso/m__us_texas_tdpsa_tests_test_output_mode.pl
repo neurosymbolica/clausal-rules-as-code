@@ -1,0 +1,108 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__us_texas_tdpsa_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__us_texas_tdpsa_texas_tdpsa, [decide_texas_tdpsa/2, texas_tdpsa_status/2, applicability_status/4, response_deadline/4, extended_response_deadline/4, appeal_response_deadline/4, cure_period_last_day/4, attorney_general_action_status/5, civil_penalty_maximum/3]).
+:- use_module(m__us_texas_tdpsa_fixtures, [texas_tdpsa_profile_for/2]).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    findall(Status, texas_tdpsa_status(Profile, Status), Statuses),
+    Statuses == [in_scope].
+test(the_verdict_carries_a_citation) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    decide_texas_tdpsa(Profile, texas_tdpsa_verdict(in_scope, [_FirstCitation|_OtherCitations])).
+test(the_in_scope_citations_are_the_eleven_of_section_541_002) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    findall(Citations, applicability_status(Profile, _, _, Citations), [Citations]),
+    clausal_msort(Citations, Sorted),
+    Sorted == [cite(us_tx_bc_541_002_a), cite(us_tx_bc_541_002_a_1), cite(us_tx_bc_541_002_a_2), cite(us_tx_bc_541_002_a_3), cite(us_tx_bc_541_002_b), cite(us_tx_bc_541_002_b_1), cite(us_tx_bc_541_002_b_2), cite(us_tx_bc_541_002_b_3), cite(us_tx_bc_541_002_b_4), cite(us_tx_bc_541_002_b_5), cite(us_tx_bc_541_002_b_6)].
+test(small_business_basis_shown_even_with_another_exclusion) :-
+    Attested = attested(true, attestation(host_user, host_time, size_review, none)),
+    findall(Result - Basis, applicability_status([attribute(entity_category, financial_institution), attribute(processes_or_sells_personal_data, false), attribute(small_business_as_defined_by_sba, Attested)], Result, Basis, _), Answers),
+    Answers == [out_of_scope - [outside_fact(small_business_as_defined_by_sba, Attested)]].
+test(exclusion_decides_whatever_is_absent) :-
+    findall(Result - Basis - Citations, applicability_status([attribute(conducts_business_in_texas_or_serves_texas_residents, false)], Result, Basis, Citations), Answers),
+    Answers = [out_of_scope - [] - [_|_]].
+test(missing_key_named_before_the_absent_referral) :-
+    findall(Result, applicability_status([attribute(entity_category, none_of_the_excluded_categories), attribute(conducts_business_in_texas_or_serves_texas_residents, true)], Result, _, _), Answers),
+    Answers == [indeterminate([processes_or_sells_personal_data])].
+test(absent_referral_before_an_unsure_judgement) :-
+    findall(Result, applicability_status([attribute(entity_category, none_of_the_excluded_categories), attribute(processes_or_sells_personal_data, true), attribute(conducts_business_in_texas_or_serves_texas_residents, unsure)], Result, _, _), Answers),
+    Answers = [needs_legal_review(cross_reference_unresolved(_, _), _)].
+test(response_deadline_crosses_into_february) :-
+    findall(Result - Citations, response_deadline([], date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [date(2026, 2, 15) - [cite(us_tx_bc_541_052_b), cite(us_tx_bc_541_052_c)]].
+test(response_deadline_lands_on_a_leap_day) :-
+    findall(Result, response_deadline([], date(2024, 1, 15), Result, _), Answers),
+    Answers == [date(2024, 2, 29)].
+test(response_deadline_without_a_leap_day) :-
+    findall(Result, response_deadline([], date(2025, 1, 15), Result, _), Answers),
+    Answers == [date(2025, 3, 1)].
+test(response_deadline_crosses_the_year_end) :-
+    findall(Result, response_deadline([], date(2026, 12, 1), Result, _), Answers),
+    Answers == [date(2027, 1, 15)].
+test(extended_deadline_is_ninety_days) :-
+    texas_tdpsa_profile_for(extension_granted, Profile),
+    findall(Result - Citations, extended_response_deadline(Profile, date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [date(2026, 4, 1) - [cite(us_tx_bc_541_052_b)]].
+test(extension_with_empty_profile_names_necessity_first) :-
+    findall(Result, extended_response_deadline([], date(2026, 1, 1), Result, _), Answers),
+    Answers == [indeterminate([extension_reasonably_necessary])].
+test(appeal_deadline_is_sixty_days) :-
+    findall(Result - Citations, appeal_response_deadline([], date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [date(2026, 3, 2) - [cite(us_tx_bc_541_053_c)]].
+test(cure_period_last_day_is_thirty_days) :-
+    findall(Result - Citations, cure_period_last_day([], date(2026, 3, 1), Result, Citations), Answers),
+    Answers == [date(2026, 3, 31) - [cite(us_tx_bc_541_154), cite(us_tx_bc_541_154_1)]].
+test(reference_on_the_notice_day_is_running) :-
+    findall(Result, attorney_general_action_status([], date(2026, 3, 1), date(2026, 3, 1), Result, _), Answers),
+    Answers == [cure_period_running].
+test(reference_on_the_thirtieth_day_is_running) :-
+    texas_tdpsa_profile_for(cure_not_achieved, Profile),
+    findall(Result - Citations, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 3, 31), Result, Citations), Answers),
+    Answers == [cure_period_running - [cite(us_tx_bc_541_154)]].
+test(reference_on_the_thirty_first_day_reads_the_keys) :-
+    texas_tdpsa_profile_for(cure_not_achieved, Profile),
+    findall(Result - Citations, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), Result, Citations), Answers),
+    Answers = [action_may_be_brought - Citations],
+    length(Citations, 8).
+test(missing_statement_named_after_a_true_cure) :-
+    findall(Result, attorney_general_action_status([attribute(cured_within_cure_period, true)], date(2026, 3, 1), date(2026, 4, 1), Result, _), Answers),
+    Answers == [indeterminate([written_statement_provided])].
+test(missing_breach_named_last) :-
+    findall(Result, attorney_general_action_status([attribute(cured_within_cure_period, true), attribute(written_statement_provided, true)], date(2026, 3, 1), date(2026, 4, 1), Result, _), Answers),
+    Answers == [indeterminate([written_statement_breached])].
+test(false_statement_decides_before_an_absent_cure) :-
+    findall(Result, attorney_general_action_status([attribute(written_statement_provided, false)], date(2026, 3, 1), date(2026, 4, 1), Result, _), Answers),
+    Answers == [action_may_be_brought].
+test(cured_violation_cites_seven_provisions) :-
+    texas_tdpsa_profile_for(cure_completed, Profile),
+    findall(Result - Citations, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), Result, Citations), Answers),
+    Answers = [no_action_for_cured_violation - Citations],
+    length(Citations, 7).
+test(penalty_one_violation_is_7500) :-
+    findall(Result, civil_penalty_maximum([attribute(violation_after_cure_period_or_statement_breach, true), attribute(violation_count, 1)], Result, _), Answers),
+    Answers == [7500].
+test(penalty_zero_violations_is_zero) :-
+    texas_tdpsa_profile_for(penalty_zero_violations, Profile),
+    findall(Result - Citations, civil_penalty_maximum(Profile, Result, Citations), Answers),
+    Answers == [0 - [cite(us_tx_bc_541_155_a)]].
+test(penalty_no_ground_ignores_the_count) :-
+    findall(Result, civil_penalty_maximum([attribute(violation_after_cure_period_or_statement_breach, false)], Result, _), Answers),
+    Answers == [no_civil_penalty].
+test(penalty_missing_ground_hides_the_count) :-
+    findall(Result - Citations, civil_penalty_maximum([attribute(violation_count, 2)], Result, Citations), Answers),
+    Answers == [indeterminate([violation_after_cure_period_or_statement_breach]) - []].
+
+cp_test_names([the_baseline_profile_yields_exactly_one_status, the_verdict_carries_a_citation, the_in_scope_citations_are_the_eleven_of_section_541_002, small_business_basis_shown_even_with_another_exclusion, exclusion_decides_whatever_is_absent, missing_key_named_before_the_absent_referral, absent_referral_before_an_unsure_judgement, response_deadline_crosses_into_february, response_deadline_lands_on_a_leap_day, response_deadline_without_a_leap_day, response_deadline_crosses_the_year_end, extended_deadline_is_ninety_days, extension_with_empty_profile_names_necessity_first, appeal_deadline_is_sixty_days, cure_period_last_day_is_thirty_days, reference_on_the_notice_day_is_running, reference_on_the_thirtieth_day_is_running, reference_on_the_thirty_first_day_reads_the_keys, missing_statement_named_after_a_true_cure, missing_breach_named_last, false_statement_decides_before_an_absent_cure, cured_violation_cites_seven_provisions, penalty_one_violation_is_7500, penalty_zero_violations_is_zero, penalty_no_ground_ignores_the_count, penalty_missing_ground_hides_the_count]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

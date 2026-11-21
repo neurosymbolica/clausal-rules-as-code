@@ -1,0 +1,170 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_resilience_testing_programme
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_resilience_testing_programme"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The root atoms the scorer reads as package-root
+# attributes are declared as name/0 facts in queries.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_resilience_testing_programme.clausal --
+  - "resilience_testing_duties_required/3"
+  - "resilience_testing_duties_complete/3"
+  - "resilience_testing_duties_outstanding/3"
+  - "decide_dora_resilience_testing_programme/2"
+  - "dora_resilience_testing_programme_status/2"
+  - "dora_resilience_testing_programme_checklist/2"
+  - "dora_resilience_testing_programme_decision_resolvable/1"
+  - "dora_resilience_testing_programme_status_values/1"
+  # -- queries.clausal --
+  - "dora_resilience_testing_programme_profile_keys/1"
+  - "dora_resilience_testing_programme_input_problems/2"
+  - "dora_resilience_testing_programme_what_if/4"
+  - "dora_resilience_testing_programme_compliance_check/3"
+  - "complete/0"
+  - "incomplete/0"
+  - "none_outstanding/0"
+  - "required/1"
+  - "outstanding/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "financial_entity_is_microenterprise/0"
+  - "dora_entity_type/0"
+  - "tests_undertaken_by_internal_tester/0"
+  - "resilience_testing_programme_established_maintained_and_reviewed/0"
+  - "programme_includes_range_of_assessments_and_tests/0"
+  - "programme_conducted_on_risk_based_approach/0"
+  - "tests_undertaken_by_independent_parties/0"
+  - "internal_tester_resourced_and_conflicts_of_interest_avoided/0"
+  - "procedures_to_prioritise_classify_and_remedy_issues_established/0"
+  - "internal_validation_methodologies_established/0"
+  - "critical_ict_systems_tested_at_least_yearly/0"
+  - "programme_provides_for_appropriate_tests/0"
+  - "vulnerability_assessments_performed_before_deployment/0"
+  - "microenterprise_tests_risk_based_and_planned/0"
+  - "resilience_testing_programme/0"
+  - "range_of_assessments_and_tests/0"
+  - "risk_based_testing_approach/0"
+  - "independent_testers/0"
+  - "internal_tester_resources_and_conflicts_of_interest/0"
+  - "issue_prioritisation_classification_and_remedy/0"
+  - "internal_validation_methodologies/0"
+  - "yearly_testing_of_critical_ict_systems/0"
+  - "execution_of_appropriate_tests/0"
+  - "vulnerability_assessments_before_deployment/0"
+  - "microenterprise_risk_based_planned_testing/0"
+  - "central_securities_depository/0"
+  - "central_counterparty/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "dora_resilience_testing_programme_subject/1"
+  - "dora_resilience_testing_programme_profile_for/2"
+  - "dora_resilience_testing_programme_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports none (only the kit's formalize_lib and
+# query_combinators, which are not domain packages).
+uses: []
+
+scope: "For ONE financial entity presupposed to be within the scope of Regulation (EU) 2022/2554 (DORA), which of the digital operational resilience testing duties of Article 24(1) to (6) and Article 25(1) to (3) apply to it (resilience_testing_duties_required), whether it has performed all of them as the caller judges it (resilience_testing_duties_complete), and which of them are outstanding (resilience_testing_duties_outstanding). A microenterprise has the one duty of Art 25(3); any other entity has the eight duties of Art 24(1) to (6) and Art 25(1), the second duty of Art 24(4) when an internal tester is used, and the duty of Art 25(2) when it is a central securities depository or central counterparty. Each duty is a caller judgement (true, false, unsure); an unsure judgement that decides is referred to a lawyer. Out of scope: whether the entity is a financial entity in scope (Articles 2 and 3), proportionality and the simplified framework (Articles 4 and 16), the ICT risk-management framework (Article 6) and detection (Article 10), threat-led penetration testing (Articles 26 and 27), and the date of application (Article 64); each belongs to a sibling order or is presupposed."
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (Digital Operational Resilience Act, DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554, original OJ text), Article 24(1) to (6) and Article 25(1) to (3)"
+
+query_interface:
+  2: "dora_resilience_testing_programme_status/2"            # eligibility/status verdict: complete | incomplete | status compound
+  7: "dora_resilience_testing_programme_checklist/2"         # justification: one item per duty with cite(...) provenance
+  13: "dora_resilience_testing_programme_compliance_check/3" # compliance check: may the entity omit a duty
+  16: "dora_resilience_testing_programme_what_if/4"          # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_024
+  - 32022R2554#art_025
+  reason: The headings of Articles 24 and 25 carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: scope_and_entity_types
+  instrument: Regulation (EU) 2022/2554 Articles 2 and 3
+  cites:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: Not pinned in this domain. Whether the entity is a financial entity within
+    the scope of the Regulation is presupposed (reading (1)); the entity type atoms
+    are those of the order on scope and entity types, which formalises Article 2 (readings
+    (6), (14)); the microenterprise of Article 3(60) is the caller's statement (readings
+    (3), (5)).
+  consequence: The answers presuppose a financial entity within scope (open question
+    (Q1)).
+- what: proportionality_and_simplified_framework
+  instrument: Regulation (EU) 2022/2554 Articles 4 and 16
+  cites:
+  - 32022R2554#art_004
+  - 32022R2554#art_016
+  reason: Not pinned in this domain. The criteria of Article 4(2) are read as part
+    of the caller's judgement (reading (12)); Article 16(1) is read as not reaching
+    Articles 24 and 25 (reading (2)). Both articles are formalised in the order on
+    proportionality and the simplified framework.
+  consequence: No duty is removed for size other than the microenterprise rule, and
+    no answer turns on Article 16(1) (open questions (Q2), (Q12)).
+- what: ict_risk_management_framework_and_detection
+  instrument: Regulation (EU) 2022/2554 Articles 6 and 10
+  cites:
+  - 32022R2554#art_006
+  - 32022R2554#art_010
+  reason: Not pinned in this domain. Art 24(1) makes the programme an integral part
+    of the framework of Article 6, and Art 10(1) has detection mechanisms tested in
+    accordance with Article 25; both are formalised in their own orders and are not
+    read here (reading (19)).
+  consequence: complete and none_outstanding say nothing about the framework or the
+    detection mechanisms (open question (Q19)).
+- what: threat_led_penetration_testing
+  instrument: Regulation (EU) 2022/2554 Articles 26 and 27, and Commission Delegated
+    Regulation (EU) 2025/1190 (threat-led penetration testing)
+  cites:
+  - 32022R2554#art_026
+  - 32022R2554#art_027
+  - 32025R1190#art_001
+  reason: Not pinned in this domain. Art 24(2) names Article 26; advanced testing
+    based on threat-led penetration testing is the subject of its own order (reading
+    (11)).
+  consequence: No answer of this order says anything about threat-led penetration
+    testing (open question (Q11)).
+- what: date_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64
+  cites:
+  - 32022R2554#art_064
+  reason: Not pinned in this domain. The Regulation applies from 17 January 2025;
+    the order answers on the Regulation as it applies and reads no date (reading (16)).
+  consequence: No answer depends on a date (open question (Q16)).

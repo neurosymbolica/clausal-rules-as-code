@@ -6,7 +6,7 @@
 :- use_module(library(dif)).
 :- use_module(m__eu_data_protection_gdpr_cooperation_with_the_supervisory_authority_kernel, [gdpr_cooperation_with_the_supervisory_authority_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_cooperation_with_the_supervisory_authority_citations, [citation/2, implements/1]).
-:- use_module(m__eu_data_protection_gdpr_cooperation_with_the_supervisory_authority_gdpr_cooperation_with_the_supervisory_authority, [attestation/4, attested/2, cooperation_duty/4, cooperation_met/0, cooperation_not_met/0, cooperation_not_required/0, cross_reference_unresolved/2, decide_gdpr_cooperation_with_the_supervisory_authority/2, document/2, duplicate_key/1, gdpr_cooperation_with_the_supervisory_authority_checklist/2, gdpr_cooperation_with_the_supervisory_authority_cooperation_duty/4, gdpr_cooperation_with_the_supervisory_authority_decision_resolvable/1, gdpr_cooperation_with_the_supervisory_authority_status/2, gdpr_cooperation_with_the_supervisory_authority_status_values/1, indeterminate/1, input_problems/1, inputs_relied_on/1, needs_legal_review/2, open_textured/2, outside_fact/2, provenance/2, resolution/2, unknown_key/1, url/2, wrong_type/1]).
+:- use_module(m__eu_data_protection_gdpr_cooperation_with_the_supervisory_authority_gdpr_cooperation_with_the_supervisory_authority, [attested/2, cooperation_duty/4, cooperation_met/0, cooperation_not_met/0, cooperation_not_required/0, cross_reference_unresolved/2, decide_gdpr_cooperation_with_the_supervisory_authority/2, gdpr_cooperation_with_the_supervisory_authority_checklist/2, gdpr_cooperation_with_the_supervisory_authority_decision_resolvable/1, gdpr_cooperation_with_the_supervisory_authority_status/2, gdpr_cooperation_with_the_supervisory_authority_status_values/1, indeterminate/1, input_problems/1, inputs_relied_on/1, needs_legal_review/2, open_textured/2, outside_fact/2, resolution/2]).
 :- use_module(m__eu_data_protection_gdpr_cooperation_with_the_supervisory_authority_queries, [acts_as_controller/0, acts_as_processor/0, acts_as_representative_of_controller_or_processor/0, authority_request_made/0, cooperation_given/0, gdpr_cooperation_with_the_supervisory_authority_profile_keys/1, gdpr_cooperation_with_the_supervisory_authority_what_if/4, request_is_in_performance_of_authority_tasks/0, unsure/0]).
 :- use_module(m__eu_data_protection_gdpr_cooperation_with_the_supervisory_authority_fixtures, [gdpr_cooperation_with_the_supervisory_authority_assess/2, gdpr_cooperation_with_the_supervisory_authority_profile_for/2, gdpr_cooperation_with_the_supervisory_authority_subject/1]).
 
@@ -14,11 +14,17 @@ root_export(absent).
 root_export(acts_as_controller).
 root_export(acts_as_processor).
 root_export(acts_as_representative_of_controller_or_processor).
+root_export(attestation).
 root_export(authority_request_made).
 root_export(cooperation_given).
 root_export(cooperation_met).
 root_export(cooperation_not_met).
 root_export(cooperation_not_required).
+root_export(document).
+root_export(duplicate_key).
 root_export(not_attempted).
 root_export(request_is_in_performance_of_authority_tasks).
+root_export(unknown_key).
 root_export(unsure).
+root_export(url).
+root_export(wrong_type).

@@ -1,0 +1,129 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a one-edit near-miss whose
+% answer must NOT be the positive one (`test(Name, fail) :- Goal.`), and a
+% positive test of the near-miss's own answer, so a misspelt atom shows up
+% as a failing positive test rather than a vacuous pass.
+% Run: python -m clausal.testing eu/dora_ict_risk_response_and_recovery/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_ict_risk_response_and_recovery/dora_ict_risk_response_and_recovery, [
+    ict_risk_response_and_recovery_duties_required/3,
+    ict_risk_response_and_recovery_duties_complete/3,
+    ict_risk_response_and_recovery_duties_outstanding/3,
+    dora_ict_risk_response_and_recovery_status/2,
+    dora_ict_risk_response_and_recovery_status_values/1
+]).
+:- use_module(eu/dora_ict_risk_response_and_recovery/kernel, [dora_ict_risk_response_and_recovery_input_problems/2]).
+:- use_module(eu/dora_ict_risk_response_and_recovery/fixtures, [dora_ict_risk_response_and_recovery_profile_for/2]).
+
+complete_answer(Subject, Result) :-
+    dora_ict_risk_response_and_recovery_profile_for(Subject, Profile),
+    ict_risk_response_and_recovery_duties_complete(Profile, Result, _).
+
+test(the_status_table_names_each_final_atom) :-
+    dora_ict_risk_response_and_recovery_status_values(StatusValues),
+    member(complete, StatusValues),
+    member(incomplete, StatusValues),
+    member(simplified_framework_entity, StatusValues).
+
+% ---- the gate true ----------------------------------------------------
+test(gate_true_is_simplified_framework_entity) :-
+    complete_answer(article_16_1_entity, simplified_framework_entity).
+test(gate_false_is_not_simplified_framework_entity, fail) :-
+    complete_answer(large_credit_institution_all_performed, simplified_framework_entity).
+
+% ---- the gate absent --------------------------------------------------
+test(gate_absent_is_asked_first) :-
+    complete_answer(article_16_1_status_not_stated, indeterminate([financial_entity_is_article_16_1_entity])).
+test(gate_stated_is_not_asked, fail) :-
+    complete_answer(large_credit_institution_all_performed, indeterminate([financial_entity_is_article_16_1_entity])).
+
+% ---- a failing duty (S1) ----------------------------------------------
+test(a_failing_policy_is_incomplete) :-
+    complete_answer(large_credit_institution_policy_not_performed, incomplete).
+test(a_performed_policy_is_not_incomplete, fail) :-
+    complete_answer(large_credit_institution_all_performed, incomplete).
+test(a_performed_policy_is_complete) :-
+    complete_answer(large_credit_institution_all_performed, complete).
+
+% ---- the microenterprise exception of Art 11(3) -----------------------
+test(a_microenterprise_needs_no_audit_review) :-
+    complete_answer(microenterprise_without_audit_review, complete).
+test(a_large_entity_without_audit_review_is_not_complete, fail) :-
+    complete_answer(large_credit_institution_without_audit_review, complete).
+test(a_large_entity_without_audit_review_is_incomplete) :-
+    complete_answer(large_credit_institution_without_audit_review, incomplete).
+
+% ---- the microenterprise-only duty of Art 12(4), second sentence ------
+test(a_microenterprise_must_assess_the_need_for_redundancy) :-
+    complete_answer(microenterprise_need_for_redundancy_not_assessed, incomplete).
+test(a_microenterprise_that_assessed_is_not_incomplete, fail) :-
+    complete_answer(microenterprise_all_performed, incomplete).
+
+% ---- the entity type of Art 12(5) -------------------------------------
+test(a_central_securities_depository_needs_a_secondary_site) :-
+    complete_answer(central_securities_depository_without_secondary_site, incomplete).
+test(a_credit_institution_needs_no_secondary_site, fail) :-
+    complete_answer(credit_institution_without_secondary_site, incomplete).
+test(a_credit_institution_without_secondary_site_is_complete) :-
+    complete_answer(credit_institution_without_secondary_site, complete).
+
+% ---- the trigger of Art 11(8) ------------------------------------------
+test(activated_plans_need_records) :-
+    complete_answer(plans_activated_records_not_kept, incomplete).
+test(plans_not_activated_need_no_records, fail) :-
+    complete_answer(plans_not_activated_records_not_kept, incomplete).
+test(plans_not_activated_without_records_is_complete) :-
+    complete_answer(plans_not_activated_records_not_kept, complete).
+
+% ---- the size split (S2) ----------------------------------------------
+test(each_size_failing_is_incomplete) :-
+    complete_answer(size_not_stated_both_redundancy_duties_failing, incomplete).
+test(one_size_failing_is_not_incomplete, fail) :-
+    complete_answer(size_not_stated_one_redundancy_duty_failing, incomplete).
+test(one_size_failing_asks_the_size) :-
+    complete_answer(size_not_stated_one_redundancy_duty_failing, indeterminate([financial_entity_is_microenterprise])).
+
+% ---- the referral (S5) -------------------------------------------------
+test(an_unsure_recovery_is_referred) :-
+    complete_answer(central_counterparty_recovery_unsure, needs_legal_review(open_textured(recovery_plans_enable_recovery_of_all_transactions, cite(eu_reg_2022_2554_art_12_3)), _)).
+test(a_performed_recovery_is_not_referred, fail) :-
+    complete_answer(central_counterparty_recovery_performed, needs_legal_review(_, _)).
+test(a_performed_recovery_is_complete) :-
+    complete_answer(central_counterparty_recovery_performed, complete).
+
+% ---- the required list and the Art 11(10) request ----------------------
+test(a_microenterprise_is_not_asked_the_cost_request) :-
+    dora_ict_risk_response_and_recovery_profile_for(microenterprise_cost_request_not_stated, Profile),
+    ict_risk_response_and_recovery_duties_required(Profile, required(_), _).
+test(a_large_entity_is_asked_the_cost_request, fail) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_entity_cost_request_not_stated, Profile),
+    ict_risk_response_and_recovery_duties_required(Profile, required(_), _).
+
+% ---- the outstanding list ---------------------------------------------
+test(a_failing_policy_is_outstanding) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_policy_not_performed, Profile),
+    ict_risk_response_and_recovery_duties_outstanding(Profile, outstanding([ict_business_continuity_policy]), [cite(eu_reg_2022_2554_art_11_1)]).
+test(a_performed_policy_is_not_outstanding, fail) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    ict_risk_response_and_recovery_duties_outstanding(Profile, outstanding(_), _).
+test(a_performed_policy_is_none_outstanding) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    ict_risk_response_and_recovery_duties_outstanding(Profile, none_outstanding, _).
+
+% ---- input problems ----------------------------------------------------
+test(an_unknown_key_is_a_problem) :-
+    dora_ict_risk_response_and_recovery_profile_for(unknown_key_profile, Profile),
+    dora_ict_risk_response_and_recovery_input_problems(Profile, [unknown_key(no_such_key)]).
+test(a_clean_profile_has_no_problem, fail) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    dora_ict_risk_response_and_recovery_input_problems(Profile, [_|_]).
+test(a_profile_with_a_problem_gets_no_status_atom, fail) :-
+    dora_ict_risk_response_and_recovery_profile_for(unknown_key_profile, Profile),
+    dora_ict_risk_response_and_recovery_status_values(StatusValues),
+    member(Status, StatusValues),
+    dora_ict_risk_response_and_recovery_status(Profile, Status).
+
+:- end_module(test_negative_controls).

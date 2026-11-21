@@ -1,0 +1,147 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_high_risk_requirements_citations, [citation/2, implements/1, citation_vocabulary/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+implements(Key) :-
+    citation(Key, _).
+
+citation(eu_reg_2024_1689_art_3_8, [label - 'Regulation (EU) 2024/1689 Art 3, point (8), definition of operator', ref - '02024R1689-20260727#point_003_8']).
+citation(eu_reg_2024_1689_art_3_9, [label - 'Regulation (EU) 2024/1689 Art 3, point (9), definition of placing on the market', ref - '02024R1689-20260727#point_003_9']).
+citation(eu_reg_2024_1689_art_3_11, [label - 'Regulation (EU) 2024/1689 Art 3, point (11), definition of putting into service', ref - '02024R1689-20260727#point_003_11']).
+citation(eu_reg_2024_1689_art_3_14a, [label - 'Regulation (EU) 2024/1689 Art 3, point (14a), definition of micro, small and medium-sized enterprise (SME)', ref - '02024R1689-20260727#point_003_14a']).
+citation(eu_reg_2024_1689_art_3_14b, [label - 'Regulation (EU) 2024/1689 Art 3, point (14b), definition of small mid-cap enterprise (SMC)', ref - '02024R1689-20260727#point_003_14b']).
+citation(eu_reg_2024_1689_art_8, [label - 'Regulation (EU) 2024/1689 Art 8, title', ref - '02024R1689-20260727#art_008', verbatim - 'Compliance with the requirements']).
+citation(eu_reg_2024_1689_art_8_1, [label - 'Regulation (EU) 2024/1689 Art 8(1), first sentence', ref - '02024R1689-20260727#parag_008.001', verbatim - 'High-risk AI systems shall comply with the requirements laid down in this Section']).
+citation(eu_reg_2024_1689_art_9_1, [label - 'Regulation (EU) 2024/1689 Art 9(1)', ref - '02024R1689-20260727#parag_009.001', verbatim - 'A risk management system shall be established, implemented, documented and maintained in relation to high-risk AI systems.']).
+citation(eu_reg_2024_1689_art_10_1, [label - 'Regulation (EU) 2024/1689 Art 10(1)', ref - '02024R1689-20260727#parag_010.001', verbatim - 'High-risk AI systems which make use of techniques involving the training of AI models with data shall be developed on the basis of training, validation and testing data sets that meet the quality criteria referred to in paragraphs 2, 3 and 4 of this Article and in Article 4a(1) whenever such data sets are used.']).
+citation(eu_reg_2024_1689_art_10_6, [label - 'Regulation (EU) 2024/1689 Art 10(6)', ref - '02024R1689-20260727#parag_010.006', verbatim - 'For the development of high-risk AI systems not using techniques involving the training of AI models, paragraphs 2, 3 and 4 of this Article and Article 4a(1) shall apply only to the testing data sets.']).
+citation(eu_reg_2024_1689_art_11_1, [label - 'Regulation (EU) 2024/1689 Art 11(1), third and fourth sentences (Annex IV minimum; simplified manner for SMEs and SMCs)', ref - '02024R1689-20260727#parag_011.001', verbatim - 'It shall contain, at a minimum, the elements set out in Annex IV. SMEs, including start-ups, and SMCs, may provide the elements of the technical documentation specified in Annex IV in a simplified manner.']).
+citation(eu_reg_2024_1689_art_11_2, [label - 'Regulation (EU) 2024/1689 Art 11(2)', ref - '02024R1689-20260727#parag_011.002', verbatim - 'Where a high-risk AI system related to a product covered by the Union harmonisation legislation listed in Section A of Annex I is placed on the market or put into service, a single set of technical documentation shall be drawn up containing all the information set out in paragraph 1, as well as the information required under those legal acts.']).
+citation(eu_reg_2024_1689_art_12_1, [label - 'Regulation (EU) 2024/1689 Art 12(1)', ref - '02024R1689-20260727#parag_012.001', verbatim - 'High-risk AI systems shall technically allow for the automatic recording of events (logs) over the lifetime of the system.']).
+citation(eu_reg_2024_1689_art_12_3, [label - 'Regulation (EU) 2024/1689 Art 12(3), lead words', ref - '02024R1689-20260727#parag_012.003', verbatim - 'For high-risk AI systems referred to in point 1 (a), of Annex III, the logging capabilities shall provide, at a minimum:']).
+citation(eu_reg_2024_1689_art_12_3_a, [label - 'Regulation (EU) 2024/1689 Art 12(3), point (a)', ref - '02024R1689-20260727#point_012.003_a', verbatim - 'recording of the period of each use of the system (start date and time and end date and time of each use)']).
+citation(eu_reg_2024_1689_art_12_3_b, [label - 'Regulation (EU) 2024/1689 Art 12(3), point (b)', ref - '02024R1689-20260727#point_012.003_b', verbatim - 'the reference database against which input data has been checked by the system']).
+citation(eu_reg_2024_1689_art_12_3_c, [label - 'Regulation (EU) 2024/1689 Art 12(3), point (c)', ref - '02024R1689-20260727#point_012.003_c', verbatim - 'the input data for which the search has led to a match']).
+citation(eu_reg_2024_1689_art_12_3_d, [label - 'Regulation (EU) 2024/1689 Art 12(3), point (d)', ref - '02024R1689-20260727#point_012.003_d', verbatim - 'the identification of the natural persons involved in the verification of the results, as referred to in Article 14(5)']).
+citation(eu_reg_2024_1689_art_13_1, [label - 'Regulation (EU) 2024/1689 Art 13(1)', ref - '02024R1689-20260727#parag_013.001', verbatim - 'High-risk AI systems shall be designed and developed in such a way as to ensure that their operation is sufficiently transparent to enable deployers to interpret a system']).
+citation(eu_reg_2024_1689_art_13_2, [label - 'Regulation (EU) 2024/1689 Art 13(2)', ref - '02024R1689-20260727#parag_013.002', verbatim - 'High-risk AI systems shall be accompanied by instructions for use in an appropriate digital format or otherwise']).
+citation(eu_reg_2024_1689_art_13_3, [label - 'Regulation (EU) 2024/1689 Art 13(3), lead words', ref - '02024R1689-20260727#parag_013.003', verbatim - 'The instructions for use shall contain at least the following information:']).
+citation(eu_reg_2024_1689_art_13_3_a, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (a)', ref - '02024R1689-20260727#point_013.003_a', verbatim - 'the identity and the contact details of the provider and, where applicable, of its authorised representative']).
+citation(eu_reg_2024_1689_art_13_3_b_i, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (b)(i)', ref - '02024R1689-20260727#point_013.003_b_i', verbatim - 'its intended purpose']).
+citation(eu_reg_2024_1689_art_13_3_b_ii, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (b)(ii)', ref - '02024R1689-20260727#point_013.003_b_ii', verbatim - 'the level of accuracy, including its metrics, robustness and cybersecurity referred to in Article 15 against which the high-risk AI system has been tested and validated and which can be expected']).
+citation(eu_reg_2024_1689_art_13_3_b_iii, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (b)(iii)', ref - '02024R1689-20260727#point_013.003_b_iii', verbatim - 'any known or foreseeable circumstance, related to the use of the high-risk AI system in accordance with its intended purpose or under conditions of reasonably foreseeable misuse, which may lead to risks to the health and safety or fundamental rights referred to in Article 9(2)']).
+citation(eu_reg_2024_1689_art_13_3_b_iv, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (b)(iv)', ref - '02024R1689-20260727#point_013.003_b_iv', verbatim - 'where applicable, the technical capabilities and characteristics of the high-risk AI system to provide information that is relevant to explain its output']).
+citation(eu_reg_2024_1689_art_13_3_b_v, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (b)(v)', ref - '02024R1689-20260727#point_013.003_b_v', verbatim - 'when appropriate, its performance regarding specific persons or groups of persons on which the system is intended to be used']).
+citation(eu_reg_2024_1689_art_13_3_b_vi, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (b)(vi)', ref - '02024R1689-20260727#point_013.003_b_vi', verbatim - 'when appropriate, specifications for the input data, or any other relevant information in terms of the training, validation and testing data sets used, taking into account the intended purpose of the high-risk AI system']).
+citation(eu_reg_2024_1689_art_13_3_b_vii, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (b)(vii)', ref - '02024R1689-20260727#point_013.003_b_vii', verbatim - 'where applicable, information to enable deployers to interpret the output of the high-risk AI system and use it appropriately']).
+citation(eu_reg_2024_1689_art_13_3_c, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (c)', ref - '02024R1689-20260727#point_013.003_c', verbatim - 'the changes to the high-risk AI system and its performance which have been pre-determined by the provider at the moment of the initial conformity assessment, if any']).
+citation(eu_reg_2024_1689_art_13_3_d, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (d)', ref - '02024R1689-20260727#point_013.003_d', verbatim - 'the human oversight measures referred to in Article 14, including the technical measures put in place to facilitate the interpretation of the outputs of the high-risk AI systems by the deployers']).
+citation(eu_reg_2024_1689_art_13_3_e, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (e)', ref - '02024R1689-20260727#point_013.003_e', verbatim - 'the computational and hardware resources needed, the expected lifetime of the high-risk AI system and any necessary maintenance and care measures']).
+citation(eu_reg_2024_1689_art_13_3_f, [label - 'Regulation (EU) 2024/1689 Art 13(3), point (f)', ref - '02024R1689-20260727#point_013.003_f', verbatim - 'where relevant, a description of the mechanisms included within the high-risk AI system that allows deployers to properly collect, store and interpret the logs in accordance with Article 12.']).
+citation(eu_reg_2024_1689_art_14_1, [label - 'Regulation (EU) 2024/1689 Art 14(1)', ref - '02024R1689-20260727#parag_014.001', verbatim - 'High-risk AI systems shall be designed and developed in such a way, including with appropriate human-machine interface tools, that they can be effectively overseen by natural persons during the period in which they are in use.']).
+citation(eu_reg_2024_1689_art_14_5, [label - 'Regulation (EU) 2024/1689 Art 14(5), first and second sentences (separate verification by at least two natural persons, and its exception)', ref - '02024R1689-20260727#parag_014.005', verbatim - 'The requirement for a separate verification by at least two natural persons shall not apply to high-risk AI systems used for the purposes of law enforcement, migration, border control or asylum, where Union or national law considers the application of this requirement to be disproportionate.']).
+citation(eu_reg_2024_1689_art_15_1, [label - 'Regulation (EU) 2024/1689 Art 15(1)', ref - '02024R1689-20260727#parag_015.001', verbatim - 'High-risk AI systems shall be designed and developed in such a way that they achieve an appropriate level of accuracy, robustness, and cybersecurity']).
+citation(eu_reg_2024_1689_art_15_3, [label - 'Regulation (EU) 2024/1689 Art 15(3)', ref - '02024R1689-20260727#parag_015.003', verbatim - 'The levels of accuracy and the relevant accuracy metrics of high-risk AI systems shall be declared in the accompanying instructions of use.']).
+citation(eu_reg_2024_1689_annex_iv, [label - 'Regulation (EU) 2024/1689 Annex IV, lead words', ref - '02024R1689-20260727#division_annex_iv', verbatim - 'The technical documentation referred to in Article 11(1) shall contain at least the following information, as applicable to the relevant AI system']).
+citation(eu_reg_2024_1689_annex_iv_1_a, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(a)', ref - '02024R1689-20260727#point_annex_iv_1_a', verbatim - 'its intended purpose, the name of the provider and the version of the system reflecting its relation to previous versions']).
+citation(eu_reg_2024_1689_annex_iv_1_b, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(b)', ref - '02024R1689-20260727#point_annex_iv_1_b', verbatim - 'how the AI system interacts with, or can be used to interact with, hardware or software, including with other AI systems, that are not part of the AI system itself, where applicable']).
+citation(eu_reg_2024_1689_annex_iv_1_c, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(c)', ref - '02024R1689-20260727#point_annex_iv_1_c', verbatim - 'the versions of relevant software or firmware, and any requirements related to version updates']).
+citation(eu_reg_2024_1689_annex_iv_1_d, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(d)', ref - '02024R1689-20260727#point_annex_iv_1_d', verbatim - 'the description of all the forms in which the AI system is placed on the market or put into service']).
+citation(eu_reg_2024_1689_annex_iv_1_e, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(e)', ref - '02024R1689-20260727#point_annex_iv_1_e', verbatim - 'the description of the hardware on which the AI system is intended to run']).
+citation(eu_reg_2024_1689_annex_iv_1_f, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(f)', ref - '02024R1689-20260727#point_annex_iv_1_f', verbatim - 'where the AI system is a component of products, photographs or illustrations showing external features, the marking and internal layout of those products']).
+citation(eu_reg_2024_1689_annex_iv_1_g, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(g)', ref - '02024R1689-20260727#point_annex_iv_1_g', verbatim - 'a basic description of the user-interface provided to the deployer']).
+citation(eu_reg_2024_1689_annex_iv_1_h, [label - 'Regulation (EU) 2024/1689 Annex IV, point 1(h)', ref - '02024R1689-20260727#point_annex_iv_1_h', verbatim - 'instructions for use for the deployer, and a basic description of the user-interface provided to the deployer, where applicable']).
+citation(eu_reg_2024_1689_annex_iv_2_a, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(a)', ref - '02024R1689-20260727#point_annex_iv_2_a', verbatim - 'the methods and steps performed for the development of the AI system']).
+citation(eu_reg_2024_1689_annex_iv_2_b, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(b)', ref - '02024R1689-20260727#point_annex_iv_2_b', verbatim - 'the design specifications of the system, namely the general logic of the AI system and of the algorithms']).
+citation(eu_reg_2024_1689_annex_iv_2_c, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(c)', ref - '02024R1689-20260727#point_annex_iv_2_c', verbatim - 'the description of the system architecture explaining how software components build on or feed into each other and integrate into the overall processing']).
+citation(eu_reg_2024_1689_annex_iv_2_d, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(d)', ref - '02024R1689-20260727#point_annex_iv_2_d', verbatim - 'where relevant, the data requirements in terms of datasheets describing the training methodologies and techniques and the training data sets used']).
+citation(eu_reg_2024_1689_annex_iv_2_e, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(e)', ref - '02024R1689-20260727#point_annex_iv_2_e', verbatim - 'assessment of the human oversight measures needed in accordance with Article 14']).
+citation(eu_reg_2024_1689_annex_iv_2_f, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(f)', ref - '02024R1689-20260727#point_annex_iv_2_f', verbatim - 'where applicable, a detailed description of pre-determined changes to the AI system and its performance']).
+citation(eu_reg_2024_1689_annex_iv_2_g, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(g)', ref - '02024R1689-20260727#point_annex_iv_2_g', verbatim - 'the validation and testing procedures used, including information about the validation and testing data used and their main characteristics']).
+citation(eu_reg_2024_1689_annex_iv_2_h, [label - 'Regulation (EU) 2024/1689 Annex IV, point 2(h)', ref - '02024R1689-20260727#point_annex_iv_2_h', verbatim - 'cybersecurity measures put in place']).
+citation(eu_reg_2024_1689_annex_iv_3, [label - 'Regulation (EU) 2024/1689 Annex IV, point 3', ref - '02024R1689-20260727#point_annex_iv_3', verbatim - 'Detailed information about the monitoring, functioning and control of the AI system']).
+citation(eu_reg_2024_1689_annex_iv_4, [label - 'Regulation (EU) 2024/1689 Annex IV, point 4', ref - '02024R1689-20260727#point_annex_iv_4', verbatim - 'A description of the appropriateness of the performance metrics for the specific AI system']).
+citation(eu_reg_2024_1689_annex_iv_5, [label - 'Regulation (EU) 2024/1689 Annex IV, point 5', ref - '02024R1689-20260727#point_annex_iv_5', verbatim - 'A detailed description of the risk management system in accordance with Article 9']).
+citation(eu_reg_2024_1689_annex_iv_6, [label - 'Regulation (EU) 2024/1689 Annex IV, point 6', ref - '02024R1689-20260727#point_annex_iv_6', verbatim - 'A description of relevant changes made by the provider to the system through its lifecycle']).
+citation(eu_reg_2024_1689_annex_iv_7, [label - 'Regulation (EU) 2024/1689 Annex IV, point 7', ref - '02024R1689-20260727#point_annex_iv_7', verbatim - 'A list of the harmonised standards applied in full or in part the references of which have been published in the Official Journal of the European Union']).
+citation(eu_reg_2024_1689_annex_iv_8, [label - 'Regulation (EU) 2024/1689 Annex IV, point 8', ref - '02024R1689-20260727#point_annex_iv_8', verbatim - 'A copy of the EU declaration of conformity referred to in Article 47']).
+citation(eu_reg_2024_1689_annex_iv_9, [label - 'Regulation (EU) 2024/1689 Annex IV, point 9', ref - '02024R1689-20260727#point_annex_iv_9', verbatim - 'A detailed description of the system in place to evaluate the AI system performance in the post-market phase in accordance with Article 72']).
+citation(eu_reg_2024_1689_art_111_1, [label - 'Regulation (EU) 2024/1689 Art 111(1), first sentence', ref - '02024R1689-20260727#parag_111.001', verbatim - 'AI systems which are components of the large-scale IT systems established by the legal acts listed in Annex X that have been placed on the market or put into service before 2 August 2027 shall be brought into compliance with this Regulation by 31 December 2030.']).
+citation(eu_reg_2024_1689_art_111_2, [label - 'Regulation (EU) 2024/1689 Art 111(2), first and second sentences', ref - '02024R1689-20260727#parag_111.002', verbatim - 'only if, as from that date, those systems are subject to significant changes in their designs. In any case, the providers and deployers of high-risk AI systems intended to be used by public authorities shall take the necessary steps to comply with the requirements and obligations laid down in this Regulation by 2 August 2030.']).
+citation(eu_reg_2024_1689_art_113, [label - 'Regulation (EU) 2024/1689 Art 113, second paragraph and lead word of the third paragraph', ref - '02024R1689-20260727#art_113', verbatim - 'It shall apply from 2 August 2026. However:']).
+citation(eu_reg_2024_1689_art_113_a, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (a)', ref - '02024R1689-20260727#point_113_a', verbatim - 'Chapters I and II shall apply from 2 February 2025']).
+citation(eu_reg_2024_1689_art_113_b, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (b)', ref - '02024R1689-20260727#point_113_b', verbatim - 'Chapter III Section 4, Chapter V, Chapter VII and Chapter XII and Article 78 shall apply from 2 August 2025, with the exception of Article 101']).
+citation(eu_reg_2024_1689_art_113_c, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (c), lead words', ref - '02024R1689-20260727#point_113_c', verbatim - 'Chapter III, Sections 1, 2, and 3, with the exception of Article 6(5), shall apply from:']).
+citation(eu_reg_2024_1689_art_113_c_i, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (c)(i)', ref - '02024R1689-20260727#point_113_c_i', verbatim - '2 December 2027 as regards AI systems classified as high-risk pursuant to Article 6(2) and Annex III']).
+citation(eu_reg_2024_1689_art_113_c_ii, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (c)(ii)', ref - '02024R1689-20260727#point_113_c_ii', verbatim - '2 August 2028 as regards AI systems classified as high-risk pursuant to Article 6(1) and Annex I']).
+citation(eu_reg_2024_1689_art_113_d, [label - 'Regulation (EU) 2024/1689 Art 113, third paragraph, point (d)', ref - '02024R1689-20260727#point_113_d', verbatim - 'Articles 102 to 110 shall apply from 27 July 2026.']).
+
+citation_vocabulary(eu_reg_2024_1689_art_8_1).
+citation_vocabulary(eu_reg_2024_1689_art_9_1).
+citation_vocabulary(eu_reg_2024_1689_art_10_1).
+citation_vocabulary(eu_reg_2024_1689_art_10_6).
+citation_vocabulary(eu_reg_2024_1689_art_11_1).
+citation_vocabulary(eu_reg_2024_1689_art_11_2).
+citation_vocabulary(eu_reg_2024_1689_art_12_1).
+citation_vocabulary(eu_reg_2024_1689_art_12_3).
+citation_vocabulary(eu_reg_2024_1689_art_13_1).
+citation_vocabulary(eu_reg_2024_1689_art_13_2).
+citation_vocabulary(eu_reg_2024_1689_art_13_3).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_a).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_b_i).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_b_ii).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_b_iii).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_b_iv).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_b_v).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_b_vi).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_b_vii).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_c).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_d).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_e).
+citation_vocabulary(eu_reg_2024_1689_art_13_3_f).
+citation_vocabulary(eu_reg_2024_1689_art_14_1).
+citation_vocabulary(eu_reg_2024_1689_art_14_5).
+citation_vocabulary(eu_reg_2024_1689_art_15_1).
+citation_vocabulary(eu_reg_2024_1689_art_15_3).
+citation_vocabulary(eu_reg_2024_1689_art_111_1).
+citation_vocabulary(eu_reg_2024_1689_art_111_2).
+citation_vocabulary(eu_reg_2024_1689_art_113_c).
+citation_vocabulary(eu_reg_2024_1689_art_113_c_i).
+citation_vocabulary(eu_reg_2024_1689_art_113_c_ii).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_a).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_b).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_c).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_d).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_e).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_f).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_g).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_1_h).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_a).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_b).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_c).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_d).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_e).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_f).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_g).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_2_h).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_3).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_4).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_5).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_6).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_7).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_8).
+citation_vocabulary(eu_reg_2024_1689_annex_iv_9).
+
+test(every_vocabulary_atom_is_recorded) :-
+    findall(Key, citation_vocabulary(Key), Keys),
+    maplist(implements, Keys).
+test(a_provenance_only_key_is_recorded) :-
+    implements(eu_reg_2024_1689_art_3_8).
+
+test(a_provenance_only_key_is_not_returnable, fail) :-
+    citation_vocabulary(eu_reg_2024_1689_art_3_8).
+test(an_unrecorded_key_does_not_implement, fail) :-
+    implements(eu_todo_primary_source).

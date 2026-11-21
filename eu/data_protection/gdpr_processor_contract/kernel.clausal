@@ -2,41 +2,99 @@
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_processor_contract (deontic family).
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL -- possibly none, which is why
-% the export list below starts empty.
-% Exception: the scaffold writes the order's input check gdpr_processor_contract_input_problems/2 here, exported, for every slice to import.
-% deontic family: STATUS is a modal vocabulary (cf. eu/procurement/exclusion_grounds must_exclude/may_exclude/not_excluded).
+% PREDICATES that two or more files CALL.
 %
-% Atoms and data terms need NO declaration and NO import: a slice writes
-% `eligible` or `widget_verdict(Status, Citations)` directly. So nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
-% result terms so every file spells them alike.
+% Source: Regulation (EU) 2016/679 (GDPR), Article 28(1) to (10), with the
+% definitions of Article 4(1), 4(2), 4(7) and 4(8); consolidated text
+% 02016R0679-20160504 (in force from 2016-05-04, 2018 corrigendum included).
+% The citation records are in citations.clausal.
 %
-% NOTHING SINGLE-CALLER LIVES HERE. A predicate only ONE file calls is
-% defined in THAT file. Move a predicate here the moment a SECOND file
-% calls it, and only then; export it as `name/arity` and import it where
-% it is called:
-%   :- use_module(eu/data_protection/gdpr_processor_contract/kernel, [shared_predicate/2]).
+% Shared here, and nothing else:
+%   gdpr_processor_contract_input_problems/2 -- the order's input check
+%     (written by the scaffold from the typed input contract; the slice and
+%     queries.clausal both call it first).
+%   gdpr_processor_contract_key_order/1 -- the 32 profile keys in root_exports
+%     (alphabetical) order. That order governs MISSING, CITATIONS,
+%     MISSING_KEYS, checklist ITEMS, PAIRS and the choice of the first unsure
+%     judgement. Every ordered list is built by walking this list, never by
+%     sort/2.
+%
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
+%
+% Result terms built by the one determination slice
+% (processor_contract_status.clausal) and projected by queries.clausal:
+%   processor_contract_verdict(Status, Missing, Citations)
+%     Status    -- exactly one of: the bare atoms eligible, ineligible,
+%                  not_applicable; the compound indeterminate(MissingKeys);
+%                  the compound needs_legal_review(Reason, Context); the
+%                  compound input_problems(Problems). The bare atom
+%                  indeterminate is NEVER written.
+%     Missing   -- for ineligible, the KEY atoms of every UNMET limb, in key
+%                  order; [] in every other status.
+%     Citations -- for ineligible, the parallel cite(Citation) list (duplicates
+%                  kept); for eligible, the distinct cite(Citation) of every
+%                  checklist limb read, in order of first appearance; for
+%                  not_applicable, [cite(eu_reg_2016_679_art_4_8)]; else [].
+%   Reason    -- open_textured(Key, cite(Citation)) or
+%                deferred_provision(cite(eu_reg_2016_679_art_28_10)).
+%   Context   -- [inputs_relied_on(Pairs)], Pairs Key-Value in key order, with
+%                standard_clauses_adopted-absent when that outside fact is absent.
+%   checklist_item(Key, cite(Citation), State)
+%     State     -- one of the bare atoms met, unmet, open_by_absence,
+%                  open_by_judgement.
+%   outside_fact(standard_clauses_adopted, Arrival)
+%     Arrival   -- the attested(Value, attestation(By, At, Reason, Evidence))
+%                  term as given, or the atom absent.
+%   Input problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key),
+%     and [wrong_type(profile)] for a profile that is not an attribute list.
 %
 % Spell every result and verdict atom exactly as REQUIRED PUBLIC
 % PREDICATES and the order pin it: an atom spelled differently is a
 % DIFFERENT atom, and nothing will warn you.
-%
-% Result terms -- one per determination slice. `status` is the slice's
-% verdict atom (its pinned vocabulary is the `<slice>_status_values/1`
-% table in the slice file), `citations` a list of cite(Key) terms:
-%   processor_contract_status_verdict(status, citations)
-% Shared across the slices: the checklist row id `overall` and the
-% profile key `as_of_date` (atoms -- nothing to export).
-%
-% TODO: add the predicates two or more slices genuinely share (names
-% spelled out in full dictionary words -- no abbreviations, C6).
-% Source: TODO (instrument + article).
 % =====================================================================
 
-:- module(kernel, [gdpr_processor_contract_input_problems/2]).
+:- module(kernel, [gdpr_processor_contract_input_problems/2, gdpr_processor_contract_key_order/1]).
 
 :- use_module(library(reif), [memberd_t/3]).
+
+% ---- the canonical key order (root_exports, alphabetical) ----------
+% gdpr_processor_contract_key_order(KeyOrder): the ground list of the 32 profile
+% keys. One fact, so exactly one solution.
+gdpr_processor_contract_key_order([
+    contract_binding_on_processor,
+    contract_governed_by_union_or_member_state_law,
+    contract_in_writing,
+    contract_sets_out_categories_of_data_subjects,
+    contract_sets_out_controller_obligations_and_rights,
+    contract_sets_out_duration,
+    contract_sets_out_nature_of_processing,
+    contract_sets_out_purpose_of_processing,
+    contract_sets_out_subject_matter,
+    contract_sets_out_type_of_personal_data,
+    controller_given_opportunity_to_object,
+    processing_on_behalf_of_controller,
+    processor_determines_purposes_and_means,
+    processor_informed_controller_of_intended_changes,
+    processor_provides_sufficient_guarantees,
+    standard_clauses_adopted,
+    stipulates_assistance_with_articles_32_to_36_obligations,
+    stipulates_assistance_with_data_subject_requests,
+    stipulates_conditions_for_engaging_another_processor,
+    stipulates_confidentiality_commitment,
+    stipulates_deletion_or_return_of_personal_data,
+    stipulates_information_and_audit_rights,
+    stipulates_notice_of_infringing_instruction,
+    stipulates_processing_only_on_documented_instructions,
+    stipulates_security_measures,
+    subprocessor_authorisation,
+    subprocessor_authorisation_given_before_engagement,
+    subprocessor_contract_governed_by_union_or_member_state_law,
+    subprocessor_contract_in_writing,
+    subprocessor_engaged,
+    subprocessor_obligations_same,
+    subprocessor_provides_sufficient_guarantees
+]).
 
 % ---- input checks: the problems a profile has, if any -----------
 % gdpr_processor_contract_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -67,7 +125,7 @@ profile_problems(true, Profile, Problems) :-
 
 % The contract: each key and the type of its value.
 key_type(contract_binding_on_processor, judgement).
-key_type(contract_governed_by_union_or_member_state_law, boolean).
+key_type(contract_governed_by_union_or_member_state_law, judgement).
 key_type(contract_in_writing, boolean).
 key_type(contract_sets_out_categories_of_data_subjects, boolean).
 key_type(contract_sets_out_controller_obligations_and_rights, boolean).
@@ -93,7 +151,7 @@ key_type(stipulates_processing_only_on_documented_instructions, boolean).
 key_type(stipulates_security_measures, boolean).
 key_type(subprocessor_authorisation, enum([specific_written, general_written, none])).
 key_type(subprocessor_authorisation_given_before_engagement, boolean).
-key_type(subprocessor_contract_governed_by_union_or_member_state_law, boolean).
+key_type(subprocessor_contract_governed_by_union_or_member_state_law, judgement).
 key_type(subprocessor_contract_in_writing, boolean).
 key_type(subprocessor_engaged, boolean).
 key_type(subprocessor_obligations_same, judgement).
@@ -243,5 +301,28 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+% ---- tests of the shared floor ------------------------------------
+test(key_order_has_thirty_two_keys) :-
+    gdpr_processor_contract_key_order(KeyOrder),
+    length(KeyOrder, 32).
+test(an_empty_profile_has_no_problem) :-
+    gdpr_processor_contract_input_problems([], []).
+test(a_non_list_profile_is_wrong_type) :-
+    gdpr_processor_contract_input_problems(profile_text, [wrong_type(profile)]).
+test(unsure_in_a_crisp_key_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, unsure)], [wrong_type(contract_in_writing)]).
+test(unsure_in_a_judgement_is_well_typed) :-
+    gdpr_processor_contract_input_problems([attribute(contract_binding_on_processor, unsure)], []).
+test(a_duplicate_key_is_not_also_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, unsure), attribute(contract_in_writing, true)], [duplicate_key(contract_in_writing)]).
+test(a_repeated_unknown_key_is_named_once) :-
+    gdpr_processor_contract_input_problems([attribute(stray_key, true), attribute(stray_key, false)], [unknown_key(stray_key)]).
+test(a_well_formed_attested_fact_is_well_typed) :-
+    gdpr_processor_contract_input_problems([attribute(standard_clauses_adopted, attested(true, attestation(host, moment, reason, none)))], []).
+test(a_bare_outside_fact_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(standard_clauses_adopted, true)], [wrong_type(standard_clauses_adopted)]).
+test(an_unknown_authorisation_kind_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(subprocessor_authorisation, oral)], [wrong_type(subprocessor_authorisation)]).
 
 :- end_module(kernel).

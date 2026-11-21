@@ -1,7 +1,7 @@
 % SPDX-License-Identifier: EUPL-1.2
 % tools/iso_export/companion/clausal_datetime.pl
 % The datetime half of library(datetime) for the Clausal Prolog (.clausal) ISO
-% export. Added 2026-11-12 for a package whose
+% export. Added 2026-11-12 (a NIS2 domain name data package): its
 % tests build instants with datetime/7 and the package adds and subtracts
 % timedeltas in seconds, and the export had no datetime/7, so the import was
 % dropped and every call raised existence_error on Scryer and Trealla.

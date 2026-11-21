@@ -1,0 +1,393 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dma_art_6_9_10_portability_and_business_data_order.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The order sets no figure, so there is no numeric
+% threshold: each route has a positive subject and a one-key near-miss
+% control that flips exactly one value (true to false, a statement to its
+% opposite, a value to absent or unsure), named in the comment above it.
+% Outside facts are attested statements as a host would supply them.
+% =====================================================================
+
+:- module(fixtures, [
+    dma_art_6_9_10_portability_and_business_data_order_subject/1,
+    dma_art_6_9_10_portability_and_business_data_order_profile_for/2,
+    dma_art_6_9_10_portability_and_business_data_order_assess/2
+]).
+
+:- use_module(eu/dma_art_6_9_10_portability_and_business_data_order/dma_art_6_9_10_portability_and_business_data_order, [decide_dma_art_6_9_10_portability_and_business_data_order/2]).
+
+% ---- Attested statements --------------------------------------------
+listed_statement(attested(true, attestation(host_operator, '2026-11-19T10:00:00Z', listed_in_designation_decision, none))).
+not_listed_statement(attested(false, attestation(host_operator, '2026-11-19T10:00:00Z', not_listed_in_designation_decision, none))).
+consent_given_statement(attested(true, attestation(host_operator, '2026-11-19T10:00:00Z', end_users_opted_in, none))).
+consent_refused_statement(attested(false, attestation(host_operator, '2026-11-19T10:00:00Z', end_users_did_not_opt_in, none))).
+
+% ---- Subject registry ------------------------------------------------
+% Art 6(1)
+dma_art_6_9_10_portability_and_business_data_order_subject(application_listed).
+dma_art_6_9_10_portability_and_business_data_order_subject(application_not_listed).
+dma_art_6_9_10_portability_and_business_data_order_subject(application_designation_absent).
+% Art 6(9)
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_duty_met_subject).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_tools_lacking).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_charged_with_other_elements_open).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_not_requested_subject).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_data_outside).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_not_listed).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_request_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_scope_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_effective_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_designation_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_scope_unsure).
+dma_art_6_9_10_portability_and_business_data_order_subject(portability_tools_unsure).
+% Art 6(10), 2(25), 2(32)
+dma_art_6_9_10_portability_and_business_data_order_subject(business_non_personal_met).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_non_personal_charged).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_personal_met).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_personal_real_time_lacking).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_consent_refused).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_not_directly_connected).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_not_requested).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_data_outside).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_not_listed).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_request_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_personal_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_connection_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_element_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_designation_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_consent_absent).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_personal_unsure).
+dma_art_6_9_10_portability_and_business_data_order_subject(business_effective_unsure).
+% THE INPUT CHECK
+dma_art_6_9_10_portability_and_business_data_order_subject(input_unknown_key).
+dma_art_6_9_10_portability_and_business_data_order_subject(input_duplicate_key).
+dma_art_6_9_10_portability_and_business_data_order_subject(input_crisp_key_unsure).
+
+% ---- Profiles: Art 6(1) ---------------------------------------------
+% Listed: the obligations apply.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(application_listed, [attribute(designated_as_gatekeeper_for_core_platform_service, Listed)]) :-
+    listed_statement(Listed).
+% Near-miss: the statement is that no decision lists the service.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(application_not_listed, [attribute(designated_as_gatekeeper_for_core_platform_service, NotListed)]) :-
+    not_listed_statement(NotListed).
+% Near-miss: no statement at all (referred).
+dma_art_6_9_10_portability_and_business_data_order_profile_for(application_designation_absent, []).
+
+% ---- Profiles: Art 6(9) ---------------------------------------------
+% All four elements hold.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_duty_met_subject, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, true),
+        attribute(end_user_data_portability_free_of_charge, true),
+        attribute(end_user_data_portability_effective, true),
+        attribute(end_user_data_portability_tools_provided, true),
+        attribute(end_user_data_continuous_real_time_access_provided, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss: tools false.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_tools_lacking, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, true),
+        attribute(end_user_data_portability_free_of_charge, true),
+        attribute(end_user_data_portability_effective, true),
+        attribute(end_user_data_portability_tools_provided, false),
+        attribute(end_user_data_continuous_real_time_access_provided, true)
+    ]) :-
+    listed_statement(Listed).
+% Charged for: not met whatever the others are (unsure and absent).
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_charged_with_other_elements_open, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, true),
+        attribute(end_user_data_portability_free_of_charge, false),
+        attribute(end_user_data_portability_effective, unsure)
+    ]) :-
+    listed_statement(Listed).
+% No request.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_not_requested_subject, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, false)
+    ]) :-
+    listed_statement(Listed).
+% Requested, data outside Art 6(9) (near-miss of the met subject: scope false).
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_data_outside, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, false)
+    ]) :-
+    listed_statement(Listed).
+% Not listed, other keys unsure: Article 6 does not apply.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_not_listed, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, NotListed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, unsure)
+    ]) :-
+    not_listed_statement(NotListed).
+% Request not given.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_request_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed)
+    ]) :-
+    listed_statement(Listed).
+% Requested, scope not given.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_scope_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss of the met subject: effective absent.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_effective_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, true),
+        attribute(end_user_data_portability_free_of_charge, true),
+        attribute(end_user_data_portability_tools_provided, true),
+        attribute(end_user_data_continuous_real_time_access_provided, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss of the met subject: designation statement absent.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_designation_absent, [
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, true),
+        attribute(end_user_data_portability_free_of_charge, true),
+        attribute(end_user_data_portability_effective, true),
+        attribute(end_user_data_portability_tools_provided, true),
+        attribute(end_user_data_continuous_real_time_access_provided, true)
+    ]).
+% Near-miss of the met subject: scope unsure.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_scope_unsure, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, unsure),
+        attribute(end_user_data_portability_free_of_charge, true),
+        attribute(end_user_data_portability_effective, true),
+        attribute(end_user_data_portability_tools_provided, true),
+        attribute(end_user_data_continuous_real_time_access_provided, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss of the met subject: tools unsure.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(portability_tools_unsure, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, true),
+        attribute(end_user_data_portability_free_of_charge, true),
+        attribute(end_user_data_portability_effective, true),
+        attribute(end_user_data_portability_tools_provided, unsure),
+        attribute(end_user_data_continuous_real_time_access_provided, true)
+    ]) :-
+    listed_statement(Listed).
+
+% ---- Profiles: Art 6(10) --------------------------------------------
+% Not personal data, all elements hold.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_non_personal_met, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, false),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss: charged for.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_non_personal_charged, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, false),
+        attribute(business_user_data_access_free_of_charge, false),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed).
+% Personal data, both conditions hold, all elements hold.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_personal_met, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, true),
+        attribute(personal_data_directly_connected_with_end_user_use_of_business_user_offer, true),
+        attribute(end_users_opted_in_to_sharing_by_consent, Consent),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed),
+    consent_given_statement(Consent).
+% Near-miss: not continuous and real time.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_personal_real_time_lacking, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, true),
+        attribute(personal_data_directly_connected_with_end_user_use_of_business_user_offer, true),
+        attribute(end_users_opted_in_to_sharing_by_consent, Consent),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, false)
+    ]) :-
+    listed_statement(Listed),
+    consent_given_statement(Consent).
+% Near-miss of personal met: consent stated refused.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_consent_refused, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, true),
+        attribute(personal_data_directly_connected_with_end_user_use_of_business_user_offer, true),
+        attribute(end_users_opted_in_to_sharing_by_consent, Refused),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed),
+    consent_refused_statement(Refused).
+% Near-miss of personal met: not directly connected.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_not_directly_connected, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, true),
+        attribute(personal_data_directly_connected_with_end_user_use_of_business_user_offer, false),
+        attribute(end_users_opted_in_to_sharing_by_consent, Consent),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed),
+    consent_given_statement(Consent).
+% No request.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_not_requested, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, false)
+    ]) :-
+    listed_statement(Listed).
+% Requested, data outside Art 6(10).
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_data_outside, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, false)
+    ]) :-
+    listed_statement(Listed).
+% Not listed, personal data unsure: Article 6 does not apply.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_not_listed, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, NotListed),
+        attribute(requested_business_user_data_are_personal_data, unsure)
+    ]) :-
+    not_listed_statement(NotListed).
+% Request not given.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_request_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed)
+    ]) :-
+    listed_statement(Listed).
+% Requested, in scope, personal data not given.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_personal_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss of personal met: direct connection absent.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_connection_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, true),
+        attribute(end_users_opted_in_to_sharing_by_consent, Consent),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed),
+    consent_given_statement(Consent).
+% Near-miss of non-personal met: effective and high quality absent.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_element_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, false),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss of non-personal met: designation statement absent.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_designation_absent, [
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, false),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]).
+% Near-miss of personal met: consent statement absent.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_consent_absent, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, true),
+        attribute(personal_data_directly_connected_with_end_user_use_of_business_user_offer, true),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed).
+% Near-miss of personal met: personal data unsure.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_personal_unsure, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, unsure),
+        attribute(personal_data_directly_connected_with_end_user_use_of_business_user_offer, true),
+        attribute(end_users_opted_in_to_sharing_by_consent, Consent),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, true),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed),
+    consent_given_statement(Consent).
+% Near-miss of non-personal met: effective and high quality unsure.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(business_effective_unsure, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(data_access_requested_by_business_user_or_authorised_third_party, true),
+        attribute(data_provided_or_generated_in_use_by_business_user_and_its_end_users, true),
+        attribute(requested_business_user_data_are_personal_data, false),
+        attribute(business_user_data_access_free_of_charge, true),
+        attribute(business_user_data_access_and_use_effective_and_high_quality, unsure),
+        attribute(business_user_data_access_continuous_and_real_time, true)
+    ]) :-
+    listed_statement(Listed).
+
+% ---- Profiles: THE INPUT CHECK ---------------------------------------
+dma_art_6_9_10_portability_and_business_data_order_profile_for(input_unknown_key, [attribute(colour, blue)]).
+dma_art_6_9_10_portability_and_business_data_order_profile_for(input_duplicate_key, [
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, false)
+    ]).
+dma_art_6_9_10_portability_and_business_data_order_profile_for(input_crisp_key_unsure, [
+        attribute(end_user_data_portability_free_of_charge, unsure)
+    ]).
+
+% ---- Baseline profile read by the scaffold's mode tests --------------
+% Not in the subject registry: the same profile as the met portability
+% subject, so its verdict carries citations and its checklist is cited.
+dma_art_6_9_10_portability_and_business_data_order_profile_for(todo_baseline_subject, [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Listed),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, true),
+        attribute(end_user_data_portability_free_of_charge, true),
+        attribute(end_user_data_portability_effective, true),
+        attribute(end_user_data_portability_tools_provided, true),
+        attribute(end_user_data_continuous_real_time_access_provided, true)
+    ]) :-
+    listed_statement(Listed).
+
+% ---- Convenience wrapper ---------------------------------------------
+dma_art_6_9_10_portability_and_business_data_order_assess(Subject, Result) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+    decide_dma_art_6_9_10_portability_and_business_data_order(Profile, Result).
+
+:- end_module(fixtures).

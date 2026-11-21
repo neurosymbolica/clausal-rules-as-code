@@ -1,0 +1,280 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_corrective_powers_named
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_corrective_powers_named"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_corrective_powers_named.clausal --
+  - "corrective_powers_named/3"
+  - "corrective_power_named/4"
+  - "decide_gdpr_corrective_powers_named/2"
+  - "gdpr_corrective_powers_named_status/2"
+  - "gdpr_corrective_powers_named_checklist/2"
+  - "gdpr_corrective_powers_named_decision_resolvable/1"
+  - "gdpr_corrective_powers_named_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_corrective_powers_named_profile_keys/1"
+  - "gdpr_corrective_powers_named_input_problems/2"
+  - "gdpr_corrective_powers_named_what_if/4"
+  - "not_named/0"
+  - "authority_discretion/0"
+  - "warning/0"
+  - "reprimand/0"
+  - "order_to_comply_with_data_subject_requests/0"
+  - "order_to_bring_processing_into_compliance/0"
+  - "order_to_communicate_personal_data_breach/0"
+  - "limitation_or_ban_on_processing/0"
+  - "order_of_rectification_erasure_or_restriction/0"
+  - "withdrawal_or_refusal_of_certification/0"
+  - "administrative_fine/0"
+  - "suspension_of_data_flows/0"
+  - "controller/0"
+  - "processor/0"
+  - "certification_body/0"
+  - "powers_named/2"
+  - "power/2"
+  - "named/2"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_corrective_powers_named_subject/1"
+  - "gdpr_corrective_powers_named_profile_for/2"
+  - "gdpr_corrective_powers_named_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only the kit (formalize_lib, library(reif)),
+# no shared backbone package.
+uses: []
+
+scope: >-
+  Regulation (EU) 2016/679 (GDPR) Article 58(2), the chapeau and points (a) to
+  (j), pinned unit text of the consolidated text of 4 May 2016. Decided here:
+  whether the text NAMES one given corrective power for a stated situation and
+  against which addressees (corrective_power_named/4), and which of the ten
+  powers it names, in the order of the points (corrective_powers_named/3). Every
+  final answer carries authority_discretion: the text states no rule of choice
+  among the powers and no duty to use one, and this order decides neither.
+  The five legal conclusions (intended processing likely to infringe, processing
+  that has infringed, processing not in compliance, a ground under Articles 16 to
+  18, certification requirements not met) are tri-state judgements the caller
+  states; unsure refers to a lawyer. Out of scope: whether there is an
+  infringement, which authority is competent, Article 58(1) and (3), the
+  safeguards of Article 58(4), Member State powers under Article 58(5) and (6),
+  Articles 16 to 19, 33 and 34, 42 and 43, Article 83 (gdpr-administrative-fine-maximum)
+  and Chapter V (gdpr-chapter-v-transfers). No date and no amount is computed.
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504; Article 58(2), chapeau and points (a) to (j)"
+  - "Regulation (EU) 2016/679, Article 58(4) to (6) (quoted for readings (1) and (15) only; deferred, no limb reads them)"
+
+query_interface:
+  1: "corrective_power_named/4"                  # factual lookup: does the text name this power, and against whom
+  2: "gdpr_corrective_powers_named_status/2"      # status verdict: the RESULT of corrective_powers_named/3
+  4: "corrective_powers_named/3"                  # enumeration: every power named, in the order of the points
+  7: "gdpr_corrective_powers_named_checklist/2"   # justification: one item per point with its cite(...)
+  16: "gdpr_corrective_powers_named_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_58_heading
+  units:
+  - 02016R0679-20160504#art_058
+  reason: 'The title of Article 58 (''Powers'') carries no obligation: document structure.'
+  consequence: 'None for a caller: the title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: investigative_powers
+  units:
+  - 02016R0679-20160504#parag_058.001
+  - 02016R0679-20160504#point_058.001_a
+  - 02016R0679-20160504#point_058.001_b
+  - 02016R0679-20160504#point_058.001_c
+  - 02016R0679-20160504#point_058.001_d
+  - 02016R0679-20160504#point_058.001_e
+  - 02016R0679-20160504#point_058.001_f
+  reason: 'Article 58(1) and its points (a) to (f): the investigative powers (to order
+    information, audits, a review of certifications, to notify an alleged infringement,
+    access to data and to premises). A list of powers of the same kind as Article
+    58(2), outside the brief of this order; no limb reads it.'
+  consequence: No answer names an investigative power; the caller reads Article 58(1)
+    itself.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later order, not in this order's rules;
+    the deferral stands for this run.
+- debt: true
+  what: authorisation_and_advisory_powers
+  units:
+  - 02016R0679-20160504#parag_058.003
+  - 02016R0679-20160504#point_058.003_a
+  - 02016R0679-20160504#point_058.003_b
+  - 02016R0679-20160504#point_058.003_c
+  - 02016R0679-20160504#point_058.003_d
+  - 02016R0679-20160504#point_058.003_e
+  - 02016R0679-20160504#point_058.003_f
+  - 02016R0679-20160504#point_058.003_g
+  - 02016R0679-20160504#point_058.003_h
+  - 02016R0679-20160504#point_058.003_i
+  - 02016R0679-20160504#point_058.003_j
+  reason: 'Article 58(3) and its points (a) to (j): the authorisation and advisory
+    powers (advice in prior consultation, opinions, authorisations, codes of conduct,
+    accreditation, certification, standard clauses, administrative arrangements, binding
+    corporate rules). Outside the brief of this order; no limb reads it.'
+  consequence: No answer names an authorisation or advisory power; the caller reads
+    Article 58(3) itself.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later order, not in this order's rules;
+    the deferral stands for this run.
+- what: safeguards_on_the_exercise_of_powers
+  units:
+  - 02016R0679-20160504#parag_058.004
+  reason: 'Article 58(4): the exercise of the powers is subject to appropriate safeguards,
+    including effective judicial remedy and due process, set out in Union and Member
+    State law in accordance with the Charter. A procedural condition on the authority''s
+    use of its powers, with no output in this order; quoted in sources for reading
+    (1) only, with Article 58(5) and (6).'
+  consequence: No answer checks the safeguards; every answer that names a power carries
+    authority_discretion, and the caller checks the procedure under Union and Member
+    State law itself.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: judicial_proceedings_power_under_member_state_law
+  units:
+  - 02016R0679-20160504#parag_058.005
+  reason: 'Article 58(5): each Member State provides by law that its authority may
+    bring infringements to the attention of the judicial authorities and commence
+    or engage in legal proceedings. Member State law, not pinned; quoted in sources
+    for reading (15) only.'
+  consequence: No answer names this power (Q12).
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: additional_powers_under_member_state_law
+  units:
+  - 02016R0679-20160504#parag_058.006
+  reason: 'Article 58(6): Member State law may give the authority powers additional
+    to those of paragraphs 1, 2 and 3, without impairing Chapter VII. Member State
+    law, not pinned; quoted in sources for reading (15) only.'
+  consequence: No answer names a power of Member State law (Q12).
+  declaration: not_an_exception
+  not_formalized_because: national_law
+
+excluded_set:
+- what: administrative_fines
+  instrument: Regulation (EU) 2016/679 Art 83
+  cites:
+  - 02016R0679-20160504#art_083
+  reason: 'Point (i) gives the power to fine ''pursuant to Article 83''. Article 83
+    is not pinned in this order and is not restated: which infringements may be fined,
+    the factors and the legal maximum are decided under Article 83 (the legal maximum
+    in gdpr-administrative-fine-maximum).'
+  consequence: An answer that names administrative_fine gives no amount, no factor
+    and no maximum; the caller asks gdpr-administrative-fine-maximum for the legal
+    maximum (Q7).
+- what: data_subject_rights_rectification_erasure_restriction_notification
+  instrument: Regulation (EU) 2016/679 Arts 16, 17, 18 and 19
+  cites:
+  - 02016R0679-20160504#art_016
+  - 02016R0679-20160504#art_017
+  - 02016R0679-20160504#art_018
+  - 02016R0679-20160504#art_019
+  reason: Point (g) refers to Articles 16, 17 and 18 and to the notification under
+    Articles 17(2) and 19; they are not pinned here. Whether a ground is met is the
+    caller's judgement rectification_erasure_or_restriction_ground_met (reading (9));
+    the grounds are decided in gdpr-data-subject-rights-access-rectification-restriction
+    and gdpr-data-subject-rights-erasure.
+  consequence: No answer says whether rectification, erasure or restriction is owed,
+    or whether recipients must be notified.
+- what: breach_notification_and_communication
+  instrument: Regulation (EU) 2016/679 Arts 4(12), 33 and 34
+  cites:
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#art_033
+  - 02016R0679-20160504#art_034
+  reason: Point (e) speaks of a personal data breach; the definition and the duties
+    to notify and communicate are not pinned here. Whether a breach occurred is the
+    caller's fact personal_data_breach_occurred; when communication is owed is decided
+    in gdpr-breach-notification.
+  consequence: An answer that names order_to_communicate_personal_data_breach does
+    not say that communication is owed (Q6).
+- what: certification_and_certification_bodies
+  instrument: Regulation (EU) 2016/679 Arts 42 and 43
+  cites:
+  - 02016R0679-20160504#art_042
+  - 02016R0679-20160504#art_043
+  reason: Point (h) refers to certifications issued pursuant to Articles 42 and 43;
+    they are not pinned here and no order formalises them. Whether a certification
+    exists is the caller's fact certification_issued_or_applied_for, and whether its
+    requirements are met the caller's judgement certification_requirements_not_met
+    (reading (10)).
+  consequence: No answer checks a certification or a certification body.
+- what: chapter_v_transfers
+  instrument: Regulation (EU) 2016/679 Arts 44 to 49
+  cites:
+  - 02016R0679-20160504#art_044
+  - 02016R0679-20160504#art_045
+  - 02016R0679-20160504#art_046
+  - 02016R0679-20160504#art_047
+  - 02016R0679-20160504#art_048
+  - 02016R0679-20160504#art_049
+  reason: Point (j) names data flows to a recipient in a third country or to an international
+    organisation; whether a transfer meets Chapter V is decided in gdpr-chapter-v-transfers
+    and is not read here (reading (12)).
+  consequence: An answer that names suspension_of_data_flows does not say that the
+    transfer infringes Chapter V (Q8).
+- what: authority_competence_and_tasks
+  instrument: Regulation (EU) 2016/679 Arts 51, 55, 56 and 57
+  cites:
+  - 02016R0679-20160504#art_051
+  - 02016R0679-20160504#art_055
+  - 02016R0679-20160504#art_056
+  - 02016R0679-20160504#art_057
+  reason: Which supervisory authority is competent (Articles 55 and 56) and what its
+    tasks are (Article 57) are not pinned here; 'the authority' in this order means
+    the competent one, as the caller takes it to be.
+  consequence: No answer names the competent authority or states a duty to act (Q11).
+- what: recitals
+  instrument: Regulation (EU) 2016/679 recitals on the powers of supervisory authorities
+    and on penalties
+  cites:
+  - 32016R0679#rct_129
+  - 32016R0679#rct_148
+  reason: No recital is pinned, so none is quoted or cited as a provision.
+  consequence: The readings rest on the pinned Article 58 only.
+- what: case_law
+  instrument: Judgments of the Court of Justice in Case C-46/23 and in Case C-768/21,
+    on the corrective powers of supervisory authorities
+  cites:
+  - 62023CJ0046#operative_part
+  - 62021CJ0768#operative_part
+  reason: Not pinned, not read and not quoted. They are named only as materials a
+    lawyer would read on the open questions (Q3) and (Q11); no reading of this order
+    rests on them.
+  consequence: The order computes nothing from case law; a caller who needs it reads
+    it itself.

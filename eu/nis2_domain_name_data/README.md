@@ -4,7 +4,7 @@
 
 ## Scope
 
-What Directive (EU) 2022/2555 (NIS 2) Art 28(1) to (6) requires a Member State to require of TLD name registries and entities providing domain name registration services: the nine duties, the registration data to hold (Art 28(2)), whether non-personal data must be published (Art 28(4)), whether access to data must be provided (Art 28(5) first sentence), and whether a reply to an access request was within 72 hours (Art 28(5) second sentence). Out of scope, handed to a lawyer or a sibling order: who is a TLD name registry or registrar (Art 6), GDPR lawfulness, adequacy of procedures and data, national access procedures.
+Directive (EU) 2022/2555 (NIS 2) Article 28(1) to (6): what a Member State must require of a TLD name registry and of an entity providing domain name registration services as regards domain name registration data. Decided here: the nine duties of Art 28 for an addressed provider and none for any other entity; the registration data the database must hold (Art 28(2)(a) to (d), point (d) read per element); whether the non-personal registration data must be made publicly available (Art 28(4)); whether access to specific registration data must be provided (Art 28(5) first sentence); and whether a reply to any request for access was timely (Art 28(5) second sentence, within 72 hours of receipt, a part of an hour rounded up, and without undue delay). Out of scope: whether an entity is a TLD name registry or registrar (Art 6; the caller states it), lawfulness under Union data protection law, the adequacy of data and procedures, national access procedures, what counts as receipt of a request, and whether publication was in fact without undue delay. Open-textured judgements (personal data, legitimate access seeker, lawful and duly substantiated request, undue delay) are the caller's; an ...
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ What Directive (EU) 2022/2555 (NIS 2) Art 28(1) to (6) requires a Member State t
 
 ## What was checked
 
-- 145 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 221 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

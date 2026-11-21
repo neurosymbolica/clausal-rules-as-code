@@ -1,160 +1,63 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_queries.clausal -- PROPERTY tests for the query layer: one group per
-% query-taxonomy predicate registered in manifest.yaml query_interface
-% (#2 eligibility, #16 what-if), the schema, the re-exported input check,
-% the root-export atoms and the result-constructor recognisers.
+% test_queries.clausal -- PROPERTY tests for the query layer: one test per
+% predicate registered in manifest.yaml query_interface (#2 status, #7
+% checklist, #16 what-if) and the schema and input-check re-export.
 % Run: python -m clausal.testing eu/data_protection/gdpr_complaints_and_judicial_remedies/tests/test_queries.clausal
 % =====================================================================
 :- module(test_queries, []).
 :- use_module(eu/data_protection/gdpr_complaints_and_judicial_remedies/queries, [
     gdpr_complaints_and_judicial_remedies_profile_keys/1,
     gdpr_complaints_and_judicial_remedies_input_problems/2,
-    gdpr_complaints_and_judicial_remedies_what_if/4,
-    gdpr_complaints_and_judicial_remedies_eligibility/4,
-    is_data_subject/0,
-    authority_competent_under_articles_55_and_56/0,
-    unsure/0,
-    indeterminate/1,
-    needs_legal_review/2,
-    provenance/2,
-    outside_fact/2,
-    attested/2,
-    url/2,
-    document/2,
-    input_problems/1,
-    unknown_key/1,
-    wrong_type/1,
-    duplicate_key/1
+    gdpr_complaints_and_judicial_remedies_what_if/4
 ]).
+:- use_module(eu/data_protection/gdpr_complaints_and_judicial_remedies/gdpr_complaints_and_judicial_remedies, [
+    gdpr_complaints_and_judicial_remedies_status/2,
+    gdpr_complaints_and_judicial_remedies_checklist/2
+]).
+:- use_module(eu/data_protection/gdpr_complaints_and_judicial_remedies/fixtures, [gdpr_complaints_and_judicial_remedies_profile_for/2]).
 
 test(profile_keys_are_the_contract_keys) :-
     gdpr_complaints_and_judicial_remedies_profile_keys(ProfileKeys),
     ProfileKeys == [is_data_subject, data_subject_considers_processing_infringes_regulation, decision_is_legally_binding, decision_concerns_the_caller, complaint_lodged_under_article_77, authority_competent_under_articles_55_and_56, authority_handled_the_complaint, three_months_from_the_complaint_have_passed, authority_informed_on_progress_or_outcome, data_subject_considers_rights_infringed_by_processing, defendant_is_member_state_public_authority_acting_in_public_powers].
 
-test(the_re_exported_input_check_names_an_unknown_key) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([attribute(colour, blue)], [unknown_key(colour)]).
+test(input_problems_through_the_query_layer) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(malformed_duplicate_and_unknown, Profile),
+    gdpr_complaints_and_judicial_remedies_input_problems(Profile, Problems),
+    Problems == [duplicate_key(is_data_subject), wrong_type(decision_concerns_the_caller), unknown_key(colour)].
 
-test(the_root_atoms_are_served) :-
-    is_data_subject,
-    authority_competent_under_articles_55_and_56,
-    unsure.
+test(eligibility_status_gives_one_answer_per_query) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    findall(Status, gdpr_complaints_and_judicial_remedies_status(Profile, Status), Statuses),
+    Statuses == [answer(complaint_right, complaint_right_exists), answer(authority_decision_remedy_right, decision_remedy_right_exists), answer(authority_inaction_remedy_right, inaction_remedy_right_exists), answer(controller_processor_remedy_right, judicial_remedy_right_exists), answer(controller_processor_forum, forum_establishment_or_habitual_residence_state)].
 
-% ---- #16 what-if ----------------------------------------------------------
-test(what_if_the_baseline_is_available) :-
-    gdpr_complaints_and_judicial_remedies_what_if([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, true)],
-                                                  decision_is_legally_binding,
-                                                  true,
-                                                  remedy_available).
-test(what_if_a_false_concern_takes_the_remedy_away) :-
-    gdpr_complaints_and_judicial_remedies_what_if([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, true)],
-                                                  decision_concerns_the_caller,
-                                                  false,
-                                                  remedy_open).
-test(what_if_a_false_concern_is_not_available, fail) :-
-    gdpr_complaints_and_judicial_remedies_what_if([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, true)],
-                                                  decision_concerns_the_caller,
-                                                  false,
-                                                  remedy_available).
-test(what_if_a_wrong_typed_value_is_an_input_problem) :-
-    gdpr_complaints_and_judicial_remedies_what_if([],
-                                                  is_data_subject,
-                                                  unsure,
-                                                  input_problems([wrong_type(is_data_subject)])).
-test(what_if_has_one_answer) :-
-    findall(Status,
-            gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, true)], data_subject_considers_processing_infringes_regulation, true, Status),
-            Statuses),
-    Statuses == [remedy_available].
+test(justification_checklist_cites_each_provision) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(empty_profile, Profile),
+    gdpr_complaints_and_judicial_remedies_checklist(Profile, ChecklistItems),
+    ChecklistItems == [item(complaint_right, indeterminate([is_data_subject]), cite(eu_reg_2016_679_art_77_1)), item(authority_decision_remedy_right, indeterminate([decision_is_legally_binding]), cite(eu_reg_2016_679_art_78_1)), item(authority_inaction_remedy_right, indeterminate([is_data_subject]), cite(eu_reg_2016_679_art_78_2)), item(controller_processor_remedy_right, indeterminate([is_data_subject]), cite(eu_reg_2016_679_art_79_1)), item(controller_processor_forum, indeterminate([defendant_is_member_state_public_authority_acting_in_public_powers]), cite(eu_reg_2016_679_art_79_2))].
 
-% ---- #2 eligibility ---------------------------------------------------------
-test(eligibility_complaint_right_eligible) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(complaint_right,
-                                                      [attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, true)],
-                                                      eligible,
-                                                      [cite(eu_reg_2016_679_art_77_1)]).
-test(eligibility_decision_remedy_ineligible) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(authority_decision_remedy_right,
-                                                      [attribute(decision_is_legally_binding, false)],
-                                                      ineligible,
-                                                      [cite(eu_reg_2016_679_art_78_1)]).
-test(eligibility_inaction_remedy_eligible) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(authority_inaction_remedy_right,
-                                                      [attribute(is_data_subject, true),
-                                                       attribute(complaint_lodged_under_article_77, true),
-                                                       attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none))),
-                                                       attribute(authority_handled_the_complaint, false)],
-                                                      eligible,
-                                                      [cite(eu_reg_2016_679_art_78_2)]).
-test(eligibility_judicial_remedy_eligible) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_remedy_right,
-                                                      [attribute(is_data_subject, true), attribute(data_subject_considers_rights_infringed_by_processing, true)],
-                                                      eligible,
-                                                      [cite(eu_reg_2016_679_art_79_1)]).
-test(eligibility_input_problems_are_indeterminate_eligibility) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(complaint_right,
-                                                      not_a_profile,
-                                                      indeterminate_eligibility,
-                                                      []).
-test(eligibility_a_missing_key_is_indeterminate_eligibility) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_remedy_right,
-                                                      [],
-                                                      indeterminate_eligibility,
-                                                      []).
-test(eligibility_the_forum_is_not_an_eligibility, fail) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_forum,
-                                                      [attribute(defendant_is_member_state_public_authority_acting_in_public_powers, true)],
-                                                      _,
-                                                      _).
-test(eligibility_inaction_has_one_answer) :-
-    findall(Label-Citations,
-            gdpr_complaints_and_judicial_remedies_eligibility(authority_inaction_remedy_right, [attribute(is_data_subject, false)], Label, Citations),
-            Answers),
-    Answers == [ineligible-[cite(eu_reg_2016_679_art_78_2)]].
+test(what_if_flips_the_forum) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    gdpr_complaints_and_judicial_remedies_what_if(Profile, defendant_is_member_state_public_authority_acting_in_public_powers, true, answer(controller_processor_forum, Result)),
+    Result == forum_establishment_state_only.
 
-% ---- the result-constructor recognisers, called with ground input ----
-test(recogniser_indeterminate_names_one_contract_key) :-
-    indeterminate([complaint_lodged_under_article_77]).
-test(recogniser_indeterminate_refuses_an_unknown_key, fail) :-
-    indeterminate([colour]).
-test(recogniser_needs_legal_review_open_textured) :-
-    needs_legal_review(open_textured(decision_concerns_the_caller, cite(eu_reg_2016_679_art_78_1)),
-                       [inputs_relied_on([decision_is_legally_binding-true, decision_concerns_the_caller-unsure])]).
-test(recogniser_needs_legal_review_cross_reference) :-
-    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)),
-                       [resolution(cite(competence_statement), not_attempted),
-                        inputs_relied_on([authority_competent_under_articles_55_and_56-absent])]).
-test(recogniser_needs_legal_review_refuses_an_empty_context, fail) :-
-    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), []).
-test(recogniser_provenance) :-
-    provenance(host_attestation_service, register_lookup).
-test(recogniser_outside_fact) :-
-    outside_fact(authority_competent_under_articles_55_and_56, attested(false, attestation(host, at, reason, none))).
-test(recogniser_outside_fact_refuses_another_key, fail) :-
-    outside_fact(is_data_subject, attested(false, attestation(host, at, reason, none))).
-test(recogniser_attested_true) :-
-    attested(true, attestation(host, at, reason, url('https://example.org/competence', '2026-11-12'))).
-test(recogniser_attested_refuses_unsure, fail) :-
-    attested(unsure, attestation(host, at, reason, none)).
-test(recogniser_url) :-
-    url('https://example.org/competence', '2026-11-12').
-test(recogniser_document) :-
-    document(upload_0001, sha256_digest).
-test(recogniser_input_problems) :-
-    input_problems([wrong_type(profile)]).
-test(recogniser_input_problems_refuses_an_empty_list, fail) :-
-    input_problems([]).
-test(recogniser_unknown_key) :-
-    unknown_key(colour).
-test(recogniser_unknown_key_refuses_a_contract_key, fail) :-
-    unknown_key(decision_concerns_the_caller).
-test(recogniser_wrong_type) :-
-    wrong_type(decision_is_legally_binding).
-test(recogniser_wrong_type_refuses_an_unknown_key, fail) :-
-    wrong_type(colour).
-test(recogniser_duplicate_key) :-
-    duplicate_key(authority_handled_the_complaint).
-test(recogniser_duplicate_key_refuses_the_profile, fail) :-
-    duplicate_key(profile).
+test(what_if_supplies_the_missing_competence) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_competence_absent, Profile),
+    gdpr_complaints_and_judicial_remedies_what_if(Profile, authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none)), answer(authority_inaction_remedy_right, Result)),
+    Result == inaction_remedy_right_exists.
+
+test(what_if_resolves_the_unsure_judgement) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(decision_unsure_binding, Profile),
+    gdpr_complaints_and_judicial_remedies_what_if(Profile, decision_is_legally_binding, true, answer(authority_decision_remedy_right, Result)),
+    Result == decision_remedy_right_exists.
+
+test(what_if_with_a_wrong_value_gives_input_problems) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    gdpr_complaints_and_judicial_remedies_what_if(Profile, is_data_subject, unsure, answer(complaint_right, Result)),
+    Result == input_problems([wrong_type(is_data_subject)]).
+
+test(what_if_does_not_keep_the_old_answer, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    gdpr_complaints_and_judicial_remedies_what_if(Profile, is_data_subject, false, answer(complaint_right, complaint_right_exists)).
 
 :- end_module(test_queries).

@@ -1,0 +1,33 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_cra_manufacturer_duties_citations, [citation/2, implements/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+implements(Key) :-
+    citation(Key, _).
+
+citation(eu_reg_2024_2847_art_71_2, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 71(2), dates of application', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_071.002)', verbatim - 'This Regulation shall apply from 11 December 2027. However, Article 14 shall apply from 11 September 2026 and Chapter IV (Articles 35 to 51) shall apply from 11 June 2026.']).
+citation(eu_reg_2024_2847_art_69_2, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 69(2), products placed on the market before 11 December 2027', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_069.002)', verbatim - 'Products with digital elements that have been placed on the market before 11 December 2027 shall be subject to the requirements set out in this Regulation only if, from that date, those products are subject to a substantial modification.']).
+citation(eu_reg_2024_2847_art_69_3, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 69(3), Article 14 for products placed on the market before 11 December 2027', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_069.003)', verbatim - 'By way of derogation from paragraph 2 of this Article, the obligations laid down in Article 14 shall apply to all products with digital elements that fall within the scope of this Regulation that have been placed on the market before 11 December 2027.']).
+citation(eu_reg_2024_2847_art_13_8, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 13(8), third subparagraph, the five-year floor of the support period', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_013.008)', verbatim - 'Without prejudice to the second subparagraph, the support period shall be at least five years. Where the product with digital elements is expected to be in use for less than five years, the support period shall correspond to the expected use time.']).
+citation(eu_reg_2024_2847_art_13_9, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 13(9), availability of security updates', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_013.009)', verbatim - 'Manufacturers shall ensure that each security update, as referred to in Part II, point (8), of Annex I, which has been made available to users during the support period, remains available after it has been issued for a minimum of 10 years or for the remainder of the support period, whichever is longer.']).
+citation(eu_reg_2024_2847_art_13_13, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 13(13), keeping the technical documentation and the EU declaration of conformity', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_013.013)', verbatim - 'Manufacturers shall keep the technical documentation and the EU declaration of conformity at the disposal of the market surveillance authorities for at least 10 years after the product with digital elements has been placed on the market or for the support period, whichever is longer.']).
+citation(eu_reg_2024_2847_art_13_18, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 13(18), last two sentences, periods of availability of the information and instructions to the user', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_013.018)', verbatim - 'Manufacturers shall keep the information and instructions to the user set out in Annex II at the disposal of users and market surveillance authorities for at least 10 years after the product with digital elements has been placed on the market or for the support period, whichever is longer. Where such information and instructions are provided online, manufacturers shall ensure that they are accessible, user-friendly and available online for at least 10 years after the product with digital elements has been placed on the market or for the support period, whichever is longer.']).
+citation(eu_reg_2024_2847_art_13_19, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 13(19), first sentence, end date of the support period stated at least by month and year', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#parag_013.019)', verbatim - 'Manufacturers shall ensure that the end date of the support period referred to in paragraph 8, including at least the month and the year, is clearly and understandably specified at the time of purchase']).
+citation(eu_reg_2024_2847_art_3_20, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 3(20), definition of support period', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#point_003_20)', verbatim - 'means the period during which a manufacturer is required to ensure that vulnerabilities of a product with digital elements are handled effectively and in accordance with the essential cybersecurity requirements set out in Part II of Annex I']).
+citation(eu_reg_2024_2847_art_3_21, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 3(21), definition of placing on the market', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#point_003_21)', verbatim - 'means the first making available of a product with digital elements on the Union market']).
+citation(eu_reg_2024_2847_art_3_30, [label - 'Regulation (EU) 2024/2847 (Cyber Resilience Act) Art 3(30), definition of substantial modification', ref - 'https://eur-lex.europa.eu/eli/reg/2024/2847/oj (unit 32024R2847#point_003_30)', verbatim - 'means a change to the product with digital elements following its placing on the market, which affects the compliance of the product with digital elements with the essential cybersecurity requirements set out in Part I of Annex I or which results in a modification to the intended purpose for which the product with digital elements has been assessed']).
+
+test(every_result_key_is_recorded) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    implements(eu_reg_2024_2847_art_69_2),
+    implements(eu_reg_2024_2847_art_69_3),
+    implements(eu_reg_2024_2847_art_13_8),
+    implements(eu_reg_2024_2847_art_13_9),
+    implements(eu_reg_2024_2847_art_13_13),
+    implements(eu_reg_2024_2847_art_13_18).
+
+test(an_unrecorded_key_does_not_implement, fail) :-
+    implements(eu_todo_primary_source).

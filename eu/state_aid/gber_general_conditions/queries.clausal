@@ -1,0 +1,138 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/state_aid/gber_general_conditions.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types of the order and where each is served:
+% - #2 eligibility: decide_gber_general_conditions/2 with the cited
+%   checklist gber_general_conditions_checklist/2 (the slice);
+% - #3 status determination: gber_general_conditions_status/2 (the slice);
+% - #16 what-if: gber_general_conditions_what_if/4 (here), which overrides
+%   one profile key of a case and re-runs the joined decision;
+% - the schema of profile keys: gber_general_conditions_profile_keys/1;
+% - the input check: gber_general_conditions_input_problems/2, re-exported
+%   as the scaffold wrote it in kernel.clausal.
+%
+% ROOT EXPORTS: the fifteen result atoms are exported as name/0 facts and
+% the result constructors as name/arity constructors (data, no clauses).
+% The twenty-six profile key atoms, the enumeration atoms of the five
+% enumeration keys, the atom no_application and the judgement value unsure
+% are NOT in the export list (an export list holds only name/arity): they
+% are listed under root_atoms in manifest.yaml, which makes the package
+% root carry each of them.
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], not a
+% dict, so the override is a local list replacement (plumbing, no
+% statutory marker): every entry of the key is dropped and one entry
+% attribute(Key, Value) is appended. kit/query_combinators' override_key/4
+% works on dicts and is noted in NOTES.md as a candidate for an
+% attribute-list variant.
+% =====================================================================
+
+:- module(queries, [
+    gber_general_conditions_profile_keys/1,
+    gber_general_conditions_input_problems/2,
+    gber_general_conditions_what_if/4,
+    within_scope/0,
+    excluded_from_scope/0,
+    within_threshold/0,
+    threshold_exceeded/0,
+    threshold_not_formalised/0,
+    transparent_aid/0,
+    not_transparent_aid/0,
+    incentive_effect/0,
+    no_incentive_effect/0,
+    cumulation_allowed/0,
+    cumulation_not_allowed/0,
+    cumulation_not_formalised/0,
+    tested_chapter_i_conditions_met/0,
+    chapter_i_conditions_not_met/0,
+    chapter_i_conditions_partly_untested/0,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/state_aid/gber_general_conditions/kernel, [gber_general_conditions_input_problems/2]).
+:- use_module(eu/state_aid/gber_general_conditions/gber_general_conditions, [decide_gber_general_conditions/2]).
+
+% ---- result constructors (exported, data only, never called as queries) ----
+:- constructors([
+    date(year, month, day),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% ---- result atoms (the fifteen RESULT atoms of the six queries) ----
+within_scope.
+excluded_from_scope.
+within_threshold.
+threshold_exceeded.
+threshold_not_formalised.
+transparent_aid.
+not_transparent_aid.
+incentive_effect.
+no_incentive_effect.
+cumulation_allowed.
+cumulation_not_allowed.
+cumulation_not_formalised.
+tested_chapter_i_conditions_met.
+chapter_i_conditions_not_met.
+chapter_i_conditions_partly_untested.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gber_general_conditions_profile_keys([scheme_excluded_by_article_1_2_a_or_b, export_or_domestic_goods_aid, aided_sector, sector_exception_applies, price_or_pass_on_condition, article_13_regional_aid_category, also_active_in_excluded_sector, separation_of_activities_or_costs_ensured, recovery_order_exclusion_applies, undertaking_in_difficulty, difficulty_exception_applies, difficulty_2020_2021_derogation, non_severable_violation_of_union_law, article_4_category, research_project_doubled, aid_form, form_transparency_condition_met, category_transparency_condition_met, transparent_under_article_5_1, article_6_5_category_conditions_met, tax_measure_conditions_met, application_contains_required_information, aid_type, size_class, large_enterprise_verification_done, identifiable_eligible_costs]).
+
+% #16 what-if: re-evaluate the joined decision with one key of the case's
+% profile hypothetically set to NewValue. Forward-only: Key and NewValue bound.
+gber_general_conditions_what_if(gber_case(Profile, ProjectAidCents, ApplicationDate, WorkStartDate, EligibleCostsCents, SameCostsAidCents, SameCostsDeMinimisCents, MaxIntensityBasisPoints), OverriddenKey, NewValue, Verdict) :-
+    override_profile_key(Profile, OverriddenKey, NewValue, Hypothesis),
+    decide_gber_general_conditions(gber_case(Hypothesis, ProjectAidCents, ApplicationDate, WorkStartDate, EligibleCostsCents, SameCostsAidCents, SameCostsDeMinimisCents, MaxIntensityBasisPoints), Verdict).
+
+% override_profile_key(Profile, Key, Value, Hypothesis): every entry of Key
+% dropped, then attribute(Key, Value) appended.
+override_profile_key(Profile, OverriddenKey, Value, Hypothesis) :-
+    profile_without_key(Profile, OverriddenKey, Remaining),
+    append(Remaining, [attribute(OverriddenKey, Value)], Hypothesis).
+
+profile_without_key([], _, []).
+profile_without_key([attribute(ElementKey, _)|Elements], OverriddenKey, Remaining) :-
+    ElementKey == OverriddenKey,
+    profile_without_key(Elements, OverriddenKey, Remaining).
+profile_without_key([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, [attribute(ElementKey, ElementValue)|Remaining]) :-
+    ElementKey \== OverriddenKey,
+    profile_without_key(Elements, OverriddenKey, Remaining).
+
+% ---- tests ----
+test(the_schema_has_twenty_six_keys) :-
+    gber_general_conditions_profile_keys(ProfileKeys),
+    length(ProfileKeys, 26).
+test(an_override_replaces_the_key) :-
+    override_profile_key([attribute(aid_form, grant), attribute(aid_type, scheme)], aid_form, loan, [attribute(aid_type, scheme), attribute(aid_form, loan)]).
+test(an_override_adds_an_absent_key) :-
+    override_profile_key([], aid_form, grant, [attribute(aid_form, grant)]).
+test(what_if_a_recovery_order_settles_against) :-
+    gber_general_conditions_what_if(gber_case([attribute(recovery_order_exclusion_applies, false)], 1, date(2024, 1, 1), date(2024, 2, 1), 1000, 100, 0, 5000), recovery_order_exclusion_applies, true, gber_general_conditions_verdict(chapter_i_conditions_not_met, _)).
+test(what_if_a_recovery_order_is_not_met_otherwise, fail) :-
+    gber_general_conditions_what_if(gber_case([attribute(recovery_order_exclusion_applies, false)], 1, date(2024, 1, 1), date(2024, 2, 1), 1000, 100, 0, 5000), recovery_order_exclusion_applies, true, gber_general_conditions_verdict(tested_chapter_i_conditions_met, _)).
+test(what_if_the_first_scope_key_is_given_the_next_is_asked) :-
+    gber_general_conditions_what_if(gber_case([], 1, date(2024, 1, 1), date(2024, 2, 1), 1000, 100, 0, 5000), scheme_excluded_by_article_1_2_a_or_b, false, gber_general_conditions_verdict(indeterminate([export_or_domestic_goods_aid]), [])).
+test(a_result_atom_is_a_fact) :-
+    within_scope.
+
+:- end_module(queries).

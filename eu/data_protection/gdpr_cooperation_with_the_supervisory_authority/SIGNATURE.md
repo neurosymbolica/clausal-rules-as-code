@@ -2,75 +2,48 @@
 
 ## Public query surface
 
-| Item | Value |
-|---|---|
-| Package | `eu/data_protection/gdpr_cooperation_with_the_supervisory_authority` |
-| Predicate prefix | `gdpr_cooperation_with_the_supervisory_authority_` |
-| Shape family | deontic |
-| Layout | kernel -> citations -> parameters -> gdpr_cooperation_with_the_supervisory_authority -> queries -> fixtures -> package facade (unchanged) |
-
-The one determination is the query COOPERATION_DUTY:
-
-`gdpr_cooperation_with_the_supervisory_authority_cooperation_duty(Profile, Result, Basis, Citations)`
-
-The facade wraps it:
+The core query is `gdpr_cooperation_with_the_supervisory_authority_cooperation_duty(Profile, Result, Basis, Citations)` (COOPERATION_DUTY). The facade wraps it:
 
 - `decide_gdpr_cooperation_with_the_supervisory_authority(Profile, gdpr_cooperation_with_the_supervisory_authority_verdict(Status, Citations))`
 - `gdpr_cooperation_with_the_supervisory_authority_status(Profile, Status)`
 
-**Totality and determinism:** for every term given as Profile, the query and the input check yield EXACTLY ONE solution, and they never fail or raise. The guards of the clauses are mutually exclusive, with no cut and no if-then-else. Every combination of the six keys is decided by exactly one step.
+Totality and determinism:
 
-**Figures:** none. Art 31 has no thresholds, periods or dates. No figure is imported, and no `constant_value` is declared.
+- **Total**: every term given as PROFILE gets exactly one RESULT.
+- **Deterministic**: there is exactly one solution, with no witness duplication. The role test is written as three disjoint clauses, so a profile with two `true` roles still has one witness.
 
-## Verdict STATUS atoms (replace the placeholders required / permitted / not_applicable)
+No figures are imported or declared. Art 31 has no thresholds or periods, and parameters.clausal stays empty of `constant_value` facts.
 
-**Final statuses:**
+## Verdict STATUS atoms (replace scaffold `required / permitted / not_applicable`)
 
-| Status | Meaning |
+Final statuses:
+
+- `cooperation_met`: a duty exists and the attested statement says the caller cooperated.
+- `cooperation_not_met`: a duty exists and the attested statement says the caller did not cooperate.
+- `cooperation_not_required`: Art 31 imposes no duty on these facts.
+
+Non-final statuses (compound terms only):
+
+- `indeterminate([Key])`. The bare atom `indeterminate` is never written.
+- `needs_legal_review(Reason, Context)`, where Reason is one of:
+  - `open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31))`
+  - `cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement))`
+- `input_problems(Problems)`
+
+For the eligibility query type (#2), the domain atoms map onto the eligibility labels as follows:
+
+| Eligibility label | Domain status |
 |---|---|
-| `cooperation_met` | The attested statement says the caller cooperated with the request. |
-| `cooperation_not_met` | The attested statement says the caller did not cooperate. |
-| `cooperation_not_required` | Art 31 imposes no duty on the facts given: no request, the request is not in the performance of the tasks, or the caller is not bound. |
+| eligible | `cooperation_met` |
+| ineligible | `cooperation_not_met` |
+| not applicable | `cooperation_not_required` |
+| indeterminate | `indeterminate([Key])` / `needs_legal_review(...)` |
 
-**Statuses that are not final:**
+The verdict is NOT derived from the `labels(Pos, Indet, Neg)` triple of assess/6. That triple would force a bare `indeterminate` atom, which is the atom-shadowing trap. The verdict comes from the limbs of cooperation_duty instead.
 
-| Status | Meaning |
-|---|---|
-| `indeterminate([KEY])` | KEY is the first absent needed key. The bare atom `indeterminate` is NEVER written. |
-| `needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)), [inputs_relied_on(PAIRS)])` | The judgement is unsure (step 6). |
-| `needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)), [resolution(cite(cooperation_statement), not_attempted), inputs_relied_on(PAIRS)])` | The outside fact is absent (step 5). |
-| `input_problems(PROBLEMS)` | The profile fails the input check (step 0). |
+## Profile keys (attribute list, read only with profile_get/3)
 
-**Mapping to query type #2 (eligibility):**
-
-- `cooperation_met` and `cooperation_not_met` are the duty-bound verdicts, positive and negative.
-- `cooperation_not_required` is the verdict that the duty does not apply.
-- `indeterminate` and `needs_legal_review` are the indeterminate verdicts.
-
-**RESULT CONSTRUCTORS** (exported, never called as queries):
-
-- indeterminate/1
-- needs_legal_review/2
-- open_textured/2
-- cross_reference_unresolved/2
-- input_problems/1
-- unknown_key/1
-- wrong_type/1
-- duplicate_key/1
-- resolution/2
-- inputs_relied_on/1
-- provenance/2
-- outside_fact/2
-- attested/2
-- attestation/4
-- url/2
-- document/2
-
-## Profile keys
-
-The profile is an attribute list `[attribute(KEY, VALUE), ...]`. It is read ONLY with `profile_get/3`, by presence first and then by value. Keys are bare atoms.
-
-There are six keys, in root_exports / input_contract order:
+The keys are listed in root_exports and input_contract order.
 
 | # | Key | Kind | Values |
 |---|---|---|---|
@@ -79,201 +52,201 @@ There are six keys, in root_exports / input_contract order:
 | 3 | `acts_as_representative_of_controller_or_processor` | crisp | `true` / `false` |
 | 4 | `authority_request_made` | crisp | `true` / `false` |
 | 5 | `request_is_in_performance_of_authority_tasks` | judgement (tri-state) | `true` / `false` / `unsure` |
-| 6 | `cooperation_given` | outside fact | `attested(true\|false, attestation(BY, AT, REASON, EVIDENCE))` |
+| 6 | `cooperation_given` | outside fact | `attested(true\|false, attestation(By, At, Reason, Evidence))` |
 
-For the outside fact:
+No key is numeric and no key is a date. For `cooperation_given`:
 
-- EVIDENCE is `url(URL, RETRIEVED_AT)`, `document(UPLOAD_ID, SHA256)` or `none`.
-- Kinds in precedence order are `attested` and `fetched`. The fetcher is `none`, so only `attested` is read.
+- Evidence is `url(Url, RetrievedAt)`, `document(UploadId, Sha256)` or `none`. None of these arguments is inspected.
+- `outside_facts:` entry: key `cooperation_given`, citation `eu_reg_2016_679_art_31`, target `cooperation_statement`. Kinds in precedence order are `attested`, `fetched`; fetcher `none`.
 
-The profile has no numeric keys and no date keys. No value is a string or a Python boolean.
+## Citation-key atoms (canonical lexicon scheme; never shortened)
 
-## Citation-key atoms (CANONICAL lexicon scheme, _lexicon/citations.yaml)
+- `eu_reg_2016_679_art_31`: GDPR Art 31, the single paragraph. It is the only load-bearing provision.
+- `cooperation_statement`: the cross-reference TARGET of the outside fact (the attested cooperation statement). It appears only inside `cite(cooperation_statement)` in referral terms.
 
-- `eu_reg_2016_679_art_31`: Regulation (EU) 2016/679 Art 31, pinned unit `02016R0679-20160504#art_031`. This is the only load-bearing provision.
-- `cooperation_statement`: the TARGET of the outside fact `cooperation_given`. It is used only in `cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement))` and in `resolution(cite(cooperation_statement), not_attempted)`.
+`citation_vocabulary` is the set `[eu_reg_2016_679_art_31, cooperation_statement]`.
 
-`citation_vocabulary` is `[eu_reg_2016_679_art_31, cooperation_statement]`. No shortened citation atom is ever invented.
+## Public predicates
 
-The `outside_facts:` entry reads:
+- `gdpr_cooperation_with_the_supervisory_authority_cooperation_duty(Profile, Result, Basis, Citations)`: the COOPERATION_DUTY query. It runs limbs 0-8 in order, and the first limb that applies decides. Cites `eu_reg_2016_679_art_31`.
+- `gdpr_cooperation_with_the_supervisory_authority_input_problems(Profile, Problems)`: the shape-only input check against input_contract.
+  - Yields exactly one solution for every term and never fails or raises.
+  - Problems is `[]` when the profile is well-formed.
+  - Problem order: `duplicate_key` / `wrong_type` per contract key in contract order, then `unknown_key` in order of first occurrence.
+  - Cites `eu_reg_2016_679_art_31` (input_contract).
+- `decide_gdpr_cooperation_with_the_supervisory_authority(Profile, Verdict)`: Verdict is `gdpr_cooperation_with_the_supervisory_authority_verdict(Status, Citations)`, where Status and Citations are the Result and Citations of cooperation_duty. Cites `eu_reg_2016_679_art_31`.
+- `gdpr_cooperation_with_the_supervisory_authority_status(Profile, Status)`: the eligibility verdict (query type #2). Status is the Result of cooperation_duty. Cites `eu_reg_2016_679_art_31`.
+- `gdpr_cooperation_with_the_supervisory_authority_checklist(Profile, Checklist)`: the justification checklist (query type #7).
+  - Built with formalize_lib `eval_requirements/4` over the four requirement ids.
+  - Each item is `item(RequirementId, Status, cite(eu_reg_2016_679_art_31))`, met items included.
+  - Cites `eu_reg_2016_679_art_31`.
+- `gdpr_cooperation_with_the_supervisory_authority_what_if(Profile, Key, Value, Status)`: the status after overriding Key with Value.
+  - Implemented through query_combinators `what_if/5` with the closure `gdpr_cooperation_with_the_supervisory_authority_status`.
+  - Cites `eu_reg_2016_679_art_31`.
+- `gdpr_cooperation_with_the_supervisory_authority_fixture(Name, Profile)` and `gdpr_cooperation_with_the_supervisory_authority_fixture_expected(Name, Result, Basis, Citations)`: the named test profiles and their expected answers. Cites `eu_reg_2016_679_art_31`.
 
-- key: `cooperation_given`
-- citation: `eu_reg_2016_679_art_31`
-- target: `cooperation_statement`
-- kinds: `[attested, fetched]`
-- fetcher: `none`
+RESULT constructors are exported but never called as queries:
 
-The `referrals:` block points to THE PAIRS RULE (slice section, step 5 and step 6).
-
-## Public predicates (one line each)
-
-| Predicate | Description | Citation |
-|---|---|---|
-| `gdpr_cooperation_with_the_supervisory_authority_cooperation_duty(Profile, Result, Basis, Citations)` | The query COOPERATION_DUTY, steps 0 to 8, first step decides. Gives exactly one solution. | `cite(eu_reg_2016_679_art_31)` |
-| `gdpr_cooperation_with_the_supervisory_authority_input_problems(Profile, Problems)` | The typed input check against input_contract. Problems is `[]` or the ordered problem list. It gives exactly one solution, and never fails or raises. | (none: a check of form) |
-| `decide_gdpr_cooperation_with_the_supervisory_authority(Profile, Verdict)` | Facade. Verdict is `gdpr_cooperation_with_the_supervisory_authority_verdict(Status, Citations)`, with Status the Result of cooperation_duty. | `cite(eu_reg_2016_679_art_31)` |
-| `gdpr_cooperation_with_the_supervisory_authority_status(Profile, Status)` | Facade. Status alone, equal to the Result of cooperation_duty. | `cite(eu_reg_2016_679_art_31)` |
-| `gdpr_cooperation_with_the_supervisory_authority_checklist(Profile, Checklist)` | Query types #2 and #7. Checklist is a list of `item(RequirementId, Status, cite(eu_reg_2016_679_art_31))`, one per requirement, met items included. Checklist is `[]` when the input check gives problems. | `cite(eu_reg_2016_679_art_31)` on every item |
-| `gdpr_cooperation_with_the_supervisory_authority_what_if(Profile, Key, Value, Status)` | Status of the profile with attribute(Key, Value) put in place of any existing Key. Uses `what_if/5` from kit/query_combinators, with the closure `gdpr_cooperation_with_the_supervisory_authority_status`. | `cite(eu_reg_2016_679_art_31)` |
-| `gdpr_cooperation_with_the_supervisory_authority_requirement(RequirementId, Profile, Status, Citation)` | The requirement goal injected into `eval_requirements/4`. RequirementId comes FIRST. | `cite(eu_reg_2016_679_art_31)` |
-| `gdpr_cooperation_with_the_supervisory_authority_fixture(Name, Profile)` | Fixtures: named profiles, one per step and per interesting edge. | (none) |
-| `gdpr_cooperation_with_the_supervisory_authority_fixture_expected(Name, Result, Basis, Citations)` | Fixtures: the expected answer of each fixture. | (none) |
+- Result terms: `indeterminate/1`, `needs_legal_review/2`, `open_textured/2`, `cross_reference_unresolved/2`, `input_problems/1`
+- Problem terms: `unknown_key/1`, `wrong_type/1`, `duplicate_key/1`
+- Context and basis terms: `resolution/2`, `inputs_relied_on/1`, `provenance/2`, `outside_fact/2`
+- Outside-fact terms: `attested/2`, `attestation/4`, `url/2`, `document/2`
 
 ## Planned reuse (manifest `uses:`)
 
-**formalize_lib**, importing exactly what is used:
+- **formalize_lib**:
+  - `profile_get/3`, `profile_has/2` and `profile_lacks/2`: presence first, then value.
+  - `check_true/4`: the role and request items.
+  - `check_tri/4`: the judgement item. Clause outcomes: true → met, false → unmet, unsure or absent → unknown.
+  - `or_status/2`: combines the three role items into one bound item.
+  - `eval_requirements/4`: builds the checklist. It must not be hand-rolled (lint R1).
+  - `memberd/2`, `not_member/2`, `item/3`, `attribute/2`.
+- **kit.query_combinators**: `what_if/5`, for the what_if facade.
+- **validate_props** (tests only):
+  - `run_props/1`
+  - `prop_totality/3` and `prop_determinism/3`, run over the full product of key values plus absent.
+  - `prop_citation_complete/3`
+  - `prop_missing_key_coverage/3`
+- **Not used, with reasons**:
+  - kit.compliance_lib: the limbs are a closed, ordered list fixed by the interface. A deny-overrides lattice would add nothing and could reorder the precedence.
+  - kit.deadline_lib and date_time: Art 31 has no time limit.
+  - currency_vocab, vat_category, country: there are no money, VAT or country inputs.
+  - rolling_window: not relevant to this order.
 
-- profile_get/3
-- profile_has/2
-- profile_lacks/2
-- eval_requirements/4
-- not_member/2
-- memberd/2
-- attribute/2
-- item/3
-- unmet/1
-- unknown/1
+## Layer files (layout unchanged)
 
-The checklist is built with `eval_requirements/4` over the injected `gdpr_cooperation_with_the_supervisory_authority_requirement`. It is never a hand-rolled findall-over-item helper (lint R1).
-
-The tri-state judgement item is written as three explicit clauses (true / false / unsure-or-absent) and not as a clone of check_tri. If the `unsure` mapping of check_tri/4 matches `unknown([request_is_in_performance_of_authority_tasks])`, check_tri/4 is used instead (lint C15).
-
-**kit/query_combinators:** what_if/5, for the what_if/4 facade.
-
-**validate_props** (tests only):
-
-- run_props/1
-- prop_totality/3
-- prop_determinism/3
-- prop_citation_complete/3
-- prop_missing_key_coverage/3
-- bad_citation/1
-
-**Not used:**
-
-- deadline_lib, rolling_window and date_time: Art 31 has no period.
-- currency_vocab and vat_category: there is no money.
-- compliance_lib: the query types are not in scope.
-- country: competence is not checked.
-
-**Not in the kit yet** (noted in the working notes (not published), local for now):
-
-- the outside-fact shape check;
-- the duplicate-aware typed input check.
-
-## kernel.clausal
-
-It keeps only the shared floor of the scaffold. There is ONE determination slice, so NO domain predicate is shared, and nothing domain-specific moves into the kernel.
+- **kernel.clausal.** No predicate needs to be shared, because there is only one determination slice. The kernel keeps only its scaffold floor (module header and generic exports) and gains no domain logic.
+- **citations.clausal.** Holds the citation facts for `eu_reg_2016_679_art_31` (pinned unit `02016R0679-20160504#art_031` with the verbatim text) and `cooperation_statement` (the outside-fact target).
+- **parameters.clausal.** No statutory figures. A comment records that Art 31 sets none.
+- **queries.clausal.** Re-exports the facade predicates listed above by delegating to the slice.
+- **fixtures.clausal.** Holds the named profiles listed in the slice section, with their expected results.
 
 ## Slice: gdpr_cooperation_with_the_supervisory_authority.clausal
 
-### Value facts owned
+### Statutory VALUE facts owned by this slice
 
-- No statutory figures. There is no threshold, period or table, and no `constant_value`.
-- Facts owned:
-  - the contract key order `gdpr_cooperation_with_the_supervisory_authority_contract_key(Position, Key, Kind)`, positions 1 to 6 as in the table above, with Kind `crisp`, `judgement` or `outside_fact`;
-  - the role keys `gdpr_cooperation_with_the_supervisory_authority_role_key(Key)` for the three role atoms;
-  - the requirement order `gdpr_cooperation_with_the_supervisory_authority_requirement_order([caller_bound_by_article, request_made_by_authority, request_in_performance_of_authority_tasks, cooperation_given_on_request])`.
+Art 31 has no thresholds, periods or tables. The slice owns these interface facts:
 
-### Input check (step 0)
+- `contract_key(Position, Key, Kind)` for positions 1-6:
+  - Kind `crisp`: the four role and request keys.
+  - Kind `judgement`: `request_is_in_performance_of_authority_tasks`.
+  - Kind `outside_fact`: `cooperation_given`.
+- `role_key/1`: the three role keys, in order.
+- `outside_fact_entry(cooperation_given, eu_reg_2016_679_art_31, cooperation_statement)`.
 
-The check is `gdpr_cooperation_with_the_supervisory_authority_input_problems(Profile, Problems)`. It gives exactly one solution for every term.
+### Rules / requirements (checklist ids, each cited `eu_reg_2016_679_art_31`)
 
-**When the profile is not an attribute list**, Problems is `[wrong_type(profile)]`. This covers:
+Each requirement is written as `requirement(RequirementId, Profile, Status, Citation)`, with RequirementId first. Each has exactly three disjoint clauses (met, unmet, unknown), with no cut and no if-then-else.
 
-- a Profile that is unbound;
-- a partial list;
-- a non-list;
-- a list holding an unbound element;
-- a list holding any element that is not `attribute(_, _)`.
-
-**Otherwise**, Problems lists the following, in this order:
-
-1. For each contract key in positions 1 to 6:
-   - `duplicate_key(KEY)` if KEY occurs more than once. No value of a duplicated key is read, so it is never also wrong_type.
-   - Else `wrong_type(KEY)` if the single value is outside its type:
-     - a crisp key whose value is not `true` or `false`;
-     - the judgement whose value is not `true`, `false` or `unsure`;
-     - the outside fact whose value is not `attested(true|false, attestation(_, _, _, _))`;
-     - any key whose value is unbound.
-2. Then `unknown_key(KEY)` once for each key outside the six, in the order of its first occurrence, however often it repeats. A key that is not an atom (a number, string, compound or unbound variable) is unknown_key(KEY), KEY as given. The check compares keys with `==`, never by unification.
-
-Absence is never a problem. Every present key is checked.
-
-### The limbs
-
-The limbs are clauses of `..._cooperation_duty/4` with the ground result folded into the head (C17). There is one clause per disjoint route. Each guard includes `Problems == []` for steps 1 to 8.
-
-| Step | Guard | Result | Basis | Citations |
+| Requirement id | Built from | met | unmet | unknown |
 |---|---|---|---|---|
-| (0) | Problems non-empty | `input_problems(Problems)` | `[]` | `[]` |
-| (1) | authority_request_made = false | `cooperation_not_required` | `[]` | `[cite(eu_reg_2016_679_art_31)]` |
-| (2) | request_is_in_performance_of_authority_tasks = false, and authority_request_made not false | `cooperation_not_required` | `[]` | `[cite(eu_reg_2016_679_art_31)]` |
-| (3) | the three role keys all present and all false; request not false; judgement not false | `cooperation_not_required` | `[]` | `[cite(eu_reg_2016_679_art_31)]` |
-| (4) | none of steps 1 to 3; a needed key is absent | `indeterminate([KEY])` | `[]` | `[]` |
-| (5) | every needed key present; one role true; request true; judgement true or unsure; cooperation_given absent | `needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)), [resolution(cite(cooperation_statement), not_attempted), inputs_relied_on([request_is_in_performance_of_authority_tasks-Value, cooperation_given-absent])])`, with Value true or unsure | `[]` | `[]` |
-| (6) | as step 5, but judgement unsure and cooperation_given present | `needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)), [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])])` | `[]` | `[]` |
-| (7) | judgement true; cooperation_given = `attested(true, _)` | `cooperation_met` | `[outside_fact(cooperation_given, Attested)]` | `[cite(eu_reg_2016_679_art_31)]` |
-| (8) | judgement true; cooperation_given = `attested(false, _)` | `cooperation_not_met` | `[outside_fact(cooperation_given, Attested)]` | `[cite(eu_reg_2016_679_art_31)]` |
+| `caller_is_bound_by_article_31` | `or_status/2` over `check_true/4` on the three role keys | any role key `true` | all role keys `false` | otherwise, `unknown(Keys)` for the absent role keys |
+| `authority_request_made` | `check_true/4` | `true` | `false` | absent, `unknown([authority_request_made])` |
+| `request_is_in_performance_of_authority_tasks` | `check_tri/4` | `true` | `false` | `unsure` or absent |
+| `cooperation_given` | local three-clause predicate | `attested(true, _)` | `attested(false, _)` | absent |
 
-At steps 7 and 8, Attested is exactly as supplied.
+The checklist's `unknown([cooperation_given])` is justification only. It never enters MISSING_KEYS.
 
-**Needed keys at step 4.** The needed keys are computed in root_exports order, and KEY is the first absent one:
+### Limbs of cooperation_duty (C17: constant outputs folded into heads; one clause per disjoint route)
 
-- **When no role key is true:** acts_as_controller, acts_as_processor, acts_as_representative_of_controller_or_processor, authority_request_made, request_is_in_performance_of_authority_tasks.
-- **When some role key is true:** authority_request_made, request_is_in_performance_of_authority_tasks.
-- **Never:** cooperation_given.
+Every route after step 0 begins with `input_problems(Profile, [])`.
 
-**The PAIRS rule.** PAIRS holds only the present judgement key. At step 5 it also holds `cooperation_given-absent`, at that key's root_exports place (after the judgement). No other key is a pair.
+- **Step 0.** Problems is non-empty.
+  - Result: `input_problems(Problems)`.
+  - Basis `[]`, Citations `[]`.
+- **Step 1.** `authority_request_made` is `false`.
+  - Result: `cooperation_not_required`.
+  - Basis `[]`, Citations `[cite(eu_reg_2016_679_art_31)]`.
+- **Step 2.** The request flag is not `false` (absent or `true`), and the judgement is `false`.
+  - Result: `cooperation_not_required`.
+  - Basis `[]`, Citations `[cite(eu_reg_2016_679_art_31)]`.
+- **Step 3.** Request not `false`, judgement not `false`, and all three role keys present and `false`.
+  - Result: `cooperation_not_required`.
+  - Basis `[]`, Citations `[cite(eu_reg_2016_679_art_31)]`.
+- **Step 4.** Steps 1-3 do not apply, and a needed key is absent.
+  - Result: `indeterminate([Key])`, where Key is the first absent needed key in contract order.
+  - Basis `[]`, Citations `[]`.
+  - Needed keys: the role keys (only while no role key is `true`), then `authority_request_made`, then `request_is_in_performance_of_authority_tasks`.
+- **Step 5.** Bound, request `true`, judgement `true` or `unsure`, and `cooperation_given` absent.
+  - Result: `needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)), [resolution(cite(cooperation_statement), not_attempted), inputs_relied_on([request_is_in_performance_of_authority_tasks-Judgement, cooperation_given-absent])])`.
+  - Basis `[]`, Citations `[]`.
+- **Step 6.** Bound, request `true`, judgement `unsure`, and `cooperation_given` present.
+  - Result: `needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)), [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])])`.
+  - Basis `[]`, Citations `[]`.
+- **Step 7.** Bound, request `true`, judgement `true`, and `cooperation_given` is `attested(true, Attestation)`.
+  - Result: `cooperation_met`.
+  - Basis `[outside_fact(cooperation_given, attested(true, Attestation))]`, Citations `[cite(eu_reg_2016_679_art_31)]`.
+- **Step 8.** As step 7, but the statement is `attested(false, Attestation)`.
+  - Result: `cooperation_not_met`.
+  - Basis `[outside_fact(cooperation_given, attested(false, Attestation))]`, Citations `[cite(eu_reg_2016_679_art_31)]`.
 
-### Requirements (checklist, query types #2 and #7)
+Three helper predicates keep the routes disjoint and single-witness:
 
-`..._requirement/4` has three mutually exclusive clauses per requirement: met, unmet and unknown. Each is cited `cite(eu_reg_2016_679_art_31)`.
+- **Bound.** `caller_bound_by_role(Profile)` has three disjoint clauses, so it yields one witness:
+  - `acts_as_controller` is `true`; or
+  - controller not `true` and `acts_as_processor` is `true`; or
+  - neither is `true` and `acts_as_representative_of_controller_or_processor` is `true`.
+- **First missing key.** `first_missing_needed_key(Profile, Key)` uses disjoint clauses guarded by `profile_lacks/2` and `profile_has/2` in contract order.
+- **Pairs.** `relied_on_pairs/3` builds PAIRS.
 
-- **caller_bound_by_article** (R1)
-  - met: a role key is true;
-  - `unmet(caller_not_bound)`: all three role keys are false;
-  - `unknown([FirstAbsentRoleKey])`: otherwise.
-- **request_made_by_authority** (R2)
-  - met: true;
-  - `unmet(no_request_made)`: false;
-  - `unknown([authority_request_made])`: absent.
-- **request_in_performance_of_authority_tasks** (R3)
-  - met: true;
-  - `unmet(request_outside_authority_tasks)`: false;
-  - `unknown([request_is_in_performance_of_authority_tasks])`: unsure or absent.
-- **cooperation_given_on_request** (R4)
-  - met: `attested(true, _)`;
-  - `unmet(cooperation_not_given)`: `attested(false, _)`;
-  - `unknown([cooperation_given])`: absent. This is checklist provenance only; MISSING_KEYS never names it.
+### Input check (owned by this slice)
 
-### Verdict atoms of the slice
+`gdpr_cooperation_with_the_supervisory_authority_input_problems(Profile, Problems)` uses disjoint clauses with no cut, no if-then-else and no exceptions.
 
-- cooperation_met
-- cooperation_not_met
-- cooperation_not_required
-- indeterminate/1
-- needs_legal_review/2 (open_textured/2, cross_reference_unresolved/2)
-- input_problems/1
+**Profile shape.**
 
-### Shared with another slice
+- A profile that is a proper, fully bound list in which every element is nonvar and of the form `attribute(_, _)` is an attribute list.
+- The test walks the list with `var/1` guards, so a partial list or an unbound tail is never bound.
+- Anything else gives `[wrong_type(profile)]` alone.
 
-None.
+**Per contract key, in contract order.** Occurrences are counted by `==` on atoms.
 
-### Tests (seven modes, v2 manifest)
+- Two or more occurrences give `duplicate_key(Key)`. No value is read.
+- Exactly one occurrence whose value is outside its type gives `wrong_type(Key)`:
+  - crisp keys: `true` or `false`;
+  - judgement: `true`, `false` or `unsure`;
+  - outside fact: `attested(V, attestation(A, B, C, D))` with V `true` or `false` and each of A-D `ground/1`.
+- An unbound value is `wrong_type(Key)`.
 
-There is one fixture per step 0 to 8. Edges:
+**Unknown keys.**
 
-- duplicate keys, equal and unequal;
-- a non-atom key;
-- an unbound value;
-- an unbound profile;
-- a partial list;
-- an unknown key that repeats;
-- a representative alone bound;
-- controller false with processor absent, giving `indeterminate([acts_as_processor])`;
-- request absent with a role true, giving `indeterminate([authority_request_made])`;
-- judgement unsure with cooperation absent, giving step 5;
-- judgement false with request absent, giving step 2.
+- Every key that is not one of the six atoms gives `unknown_key(Key)`, Key as given. This covers non-atoms: numbers, strings, compound terms and unbound variables.
+- Each such key is listed once, in order of first occurrence, deduplicated by `==`.
 
-Every negative test is paired with a positive test over the same case. Totality, determinism and citation-completeness are checked with validate_props.
+### Verdict atoms of this slice
+
+The slice uses the full status set from the top of this file:
+
+- final: `cooperation_met`, `cooperation_not_met`, `cooperation_not_required`;
+- non-final: `indeterminate([Key])`, `needs_legal_review(Reason, Context)`, `input_problems(Problems)`.
+
+### Shared predicates
+
+None. Nothing in this slice must be shared with another slice, so nothing moves to kernel.clausal.
+
+### Fixtures and per-rule tests
+
+Each negative test is paired with a positive test over the same case.
+
+| Fixture | Profile | Expected result |
+|---|---|---|
+| `controller_cooperated` | controller true, others false, request true, judgement true, `attested(true, ...)` | `cooperation_met` |
+| `processor_refused` | processor true, request true, judgement true, `attested(false, ...)` | `cooperation_not_met` |
+| `representative_cooperated` | representative true, request true, judgement true, `attested(true, ...)` | `cooperation_met` |
+| `no_request` | request false | `cooperation_not_required` (also with the role keys absent) |
+| `request_outside_tasks` | judgement false, request key absent | `cooperation_not_required` |
+| `not_bound` | all role keys false, request true, judgement true | `cooperation_not_required` |
+| `role_unknown` | controller absent, the other roles false | `indeterminate([acts_as_controller])` |
+| `two_keys_missing` | request and judgement absent, controller true | `indeterminate([authority_request_made])` |
+| `statement_missing_unsure` | judgement unsure, cooperation_given absent | step 5 referral with PAIRS `[request_is_in_performance_of_authority_tasks-unsure, cooperation_given-absent]` |
+| `statement_missing_true` | judgement true, cooperation_given absent | step 5 referral with judgement `true` |
+| `judgement_unsure` | judgement unsure, statement present | step 6 open_textured referral |
+| `duplicate_and_unknown` | repeated role key plus key `color` | `input_problems([duplicate_key(acts_as_controller), unknown_key(color)])` |
+| `wrong_types` | crisp key `unsure`, attestation holding an unbound argument | `wrong_type` problems |
+| `not_a_list` | profile is an atom, an unbound variable, or a partial list | `input_problems([wrong_type(profile)])` |
+
+Property tests:
+
+- **Totality and determinism**: `findall` over the cooperation_duty answers gives length 1, over the full product of the six keys (each value plus absent).
+- **Citation completeness**: every final answer cites `eu_reg_2016_679_art_31`.
+- **Outside-fact discipline**: `cooperation_given` never appears in any `indeterminate/1` list.

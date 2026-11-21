@@ -1,0 +1,282 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_corrective_powers_named.
+% A TOP-LAYER consumer: imports only the slice's public predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The order has no threshold, so the near-miss
+% controls are one-key flips: each positive subject is paired with a
+% subject that differs in ONE key and gets the opposite answer.
+%
+% Pairs (positive / near-miss control):
+%   past_infringement            / all_false              (processing_has_infringed true / false)
+%   intended_infringement        / all_false              (intended_processing_likely_to_infringe)
+%   non_compliance_only          / all_false              (processing_not_in_compliance)
+%   breach_and_request           / all_false              (two crisp keys)
+%   certification_failing        / certification_requirements_met (requirements true / false)
+%   certification_failing        / certification_not_held (issued true / false)
+%   third_country_flows          / missing_flows          (flows true / absent)
+%   past_infringement            / unsure_infringement    (true / unsure: refers)
+%   certification_failing        / unsure_requirements    (true / unsure: refers)
+%   certification_not_held       / missing_certification_key (false / absent)
+%   breach_stated_plainly        / attested_value         (true / attested(true): input problem)
+%   everything_true              / duplicate_and_unknown  (well-formed / malformed)
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_corrective_powers_named_subject/1,
+    gdpr_corrective_powers_named_profile_for/2,
+    gdpr_corrective_powers_named_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_corrective_powers_named/gdpr_corrective_powers_named, [decide_gdpr_corrective_powers_named/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_corrective_powers_named_subject(all_false).
+gdpr_corrective_powers_named_subject(intended_infringement).
+gdpr_corrective_powers_named_subject(past_infringement).
+gdpr_corrective_powers_named_subject(non_compliance_only).
+gdpr_corrective_powers_named_subject(breach_and_request).
+gdpr_corrective_powers_named_subject(breach_stated_plainly).
+gdpr_corrective_powers_named_subject(certification_failing).
+gdpr_corrective_powers_named_subject(certification_requirements_met).
+gdpr_corrective_powers_named_subject(certification_not_held).
+gdpr_corrective_powers_named_subject(third_country_flows).
+gdpr_corrective_powers_named_subject(everything_true).
+gdpr_corrective_powers_named_subject(missing_flows).
+gdpr_corrective_powers_named_subject(missing_certification_key).
+gdpr_corrective_powers_named_subject(unsure_infringement).
+gdpr_corrective_powers_named_subject(unsure_requirements).
+gdpr_corrective_powers_named_subject(attested_value).
+gdpr_corrective_powers_named_subject(duplicate_and_unknown).
+
+% ---- Profiles --------------------------------------------------------
+% No situation: no point is named (powers_named([], authority_discretion)).
+gdpr_corrective_powers_named_profile_for(all_false, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Intended processing likely to infringe: points (a) and (f).
+gdpr_corrective_powers_named_profile_for(intended_infringement, [
+    attribute(intended_processing_likely_to_infringe, true),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Processing has infringed: points (b), (f) and (i).
+gdpr_corrective_powers_named_profile_for(past_infringement, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, true),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Processing not in compliance: points (d) and (f).
+gdpr_corrective_powers_named_profile_for(non_compliance_only, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, true),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% A request and a breach: points (c) and (e).
+gdpr_corrective_powers_named_profile_for(breach_and_request, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, true),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, true),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% A breach stated as the plain atom true: point (e), to the controller only.
+gdpr_corrective_powers_named_profile_for(breach_stated_plainly, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, true),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% A certification issued whose requirements are not met: point (h).
+gdpr_corrective_powers_named_profile_for(certification_failing, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, true),
+    attribute(certification_requirements_not_met, true),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Near miss: a certification issued whose requirements are met.
+gdpr_corrective_powers_named_profile_for(certification_requirements_met, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, true),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Near miss: no certification held; a false settles point (h) before the unsure.
+gdpr_corrective_powers_named_profile_for(certification_not_held, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, unsure),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Data flows to a third country or international organisation: point (j).
+gdpr_corrective_powers_named_profile_for(third_country_flows, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, true)
+]).
+
+% Every situation: all ten points named, in the order of the points.
+gdpr_corrective_powers_named_profile_for(everything_true, [
+    attribute(intended_processing_likely_to_infringe, true),
+    attribute(processing_has_infringed, true),
+    attribute(data_subject_request_to_exercise_rights_made, true),
+    attribute(processing_not_in_compliance, true),
+    attribute(personal_data_breach_occurred, true),
+    attribute(rectification_erasure_or_restriction_ground_met, true),
+    attribute(certification_issued_or_applied_for, true),
+    attribute(certification_requirements_not_met, true),
+    attribute(data_flows_to_third_country_or_international_organisation, true)
+]).
+
+% Near miss of third_country_flows: the flows key absent.
+gdpr_corrective_powers_named_profile_for(missing_flows, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false)
+]).
+
+% The certification key absent with the requirements unsure: the absent
+% key is named; the requirements wait behind it (with <<DNUM>>).
+gdpr_corrective_powers_named_profile_for(missing_certification_key, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_requirements_not_met, unsure),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Near miss of past_infringement: the infringement judgement unsure (refers).
+gdpr_corrective_powers_named_profile_for(unsure_infringement, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, unsure),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Near miss of certification_failing: the requirements judgement unsure (refers).
+gdpr_corrective_powers_named_profile_for(unsure_requirements, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, true),
+    attribute(certification_requirements_not_met, unsure),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% Near miss of breach_stated_plainly: an attested(...) value is wrong_type (reading (14)).
+gdpr_corrective_powers_named_profile_for(attested_value, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, attested(true)),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false)
+]).
+
+% A repeated contract key and a key outside the contract.
+gdpr_corrective_powers_named_profile_for(duplicate_and_unknown, [
+    attribute(intended_processing_likely_to_infringe, false),
+    attribute(processing_has_infringed, true),
+    attribute(processing_has_infringed, false),
+    attribute(data_subject_request_to_exercise_rights_made, false),
+    attribute(processing_not_in_compliance, false),
+    attribute(personal_data_breach_occurred, false),
+    attribute(rectification_erasure_or_restriction_ground_met, false),
+    attribute(certification_issued_or_applied_for, false),
+    attribute(certification_requirements_not_met, false),
+    attribute(data_flows_to_third_country_or_international_organisation, false),
+    attribute(fine_amount, true)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_corrective_powers_named_assess(Subject, Verdict) :-
+    gdpr_corrective_powers_named_profile_for(Subject, Profile),
+    decide_gdpr_corrective_powers_named(Profile, Verdict).
+
+:- end_module(fixtures).

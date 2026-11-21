@@ -1,57 +1,148 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% queries.clausal -- QUERY layer for eu/nis2_jurisdiction_registration.
-% A TOP-LAYER consumer: it imports the determination slice PUBLIC predicates
-% it calls, and nothing else.
+% queries.clausal -- QUERY-COMBINATOR layer for eu/nis2_jurisdiction_registration.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
 %
-% Query types served (see manifest query_interface):
-%   #2  eligibility    nis2_jurisdiction_registration_status/2 (slice)
-%   #7  justification  nis2_jurisdiction_registration_checklist/2 (slice), cite(...) per row
-%   #16 what-if        nis2_jurisdiction_registration_what_if/4
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive), original OJ text
+% (OJ L 333, 27.12.2022), Art 26(1), (2), (3), Art 27(1), (2), (3),
+% Art 3(3), (4). This layer decides nothing statutory: it re-evaluates the
+% slice's verdict on a changed profile, re-exports the input check, and
+% exports the package-root vocabulary (root_exports) and the result
+% constructors of the order's interface.
 %
-% nis2_jurisdiction_registration_what_if/4         override one key, re-evaluate the verdict status
-% nis2_jurisdiction_registration_status_by_category/2  enumeration: the status under each entity category
-% nis2_jurisdiction_registration_profile_keys/1    the profile key schema
-% nis2_jurisdiction_registration_input_problems/2  the problems a profile has ([] = none)
+% Query types served by the package (registered in manifest.yaml):
+%   #2 eligibility   nis2_jurisdiction_registration_status/2 (the slice):
+%                    registration_position_settled (positive) |
+%                    registration_position_open (indeterminate: an absent
+%                    key, or an unsure judgement handed to the user) |
+%                    no_single_member_state_jurisdiction (negative) |
+%                    profile_rejected (input problems).
+%   #7 justification nis2_jurisdiction_registration_checklist/2 (the slice):
+%                    every row carries its cite(...) list, met rows included.
+%   #16 what-if      nis2_jurisdiction_registration_what_if/4 (here):
+%                    override one key, then re-evaluate the verdict status.
+%   the five scored queries of the order (the slice):
+%                    jurisdiction_basis/3, main_establishment_rule/3,
+%                    registry_submission_items/2,
+%                    entity_list_submission_items/2,
+%                    change_notification_limits/2.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the kit's dict-based
+% override_key/4 does not apply: the override here drops every
+% attribute(Key, _) item and appends attribute(Key, NewValue) (list
+% plumbing only). The override may itself create an input problem (for
+% example a crisp key given unsure): the verdict then reports
+% profile_rejected, as the input check comes first.
 % =====================================================================
 
 :- module(queries, [
     nis2_jurisdiction_registration_profile_keys/1,
     nis2_jurisdiction_registration_input_problems/2,
     nis2_jurisdiction_registration_what_if/4,
-    nis2_jurisdiction_registration_status_by_category/2
+    entity_category/0,
+    established_in_union/0,
+    offers_services_in_union/0,
+    representative_designated_in_union/0,
+    decisions_predominantly_taken_in_one_union_member_state/0,
+    cybersecurity_operations_carried_out_in_one_union_member_state/0,
+    sector_and_subsector_applicable/0,
+    member_states_list_applicable/0,
+    general_entity/0,
+    public_electronic_communications_provider/0,
+    main_establishment_provider/0,
+    public_administration_entity/0,
+    unsure/0,
+    state_of_establishment/0,
+    state_where_services_are_provided/0,
+    state_of_main_establishment/0,
+    state_that_established_the_entity/0,
+    state_of_representative/0,
+    any_member_state_where_services_are_provided_may_take_legal_action/0,
+    no_rule_in_article_26/0,
+    state_where_cybersecurity_risk_management_decisions_are_taken/0,
+    state_where_cybersecurity_operations_are_carried_out/0,
+    state_of_establishment_with_most_employees_in_the_union/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    item/2,
+    limit/3,
+    months_after_change/1,
+    weeks_after_change/1
 ]).
 
 :- use_module(eu/nis2_jurisdiction_registration/kernel, [nis2_jurisdiction_registration_input_problems/2]).
 :- use_module(eu/nis2_jurisdiction_registration/nis2_jurisdiction_registration, [nis2_jurisdiction_registration_status/2]).
 
+% ---- result constructors (exported data, no clauses) -----------------
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    item(name, cite),
+    limit(regime, period, cite),
+    months_after_change(months),
+    weeks_after_change(weeks)
+]).
+
 % schema of top-level profile keys: the keys of the order's typed input contract, in its order
 nis2_jurisdiction_registration_profile_keys([entity_category, established_in_union, offers_services_in_union, representative_designated_in_union, decisions_predominantly_taken_in_one_union_member_state, cybersecurity_operations_carried_out_in_one_union_member_state, sector_and_subsector_applicable, member_states_list_applicable]).
 
-% what-if: re-evaluate with one key hypothetically overridden
+% #16 what-if: re-evaluate with one key hypothetically overridden
 nis2_jurisdiction_registration_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
     override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
     nis2_jurisdiction_registration_status(Hypothesis, NewStatus).
 
-% enumeration: the status of the profile under each of the four entity categories
-nis2_jurisdiction_registration_status_by_category(Profile, Pairs) :-
-    findall(
-        Category-Status,
-        (
-            member(Category, [general_entity, public_electronic_communications_provider, main_establishment_provider, public_administration_entity]),
-            nis2_jurisdiction_registration_what_if(Profile, entity_category, Category, Status)
-        ),
-        Pairs).
+% Attribute-list plumbing: drop every item for Key, then append the new one.
+override_attribute(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_has_key(OverriddenKey), Profile, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
 
-% override_attribute(Profile, Key, Value, NewProfile): drop every attribute of Key, then set it.
-override_attribute(Profile, Key, Value, [attribute(Key, Value)|Kept]) :-
-    drop_attribute(Profile, Key, Kept).
+attribute_has_key(Key, attribute(ElementKey, _)) :-
+    ElementKey == Key.
 
-drop_attribute([], _, []).
-drop_attribute([attribute(OtherKey, OtherValue)|Rest], Key, [attribute(OtherKey, OtherValue)|Kept]) :-
-    dif(OtherKey, Key),
-    drop_attribute(Rest, Key, Kept).
-drop_attribute([attribute(Key, _)|Rest], Key, Kept) :-
-    drop_attribute(Rest, Key, Kept).
+% ---- root_exports: the eight profile keys (root_exports order) -------
+entity_category.
+established_in_union.
+offers_services_in_union.
+representative_designated_in_union.
+decisions_predominantly_taken_in_one_union_member_state.
+cybersecurity_operations_carried_out_in_one_union_member_state.
+sector_and_subsector_applicable.
+member_states_list_applicable.
+
+% ---- root_exports: the four entity_category atoms and unsure ---------
+general_entity.
+public_electronic_communications_provider.
+main_establishment_provider.
+public_administration_entity.
+unsure.
+
+% ---- the basis atoms of jurisdiction_basis/3 --------------------------
+state_of_establishment.
+state_where_services_are_provided.
+state_of_main_establishment.
+state_that_established_the_entity.
+state_of_representative.
+any_member_state_where_services_are_provided_may_take_legal_action.
+no_rule_in_article_26.
+
+% ---- the result atoms of main_establishment_rule/3 --------------------
+state_where_cybersecurity_risk_management_decisions_are_taken.
+state_where_cybersecurity_operations_are_carried_out.
+state_of_establishment_with_most_employees_in_the_union.
 
 :- end_module(queries).

@@ -28,31 +28,35 @@ side-by-side statute report: <https://neurosymbolica.github.io/clausal-rules-as-
 
 These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
 
-Every domain folder added on 2026-11-16 or 2026-11-18 repeats this in its own `README.md`.
+Every domain folder added on 2026-11-16, 2026-11-18 or 2026-11-21 repeats this in its own `README.md`.
 
 ## What is in it
 
-99 domains and 19,445 tests (19,414 in the domains, 31 in the shared procurement vocabulary),
+124 domains and 24,799 tests (24,768 in the domains, 31 in the shared procurement vocabulary),
 all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in force.
 
 | Area | Domains |
 |---|---|
-| EU: GDPR (including the GDPR Procedural Regulation) | 39 |
-| EU: AI Act | 8 |
+| EU: GDPR (including the GDPR Procedural Regulation) | 43 |
+| EU: AI Act | 10 |
 | EU: NIS 2 Directive and its implementing regulation | 8 |
 | EU: public procurement (Directives 2014/24 and 2014/25) | 5, plus the shared vocabulary `eu/procurement/directive_2014_24/` |
-| EU: state aid (de minimis, single undertaking, SME definition) | 3 |
-| EU: working time (daily rest, weekly rest, weekly limit) | 3 |
+| EU: state aid (de minimis, single undertaking, SME definition, GBER general conditions) | 4 |
+| EU: working time (daily rest, weekly rest, weekly limit, night work) | 4 |
 | EU: anti-money laundering (AMLR beneficial ownership) | 2 |
 | EU: CBAM (de minimis, origin exclusions) | 2 |
 | EU: ePrivacy Directive | 2 |
-| EU: Cyber Resilience Act Art 14, Data Act, Digital Markets Act Art 3, Digital Services Act Art 28 | 1 each |
+| EU: Digital Operational Resilience Act (DORA) | 9 |
+| EU: Cyber Resilience Act (Art 14 reporting, administrative fines, manufacturer duties) | 3 |
+| EU: Digital Markets Act (Art 3, Art 5(2), Arts 6(9) and 6(10)) | 3 |
+| EU: Digital Services Act (Art 14 terms and conditions, Art 28 minors) | 2 |
+| EU: Data Act | 1 |
 | Switzerland: Federal Act on Data Protection | 5 |
 | United Kingdom: UK GDPR, Data Protection Act 2018, Data (Use and Access) Act 2025, PECR | 5 |
 | China: Personal Information Protection Law | 2 |
-| India: Digital Personal Data Protection Act 2023 and Rules 2025 | 4 |
+| India: Digital Personal Data Protection Act 2023 and Rules 2025 | 5 |
 | Singapore: GST registration, PDPA data breach notification, corporate service providers, small-company audit exemption, payment services licensing, securities offer exemptions | 6 |
-| United States: Virginia Consumer Data Protection Act | 1 |
+| United States: Virginia Consumer Data Protection Act, Colorado Privacy Act, Texas Data Privacy and Security Act | 3 |
 
 `_index/STATUS.md` lists every domain with its test count and the result of each check.
 
@@ -77,14 +81,16 @@ They are the only domains with a provision-tracking ledger and a side-by-side re
 | `eu/procurement/time_limits` | What is the minimum time limit for receipt (Art 27-31)? |
 | `eu/procurement/utilities_negotiated_without_prior_call` | May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)? |
 
-The other 85 domains were added on 2026-11-16 (66) and 2026-11-18 (19); on 2026-11-18 eight of
-the earlier ones were also replaced by amended versions. Each was produced through the Clausify
+The other 110 domains were added on 2026-11-16 (66), 2026-11-18 (19) and 2026-11-21 (25); on 2026-11-18 eight of
+the earlier ones, and on 2026-11-21 seventeen, were also replaced by amended versions. Each was produced through the Clausify
 harness, and its answers were scored against an independently written, sealed test oracle that
 is not published (the verdicts were recorded after the runs and are not authenticated); its
 tests here pass on all three engines. They have no provision-tracking ledger, so no check
 accounts for how much of the statute each one covers, and no side-by-side report.
 
 On 2026-11-20 6 Singapore domains were added. They quote no Singapore legislation: each citation record carries a label and a link to [Singapore Statutes Online](https://sso.agc.gov.sg), where the text can be read, and no statute text is pinned in the domain folder.
+
+The Colorado Privacy Act and Texas Data Privacy and Security Act domains, added on 2026-11-21, are published the same way: they quote no Colorado or Texas law, and their citation records give a label and a link to the Colorado Secretary of State and to the Texas Statutes site.
 
 Licence: EUPL-1.2 (see `LICENSE`). The legal texts quoted here are not official
 versions of the law; see `NOTICE`.

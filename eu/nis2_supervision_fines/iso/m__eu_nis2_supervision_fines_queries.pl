@@ -9,18 +9,6 @@
 
 nis2_supervision_fines_profile_keys([entity_class, infringed_provision, worldwide_annual_turnover_eur, entity_is_public_administration, earlier_measures_ineffective, deadline_set_for_necessary_action, required_action_taken_within_deadline, infringement_may_entail_notifiable_personal_data_breach, authority_became_aware_in_supervision_or_enforcement, data_protection_authority_in_other_member_state, gdpr_fine_imposed_under_art_58_2_i, gdpr_fine_for_same_conduct]).
 
-nis2_supervision_fines_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    without_key(Profile, OverriddenKey, RemainingAttributes),
-    nis2_supervision_fines_status([attribute(OverriddenKey, NewValue)|RemainingAttributes], NewStatus).
-
-without_key([], _, []).
-without_key([attribute(ElementKey, _)|Elements], OverriddenKey, RemainingAttributes) :-
-    ElementKey == OverriddenKey,
-    without_key(Elements, OverriddenKey, RemainingAttributes).
-without_key([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, [attribute(ElementKey, ElementValue)|RemainingAttributes]) :-
-    ElementKey \== OverriddenKey,
-    without_key(Elements, OverriddenKey, RemainingAttributes).
-
 entity_class.
 
 infringed_provision.
@@ -57,12 +45,64 @@ other.
 
 unsure.
 
-test(twelve_profile_keys) :-
-    nis2_supervision_fines_profile_keys(Keys),
-    length(Keys, 12).
-test(what_if_flips_the_last_condition) :-
-    nis2_supervision_fines_what_if([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, true)], required_action_taken_within_deadline, false, eligible).
-test(root_atoms_are_callable) :-
+nis2_supervision_fines_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    nis2_supervision_fines_input_problems(Profile, Problems),
+    what_if_checked(Problems, Profile, OverriddenKey, NewValue, NewStatus).
+
+what_if_checked([wrong_type(profile)], Profile, _, _, NewStatus) :-
+    nis2_supervision_fines_status(Profile, NewStatus).
+what_if_checked(Problems, Profile, OverriddenKey, NewValue, NewStatus) :-
+    dif(Problems, [wrong_type(profile)]),
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    nis2_supervision_fines_status(Hypothesis, NewStatus).
+
+override_attribute([], ProfileKey, NewValue, [attribute(ProfileKey, NewValue)]).
+override_attribute([attribute(ElementKey, _)|Elements], ProfileKey, NewValue, [attribute(ProfileKey, NewValue)|Remaining]) :-
+    ElementKey == ProfileKey,
+    drop_attribute(Elements, ProfileKey, Remaining).
+override_attribute([attribute(ElementKey, GivenValue)|Elements], ProfileKey, NewValue, [attribute(ElementKey, GivenValue)|Edited]) :-
+    ElementKey \== ProfileKey,
+    override_attribute(Elements, ProfileKey, NewValue, Edited).
+
+drop_attribute([], _, []).
+drop_attribute([attribute(ElementKey, _)|Elements], ProfileKey, Remaining) :-
+    ElementKey == ProfileKey,
+    drop_attribute(Elements, ProfileKey, Remaining).
+drop_attribute([attribute(ElementKey, GivenValue)|Elements], ProfileKey, [attribute(ElementKey, GivenValue)|Remaining]) :-
+    ElementKey \== ProfileKey,
+    drop_attribute(Elements, ProfileKey, Remaining).
+
+test(what_if_taking_the_action_in_time_flips_to_ineligible) :-
+    findall(Status, nis2_supervision_fines_what_if([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], required_action_taken_within_deadline, true, Status), Statuses),
+    Statuses == [ineligible].
+test(what_if_adding_the_absent_class_resolves_to_eligible) :-
+    findall(Status, nis2_supervision_fines_what_if([attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], entity_class, essential, Status), Statuses),
+    Statuses == [eligible].
+test(what_if_on_a_non_list_is_invalid_profile) :-
+    findall(Status, nis2_supervision_fines_what_if(not_a_list, entity_class, essential, Status), Statuses),
+    Statuses == [invalid_profile].
+test(profile_keys_are_the_twelve_contract_keys) :-
+    nis2_supervision_fines_profile_keys(ProfileKeys),
+    length(ProfileKeys, 12).
+test(root_export_atoms_are_served) :-
     entity_class,
-    unsure,
-    other.
+    infringed_provision,
+    worldwide_annual_turnover_eur,
+    entity_is_public_administration,
+    earlier_measures_ineffective,
+    deadline_set_for_necessary_action,
+    required_action_taken_within_deadline,
+    infringement_may_entail_notifiable_personal_data_breach,
+    authority_became_aware_in_supervision_or_enforcement,
+    data_protection_authority_in_other_member_state,
+    gdpr_fine_imposed_under_art_58_2_i,
+    gdpr_fine_for_same_conduct,
+    essential,
+    important,
+    art_21,
+    art_23,
+    other,
+    unsure.
+
+test(what_if_adding_the_absent_class_is_not_indeterminate, fail) :-
+    nis2_supervision_fines_what_if([attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], entity_class, essential, indeterminate).

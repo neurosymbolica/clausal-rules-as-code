@@ -1,67 +1,77 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_chapter_v_extras (deontic family).
-% DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL, and the order's input check,
-% which the scaffold writes here, exported, for every file to import.
+% DAG root of the determination-slices layout:
+%   kernel -> citations -> parameters -> gdpr_chapter_v_extras -> queries -> fixtures -> facade
 %
-% Source: Regulation (EU) 2016/679 (GDPR), consolidated text
-% 02016R0679-20160504 (in force from 2016-05-04): Art 44 (first sentence,
-% onward transfers), Art 48 (judgments and decisions of a third country),
-% Art 49(1) second subparagraph (second and third sentences, the two
-% duties to inform) and Art 49(6) (the documentation duty). author's
-% reading, not a lawyer's.
+% Source (the law the slice formalises; pinned unit text of 02016R0679-20160504,
+% Regulation (EU) 2016/679 (GDPR), consolidated text in force from 2016-05-04):
+%   - Art 44, first sentence (onward transfers)          -> onward_transfer_condition/4
+%   - Art 48 (judgments and decisions of third countries) -> foreign_judgment_or_decision_recognition/4
+%   - Art 49(1), second subparagraph, second and third
+%     sentences (the controller's duties to inform)       -> second_subparagraph_duty/5
+%   - Art 49(6) (document the assessment and safeguards,
+%     read with Art 30(1)(e), Art 30(2)(c), Art 30(5))     -> second_subparagraph_duty/5
+% Drafter's reading, not a lawyer's.
 %
-% This file decides no statutory condition. It holds the input check, the
-% check of the DUTY argument, the outside-fact reference table and the
-% builder of THE ABSENT REFERRAL term. These are plumbing of the interface,
-% not provisions, so they carry no implements/1 marker (and the kernel, the
-% DAG root, does not import citations).
+% WHAT LIVES HERE. Only the predicates that two or more files CALL. This
+% order has ONE determination slice (gdpr_chapter_v_extras.clausal), so no
+% domain predicate is shared: the only export is the scaffold's input check
+% gdpr_chapter_v_extras_input_problems/2, written from the order's typed
+% input contract, which the slice and queries.clausal import by full path:
+%   :- use_module(eu/data_protection/gdpr_chapter_v_extras/kernel, [gdpr_chapter_v_extras_input_problems/2]).
+% The absent-referral constructor, the key tables and the duty tables are
+% single-caller and stay in the slice.
 %
-% Atoms and data terms need NO declaration and NO import.
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms so every file spells them alike.
 %
-% RESULT TERMS (spelled exactly as the order pins them):
+% RESULT TERMS (the called contract; every query yields exactly ONE solution)
 %   second_subparagraph_duty(Profile, Duty, Result, Basis, Citations)
-%     Result: no_second_subparagraph_transfer | not_a_processor_duty |
-%             duty_met | duty_not_met | a status compound (below).
-%     Basis:  [outside_fact(transfer_relies_on_article_49_1_second_subparagraph,
-%             Attested)] for no_second_subparagraph_transfer, duty_met and
-%             duty_not_met; [] otherwise.
-%     Citations: [cite(eu_reg_2016_679_art_49_1_second_subpara)] for the two
-%             duties to inform (and not_a_processor_duty),
-%             [cite(eu_reg_2016_679_art_49_6)] for the documentation duty;
-%             [] for a status compound.
+%     Duty      inform_supervisory_authority | inform_data_subject |
+%               document_assessment_and_safeguards (an input argument)
+%     Result    no_second_subparagraph_transfer | not_a_processor_duty |
+%               duty_met | duty_not_met | a status compound (below)
+%     Basis     [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, Attested)]
+%               for no_second_subparagraph_transfer, duty_met, duty_not_met; [] otherwise
+%     Citations [cite(eu_reg_2016_679_art_49_1_second_subpara)] for the duties to
+%               inform (and not_a_processor_duty), [cite(eu_reg_2016_679_art_49_6)]
+%               for document_assessment_and_safeguards; [] for a status compound
 %   foreign_judgment_or_decision_recognition(Profile, Result, Basis, Citations)
-%     Result: article_48_not_engaged | not_barred_by_article_48 |
-%             not_recognisable_or_enforceable | a status compound.
-%     Citations: [cite(eu_reg_2016_679_art_48)] for a final Result.
+%     Result    article_48_not_engaged | not_barred_by_article_48 |
+%               not_recognisable_or_enforceable | a status compound
+%     Basis     [outside_fact(third_country_judgment_or_decision_requires_transfer, A)]
+%               for article_48_not_engaged; that item followed by
+%               outside_fact(international_agreement_basis_for_judgment_or_decision, A2)
+%               for the two others; [] otherwise
+%     Citations [cite(eu_reg_2016_679_art_48)] for a final answer, [] otherwise
 %   onward_transfer_condition(Profile, Result, Basis, Citations)
-%     Result: not_an_onward_transfer | onward_transfer_may_take_place |
-%             onward_transfer_may_not_take_place | a status compound.
-%     Citations: [cite(eu_reg_2016_679_art_44)] for a final Result.
-%   Status compounds (never written bare; Basis [] and Citations []):
-%     input_problems(Problems)     -- Problems a list of duplicate_key(Key),
-%                                     wrong_type(Key) and unknown_key(Key)
-%                                     (wrong_type(profile), wrong_type(duty));
-%     indeterminate([Key])         -- one missing crisp or enumeration key;
+%     Result    not_an_onward_transfer | onward_transfer_may_take_place |
+%               onward_transfer_may_not_take_place | a status compound
+%     Basis     [outside_fact(transfer_is_onward_transfer, A)] for not_an_onward_transfer;
+%               that item followed by outside_fact(onward_transfer_has_chapter_v_basis, A2)
+%               for the two others; [] otherwise
+%     Citations [cite(eu_reg_2016_679_art_44)] for a final answer, [] otherwise
+%   Status compounds (never written bare), each with Basis [] and Citations []:
+%     input_problems(Problems)   Problems a list of duplicate_key(Key),
+%                                wrong_type(Key) (Key may be profile or duty),
+%                                unknown_key(Key)
+%     indeterminate([Key])       one bare crisp or enumeration key, never an outside fact
 %     needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)),
-%         [resolution(cite(Target), not_attempted), inputs_relied_on([Key-absent])])
-%                                  -- THE ABSENT REFERRAL on an outside fact.
-%   A BASIS item is outside_fact(Key, Attested), Attested the
-%   attested(Value, attestation(By, At, Reason, Evidence)) term exactly as
-%   supplied.
-%   Facade verdict of the slice:
-%     gdpr_chapter_v_extras_verdict(Status, Citations), Status one of
-%     no_condition_breached | more_input_needed | condition_breached |
-%     input_problems(Problems).
+%                        [resolution(cite(Target), not_attempted),
+%                         inputs_relied_on([Key-absent])])
+%   Attested is the outside fact exactly as supplied:
+%     attested(true | false, attestation(By, At, Reason, Evidence)),
+%     Evidence none | url(Url, RetrievedAt) | document(UploadId, Sha256).
+%   Scaffold facade verdict: gdpr_chapter_v_extras_verdict(Status, Citations),
+%     Status the delegated query's Result, Citations its Citations.
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
 % =====================================================================
 
-:- module(kernel, [
-    gdpr_chapter_v_extras_input_problems/2,
-    duty_argument_problems/2,
-    outside_fact_reference/3,
-    absent_referral/2
-]).
+:- module(kernel, [gdpr_chapter_v_extras_input_problems/2]).
 
 :- use_module(library(reif), [memberd_t/3]).
 
@@ -85,6 +95,8 @@
 %   outside its type; then unknown_key(Key) for each key outside the contract, in the
 %   order of its first occurrence in Profile. Each key is named once. An absent key is
 %   not a problem.
+% An outside-fact value with an unbound part (an attestation argument that is, or
+% holds, an unbound variable) is outside its type: wrong_type(Key).
 % Every step is complementary clauses: exactly one clause holds for each input.
 gdpr_chapter_v_extras_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -230,7 +242,8 @@ truth_and(false, _, false).
 
 % attested_t(Value, Type, T): T is true when Value is
 % attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
-% By, At, Reason and Evidence come from the host and are not checked.
+% By, At, Reason and Evidence come from the host and are not checked (beyond the
+% ground test above: none of them is, or holds, an unbound variable).
 attested_t(attested(AttestedValue, Attestation), Type, T) :-
     attestation_t(Attestation, IsAttestation),
     attested_value_t(IsAttestation, Type, AttestedValue, T).
@@ -244,54 +257,5 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
-
-% ---- the DUTY argument of second_subparagraph_duty/5 -------------
-% duty_argument_problems(Duty, Problems): [] when Duty is one of the three duty
-% atoms, [wrong_type(duty)] for any other term, an unbound Duty included.
-% Exactly one solution for every term: an unbound Duty is caught by var/1 before
-% memberd_t/3 could enumerate the atoms.
-duty_argument_problems(Duty, [wrong_type(duty)]) :-
-    var(Duty).
-duty_argument_problems(Duty, Problems) :-
-    nonvar(Duty),
-    memberd_t(Duty, [inform_supervisory_authority, inform_data_subject, document_assessment_and_safeguards], IsDuty),
-    duty_problems(IsDuty, Problems).
-
-duty_problems(true, []).
-duty_problems(false, [wrong_type(duty)]).
-
-% ---- the outside facts and THE ABSENT REFERRAL ------------------
-% outside_fact_reference(Key, Citation, Target): the order's `outside_facts:`
-% rows, each citation and target a ready-made cite(...) term.
-% lint: canonical citation atom (eu_reg_2016_679_art_49_1_second_subpara is the lexicon spelling)
-outside_fact_reference(transfer_relies_on_article_49_1_second_subparagraph, cite(eu_reg_2016_679_art_49_1_second_subpara), cite(second_subparagraph_transfer_statement)).
-outside_fact_reference(third_country_judgment_or_decision_requires_transfer, cite(eu_reg_2016_679_art_48), cite(foreign_judgment_requires_transfer_statement)).
-outside_fact_reference(international_agreement_basis_for_judgment_or_decision, cite(eu_reg_2016_679_art_48), cite(international_agreement_basis_statement)).
-outside_fact_reference(transfer_is_onward_transfer, cite(eu_reg_2016_679_art_44), cite(onward_transfer_statement)).
-outside_fact_reference(onward_transfer_has_chapter_v_basis, cite(eu_reg_2016_679_art_44), cite(onward_transfer_chapter_v_basis_statement)).
-
-% absent_referral(Key, Result): THE ABSENT REFERRAL on the outside fact Key
-% (THE PAIRS RULE: the one pair Key-absent). One solution per outside-fact key.
-absent_referral(Key, needs_legal_review(cross_reference_unresolved(Citation, Target), [resolution(Target, not_attempted), inputs_relied_on([Key-absent])])) :-
-    outside_fact_reference(Key, Citation, Target).
-
-test(an_empty_profile_has_no_problem) :-
-    gdpr_chapter_v_extras_input_problems([], []).
-test(a_bare_boolean_outside_fact_is_wrong_type) :-
-    gdpr_chapter_v_extras_input_problems([attribute(transfer_is_onward_transfer, true)], [wrong_type(transfer_is_onward_transfer)]).
-test(a_known_duty_has_no_problem) :-
-    duty_argument_problems(inform_data_subject, []).
-test(an_unbound_duty_is_wrong_type) :-
-    findall(Problems, duty_argument_problems(_, Problems), All),
-    All == [[wrong_type(duty)]].
-test(an_unknown_duty_is_wrong_type) :-
-    duty_argument_problems(inform_everyone, [wrong_type(duty)]).
-test(an_unknown_duty_has_problems, fail) :-
-    duty_argument_problems(inform_everyone, []).
-test(the_referral_on_the_onward_transfer_statement) :-
-    findall(Result, absent_referral(transfer_is_onward_transfer, Result), All),
-    All == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_44), cite(onward_transfer_statement)), [resolution(cite(onward_transfer_statement), not_attempted), inputs_relied_on([transfer_is_onward_transfer-absent])])].
-test(a_crisp_key_has_no_referral, fail) :-
-    absent_referral(party_role, _).
 
 :- end_module(kernel).

@@ -2,66 +2,69 @@
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/nis2_supervision_fines (deontic family).
 % Source: Directive (EU) 2022/2555 (NIS 2 Directive), Articles 32(2), 32(4),
-% 32(5), 33(2), 33(4), 34(4), 34(5) and 35(1) to (3) (OJ L 333, 27.12.2022).
+% 32(5), 33(2), 33(4), 34(4), 34(5) and 35(1) to (3) (OJ L 333, 27.12.2022;
+% CELEX 32022L2555). This file decides no statutory condition: it holds the
+% typed input check of the order and the PAIRS rule of the order.
+%
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL.
-% Exception: the scaffold writes the order's input check
-% nis2_supervision_fines_input_problems/2 here, exported, for every slice to import.
-% deontic family: the results are what a Member State MUST provide (floors of
-% the national maximum fine, minimum powers, duties to inform), never a fine.
+% PREDICATES that two or more files CALL:
+%   nis2_supervision_fines_input_problems/2 -- THE INPUT CHECK (the slice
+%       uses it as limb (0) of every query; the facade uses it for the
+%       invalid_profile verdict). Written by the scaffold from the typed
+%       input contract; kept as written.
+%   nis2_supervision_fines_relied_pairs/3 -- THE PAIRS RULE: the Key-Value
+%       pairs of the listed judgement keys that are PRESENT in the profile,
+%       in the order given (callers pass root_exports order). Plumbing only.
 %
-% Shared predicates (plumbing only; no statutory condition is decided here, so
-% no clause carries an implements/1 marker):
-%   nis2_supervision_fines_input_problems(Profile, Problems)  -- THE INPUT CHECK.
-%   nis2_supervision_fines_pairs(Profile, JudgementKeys, Pairs) -- the Key-Value
-%       pairs of the listed judgement keys PRESENT in Profile, in the order of
-%       JudgementKeys (root_exports order), unsure ones included (THE PAIRS RULE).
-%   nis2_supervision_fines_missing_in_order(Profile, Keys, Missing) -- the keys of
-%       Keys absent from Profile, in the order of Keys (root_exports order).
+% Atoms and data terms need NO declaration and NO import. The block below
+% RECORDS the result terms so every file spells them alike.
 %
-% Atoms and data terms need NO declaration and NO import. The comment block
-% below RECORDS the result terms so every file spells them alike.
-%
-% Result terms of the contract queries (slice nis2_supervision_fines.clausal):
+% Result terms of the five contracted queries (built in the slice
+% nis2_supervision_fines.clausal):
 %   fine_ceiling_floor(Profile, Ceiling, Citations)
-%     Ceiling: minimum_national_maximum(AmountEur, Basis)  AmountEur an integer of
-%              whole euros, Basis fixed_amount | turnover_percentage;
-%              no_union_minimum; or a status compound.
+%     Ceiling: minimum_national_maximum(AmountEur, Basis) -- AmountEur an
+%       integer of whole euros, Basis fixed_amount | turnover_percentage;
+%       or no_union_minimum; or a status compound.
 %   minimum_powers(Profile, Powers)
-%     Powers: ONE list of power(Kind, Measure, cite(Key)), Kind supervision |
-%             enforcement | escalation; or a status compound.
+%     Powers: ONE list of power(Kind, Measure, cite(Key)) -- Kind
+%       supervision | enforcement | escalation; or a status compound alone.
 %   escalation_powers_exercisable(Profile, Result, Citations)
-%     Result: exercisable; not_exercisable(Reason), Reason important_entity |
-%             public_administration_entity | measures_not_ineffective |
-%             no_deadline_set | action_taken_within_deadline; or a status compound.
+%     Result: exercisable | not_exercisable(Reason) -- Reason
+%       important_entity | public_administration_entity |
+%       measures_not_ineffective | no_deadline_set |
+%       action_taken_within_deadline; or a status compound.
 %   fine_barred_by_gdpr_fine(Profile, Result, Citations)
-%     Result: fine_barred | fine_not_barred; or a status compound.
+%     Result: fine_barred | fine_not_barred | a status compound.
 %   data_protection_authority_information(Profile, Duty)
-%     Duty: ONE list ([] when no duty) of inform_gdpr_supervisory_authorities(cite(Key))
-%           then inform_supervisory_authority_in_own_member_state(cite(Key)); or a
-%           status compound.
-% Status compounds (never written bare):
-%   indeterminate(MissingKeys)  MissingKeys a non-empty list of key atoms, root order;
-%   needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]);
-%   input_problems(Problems)    Problems a list of duplicate_key(Key), wrong_type(Key),
-%                               unknown_key(Key), or [wrong_type(profile)].
-% Citations: a set-like list of cite(Key) terms; [] for a status compound.
+%     Duty: ONE list ([] for no duty) of
+%       inform_gdpr_supervisory_authorities(cite(Key)) then, when it applies,
+%       inform_supervisory_authority_in_own_member_state(cite(Key));
+%       or a status compound alone.
+%   Citations: a flat list of cite(Key) terms, [] for a non-final answer.
 %
-% Facade verdict term (queries.clausal):
+% Status compounds (never written as bare atoms):
+%   indeterminate([Key])            -- exactly ONE needed absent key
+%   needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                      [inputs_relied_on(Pairs)])
+%                                   -- Pairs Key-Value, root_exports order
+%   input_problems(Problems)        -- Problems from the input check, items
+%                                      duplicate_key(Key) | wrong_type(Key) |
+%                                      unknown_key(Key)
+%
+% Facade result term (one per determination slice):
 %   nis2_supervision_fines_verdict(Status, Citations)
-%     Status: eligible | ineligible | indeterminate(MissingKeys) |
-%             needs_legal_review(Reason, Context) | input_problems(Problems);
+%     Status: eligible | ineligible | indeterminate | invalid_profile
 %     Citations: a list of cite(Key) terms.
+% Judgement value besides true and false: unsure.
 % =====================================================================
 
 :- module(kernel, [
     nis2_supervision_fines_input_problems/2,
-    nis2_supervision_fines_pairs/3,
-    nis2_supervision_fines_missing_in_order/3
+    nis2_supervision_fines_relied_pairs/3
 ]).
 
 :- use_module(library(reif), [memberd_t/3]).
-:- use_module(formalize_lib, [profile_get/3, profile_lacks/2, missing_keys/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
 
 % ---- input checks: the problems a profile has, if any -----------
 % nis2_supervision_fines_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -252,55 +255,41 @@ not_below_zero_t(true, Value, true) :-
 not_below_zero_t(true, Value, false) :-
     Value < 0.
 
-% ---- shared plumbing: pairs and missing keys -----------------------
-% Called only on a profile whose input check gave [] (no duplicate key), so a
-% present key has exactly one value and profile_get/3 answers once.
-
-% nis2_supervision_fines_pairs(Profile, JudgementKeys, Pairs): THE PAIRS RULE --
-% the Key-Value pairs of the keys in JudgementKeys that are PRESENT in Profile,
-% in the order of JudgementKeys, the unsure ones included. Complementary clauses
-% on presence: exactly one holds for each key.
-nis2_supervision_fines_pairs(_, [], []).
-nis2_supervision_fines_pairs(Profile, [Key|Keys], [Key-Value|Pairs]) :-
+% ---- THE PAIRS RULE (plumbing; decides nothing statutory) ---------
+% nis2_supervision_fines_relied_pairs(Profile, JudgementKeys, Pairs): Pairs are the
+% Key-Value pairs of the JudgementKeys that are PRESENT in Profile, in the order of
+% JudgementKeys (callers pass them in root_exports order), unsure values included.
+% Called only on a profile the input check passed, so each present key has one value.
+nis2_supervision_fines_relied_pairs(_, [], []).
+nis2_supervision_fines_relied_pairs(Profile, [Key|Keys], [Key-Value|Pairs]) :-
     profile_get(Profile, Key, Value),
-    nis2_supervision_fines_pairs(Profile, Keys, Pairs).
-nis2_supervision_fines_pairs(Profile, [Key|Keys], Pairs) :-
+    nis2_supervision_fines_relied_pairs(Profile, Keys, Pairs).
+nis2_supervision_fines_relied_pairs(Profile, [Key|Keys], Pairs) :-
     profile_lacks(Profile, Key),
-    nis2_supervision_fines_pairs(Profile, Keys, Pairs).
-
-% nis2_supervision_fines_missing_in_order(Profile, Keys, Missing): the keys of Keys
-% (given in root_exports order) that are absent from Profile, in that order.
-nis2_supervision_fines_missing_in_order(Profile, Keys, Missing) :-
-    missing_keys(Profile, Keys, Missing).
+    nis2_supervision_fines_relied_pairs(Profile, Keys, Pairs).
 
 % ---- tests -----------------------------------------------------------
 test(a_well_formed_profile_has_no_problem) :-
-    findall(Problems, nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(worldwide_annual_turnover_eur, 0), attribute(earlier_measures_ineffective, unsure)], Problems), Answers),
-    Answers == [[]].
+    nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(earlier_measures_ineffective, unsure)], []).
 test(the_empty_profile_has_no_problem) :-
     nis2_supervision_fines_input_problems([], []).
-test(a_duplicated_key_is_named_once_and_not_typed) :-
-    nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(entity_class, banana)], [duplicate_key(entity_class)]).
+test(a_repeated_key_is_a_duplicate_only) :-
+    nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(entity_class, wrong)], [duplicate_key(entity_class)]).
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    nis2_supervision_fines_input_problems([attribute(entity_is_public_administration, unsure)], [wrong_type(entity_is_public_administration)]).
 test(a_negative_turnover_is_wrong_type) :-
     nis2_supervision_fines_input_problems([attribute(worldwide_annual_turnover_eur, -1)], [wrong_type(worldwide_annual_turnover_eur)]).
-% (b) THE TEST WAS WRONG for the C28 gate: the float literal is replaced by the
-% fraction term 3/2, which is equally not a non-negative integer.
-test(a_fraction_turnover_is_wrong_type) :-
-    nis2_supervision_fines_input_problems([attribute(worldwide_annual_turnover_eur, 3/2)], [wrong_type(worldwide_annual_turnover_eur)]).
-test(unsure_on_a_crisp_key_is_wrong_type) :-
-    nis2_supervision_fines_input_problems([attribute(entity_is_public_administration, unsure)], [wrong_type(entity_is_public_administration)]).
-test(contract_problems_come_before_unknown_keys_named_once) :-
-    nis2_supervision_fines_input_problems([attribute(colour, red), attribute(entity_class, banana), attribute(colour, blue)], [wrong_type(entity_class), unknown_key(colour)]).
+test(an_unknown_key_is_named_once) :-
+    nis2_supervision_fines_input_problems([attribute(foo, 1), attribute(foo, 2)], [unknown_key(foo)]).
+test(contract_problems_come_before_unknown_keys) :-
+    nis2_supervision_fines_input_problems([attribute(foo, 1), attribute(gdpr_fine_for_same_conduct, maybe), attribute(entity_class, big)], [wrong_type(entity_class), wrong_type(gdpr_fine_for_same_conduct), unknown_key(foo)]).
 test(a_non_list_is_not_a_profile) :-
-    nis2_supervision_fines_input_problems(essential, [wrong_type(profile)]).
-test(a_list_with_a_stray_element_is_not_a_profile) :-
-    nis2_supervision_fines_input_problems([attribute(entity_class, essential), entity_class], [wrong_type(profile)]).
-test(pairs_keep_present_judgements_in_order) :-
-    findall(Pairs, nis2_supervision_fines_pairs([attribute(gdpr_fine_for_same_conduct, unsure), attribute(infringement_may_entail_notifiable_personal_data_breach, true)], [infringement_may_entail_notifiable_personal_data_breach, gdpr_fine_for_same_conduct], Pairs), Answers),
-    Answers == [[infringement_may_entail_notifiable_personal_data_breach-true, gdpr_fine_for_same_conduct-unsure]].
-test(pairs_skip_absent_judgements) :-
-    nis2_supervision_fines_pairs([attribute(entity_class, essential)], [earlier_measures_ineffective], []).
-test(missing_keys_in_order) :-
-    nis2_supervision_fines_missing_in_order([attribute(entity_class, essential)], [entity_class, worldwide_annual_turnover_eur], [worldwide_annual_turnover_eur]).
+    nis2_supervision_fines_input_problems(not_a_list, [wrong_type(profile)]).
+test(a_list_with_a_bare_atom_is_not_a_profile) :-
+    nis2_supervision_fines_input_problems([attribute(entity_class, essential), stray], [wrong_type(profile)]).
+test(pairs_follow_the_given_key_order) :-
+    nis2_supervision_fines_relied_pairs([attribute(gdpr_fine_for_same_conduct, unsure), attribute(infringement_may_entail_notifiable_personal_data_breach, true)], [infringement_may_entail_notifiable_personal_data_breach, gdpr_fine_for_same_conduct], [infringement_may_entail_notifiable_personal_data_breach-true, gdpr_fine_for_same_conduct-unsure]).
+test(pairs_skip_an_absent_key) :-
+    nis2_supervision_fines_relied_pairs([attribute(earlier_measures_ineffective, unsure)], [infringement_may_entail_notifiable_personal_data_breach, earlier_measures_ineffective], [earlier_measures_ineffective-unsure]).
 
 :- end_module(kernel).

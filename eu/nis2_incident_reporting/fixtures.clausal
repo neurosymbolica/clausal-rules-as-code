@@ -1,8 +1,24 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % fixtures.clausal -- representative profiles for eu/nis2_incident_reporting.
-% A profile is an attribute list [attribute(Key, Value), ...].
-% Each route has a positive case and a near-miss control.
+% A TOP-LAYER consumer: import the determination slices' PUBLIC predicates
+% you call -- that is the whole import list. Profile keys and subject ids
+% are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Each route has a positive subject and a one-unit
+% near-miss control:
+%   severe_disruption_met            / neither_limb_met                  (limb (a) true / false)
+%   damage_met_disruption_unsure     / disruption_unsure_damage_not_met  (limb (b) true / false)
+%   trust_provider_ongoing_prompt    / ordinary_provider_settled_prompt  (24 / 72 hour notification, point (e) on / off)
+%   disruption_unanswered            / damage_unanswered_disruption_unsure (which key is asked for)
+%   damage_unsure_facts_complete     / disruption_unsure_damage_not_met  (referral / TSP asked first)
+%   ordinary_provider_delayed        / ordinary_provider_delay_unsure    (late / referral inside the limit)
+%   trust_service_unanswered         (TSP asked for between 25 and 72 hours)
+%   significant_ongoing_unanswered   (ONG asked for)
+%   duplicate_and_unknown_keys       / crisp_key_given_unsure            (input problems)
+% The hour boundaries (24/25 and 72/73) are driven in the tests with these
+% subjects, since HOURS_ELAPSED is an argument, not a profile key.
 % =====================================================================
 
 :- module(fixtures, [
@@ -14,39 +30,97 @@
 :- use_module(eu/nis2_incident_reporting/nis2_incident_reporting, [decide_nis2_incident_reporting/2]).
 
 % ---- Subject registry ------------------------------------------------
-nis2_incident_reporting_subject(limb_a_met).
-nis2_incident_reporting_subject(limb_b_met).
-nis2_incident_reporting_subject(both_limbs_false).
-nis2_incident_reporting_subject(limb_a_false_limb_b_absent).
-nis2_incident_reporting_subject(no_keys_given).
-nis2_incident_reporting_subject(limb_a_unsure).
-nis2_incident_reporting_subject(unknown_key_given).
+nis2_incident_reporting_subject(severe_disruption_met).
+nis2_incident_reporting_subject(neither_limb_met).
+nis2_incident_reporting_subject(damage_met_disruption_unsure).
+nis2_incident_reporting_subject(disruption_unsure_damage_not_met).
+nis2_incident_reporting_subject(disruption_unanswered).
+nis2_incident_reporting_subject(damage_unanswered_disruption_unsure).
+nis2_incident_reporting_subject(trust_provider_ongoing_prompt).
+nis2_incident_reporting_subject(ordinary_provider_settled_prompt).
+nis2_incident_reporting_subject(damage_unsure_facts_complete).
+nis2_incident_reporting_subject(significant_ongoing_unanswered).
+nis2_incident_reporting_subject(ordinary_provider_delayed).
+nis2_incident_reporting_subject(ordinary_provider_delay_unsure).
+nis2_incident_reporting_subject(trust_service_unanswered).
+nis2_incident_reporting_subject(duplicate_and_unknown_keys).
+nis2_incident_reporting_subject(crisp_key_given_unsure).
 
 % ---- Profiles --------------------------------------------------------
-% Limb (a) met: significant. Near miss: both limbs false.
-nis2_incident_reporting_profile_for(limb_a_met, [
-    attribute(severe_operational_disruption_or_financial_loss, true),
+nis2_incident_reporting_profile_for(severe_disruption_met, [
+    attribute(severe_operational_disruption_or_financial_loss, true)
+]).
+nis2_incident_reporting_profile_for(neither_limb_met, [
+    attribute(severe_operational_disruption_or_financial_loss, false),
     attribute(considerable_damage_to_other_persons, false)
 ]).
-% Limb (b) met alone: significant. Near miss: both limbs false.
-nis2_incident_reporting_profile_for(limb_b_met, [
-    attribute(severe_operational_disruption_or_financial_loss, false),
+nis2_incident_reporting_profile_for(damage_met_disruption_unsure, [
+    attribute(severe_operational_disruption_or_financial_loss, unsure),
     attribute(considerable_damage_to_other_persons, true)
 ]).
-nis2_incident_reporting_profile_for(both_limbs_false, [
-    attribute(severe_operational_disruption_or_financial_loss, false),
-    attribute(considerable_damage_to_other_persons, false)
-]).
-nis2_incident_reporting_profile_for(limb_a_false_limb_b_absent, [
-    attribute(severe_operational_disruption_or_financial_loss, false)
-]).
-nis2_incident_reporting_profile_for(no_keys_given, []).
-nis2_incident_reporting_profile_for(limb_a_unsure, [
+nis2_incident_reporting_profile_for(disruption_unsure_damage_not_met, [
     attribute(severe_operational_disruption_or_financial_loss, unsure),
     attribute(considerable_damage_to_other_persons, false)
 ]).
-nis2_incident_reporting_profile_for(unknown_key_given, [
-    attribute(bogus, true)
+nis2_incident_reporting_profile_for(disruption_unanswered, [
+    attribute(considerable_damage_to_other_persons, false)
+]).
+nis2_incident_reporting_profile_for(damage_unanswered_disruption_unsure, [
+    attribute(severe_operational_disruption_or_financial_loss, unsure)
+]).
+nis2_incident_reporting_profile_for(trust_provider_ongoing_prompt, [
+    attribute(severe_operational_disruption_or_financial_loss, true),
+    attribute(considerable_damage_to_other_persons, false),
+    attribute(trust_service_provider_incident_affects_trust_services, true),
+    attribute(incident_ongoing_at_final_report_due, true),
+    attribute(early_warning_without_undue_delay, true),
+    attribute(incident_notification_without_undue_delay, true)
+]).
+nis2_incident_reporting_profile_for(ordinary_provider_settled_prompt, [
+    attribute(severe_operational_disruption_or_financial_loss, true),
+    attribute(considerable_damage_to_other_persons, false),
+    attribute(trust_service_provider_incident_affects_trust_services, false),
+    attribute(incident_ongoing_at_final_report_due, false),
+    attribute(early_warning_without_undue_delay, true),
+    attribute(incident_notification_without_undue_delay, true)
+]).
+nis2_incident_reporting_profile_for(damage_unsure_facts_complete, [
+    attribute(severe_operational_disruption_or_financial_loss, false),
+    attribute(considerable_damage_to_other_persons, unsure),
+    attribute(trust_service_provider_incident_affects_trust_services, false),
+    attribute(incident_ongoing_at_final_report_due, false)
+]).
+nis2_incident_reporting_profile_for(significant_ongoing_unanswered, [
+    attribute(considerable_damage_to_other_persons, true),
+    attribute(trust_service_provider_incident_affects_trust_services, false)
+]).
+nis2_incident_reporting_profile_for(ordinary_provider_delayed, [
+    attribute(severe_operational_disruption_or_financial_loss, true),
+    attribute(trust_service_provider_incident_affects_trust_services, false),
+    attribute(incident_ongoing_at_final_report_due, false),
+    attribute(early_warning_without_undue_delay, false),
+    attribute(incident_notification_without_undue_delay, false)
+]).
+nis2_incident_reporting_profile_for(ordinary_provider_delay_unsure, [
+    attribute(severe_operational_disruption_or_financial_loss, true),
+    attribute(trust_service_provider_incident_affects_trust_services, false),
+    attribute(incident_ongoing_at_final_report_due, false),
+    attribute(early_warning_without_undue_delay, unsure),
+    attribute(incident_notification_without_undue_delay, unsure)
+]).
+nis2_incident_reporting_profile_for(trust_service_unanswered, [
+    attribute(severe_operational_disruption_or_financial_loss, true),
+    attribute(incident_ongoing_at_final_report_due, false),
+    attribute(incident_notification_without_undue_delay, true)
+]).
+nis2_incident_reporting_profile_for(duplicate_and_unknown_keys, [
+    attribute(severe_operational_disruption_or_financial_loss, true),
+    attribute(severe_operational_disruption_or_financial_loss, false),
+    attribute(unrelated_key, true)
+]).
+nis2_incident_reporting_profile_for(crisp_key_given_unsure, [
+    attribute(severe_operational_disruption_or_financial_loss, true),
+    attribute(trust_service_provider_incident_affects_trust_services, unsure)
 ]).
 
 % ---- Convenience wrapper ---------------------------------------------

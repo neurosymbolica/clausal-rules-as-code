@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: the answer and the citations
+% are read out, and the WHOLE solution list is compared, so a correct
+% answer yielded twice fails.
+% Run: python -m clausal.testing us/colorado_cpa/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(us/colorado_cpa/colorado_cpa, [
+    decide_colorado_cpa/2,
+    colorado_cpa_status/2,
+    applicability_status/3,
+    minors_duties_applicability/3,
+    response_deadline/4,
+    extended_response_deadline/4,
+    appeal_response_deadline/4,
+    extended_appeal_response_deadline/4,
+    cure_period_last_day/4,
+    attorney_general_action_status/5,
+    universal_opt_out_recognition_date/4
+]).
+:- use_module(us/colorado_cpa/fixtures, [colorado_cpa_profile_for/2]).
+
+test(the_large_controller_has_one_answer) :-
+    colorado_cpa_profile_for(large_linked_controller, Profile),
+    findall(Result-Citations, applicability_status(Profile, Result, Citations), Answers),
+    Answers == [in_scope-[cite(us_co_crs_6_1_1304_1_a), cite(us_co_crs_6_1_1304_1_a_i_a), cite(us_co_crs_6_1_1304_1_a_i_b)]].
+test(the_sale_controller_just_below_has_one_answer) :-
+    colorado_cpa_profile_for(sale_controller_just_below_threshold, Profile),
+    findall(Result, applicability_status(Profile, Result, _), Results),
+    Results == [out_of_scope].
+test(the_small_biometric_controller_has_one_answer) :-
+    colorado_cpa_profile_for(small_controller_with_biometric_data, Profile),
+    findall(Result, applicability_status(Profile, Result, _), Results),
+    Results == [biometric_only_scope].
+test(the_air_carrier_cites_its_clause_once) :-
+    colorado_cpa_profile_for(regulated_air_carrier, Profile),
+    findall(Result-Citations, applicability_status(Profile, Result, Citations), Answers),
+    Answers == [exempt_entity-[cite(us_co_crs_6_1_1304_2_l)]].
+test(the_unsure_link_review_is_read_out) :-
+    colorado_cpa_profile_for(controller_with_unsure_link, Profile),
+    findall(Result-Citations, applicability_status(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(colorado_link_for_general_duties, cite(us_co_crs_6_1_1304_1_a_i_a)), [inputs_relied_on([colorado_link_for_general_duties-unsure])])-[]].
+test(the_minors_unsure_link_review_is_read_out) :-
+    colorado_cpa_profile_for(minors_unsure_link_controller, Profile),
+    findall(Result-Citations, minors_duties_applicability(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(colorado_link_for_minors_duties, cite(us_co_crs_6_1_1304_1_b)), [inputs_relied_on([colorado_link_for_minors_duties-unsure])])-[]].
+test(the_response_deadline_is_read_element_wise) :-
+    response_deadline([], date(2028, 2, 1), date(Year, Month, Day), _),
+    Year == 2028,
+    Month == 3,
+    Day == 17.
+test(the_response_deadline_has_one_answer) :-
+    findall(Deadline-Citations, response_deadline([], date(2026, 1, 1), Deadline, Citations), Answers),
+    Answers == [date(2026, 2, 15)-[cite(us_co_crs_6_1_1306_2_a), cite(us_co_crs_6_1_1306_2_b)]].
+test(the_extended_response_deadline_has_one_answer) :-
+    colorado_cpa_profile_for(response_extension_granted, Profile),
+    findall(Deadline, extended_response_deadline(Profile, date(2026, 1, 1), Deadline, _), Deadlines),
+    Deadlines == [date(2026, 4, 1)].
+test(an_unsure_necessity_with_notice_false_is_no_extension_once) :-
+    findall(Deadline, extended_response_deadline([attribute(extension_reasonably_necessary, unsure), attribute(extension_notice_given_within_initial_period, false)], date(2026, 1, 1), Deadline, _), Deadlines),
+    Deadlines == [no_extension_available].
+test(a_false_necessity_with_notice_absent_is_no_extension_once) :-
+    findall(Deadline, extended_response_deadline([attribute(extension_reasonably_necessary, false)], date(2026, 1, 1), Deadline, _), Deadlines),
+    Deadlines == [no_extension_available].
+test(the_appeal_deadline_has_one_answer) :-
+    findall(Deadline, appeal_response_deadline([], date(2026, 3, 1), Deadline, _), Deadlines),
+    Deadlines == [date(2026, 4, 15)].
+test(the_extended_appeal_deadline_has_one_answer) :-
+    colorado_cpa_profile_for(appeal_extension_granted, Profile),
+    findall(Deadline, extended_appeal_response_deadline(Profile, date(2026, 3, 1), Deadline, _), Deadlines),
+    Deadlines == [date(2026, 6, 14)].
+test(the_appeal_extension_missing_notice_is_named) :-
+    findall(Deadline, extended_appeal_response_deadline([attribute(appeal_extension_reasonably_necessary, true)], date(2026, 3, 1), Deadline, _), Deadlines),
+    Deadlines == [indeterminate([appeal_extension_notice_given_within_initial_period])].
+test(the_cure_period_past_the_repeal_has_one_answer) :-
+    findall(LastDay, cure_period_last_day([], date(2026, 12, 30), LastDay, _), LastDays),
+    LastDays == [date(2027, 2, 28)].
+test(the_action_status_on_the_sixtieth_day_is_running_once) :-
+    colorado_cpa_profile_for(minors_enforcement_uncured, Profile),
+    findall(Result, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 30), Result, _), Results),
+    Results == [cure_period_running].
+test(the_action_status_on_the_day_of_receipt_is_running_once) :-
+    colorado_cpa_profile_for(minors_enforcement_uncured, Profile),
+    findall(Result, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 3, 1), Result, _), Results),
+    Results == [cure_period_running].
+test(a_notice_before_the_start_is_not_yet_received_once) :-
+    colorado_cpa_profile_for(minors_enforcement_uncured, Profile),
+    findall(Result, attorney_general_action_status(Profile, date(2025, 9, 30), date(2025, 12, 15), Result, _), Results),
+    Results == [notice_not_yet_received].
+test(the_missing_enforcement_fact_is_named_first) :-
+    findall(Result, attorney_general_action_status([], date(2026, 3, 1), date(2026, 5, 1), Result, _), Results),
+    Results == [indeterminate([action_enforces_minors_duties])].
+test(the_missing_cure_possibility_is_named) :-
+    findall(Result, attorney_general_action_status([attribute(action_enforces_minors_duties, true)], date(2026, 3, 1), date(2026, 5, 1), Result, _), Results),
+    Results == [indeterminate([cure_deemed_possible])].
+test(the_recognition_date_on_the_effective_day_is_one_answer) :-
+    findall(FirstDay, universal_opt_out_recognition_date([attribute(processes_for_targeted_advertising_or_sale, true)], date(2024, 1, 1), FirstDay, _), FirstDays),
+    FirstDays == [date(2024, 7, 1)].
+test(the_recognition_date_clamps_into_a_leap_february) :-
+    universal_opt_out_recognition_date([attribute(processes_for_targeted_advertising_or_sale, true)], date(2027, 8, 31), date(Year, Month, Day), _),
+    Year == 2028,
+    Month == 2,
+    Day == 29.
+test(the_facade_verdict_carries_a_citation) :-
+    colorado_cpa_profile_for(large_linked_controller, Profile),
+    decide_colorado_cpa(Profile, colorado_cpa_verdict(in_scope, [_FirstCitation|_OtherCitations])).
+test(the_facade_status_has_one_answer) :-
+    colorado_cpa_profile_for(unlinked_controller_without_biometric_data, Profile),
+    findall(Status, colorado_cpa_status(Profile, Status), Statuses),
+    Statuses == [out_of_scope].
+
+:- end_module(test_output_mode).

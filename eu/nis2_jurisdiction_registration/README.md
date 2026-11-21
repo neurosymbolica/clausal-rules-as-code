@@ -4,7 +4,7 @@
 
 ## Scope
 
-Which Member State's jurisdiction an entity falls under (Directive (EU) 2022/2555 Art 26(1)-(3)), where the main establishment of a Union provider is (Art 26(2)), what the entity must submit to the registry (Art 27(2)) and for the Member States' list of entities (Art 3(4)), and the limits for notifying changes (Art 27(3), Art 3(4)). The Directive binds the Member States; this domain states what it requires. Out of scope (handed to the lawyer or a sibling domain): whether the entity is in scope and its category (sibling order on scope), calendar computation of the periods, national registers, forms and channels.
+Directive (EU) 2022/2555 (NIS 2), original OJ text, Art 26(1) to (3), Art 27(1) to (3) and Art 3(3) and (4). Decided here, for an entity whose category the caller gives: the basis of its jurisdiction (never the Member State itself), the step of Art 26(2) that fixes the main establishment of a provider named in Art 26(1)(b), the information it must submit for the ENISA registry (Art 27(2)) and for the Member States list of entities (Art 3(4)), and the limits for notifying changes (Art 27(3), Art 3(4) second subparagraph), listed and not computed. Unsure judgements on Art 26(2) are referred to a lawyer. Out of scope: whether the entity is in scope and which category it falls in (sibling order on scope), the authorities duties, the national register and channel (country orders), calendar computation of periods (Regulation 1182/71), and whether an initial submission was on time.
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Which Member State's jurisdiction an entity falls under (Directive (EU) 2022/255
 
 ## What was checked
 
-- 176 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 216 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

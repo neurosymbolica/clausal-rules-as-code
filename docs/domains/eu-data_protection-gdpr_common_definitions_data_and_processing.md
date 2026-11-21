@@ -1,4 +1,4 @@
-# Regulation (EU) 2016/679 Art 4 points (1)-(6), (9)-(12), (25) and (26): given a profile of facts about one situation, whether each defined term (personal data, ...
+# Given a profile of facts about one situation, decide ONCE, for every data-protection order, whether each of the data and processing definitions of Article 4 of ...
 
 `eu/data_protection/gdpr_common_definitions_data_and_processing`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 163/163 | none (no provision-tracking ledger) | pass | pass | pass |
+| 231/231 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Regulation (EU) 2016/679 Art 4 points (1)-(6), (9)-(12), (25) and (26): given a profile of facts about one situation, whether each defined term (personal data, processing, restriction of processing, profiling, pseudonymisation, filing system, recipient, third party, consent elements, personal data breach, information society service, international organisation) is met, not met, indeterminate for an absent key, or referred to a lawyer for an unsure judgement or an unattested outside fact. Only DEFINITIONS are answered: never that an obligation applies, that a processing is lawful or that a transfer may take place. Points 4(7), (8), (13)-(24) are handled in the sibling order gdpr-common-definitions-roles-and-establishments; Directive (EU) 2015/1535 Art 1(1)(b) is not pinned and is read only as an attested outside fact.
+Given a profile of facts about one situation, decide ONCE, for every data-protection order, whether each of the data and processing definitions of Article 4 of Regulation (EU) 2016/679 (GDPR) is met: points 4(1) personal data, 4(2) processing, 4(3) restriction of processing, 4(4) profiling, 4(5) pseudonymisation, 4(6) filing system, 4(9) recipient, 4(10) third party, 4(11) consent (its five elements), 4(12) personal data breach, 4(25) information society service (an attested outside fact on Directive (EU) 2015/1535 Art 1(1)(b)) and 4(26) international organisation. Each answer is met, not_met, indeterminate(MISSING_KEYS) or needs_legal_review (an unsure user judgement, open_textured, or an absent outside fact, cross_reference_unresolved), with input_problems first. Out of scope: every obligation, lawfulness of processing and transfers; the other points of Article 4 (sibling orders gdpr-common-definitions-roles-and-establishments and gdpr-binding-corporate-rules; 4(17) and 4(21) deferred); the content of Directive (EU) 2015/1535 and of public international law, which arrive as attested outside facts.
 
 ## Pinned sources
 

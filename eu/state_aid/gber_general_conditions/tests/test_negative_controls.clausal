@@ -1,0 +1,130 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% required condition changed -> different verdict), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states "no
+% solution" as `test(Name, fail) :- Goal.`; each atom a negative names is
+% also asserted positively, so a misspelt atom shows up as a failure.
+% Run: python -m clausal.testing eu/state_aid/gber_general_conditions/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/state_aid/gber_general_conditions/gber_general_conditions, [
+    gber_general_conditions_status/2,
+    gber_general_conditions_status_values/1
+]).
+:- use_module(eu/state_aid/gber_general_conditions/fixtures, [gber_general_conditions_profile_for/2]).
+
+subject_status(Subject, Status) :-
+    gber_general_conditions_profile_for(Subject, SubjectCase),
+    gber_general_conditions_status(SubjectCase, Status).
+
+status_in_table(Status) :-
+    gber_general_conditions_status_values(StatusValues),
+    member(Status, StatusValues).
+
+% ---- the atoms the negatives name are the slice's own ----
+test(met_is_a_table_status) :-
+    status_in_table(tested_chapter_i_conditions_met).
+test(not_met_is_a_table_status) :-
+    status_in_table(chapter_i_conditions_not_met).
+test(partly_untested_is_a_table_status) :-
+    status_in_table(chapter_i_conditions_partly_untested).
+
+% ---- route: the threshold (Art 4(1)(c), strict) ----
+test(threshold_at_the_figure_is_met) :-
+    subject_status(threshold_at_figure, tested_chapter_i_conditions_met).
+test(threshold_one_cent_over_is_not_met) :-
+    subject_status(threshold_one_cent_over, chapter_i_conditions_not_met).
+test(threshold_one_cent_over_is_never_met, fail) :-
+    subject_status(threshold_one_cent_over, tested_chapter_i_conditions_met).
+
+% ---- route: the doubled research figure (Art 4(1)(i)(iv)) ----
+test(a_doubled_research_project_is_met) :-
+    subject_status(doubled_industrial_research, tested_chapter_i_conditions_met).
+test(the_same_project_undoubled_is_not_met) :-
+    subject_status(undoubled_industrial_research, chapter_i_conditions_not_met).
+test(the_same_project_undoubled_is_never_met, fail) :-
+    subject_status(undoubled_industrial_research, tested_chapter_i_conditions_met).
+test(twice_the_figure_is_met) :-
+    subject_status(doubled_research_at_twice_figure, tested_chapter_i_conditions_met).
+test(one_cent_over_twice_the_figure_is_not_met) :-
+    subject_status(doubled_research_one_cent_over_twice, chapter_i_conditions_not_met).
+test(one_cent_over_twice_the_figure_is_never_met, fail) :-
+    subject_status(doubled_research_one_cent_over_twice, tested_chapter_i_conditions_met).
+
+% ---- route: the cumulation (Art 8(3)(b) with Art 8(5)) ----
+test(de_minimis_at_the_intensity_is_met) :-
+    subject_status(de_minimis_at_intensity, tested_chapter_i_conditions_met).
+test(de_minimis_one_cent_over_is_not_met) :-
+    subject_status(de_minimis_one_cent_over, chapter_i_conditions_not_met).
+test(de_minimis_one_cent_over_is_never_met, fail) :-
+    subject_status(de_minimis_one_cent_over, tested_chapter_i_conditions_met).
+
+% ---- route: the incentive effect, application before work (Art 6(2), Q1) ----
+test(an_application_the_day_before_is_met) :-
+    subject_status(application_day_before_start, tested_chapter_i_conditions_met).
+test(an_application_on_the_same_day_is_not_met) :-
+    subject_status(same_day_application, chapter_i_conditions_not_met).
+test(an_application_on_the_same_day_is_never_met, fail) :-
+    subject_status(same_day_application, tested_chapter_i_conditions_met).
+
+% ---- route: ad hoc aid to a large enterprise (Art 6(3)) ----
+test(a_verified_ad_hoc_large_enterprise_is_met) :-
+    subject_status(ad_hoc_large_enterprise_verified, tested_chapter_i_conditions_met).
+test(an_unverified_ad_hoc_large_enterprise_is_not_met) :-
+    subject_status(ad_hoc_large_enterprise_unverified, chapter_i_conditions_not_met).
+test(an_unverified_ad_hoc_large_enterprise_is_never_met, fail) :-
+    subject_status(ad_hoc_large_enterprise_unverified, tested_chapter_i_conditions_met).
+
+% ---- route: transparency (Art 5) ----
+test(a_loan_meeting_its_condition_is_met) :-
+    subject_status(transparent_loan, tested_chapter_i_conditions_met).
+test(another_form_with_no_way_is_not_met) :-
+    subject_status(non_transparent_other_form, chapter_i_conditions_not_met).
+test(another_form_with_no_way_is_never_met, fail) :-
+    subject_status(non_transparent_other_form, tested_chapter_i_conditions_met).
+
+% ---- route: scope, undertaking in difficulty (Art 1(4)(c)) ----
+test(difficulty_with_the_derogation_is_met) :-
+    subject_status(difficulty_with_derogation, tested_chapter_i_conditions_met).
+test(difficulty_without_an_exception_is_not_met) :-
+    subject_status(difficulty_without_exception, chapter_i_conditions_not_met).
+test(difficulty_without_an_exception_is_never_met, fail) :-
+    subject_status(difficulty_without_exception, tested_chapter_i_conditions_met).
+
+% ---- route: scope, recovery order (Art 1(4)(a) and (b)) ----
+test(a_recovery_order_is_not_met) :-
+    subject_status(recovery_order_outstanding, chapter_i_conditions_not_met).
+test(a_recovery_order_is_never_met, fail) :-
+    subject_status(recovery_order_outstanding, tested_chapter_i_conditions_met).
+test(without_the_recovery_order_the_case_is_met) :-
+    subject_status(compliant_sme_grant, tested_chapter_i_conditions_met).
+
+% ---- route: referral of an unsure judgement ----
+test(an_unsure_difficulty_is_referred) :-
+    subject_status(difficulty_unsure, needs_legal_review(open_textured(undertaking_in_difficulty, cite(eu_reg_651_2014_art_1_4_c)), _)).
+test(an_unsure_difficulty_is_never_settled_against, fail) :-
+    subject_status(difficulty_unsure, chapter_i_conditions_not_met).
+
+% ---- route: the untested threshold row (Q13) ----
+test(another_category_is_partly_untested) :-
+    subject_status(other_category_row, chapter_i_conditions_partly_untested).
+test(another_category_is_never_met, fail) :-
+    subject_status(other_category_row, tested_chapter_i_conditions_met).
+
+% ---- route: the input check (size_class, Q5) ----
+test(a_large_enterprise_under_a_scheme_is_met) :-
+    subject_status(large_enterprise_scheme_aid, tested_chapter_i_conditions_met).
+test(not_an_enterprise_is_an_input_problem) :-
+    subject_status(not_an_enterprise_size, input_problems([wrong_type(size_class)])).
+test(not_an_enterprise_is_never_met, fail) :-
+    subject_status(not_an_enterprise_size, tested_chapter_i_conditions_met).
+
+% ---- route: a missing key ----
+test(the_empty_profile_names_one_missing_key) :-
+    subject_status(empty_profile, indeterminate([scheme_excluded_by_article_1_2_a_or_b])).
+test(the_empty_profile_is_never_settled, fail) :-
+    subject_status(empty_profile, chapter_i_conditions_not_met).
+
+:- end_module(test_negative_controls).

@@ -1,0 +1,68 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer: the profile
+% key schema, the re-exported input check, the what-if combinator (#16) and
+% the root-export vocabulary served by queries.clausal.
+% Run: python -m clausal.testing eu/dma_art_5_2_data_combination_order/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dma_art_5_2_data_combination_order/queries, [
+    dma_art_5_2_data_combination_order_profile_keys/1,
+    dma_art_5_2_data_combination_order_input_problems/2,
+    dma_art_5_2_data_combination_order_what_if/4,
+    practice_allowed_with_consent/0,
+    repeated_request_permitted/0,
+    designated_as_gatekeeper_for_core_platform_service/0,
+    signing_in_end_users_to_combine_personal_data/0
+]).
+:- use_module(eu/dma_art_5_2_data_combination_order/fixtures, [dma_art_5_2_data_combination_order_profile_for/2]).
+
+stated(Truth, attested(Truth, attestation(host_operator, attested_on_2026_11_19, caller_statement, none))).
+
+test(profile_keys_are_the_contract_keys) :-
+    dma_art_5_2_data_combination_order_profile_keys(ProfileKeys),
+    ProfileKeys == [designated_as_gatekeeper_for_core_platform_service, practice_under_article_5_2, end_user_presented_with_specific_choice, end_user_consent_given, gatekeeper_may_rely_on_article_6_1_c_d_or_e, consent_request_already_repeated_in_period].
+
+test(the_input_check_is_re_exported) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
+
+test(what_if_consent_given_allows_the_practice) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_combining_consent_refused_control, Profile),
+    stated(true, Consent),
+    dma_art_5_2_data_combination_order_what_if(Profile, end_user_consent_given, Consent, Status),
+    Status == practice_allowed_with_consent.
+
+test(what_if_unlisted_service_is_not_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_combining_with_consent, Profile),
+    stated(false, Designation),
+    dma_art_5_2_data_combination_order_what_if(Profile, designated_as_gatekeeper_for_core_platform_service, Designation, Status),
+    Status == article_5_obligations_do_not_apply.
+
+test(what_if_adds_an_absent_key) :-
+    dma_art_5_2_data_combination_order_profile_for(practice_missing, Profile),
+    dma_art_5_2_data_combination_order_what_if(Profile, practice_under_article_5_2, none_of_the_four_practices, Status),
+    Status == practice_outside_article_5_2.
+
+test(what_if_has_one_answer) :-
+    dma_art_5_2_data_combination_order_profile_for(basis_absent, Profile),
+    stated(true, OtherBasis),
+    findall(Status,
+            dma_art_5_2_data_combination_order_what_if(Profile, gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis, Status),
+            Statuses),
+    Statuses == [practice_allowed_on_other_legal_basis].
+
+test(what_if_a_wrong_value_gives_input_problems) :-
+    dma_art_5_2_data_combination_order_what_if([], practice_under_article_5_2, maybe, Status),
+    Status == input_problems([wrong_type(practice_under_article_5_2)]).
+
+test(what_if_on_a_non_list_has_no_answer, fail) :-
+    dma_art_5_2_data_combination_order_what_if(nothing, practice_under_article_5_2, unsure, _).
+
+test(the_root_vocabulary_is_served) :-
+    practice_allowed_with_consent,
+    repeated_request_permitted,
+    designated_as_gatekeeper_for_core_platform_service,
+    signing_in_end_users_to_combine_personal_data.
+
+:- end_module(test_queries).

@@ -20,19 +20,19 @@ modules:
 # via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
-  # (gdpr_joint_controllers_input_problems/2 is re-exported by queries.clausal)
+  # (gdpr_joint_controllers_input_problems/2 is listed once, under queries.clausal,
+  #  which re-exports the kernel's check)
   # -- citations.clausal --
   - "citation/2"
-  - "implements/1"
   # -- gdpr_joint_controllers.clausal --
+  - "rights_against_each_joint_controller/3"
+  - "liability_for_the_entire_damage/4"
+  - "recourse_after_full_compensation/4"
   - "decide_gdpr_joint_controllers/2"
   - "gdpr_joint_controllers_status/2"
   - "gdpr_joint_controllers_checklist/2"
   - "gdpr_joint_controllers_decision_resolvable/1"
   - "gdpr_joint_controllers_status_values/1"
-  - "rights_against_each_joint_controller/3"
-  - "liability_for_the_entire_damage/4"
-  - "recourse_after_full_compensation/4"
   - "not_joint_controllers/0"
   - "rights_exercisable_against_this_controller/0"
   - "not_responsible_for_the_damage/0"
@@ -59,13 +59,6 @@ public_interface:
   - "gdpr_joint_controllers_profile_keys/1"
   - "gdpr_joint_controllers_input_problems/2"
   - "gdpr_joint_controllers_what_if/4"
-  - "controllers_jointly_determine_purposes_and_means/0"
-  - "responsible_under_article_82_2_and_3/0"
-  - "other_responsible_parties/0"
-  - "full_compensation_paid/0"
-  - "unsure/0"
-  - "absent/0"
-  - "not_attempted/0"
   # -- fixtures.clausal --
   - "gdpr_joint_controllers_subject/1"
   - "gdpr_joint_controllers_profile_for/2"
@@ -76,44 +69,45 @@ public_interface:
 independence: no_external_scorer
 
 # Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. This domain imports only kit modules (formalize_lib,
-# kit/query_combinators), no shared backbone package.
+# domain imports. It imports only the kit's formalize_lib, which is not a
+# backbone package of the corpus.
 uses: []
 
 scope: >-
-  Regulation (EU) 2016/679 (GDPR), three rules sibling orders leave open, each
-  answered from the position of one party (the caller) for one processing and,
-  for Art 82, one claim for one damage: (1) Art 26(3) read with Art 28(10),
-  whether the data subject may exercise its rights in respect of and against the
-  caller whatever the joint controllers' arrangement says
-  (rights_against_each_joint_controller/3); (2) Art 82(4), whether the caller,
-  responsible under Art 82(2) and (3), may be held liable for the entire damage
-  (liability_for_the_entire_damage/4); (3) Art 82(5), whether the caller that paid
-  full compensation may claim back from the other responsible parties
-  (recourse_after_full_compensation/4); plus the input check
-  gdpr_joint_controllers_input_problems/2. Whether controllers jointly determine
-  the purposes and means and whether full compensation was paid are tri-state
-  judgements handed to the caller (unsure goes to a lawyer); the caller's own
-  responsibility under Art 82(2) and (3) is an attested outside fact copied into
-  the answer, never decided. Out of scope: Art 26(1) and (2)
-  (gdpr-accountability-security), Art 82(1) to (3)
-  (gdpr-compensation-and-liability), the rest of Art 28 (gdpr-processor-contract),
-  Art 4 (the common-definitions orders), the amount of any compensation or part,
-  the competent court (Art 82(6), Art 79), fines and penalties (Arts 83, 84),
-  which data subject rights exist (Arts 12 to 22) and national rules on
-  contribution between debtors.
+  Regulation (EU) 2016/679 (GDPR), three rules that sibling orders leave open,
+  each answered from the position of one party for one processing and, for
+  Art 82, one claim for one damage. (1) Art 26(3) read with Art 28(10):
+  whether the data subject may exercise its rights in respect of and against
+  the caller whatever the arrangement between joint controllers says
+  (rights_against_each_joint_controller/3); joint determination of the
+  purposes and means is the caller's tri-state judgement and is handed to a
+  lawyer when unsure, never tested here. (2) Art 82(4): whether the caller,
+  stated responsible under Art 82(2) and (3) by an attested outside fact, is
+  liable for the entire damage because at least one other involved party is
+  responsible for the same damage (liability_for_the_entire_damage/4).
+  (3) Art 82(5): whether a caller that paid full compensation in accordance
+  with Art 82(4) may claim back from the listed other responsible parties
+  (recourse_after_full_compensation/4); full payment is the caller's
+  tri-state judgement. The input check is gdpr_joint_controllers_input_problems/2.
+  Out of scope and decided elsewhere: Art 26(1) and (2) (gdpr-accountability-security),
+  Art 82(1) to (3) (gdpr-compensation-and-liability), the other paragraphs of
+  Art 28 (gdpr-processor-contract), the definitions of Art 4 (the common
+  definitions orders). No answer states an amount, a part of responsibility,
+  a competent court (Art 82(6), Art 79), a fine or penalty (Arts 83, 84), which
+  data-subject rights exist (Arts 12 to 22) or any national rule on contribution.
+  Drafter's reading, not a lawyer's.
 
 sources:
-  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504, pinned 2026-11-12"
-  - "GDPR Art 26(3) [02016R0679-20160504#parag_026.003]: rights in respect of and against each of the joint controllers"
-  - "GDPR Art 28(10) [02016R0679-20160504#parag_028.010]: a processor determining the purposes and means is considered a controller"
-  - "GDPR Art 82(4) [02016R0679-20160504#parag_082.004]: each responsible controller or processor liable for the entire damage"
-  - "GDPR Art 82(5) [02016R0679-20160504#parag_082.005]: claim back after paying full compensation"
-  - "GDPR Art 26(1), Art 82(2) and Art 82(3): quoted for readings (2) and (5) only, cited by no limb (deferred)"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504"
+  - "GDPR Art 26(3) [02016R0679-20160504#parag_026.003] rights in respect of and against each of the joint controllers"
+  - "GDPR Art 28(10) [02016R0679-20160504#parag_028.010] a processor that determines the purposes and means is considered a controller"
+  - "GDPR Art 82(4) [02016R0679-20160504#parag_082.004] each responsible controller or processor liable for the entire damage"
+  - "GDPR Art 82(5) [02016R0679-20160504#parag_082.005] claim back after paying full compensation"
+  - "GDPR Art 26(1), Art 82(2) and Art 82(3) quoted for readings (2) and (5) only; decided in sibling orders and cited by no limb"
 
 query_interface:
-  2: "gdpr_joint_controllers_status/2"      # eligibility verdict: the Art 82(5) claim back (eligible/ineligible/unresolved/referred/malformed)
-  7: "gdpr_joint_controllers_checklist/2"   # justification: one item(Id, Status, cite(Key)) row per Art 82(5) condition
+  2: "gdpr_joint_controllers_status/2"      # eligibility verdict on the Art 82(5) claim back
+  7: "gdpr_joint_controllers_checklist/2"   # justification: one cited item per condition
   16: "gdpr_joint_controllers_what_if/4"    # what_if: re-evaluate under an overridden key
 
 deferred_set:

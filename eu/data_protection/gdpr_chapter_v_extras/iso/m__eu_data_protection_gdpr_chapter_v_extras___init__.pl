@@ -4,7 +4,7 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [absent_referral/2, duty_argument_problems/2, gdpr_chapter_v_extras_input_problems/2, outside_fact_reference/3]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_chapter_v_extras_citations, [citation/2, implements/1]).
 :- use_module(m__eu_data_protection_gdpr_chapter_v_extras_gdpr_chapter_v_extras, [decide_gdpr_chapter_v_extras/2, foreign_judgment_or_decision_recognition/4, gdpr_chapter_v_extras_checklist/2, gdpr_chapter_v_extras_decision_resolvable/1, gdpr_chapter_v_extras_status/2, gdpr_chapter_v_extras_status_values/1, onward_transfer_condition/4, second_subparagraph_duty/5]).
 :- use_module(m__eu_data_protection_gdpr_chapter_v_extras_queries, [article_48_not_engaged/0, document_assessment_and_safeguards/0, duty_met/0, duty_not_met/0, gdpr_chapter_v_extras_profile_keys/1, gdpr_chapter_v_extras_what_if/4, inform_data_subject/0, inform_supervisory_authority/0, no_second_subparagraph_transfer/0, not_a_processor_duty/0, not_an_onward_transfer/0, not_barred_by_article_48/0, not_recognisable_or_enforceable/0, onward_transfer_may_not_take_place/0, onward_transfer_may_take_place/0]).

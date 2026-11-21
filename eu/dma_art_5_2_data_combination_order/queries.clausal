@@ -1,0 +1,184 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dma_art_5_2_data_combination_order.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types this domain serves, and where each is answered:
+%   #2  eligibility   article_5_application_status/4 and
+%                     personal_data_practice_status/4 (the slice), wrapped by the
+%                     facade verdict decide_dma_art_5_2_data_combination_order/2;
+%   #7  justification dma_art_5_2_data_combination_order_checklist/2 (the slice):
+%                     one item(Id, Status, cite(Key)) per condition, and the
+%                     CITATIONS argument of every final answer;
+%   #15 deadline      consent_request_repetition_status/6 (the slice): the one-year
+%                     period of the second subparagraph of Art 5(2), counted from
+%                     REFUSAL_DATE to the anniversary, which is outside it;
+%   #16 what-if       dma_art_5_2_data_combination_order_what_if/4 (here).
+%
+% dma_art_5_2_data_combination_order_profile_keys/1: the profile key schema (root_exports order)
+% dma_art_5_2_data_combination_order_input_problems/2: the input check, re-exported from the kernel
+% dma_art_5_2_data_combination_order_what_if/4: override or add one key, re-evaluate the facade status
+%
+% ROOT EXPORTS. The scorer reads the profile key atoms, the result atoms,
+% the practice atoms, unsure, absent and not_attempted as package-root
+% attributes. Each is served here as a predicate of its own name and arity,
+% so the generated facade carries it. These are vocabulary declarations:
+% they decide nothing statutory and carry no implements/1 marker.
+%
+% RESULT CONSTRUCTORS are exported and have NO clauses: a constructor is
+% data, never called as a query. Their fields are named by the
+% constructors/1 declaration below.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override is a
+% local list replacement (kit override_key/4 works on dicts). Plumbing only:
+% it decides nothing statutory and carries no implements/1 marker.
+% =====================================================================
+
+:- module(queries, [
+    dma_art_5_2_data_combination_order_profile_keys/1,
+    dma_art_5_2_data_combination_order_input_problems/2,
+    dma_art_5_2_data_combination_order_what_if/4,
+    article_5_obligations_apply/0,
+    article_5_obligations_do_not_apply/0,
+    practice_allowed_with_consent/0,
+    practice_allowed_on_other_legal_basis/0,
+    practice_prohibited/0,
+    practice_outside_article_5_2/0,
+    repeated_request_permitted/0,
+    repeated_request_not_permitted/0,
+    request_after_one_year_period/0,
+    designated_as_gatekeeper_for_core_platform_service/0,
+    practice_under_article_5_2/0,
+    end_user_presented_with_specific_choice/0,
+    end_user_consent_given/0,
+    gatekeeper_may_rely_on_article_6_1_c_d_or_e/0,
+    consent_request_already_repeated_in_period/0,
+    processing_for_online_advertising_services/0,
+    combining_personal_data/0,
+    cross_using_personal_data/0,
+    signing_in_end_users_to_combine_personal_data/0,
+    none_of_the_four_practices/0,
+    unsure/0,
+    absent/0,
+    not_attempted/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/dma_art_5_2_data_combination_order/kernel, [dma_art_5_2_data_combination_order_input_problems/2]).
+:- use_module(eu/dma_art_5_2_data_combination_order/dma_art_5_2_data_combination_order, [dma_art_5_2_data_combination_order_status/2]).
+
+% ---- result constructors (data: exported, no clauses) -------------------
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, attempt),
+    inputs_relied_on(pairs),
+    outside_fact(key, attested),
+    attestation(by, at, reason, evidence)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dma_art_5_2_data_combination_order_profile_keys([designated_as_gatekeeper_for_core_platform_service, practice_under_article_5_2, end_user_presented_with_specific_choice, end_user_consent_given, gatekeeper_may_rely_on_article_6_1_c_d_or_e, consent_request_already_repeated_in_period]).
+
+% ---- root exports: the result atoms of the three queries ----------------
+article_5_obligations_apply.
+article_5_obligations_do_not_apply.
+practice_allowed_with_consent.
+practice_allowed_on_other_legal_basis.
+practice_prohibited.
+practice_outside_article_5_2.
+repeated_request_permitted.
+repeated_request_not_permitted.
+request_after_one_year_period.
+
+% ---- root exports: the six profile keys, in root_exports order ---------
+designated_as_gatekeeper_for_core_platform_service.
+practice_under_article_5_2.
+end_user_presented_with_specific_choice.
+end_user_consent_given.
+gatekeeper_may_rely_on_article_6_1_c_d_or_e.
+consent_request_already_repeated_in_period.
+
+% ---- root exports: the practice atoms, unsure, absent, not_attempted ----
+processing_for_online_advertising_services.
+combining_personal_data.
+cross_using_personal_data.
+signing_in_end_users_to_combine_personal_data.
+none_of_the_four_practices.
+unsure.
+absent.
+not_attempted.
+
+% #16 what-if: re-evaluate with one key hypothetically replaced (or added when absent).
+dma_art_5_2_data_combination_order_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    dma_art_5_2_data_combination_order_status(Hypothesis, NewStatus).
+
+% attribute_override(Profile, Key, Value, Hypothesis): the first attribute(Key, _) is
+% replaced by attribute(Key, Value); with no such attribute it is appended. A term
+% that is not a proper attribute list has no hypothesis (the call fails).
+attribute_override(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]) :-
+    Profile == [].
+attribute_override(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|Rest]) :-
+    nonvar(Profile),
+    Profile = [attribute(ElementKey, _)|Rest],
+    ElementKey == OverriddenKey.
+attribute_override(Profile, OverriddenKey, NewValue, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    nonvar(Profile),
+    Profile = [attribute(ElementKey, ElementValue)|Rest],
+    ElementKey \== OverriddenKey,
+    attribute_override(Rest, OverriddenKey, NewValue, Hypothesis).
+
+test(override_replaces_a_present_key) :-
+    attribute_override([attribute(practice_under_article_5_2, unsure)],
+                       practice_under_article_5_2,
+                       combining_personal_data,
+                       Hypothesis),
+    Hypothesis == [attribute(practice_under_article_5_2, combining_personal_data)].
+test(override_adds_an_absent_key) :-
+    attribute_override([attribute(end_user_presented_with_specific_choice, true)],
+                       practice_under_article_5_2,
+                       combining_personal_data,
+                       Hypothesis),
+    Hypothesis == [attribute(end_user_presented_with_specific_choice, true),
+                   attribute(practice_under_article_5_2, combining_personal_data)].
+test(what_if_moves_the_status) :-
+    dma_art_5_2_data_combination_order_what_if([], practice_under_article_5_2, none_of_the_four_practices, Status),
+    Status == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_1), cite(commission_designation_decision)),
+                                 [resolution(cite(commission_designation_decision), not_attempted),
+                                  inputs_relied_on([designated_as_gatekeeper_for_core_platform_service-absent,
+                                                    practice_under_article_5_2-none_of_the_four_practices])]).
+test(what_if_on_a_non_list_has_no_answer, fail) :-
+    dma_art_5_2_data_combination_order_what_if(nothing, practice_under_article_5_2, unsure, _).
+test(profile_keys_are_the_six) :-
+    dma_art_5_2_data_combination_order_profile_keys(Keys),
+    length(Keys, 6).
+test(the_root_atoms_are_served) :-
+    article_5_obligations_apply,
+    practice_prohibited,
+    request_after_one_year_period,
+    consent_request_already_repeated_in_period,
+    none_of_the_four_practices,
+    unsure,
+    absent,
+    not_attempted.
+
+:- end_module(queries).

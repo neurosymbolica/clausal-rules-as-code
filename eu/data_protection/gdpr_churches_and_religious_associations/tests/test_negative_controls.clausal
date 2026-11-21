@@ -1,0 +1,128 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route of both queries: a POSITIVE case paired with a near-miss
+% control (one key changed -> a different answer), proving the route is
+% LOAD-BEARING. A negative states "no solution" as `test(Name, fail)`, and
+% each near-miss is also asserted positively with the answer it DOES get,
+% so a misspelt atom shows up as a failing positive test.
+% Run: python -m clausal.testing eu/data_protection/gdpr_churches_and_religious_associations/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/gdpr_churches_and_religious_associations, [
+    church_rules_continuation/4,
+    church_supervision/4,
+    gdpr_churches_and_religious_associations_status/2,
+    gdpr_churches_and_religious_associations_status_values/1
+]).
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/fixtures, [gdpr_churches_and_religious_associations_profile_for/2]).
+
+continuation_of(Subject, Result) :-
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    church_rules_continuation(Profile, Result, _Basis, _Citations).
+
+supervision_of(Subject, Result) :-
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    church_supervision(Profile, Result, _Basis, _Citations).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    gdpr_churches_and_religious_associations_status_values(StatusValues),
+    StatusValues = [_, _|_].
+test(the_baseline_profile_yields_exactly_one_status) :-
+    gdpr_churches_and_religious_associations_profile_for(rules_continue_authority_not_specific, Profile),
+    findall(Status, gdpr_churches_and_religious_associations_status(Profile, Status), [_]).
+test(the_baseline_profile_yields_no_other_table_status, fail) :-
+    gdpr_churches_and_religious_associations_profile_for(rules_continue_authority_not_specific, Profile),
+    findall(Status, gdpr_churches_and_religious_associations_status(Profile, Status), [BaselineStatus]),
+    gdpr_churches_and_religious_associations_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    gdpr_churches_and_religious_associations_status(Profile, Other).
+
+% ---- continuation: may continue vs each false condition ----------------
+test(holding_rules_may_continue) :-
+    continuation_of(rules_continue_authority_not_specific, church_rules_may_continue_to_apply).
+test(holding_rules_are_not_cut, fail) :-
+    continuation_of(rules_continue_authority_not_specific, church_rules_not_covered_by_article_91_1).
+test(a_body_not_a_church_is_not_covered) :-
+    continuation_of(body_not_a_church, church_rules_not_covered_by_article_91_1).
+test(a_body_not_a_church_may_not_continue, fail) :-
+    continuation_of(body_not_a_church, church_rules_may_continue_to_apply).
+test(rules_outside_a_member_state_are_not_covered) :-
+    continuation_of(rules_not_applied_in_a_member_state, church_rules_not_covered_by_article_91_1).
+test(rules_outside_a_member_state_may_not_continue, fail) :-
+    continuation_of(rules_not_applied_in_a_member_state, church_rules_may_continue_to_apply).
+test(rules_not_comprehensive_are_not_covered) :-
+    continuation_of(rules_not_comprehensive, church_rules_not_covered_by_article_91_1).
+test(rules_not_comprehensive_may_not_continue, fail) :-
+    continuation_of(rules_not_comprehensive, church_rules_may_continue_to_apply).
+test(rules_not_applied_at_entry_into_force_are_not_covered) :-
+    continuation_of(rules_not_applied_at_entry_into_force, church_rules_not_covered_by_article_91_1).
+test(rules_not_applied_at_entry_into_force_may_not_continue, fail) :-
+    continuation_of(rules_not_applied_at_entry_into_force, church_rules_may_continue_to_apply).
+test(rules_not_brought_into_line_are_not_covered) :-
+    continuation_of(rules_not_brought_into_line, church_rules_not_covered_by_article_91_1).
+test(rules_not_brought_into_line_may_not_continue, fail) :-
+    continuation_of(rules_not_brought_into_line, church_rules_may_continue_to_apply).
+
+% ---- continuation: missing key, referrals --------------------------------
+test(an_unstated_body_is_asked_for) :-
+    continuation_of(body_status_not_stated, indeterminate([body_is_church_or_religious_association_or_community])).
+test(holding_rules_ask_for_nothing, fail) :-
+    continuation_of(rules_continue_authority_not_specific, indeterminate(_)).
+test(an_unattested_entry_is_referred) :-
+    continuation_of(entry_into_force_not_attested, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_1), cite(rules_applied_at_entry_into_force_statement)), _)).
+test(an_attested_entry_is_not_referred, fail) :-
+    continuation_of(rules_continue_authority_not_specific, needs_legal_review(_, _)).
+test(unsure_comprehensive_rules_are_referred) :-
+    continuation_of(comprehensive_rules_unsure, needs_legal_review(open_textured(comprehensive_rules_relating_to_protection_with_regard_to_processing, cite(eu_reg_2016_679_art_91_1)), _)).
+test(unsure_comprehensive_rules_may_not_continue, fail) :-
+    continuation_of(comprehensive_rules_unsure, church_rules_may_continue_to_apply).
+test(an_unsure_bringing_into_line_is_referred) :-
+    continuation_of(bringing_into_line_unsure, needs_legal_review(open_textured(rules_brought_into_line_with_the_regulation, cite(eu_reg_2016_679_art_91_1)), _)).
+test(an_unsure_bringing_into_line_is_not_the_comprehensive_referral, fail) :-
+    continuation_of(bringing_into_line_unsure, needs_legal_review(open_textured(comprehensive_rules_relating_to_protection_with_regard_to_processing, _), _)).
+test(a_malformed_profile_gets_its_problems) :-
+    continuation_of(crisp_key_given_unsure, input_problems([wrong_type(rules_applied_in_a_member_state)])).
+test(a_well_formed_profile_has_no_problems, fail) :-
+    continuation_of(rules_continue_authority_not_specific, input_problems(_)).
+
+% ---- supervision ---------------------------------------------------------
+test(an_authority_not_specific_is_subject_to_supervision) :-
+    supervision_of(rules_continue_authority_not_specific, subject_to_independent_supervisory_authority).
+test(a_specific_authority_is_not_merely_subject_to_supervision, fail) :-
+    supervision_of(specific_authority_fulfils_chapter_vi, subject_to_independent_supervisory_authority).
+test(a_specific_authority_fulfilling_chapter_vi_is_permitted) :-
+    supervision_of(specific_authority_fulfils_chapter_vi, specific_supervisory_authority_permitted).
+test(a_specific_authority_failing_chapter_vi_is_not_permitted_near_miss, fail) :-
+    supervision_of(specific_authority_fails_chapter_vi, specific_supervisory_authority_permitted).
+test(a_specific_authority_failing_chapter_vi_is_not_permitted) :-
+    supervision_of(specific_authority_fails_chapter_vi, specific_supervisory_authority_not_permitted).
+test(a_fulfilling_authority_is_not_refused, fail) :-
+    supervision_of(specific_authority_fulfils_chapter_vi, specific_supervisory_authority_not_permitted).
+test(an_unstated_chapter_vi_is_referred) :-
+    supervision_of(specific_authority_chapter_vi_not_stated, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_2), cite(chapter_vi_conditions_statement)), _)).
+test(a_stated_chapter_vi_is_not_referred, fail) :-
+    supervision_of(specific_authority_fulfils_chapter_vi, needs_legal_review(_, _)).
+test(an_unstated_specificity_is_asked_for) :-
+    supervision_of(authority_specificity_not_stated, indeterminate([supervisory_authority_is_specific])).
+test(a_stated_specificity_is_not_asked_for, fail) :-
+    supervision_of(specific_authority_fulfils_chapter_vi, indeterminate(_)).
+test(a_false_condition_does_not_engage_article_91_2) :-
+    supervision_of(rules_not_comprehensive, article_91_2_not_engaged).
+test(holding_conditions_engage_article_91_2, fail) :-
+    supervision_of(rules_continue_authority_not_specific, article_91_2_not_engaged).
+test(an_unattested_entry_is_referred_in_supervision) :-
+    supervision_of(entry_into_force_not_attested, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_1), cite(rules_applied_at_entry_into_force_statement)), _)).
+test(an_unattested_entry_is_not_subject_to_supervision, fail) :-
+    supervision_of(entry_into_force_not_attested, subject_to_independent_supervisory_authority).
+test(an_unsure_judgement_is_referred_in_supervision) :-
+    supervision_of(comprehensive_rules_unsure, needs_legal_review(open_textured(comprehensive_rules_relating_to_protection_with_regard_to_processing, cite(eu_reg_2016_679_art_91_1)), _)).
+test(an_unsure_judgement_is_not_subject_to_supervision, fail) :-
+    supervision_of(comprehensive_rules_unsure, subject_to_independent_supervisory_authority).
+test(chapter_vi_is_not_read_for_an_authority_not_specific) :-
+    supervision_of(chapter_vi_stated_for_authority_not_specific, subject_to_independent_supervisory_authority).
+test(chapter_vi_false_does_not_refuse_an_authority_not_specific, fail) :-
+    supervision_of(chapter_vi_stated_for_authority_not_specific, specific_supervisory_authority_not_permitted).
+
+:- end_module(test_negative_controls).

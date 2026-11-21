@@ -4,134 +4,125 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_gdpr_joint_controllers, [decide_gdpr_joint_controllers/2, gdpr_joint_controllers_status/2, gdpr_joint_controllers_checklist/2, rights_against_each_joint_controller/3, liability_for_the_entire_damage/4, recourse_after_full_compensation/4]).
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_fixtures, [gdpr_joint_controllers_profile_for/2]).
 
-fixture_statement(Subject, Attested) :-
-    gdpr_joint_controllers_profile_for(Subject, Profile),
-    member(attribute(responsible_under_article_82_2_and_3, Attested), Profile).
+stated(Value, attested(Value, attestation(host_service, attested_moment, stated_reason, none))).
 
-rights_answers(Subject, Answers) :-
-    gdpr_joint_controllers_profile_for(Subject, Profile),
+absent_referral_term(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4), cite(responsibility_under_article_82_statement)), [resolution(cite(responsibility_under_article_82_statement), not_attempted), inputs_relied_on([responsible_under_article_82_2_and_3 - absent])])).
+
+rights_answers(Profile, Answers) :-
     findall(Result - Citations, rights_against_each_joint_controller(Profile, Result, Citations), Answers).
 
-liability_answers(Subject, Answers) :-
-    gdpr_joint_controllers_profile_for(Subject, Profile),
+liability_answers(Profile, Answers) :-
     findall(Result - Basis - Citations, liability_for_the_entire_damage(Profile, Result, Basis, Citations), Answers).
 
-recourse_answers(Subject, Answers) :-
-    gdpr_joint_controllers_profile_for(Subject, Profile),
+recourse_answers(Profile, Answers) :-
     findall(Result - Basis - Citations, recourse_after_full_compensation(Profile, Result, Basis, Citations), Answers).
 
-absent_referral(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4), cite(responsibility_under_article_82_statement)), [resolution(cite(responsibility_under_article_82_statement), not_attempted), inputs_relied_on([responsible_under_article_82_2_and_3 - absent])])).
-
-test(entitled_rights) :-
-    rights_answers(joint_processor_entitled_to_claim_back, Answers),
-    Answers == [rights_exercisable_against_this_controller - [cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]].
-test(entitled_liability) :-
-    fixture_statement(joint_processor_entitled_to_claim_back, Attested),
-    liability_answers(joint_processor_entitled_to_claim_back, Answers),
-    Answers == [liable_for_the_entire_damage - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_4)]].
-test(entitled_recourse) :-
-    fixture_statement(joint_processor_entitled_to_claim_back, Attested),
-    recourse_answers(joint_processor_entitled_to_claim_back, Answers),
-    Answers == [entitled_to_claim_back([controller_b, processor_c]) - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_5)]].
-test(partial_payment_recourse) :-
-    recourse_answers(partial_payment_near_miss, Answers),
-    Answers == [not_entitled_to_claim_back - [] - [cite(eu_reg_2016_679_art_82_5)]].
-test(sole_party_liability) :-
-    fixture_statement(sole_responsible_party_near_miss, Attested),
-    liability_answers(sole_responsible_party_near_miss, Answers),
-    Answers == [no_other_responsible_party - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_4)]].
-test(sole_party_recourse) :-
-    recourse_answers(sole_responsible_party_near_miss, Answers),
-    Answers == [not_entitled_to_claim_back - [] - [cite(eu_reg_2016_679_art_82_5)]].
-test(not_responsible_liability) :-
-    fixture_statement(not_responsible_near_miss, Attested),
-    liability_answers(not_responsible_near_miss, Answers),
-    Answers == [not_responsible_for_the_damage - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_4)]].
-test(not_responsible_recourse) :-
-    fixture_statement(not_responsible_near_miss, Attested),
-    recourse_answers(not_responsible_near_miss, Answers),
-    Answers == [not_entitled_to_claim_back - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_5)]].
-test(unsure_rights) :-
-    rights_answers(payment_judgement_unsure, Answers),
-    Answers == [needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_3)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means - unsure])]) - []].
-test(unsure_recourse) :-
-    recourse_answers(payment_judgement_unsure, Answers),
-    Answers == [needs_legal_review(open_textured(full_compensation_paid, cite(eu_reg_2016_679_art_82_5)), [inputs_relied_on([full_compensation_paid - unsure])]) - [] - []].
-test(not_yet_stated_rights) :-
-    rights_answers(payment_not_yet_stated, Answers),
+test(step_a1_not_joint_controllers) :-
+    rights_answers([attribute(controllers_jointly_determine_purposes_and_means, false)], Answers),
     Answers == [not_joint_controllers - [cite(eu_reg_2016_679_art_26_3)]].
-test(not_yet_stated_recourse) :-
-    recourse_answers(payment_not_yet_stated, Answers),
-    Answers == [indeterminate([full_compensation_paid]) - [] - []].
-test(parties_unknown_rights) :-
-    rights_answers(other_parties_not_yet_known, Answers),
+test(step_a2_joint_determination_asked_for) :-
+    rights_answers([attribute(full_compensation_paid, true)], Answers),
     Answers == [indeterminate([controllers_jointly_determine_purposes_and_means]) - []].
-test(parties_unknown_liability) :-
-    liability_answers(other_parties_not_yet_known, Answers),
+test(step_a3_joint_determination_unsure) :-
+    rights_answers([attribute(controllers_jointly_determine_purposes_and_means, unsure)], Answers),
+    Answers == [needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_3)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means - unsure])]) - []].
+test(step_a4_rights_exercisable_with_both_citations) :-
+    rights_answers([attribute(controllers_jointly_determine_purposes_and_means, true)], Answers),
+    Answers = [rights_exercisable_against_this_controller - Citations],
+    clausal_msort(Citations, [cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]).
+test(step_b1_not_responsible_whatever_the_list) :-
+    stated(false, Attested),
+    liability_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_alpha])], Answers),
+    Answers == [not_responsible_for_the_damage - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_4)]].
+test(step_b1_not_responsible_with_the_list_absent) :-
+    stated(false, Attested),
+    liability_answers([attribute(responsible_under_article_82_2_and_3, Attested)], Answers),
+    Answers == [not_responsible_for_the_damage - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_4)]].
+test(step_b2_absent_statement_referred) :-
+    absent_referral_term(Referral),
+    liability_answers([attribute(other_responsible_parties, [])], Answers),
+    Answers == [Referral - [] - []].
+test(step_b2_absent_statement_referred_with_nothing_given) :-
+    absent_referral_term(Referral),
+    liability_answers([], Answers),
+    Answers == [Referral - [] - []].
+test(step_b3_list_asked_for) :-
+    stated(true, Attested),
+    liability_answers([attribute(responsible_under_article_82_2_and_3, Attested)], Answers),
     Answers == [indeterminate([other_responsible_parties]) - [] - []].
-test(parties_unknown_recourse) :-
-    recourse_answers(other_parties_not_yet_known, Answers),
-    Answers == [indeterminate([other_responsible_parties]) - [] - []].
-test(statement_absent_liability) :-
-    absent_referral(Referral),
-    liability_answers(statement_absent_referred, Answers),
-    Answers == [Referral - [] - []].
-test(statement_absent_recourse) :-
-    absent_referral(Referral),
-    recourse_answers(statement_absent_referred, Answers),
-    Answers == [Referral - [] - []].
-test(statement_absent_alone_liability) :-
-    absent_referral(Referral),
-    liability_answers(statement_absent_no_other_party, Answers),
-    Answers == [Referral - [] - []].
-test(statement_absent_alone_recourse) :-
-    recourse_answers(statement_absent_no_other_party, Answers),
+test(step_b4_no_other_responsible_party) :-
+    stated(true, Attested),
+    liability_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [])], Answers),
+    Answers == [no_other_responsible_party - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_4)]].
+test(step_b5_liable_for_the_entire_damage) :-
+    stated(true, Attested),
+    liability_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta])], Answers),
+    Answers == [liable_for_the_entire_damage - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_4)]].
+test(step_c1_not_responsible_has_no_claim_back) :-
+    stated(false, Attested),
+    recourse_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, []), attribute(full_compensation_paid, false)], Answers),
+    Answers == [not_entitled_to_claim_back - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_5)]].
+test(step_c2_no_other_party_with_a_statement) :-
+    stated(true, Attested),
+    recourse_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, []), attribute(full_compensation_paid, unsure)], Answers),
     Answers == [not_entitled_to_claim_back - [] - [cite(eu_reg_2016_679_art_82_5)]].
-test(bare_statement_every_query) :-
-    rights_answers(malformed_bare_statement, RightsAnswers),
-    liability_answers(malformed_bare_statement, LiabilityAnswers),
-    recourse_answers(malformed_bare_statement, RecourseAnswers),
-    RightsAnswers == [input_problems([wrong_type(responsible_under_article_82_2_and_3)]) - []],
-    LiabilityAnswers == [input_problems([wrong_type(responsible_under_article_82_2_and_3)]) - [] - []],
-    RecourseAnswers == [input_problems([wrong_type(responsible_under_article_82_2_and_3)]) - [] - []].
-test(party_identifier_problem) :-
-    recourse_answers(malformed_party_identifier, Answers),
-    Answers == [input_problems([wrong_type(other_responsible_parties)]) - [] - []].
-test(duplicate_payment_problem) :-
-    liability_answers(malformed_duplicate_payment, Answers),
-    Answers == [input_problems([duplicate_key(full_compensation_paid), unknown_key(arrangement_names_contact_point)]) - [] - []].
-test(facade_verdict_carries_the_citation) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
+test(step_c2_no_other_party_with_a_false_payment_once) :-
+    recourse_answers([attribute(other_responsible_parties, []), attribute(full_compensation_paid, false)], Answers),
+    Answers == [not_entitled_to_claim_back - [] - [cite(eu_reg_2016_679_art_82_5)]].
+test(step_c3_payment_not_full) :-
+    stated(true, Attested),
+    recourse_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(full_compensation_paid, false)], Answers),
+    Answers == [not_entitled_to_claim_back - [] - [cite(eu_reg_2016_679_art_82_5)]].
+test(step_c4_absent_statement_referred_before_a_missing_list) :-
+    absent_referral_term(Referral),
+    recourse_answers([attribute(full_compensation_paid, unsure)], Answers),
+    Answers == [Referral - [] - []].
+test(step_c5_list_asked_for_before_an_unsure_payment) :-
+    stated(true, Attested),
+    recourse_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(full_compensation_paid, unsure)], Answers),
+    Answers == [indeterminate([other_responsible_parties]) - [] - []].
+test(step_c6_payment_asked_for) :-
+    stated(true, Attested),
+    recourse_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_alpha])], Answers),
+    Answers == [indeterminate([full_compensation_paid]) - [] - []].
+test(step_c7_payment_unsure) :-
+    stated(true, Attested),
+    recourse_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_alpha]), attribute(full_compensation_paid, unsure)], Answers),
+    Answers == [needs_legal_review(open_textured(full_compensation_paid, cite(eu_reg_2016_679_art_82_5)), [inputs_relied_on([full_compensation_paid - unsure])]) - [] - []].
+test(step_c8_entitled_with_the_parties_exactly_as_given) :-
+    stated(true, Attested),
+    recourse_answers([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha, processor_beta]), attribute(full_compensation_paid, true)], Answers),
+    Answers == [entitled_to_claim_back([processor_beta, controller_alpha, processor_beta]) - [outside_fact(responsible_under_article_82_2_and_3, Attested)] - [cite(eu_reg_2016_679_art_82_5)]].
+test(step_zero_an_arrangement_key_is_an_input_problem) :-
+    gdpr_joint_controllers_profile_for(arrangement_key_supplied, Profile),
+    rights_answers(Profile, Answers),
+    Answers == [input_problems([unknown_key(arrangement_terms)]) - []].
+test(step_zero_a_duplicate_key_is_an_input_problem) :-
+    gdpr_joint_controllers_profile_for(duplicate_payment_key, Profile),
+    recourse_answers(Profile, Answers),
+    Answers == [input_problems([duplicate_key(full_compensation_paid)]) - [] - []].
+test(the_eligible_verdict_carries_a_citation) :-
+    gdpr_joint_controllers_profile_for(claim_back_after_full_payment, Profile),
     findall(Verdict, decide_gdpr_joint_controllers(Profile, Verdict), Verdicts),
     Verdicts == [gdpr_joint_controllers_verdict(eligible, [cite(eu_reg_2016_679_art_82_5)])].
-test(facade_referred_verdict_has_no_citation) :-
-    gdpr_joint_controllers_profile_for(statement_absent_referred, Profile),
-    findall(Verdict, decide_gdpr_joint_controllers(Profile, Verdict), Verdicts),
-    Verdicts == [gdpr_joint_controllers_verdict(referred_for_legal_review, [])].
-test(facade_status_enumerates_one) :-
-    gdpr_joint_controllers_profile_for(sole_responsible_party_near_miss, Profile),
+test(each_fixture_yields_exactly_one_status) :-
+    gdpr_joint_controllers_profile_for(claim_back_payment_unsure, Profile),
     findall(Status, gdpr_joint_controllers_status(Profile, Status), Statuses),
-    Statuses == [ineligible].
-test(checklist_all_met_for_entitled) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
+    Statuses == [indeterminate].
+test(the_checklist_cites_every_item) :-
+    gdpr_joint_controllers_profile_for(claim_back_after_full_payment, Profile),
+    findall(Items, gdpr_joint_controllers_checklist(Profile, Items), AllItems),
+    AllItems == [[item(responsible_under_article_82, met, cite(eu_reg_2016_679_art_82_4)), item(other_responsible_party_listed, met, cite(eu_reg_2016_679_art_82_4)), item(full_compensation_paid, met, cite(eu_reg_2016_679_art_82_5))]].
+test(the_checklist_hands_an_unsure_payment_back_as_unknown) :-
+    gdpr_joint_controllers_profile_for(claim_back_payment_unsure, Profile),
     gdpr_joint_controllers_checklist(Profile, Items),
-    length(Items, 3),
-    member(item(caller_responsible_for_the_damage, met, cite(eu_reg_2016_679_art_82_4)), Items),
-    member(item(other_responsible_party_listed, met, cite(eu_reg_2016_679_art_82_4)), Items),
-    member(item(full_compensation_paid, met, cite(eu_reg_2016_679_art_82_5)), Items).
-test(checklist_partial_payment_unmet) :-
-    gdpr_joint_controllers_profile_for(partial_payment_near_miss, Profile),
-    gdpr_joint_controllers_checklist(Profile, Items),
-    member(item(full_compensation_paid, unmet(full_compensation_not_paid), cite(eu_reg_2016_679_art_82_5)), Items).
-test(checklist_malformed_single_row) :-
-    gdpr_joint_controllers_profile_for(malformed_bare_statement, Profile),
-    findall(Items, gdpr_joint_controllers_checklist(Profile, Items), Checklists),
-    Checklists == [[item(input_check, unmet(input_problems([wrong_type(responsible_under_article_82_2_and_3)])), cite(eu_reg_2016_679_art_82_5))]].
+    member(item(full_compensation_paid, unknown([full_compensation_paid]), cite(eu_reg_2016_679_art_82_5)), Items).
 
-cp_test_names([entitled_rights, entitled_liability, entitled_recourse, partial_payment_recourse, sole_party_liability, sole_party_recourse, not_responsible_liability, not_responsible_recourse, unsure_rights, unsure_recourse, not_yet_stated_rights, not_yet_stated_recourse, parties_unknown_rights, parties_unknown_liability, parties_unknown_recourse, statement_absent_liability, statement_absent_recourse, statement_absent_alone_liability, statement_absent_alone_recourse, bare_statement_every_query, party_identifier_problem, duplicate_payment_problem, facade_verdict_carries_the_citation, facade_referred_verdict_has_no_citation, facade_status_enumerates_one, checklist_all_met_for_entitled, checklist_partial_payment_unmet, checklist_malformed_single_row]).
+cp_test_names([step_a1_not_joint_controllers, step_a2_joint_determination_asked_for, step_a3_joint_determination_unsure, step_a4_rights_exercisable_with_both_citations, step_b1_not_responsible_whatever_the_list, step_b1_not_responsible_with_the_list_absent, step_b2_absent_statement_referred, step_b2_absent_statement_referred_with_nothing_given, step_b3_list_asked_for, step_b4_no_other_responsible_party, step_b5_liable_for_the_entire_damage, step_c1_not_responsible_has_no_claim_back, step_c2_no_other_party_with_a_statement, step_c2_no_other_party_with_a_false_payment_once, step_c3_payment_not_full, step_c4_absent_statement_referred_before_a_missing_list, step_c5_list_asked_for_before_an_unsure_payment, step_c6_payment_asked_for, step_c7_payment_unsure, step_c8_entitled_with_the_parties_exactly_as_given, step_zero_an_arrangement_key_is_an_input_problem, step_zero_a_duplicate_key_is_an_input_problem, the_eligible_verdict_carries_a_citation, each_fixture_yields_exactly_one_status, the_checklist_cites_every_item, the_checklist_hands_an_unsure_payment_back_as_unknown]).
 cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.

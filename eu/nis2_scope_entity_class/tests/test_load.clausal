@@ -1,65 +1,137 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
-% result terms build and destructure, the verdict atoms are distinct, and a
-% real citation record resolves.
+% test_load.clausal -- LOAD: the shared floor of eu/nis2_scope_entity_class
+% loads (kernel and citations), the result terms the order pins build and
+% destructure, the verdict and status atoms are distinct, and the real
+% citation records resolve. Self-contained: the determination slice is not
+% referenced here.
 % Run: cd <corpus root> && python -m clausal.testing \
 %      eu/nis2_scope_entity_class/tests/test_load.clausal
 % =====================================================================
 :- module(test_load, []).
-:- use_module(eu/nis2_scope_entity_class/kernel, [nis2_scope_entity_class_input_problems/2]).
-:- use_module(eu/nis2_scope_entity_class/citations, [citation/2, implements/1]).
+:- use_module(eu/nis2_scope_entity_class/kernel, [nis2_scope_entity_class_input_problems/2, nis2_scope_entity_class_profile_key_order/1]).
+:- use_module(eu/nis2_scope_entity_class/citations, [citation/2, citation_vocabulary/2, implements/1]).
 
-test(the_verdict_atoms_are_distinct) :-
-    dif(eligible, ineligible).
+% ---- the kernel loads and its shared facts hold ----
 
-test(the_result_atoms_are_distinct) :-
-    dif(in_scope, out_of_scope),
-    dif(essential_entity, important_entity).
+test(the_key_order_holds_twenty_one_keys) :-
+    nis2_scope_entity_class_profile_key_order(Keys),
+    length(Keys, 21).
 
-test(the_verdict_term_carries_status_and_citations) :-
-    Verdict = nis2_scope_entity_class_verdict(eligible, [cite(eu_dir_2022_2555_art_2_1)]),
-    Verdict = nis2_scope_entity_class_verdict(Status, Citations),
-    Status == eligible,
-    Citations == [cite(eu_dir_2022_2555_art_2_1)].
+test(the_key_order_starts_with_the_annex_types) :-
+    nis2_scope_entity_class_profile_key_order([annex_i_type, annex_ii_type|_]).
 
-test(the_indeterminate_status_destructures) :-
-    Status = indeterminate([staff_headcount]),
-    Status = indeterminate(MissingKeys),
-    MissingKeys == [staff_headcount].
+test(the_key_order_ends_with_the_former_operator_key) :-
+    nis2_scope_entity_class_profile_key_order(Keys),
+    last(Keys, former_operator_of_essential_services_kept_essential_by_member_state).
 
-test(the_needs_legal_review_status_destructures) :-
-    Status = needs_legal_review(open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)), [inputs_relied_on([annex_i_type-unsure])]),
-    Status = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
-    Key == annex_i_type,
-    CitationKey == eu_dir_2022_2555_art_2_1,
-    Pairs == [annex_i_type-unsure].
-
-test(a_real_citation_record_resolves) :-
-    citation(eu_dir_2022_2555_art_2_1, _Record).
-
-test(a_class_citation_record_resolves) :-
-    citation(eu_dir_2022_2555_art_3_2, _Record).
-
-test(the_provenance_marker_accepts_a_recorded_key) :-
-    implements(eu_dir_2022_2555_art_2_4).
-
-test(the_provenance_marker_refuses_an_unrecorded_key, fail) :-
-    implements(eu_dir_2022_2555_art_9_9).
+test(the_key_order_names_each_key_once) :-
+    nis2_scope_entity_class_profile_key_order(Keys),
+    sort(Keys, SortedKeys),
+    length(SortedKeys, 21).
 
 test(an_empty_profile_has_no_input_problem) :-
     nis2_scope_entity_class_input_problems([], []).
 
 test(a_well_formed_profile_has_no_input_problem) :-
-    nis2_scope_entity_class_input_problems([attribute(staff_headcount, 10), attribute(tld_name_registry, false)], []).
+    nis2_scope_entity_class_input_problems([attribute(annex_i_type, true), attribute(staff_headcount, 300), attribute(trust_service_provider_status, qualified_trust_service_provider)], []).
 
-test(an_unknown_key_is_named) :-
-    nis2_scope_entity_class_input_problems([attribute(shoe_size, 42)], [unknown_key(shoe_size)]).
+test(a_key_outside_the_contract_is_an_unknown_key) :-
+    nis2_scope_entity_class_input_problems([attribute(colour, red)], [unknown_key(colour)]).
 
-test(a_non_list_profile_is_wrong_type) :-
-    nis2_scope_entity_class_input_problems(not_a_profile, [wrong_type(profile)]).
+test(a_key_outside_the_contract_is_not_accepted, fail) :-
+    nis2_scope_entity_class_input_problems([attribute(colour, red)], []).
 
-test(a_wrong_typed_value_is_named_and_a_well_formed_one_is_not, fail) :-
-    nis2_scope_entity_class_input_problems([attribute(staff_headcount, -1)], []).
+test(a_term_that_is_not_a_list_is_not_a_profile) :-
+    nis2_scope_entity_class_input_problems(profile, [wrong_type(profile)]).
+
+test(the_input_check_gives_exactly_one_answer) :-
+    findall(Problems, nis2_scope_entity_class_input_problems([attribute(annex_ii_type, unsure)], Problems), Answers),
+    Answers == [[]].
+
+% ---- the verdict and status atoms are distinct ----
+
+% (b) THE TEST WAS WRONG: all_different/1 is a CLP(FD) integer constraint and fails on atoms; pairwise dif/2 states distinctness of atoms.
+test(the_size_atoms_are_distinct) :-
+    dif(microenterprise, small_enterprise),
+    dif(microenterprise, medium_sized_enterprise),
+    dif(microenterprise, large_enterprise),
+    dif(small_enterprise, medium_sized_enterprise),
+    dif(small_enterprise, large_enterprise),
+    dif(medium_sized_enterprise, large_enterprise).
+
+test(the_scope_atoms_are_distinct) :-
+    dif(in_scope, out_of_scope).
+
+test(the_class_atoms_are_distinct) :-
+    dif(essential_entity, important_entity),
+    dif(essential_entity, out_of_scope),
+    dif(important_entity, out_of_scope).
+
+test(the_trust_service_atoms_are_distinct) :-
+    dif(not_a_trust_service_provider, non_qualified_trust_service_provider),
+    dif(not_a_trust_service_provider, qualified_trust_service_provider),
+    dif(non_qualified_trust_service_provider, qualified_trust_service_provider).
+
+% (b) THE TEST WAS WRONG: all_different/1 is a CLP(FD) integer constraint and fails on atoms; pairwise dif/2 states distinctness of atoms.
+test(the_public_administration_atoms_are_distinct) :-
+    dif(not_public_administration, central_government),
+    dif(not_public_administration, regional_with_risk_assessed_services),
+    dif(not_public_administration, other_public_administration),
+    dif(central_government, regional_with_risk_assessed_services),
+    dif(central_government, other_public_administration),
+    dif(regional_with_risk_assessed_services, other_public_administration).
+
+% ---- the result terms build and destructure ----
+
+test(the_verdict_term_carries_class_and_citations) :-
+    Verdict = nis2_scope_entity_class_verdict(essential_entity, [cite(eu_dir_2022_2555_art_3_1_f)]),
+    Verdict = nis2_scope_entity_class_verdict(Class, Citations),
+    Class == essential_entity,
+    Citations == [cite(eu_dir_2022_2555_art_3_1_f)].
+
+test(the_indeterminate_status_names_one_key) :-
+    Status = indeterminate([staff_headcount]),
+    Status = indeterminate(MissingKeys),
+    MissingKeys == [staff_headcount].
+
+test(the_legal_review_status_destructures) :-
+    Status = needs_legal_review(open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)), [inputs_relied_on([annex_i_type-unsure, annex_ii_type-false])]),
+    Status = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == annex_i_type,
+    CitationKey == eu_dir_2022_2555_art_2_1,
+    Pairs == [annex_i_type-unsure, annex_ii_type-false].
+
+test(the_input_problems_status_destructures) :-
+    Status = input_problems([duplicate_key(tld_name_registry), unknown_key(colour)]),
+    Status = input_problems(Problems),
+    Problems == [duplicate_key(tld_name_registry), unknown_key(colour)].
+
+test(the_indeterminate_status_is_not_the_legal_review_status, fail) :-
+    indeterminate([staff_headcount]) = needs_legal_review(_, _).
+
+% ---- the real citation records resolve ----
+
+test(the_size_rule_citation_is_recorded) :-
+    citation(eu_dir_2022_2555_art_2_1, _Record).
+
+test(the_important_entity_citation_is_in_the_vocabulary) :-
+    citation_vocabulary(eu_dir_2022_2555_art_3_2, Unit),
+    Unit == '32022L2555#parag_003.002'.
+
+test(the_marker_only_size_key_is_implemented) :-
+    implements(eu_rec_2003_361_annex_art_2_1).
+
+test(the_placeholder_citation_is_gone, fail) :-
+    citation(eu_todo_primary_source, _).
+
+test(every_referral_citation_is_in_the_vocabulary) :-
+    maplist(vocabulary_key, [eu_dir_2022_2555_art_2_1, eu_dir_2022_2555_art_2_2_b, eu_dir_2022_2555_art_2_2_c, eu_dir_2022_2555_art_2_2_d, eu_dir_2022_2555_art_2_2_e, eu_dir_2022_2555_art_3_1_a, eu_dir_2022_2555_art_3_1_e]).
+
+test(the_negative_scope_citations_are_in_the_vocabulary) :-
+    maplist(vocabulary_key, [eu_dir_2022_2555_art_2_1, eu_dir_2022_2555_art_2_2, eu_dir_2022_2555_art_2_3, eu_dir_2022_2555_art_2_4]).
+
+vocabulary_key(Key) :-
+    citation_vocabulary(Key, _).
 
 :- end_module(test_load).

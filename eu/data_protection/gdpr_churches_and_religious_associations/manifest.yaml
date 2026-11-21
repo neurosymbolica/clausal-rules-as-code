@@ -1,0 +1,162 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_churches_and_religious_associations
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_churches_and_religious_associations"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_churches_and_religious_associations.clausal --
+  - "church_rules_continuation/4"
+  - "church_supervision/4"
+  - "church_rules_may_continue_to_apply/0"
+  - "church_rules_not_covered_by_article_91_1/0"
+  - "article_91_2_not_engaged/0"
+  - "subject_to_independent_supervisory_authority/0"
+  - "specific_supervisory_authority_permitted/0"
+  - "specific_supervisory_authority_not_permitted/0"
+  - "decide_gdpr_churches_and_religious_associations/2"
+  - "gdpr_churches_and_religious_associations_status/2"
+  - "gdpr_churches_and_religious_associations_checklist/2"
+  - "gdpr_churches_and_religious_associations_decision_resolvable/1"
+  - "gdpr_churches_and_religious_associations_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_churches_and_religious_associations_profile_keys/1"
+  - "gdpr_churches_and_religious_associations_input_problems/2"
+  - "gdpr_churches_and_religious_associations_what_if/4"
+  - "gdpr_churches_and_religious_associations_eligibility/2"
+  - "body_is_church_or_religious_association_or_community/0"
+  - "rules_applied_in_a_member_state/0"
+  - "comprehensive_rules_relating_to_protection_with_regard_to_processing/0"
+  - "rules_applied_at_entry_into_force_of_the_regulation/0"
+  - "rules_brought_into_line_with_the_regulation/0"
+  - "supervisory_authority_is_specific/0"
+  - "specific_authority_fulfils_chapter_vi_conditions/0"
+  - "unsure/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_churches_and_religious_associations_subject/1"
+  - "gdpr_churches_and_religious_associations_profile_for/2"
+  - "gdpr_churches_and_religious_associations_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib), no
+# shared backbone package.
+uses: []
+
+scope: >-
+  Article 91 of Regulation (EU) 2016/679 (GDPR), from the pinned text only.
+  church_rules_continuation/4 answers whether Art 91(1) lets the comprehensive
+  rules a church or a religious association or community applied in a Member
+  State at the time of entry into force of the Regulation continue to apply,
+  provided that they are brought into line with the Regulation.
+  church_supervision/4 answers, for the same profile, whether Art 91(2) is
+  engaged and, if it is, whether the church or association is subject to an
+  independent supervisory authority, or whether a specific authority is
+  permitted (it is attested to fulfil the conditions of Chapter VI) or not.
+  Out of scope and handed to the caller or a lawyer: the content of any
+  church rule or Member State law; whether the rules are comprehensive and
+  brought into line (tri-state judgements, unsure refers to a lawyer); the
+  time of entry into force (Art 99) and the conditions of Chapter VI, both
+  taken only as attested outside facts; the definitions of Art 4.
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, Article 91(1) and Article 91(2); pinned unit text of the consolidated version 02016R0679-20160504 (#parag_091.001, #parag_091.002)"
+
+query_interface:
+  2: "gdpr_churches_and_religious_associations_eligibility/2"     # eligibility verdict with a cited checklist
+  7: "gdpr_churches_and_religious_associations_eligibility/2"     # justification: every checklist item carries cite(...)
+  16: "gdpr_churches_and_religious_associations_what_if/4"        # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_heading
+  units:
+  - 02016R0679-20160504#art_091
+  reason: 'The title of Article 91 carries no rule: document structure. Deferred so
+    every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: the title carries no rule.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: the_rules_of_churches_and_religious_associations
+  units: []
+  instrument: the comprehensive rules that a church or a religious association or
+    community applies in a Member State, and the Member State law under which it applies
+    them (not pinned, not fetched)
+  reason: 'Art 91(1) turns on rules that are not part of the Regulation. Their content,
+    their history and whether they are comprehensive or brought into line are never
+    read: the order takes the caller''s judgements and attested statements (readings
+    (3), (4), (5)).'
+  consequence: No answer says what the rules of any church, association or community
+    provide; the caller checks them itself (Q3) (Q2).
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+
+excluded_set:
+- what: entry_into_force_of_the_regulation
+  instrument: Regulation (EU) 2016/679 Art 99
+  cites:
+  - 02016R0679-20160504#art_099
+  reason: The day of entry into force and the day the Regulation applies from are
+    fixed by Art 99; Art 91(1) turns on the first. The order never computes it and
+    takes the attested outside fact rules_applied_at_entry_into_force_of_the_regulation.
+  consequence: An absent statement refers; a present one is copied into the BASIS
+    of a final answer that rests on it (Q1).
+- what: conditions_of_chapter_vi
+  instrument: Regulation (EU) 2016/679 Chapter VI, Arts 51 to 59
+  cites:
+  - 02016R0679-20160504#art_051
+  - 02016R0679-20160504#art_052
+  - 02016R0679-20160504#art_053
+  - 02016R0679-20160504#art_054
+  - 02016R0679-20160504#art_055
+  - 02016R0679-20160504#art_056
+  - 02016R0679-20160504#art_057
+  - 02016R0679-20160504#art_058
+  - 02016R0679-20160504#art_059
+  reason: The independent status, competence, tasks and powers of supervisory authorities
+    are Chapter VI; Art 91(2) turns on them for a specific authority. The order takes
+    the attested outside fact specific_authority_fulfils_chapter_vi_conditions and
+    never decides them.
+  consequence: An absent statement for a specific authority refers; for an authority
+    that is not specific the order does not test Chapter VI (Q5).
+- what: definitions
+  instrument: Regulation (EU) 2016/679 Art 4
+  cites:
+  - 02016R0679-20160504#art_004
+  reason: What 'processing' and 'personal data' mean is Art 4; the order reads them
+    only inside the caller's judgement comprehensive_rules_relating_to_protection_with_regard_to_processing.
+  consequence: The caller applies the definitions itself.

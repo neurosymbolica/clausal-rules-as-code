@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and the input
+% tolerance of the input check (malformed, unbound and partial inputs).
+% Every negative (fail) case is paired with the positive answer the same
+% request DOES get, so a misspelt atom shows up as a failing positive.
+% Run: python -m clausal.testing eu/cra_administrative_fines/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/cra_administrative_fines/cra_administrative_fines, [
+    administrative_fine_maximum/4,
+    cra_administrative_fines_status/2
+]).
+:- use_module(eu/cra_administrative_fines/kernel, [cra_administrative_fines_input_problems/2]).
+:- use_module(eu/cra_administrative_fines/fixtures, [cra_administrative_fines_profile_for/2]).
+
+% ---- bound verdicts, one per route ------------------------------------
+
+test(bound_not_yet_applicable) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_14)], date(2027, 12, 10), not_yet_applicable, [cite(eu_reg_2024_2847_art_71_2)]).
+
+test(bound_not_yet_applicable_rejected_on_the_application_day, fail) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_14)], date(2027, 12, 11), not_yet_applicable, _).
+
+test(bound_missing_turnover_on_the_application_day) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_14)], date(2027, 12, 11), indeterminate([offender_is_undertaking]), []).
+
+test(bound_missing_provision) :-
+    administrative_fine_maximum([], date(2028, 1, 1), indeterminate([infringed_provision]), []).
+
+test(bound_not_listed) :-
+    administrative_fine_maximum([attribute(infringed_provision, other_provision)], date(2028, 1, 1), not_listed_in_article_64, [cite(eu_reg_2024_2847_art_64_1), cite(eu_reg_2024_2847_art_64_2), cite(eu_reg_2024_2847_art_64_3), cite(eu_reg_2024_2847_art_64_4)]).
+
+test(bound_fine_excluded) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_41), attribute(offender_is_open_source_software_steward, true)], date(2028, 1, 1), fine_excluded(open_source_software_steward), [cite(eu_reg_2024_2847_art_64_10_b)]).
+
+test(bound_fixed_amount_for_non_undertaking) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_13), attribute(offender_is_undertaking, false)], date(2028, 1, 1), fine_maximum(highest_maximum_tier, fixed_amount_for_non_undertaking, 1500000000), [cite(eu_reg_2024_2847_art_64_2)]).
+
+test(bound_percentage_cap_with_the_half_cent_dropped) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000001)], date(2028, 1, 1), fine_maximum(highest_maximum_tier, percentage_of_turnover, 1500000002), [cite(eu_reg_2024_2847_art_64_2)]).
+
+test(bound_percentage_cap_rounded_up_is_rejected, fail) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000001)], date(2028, 1, 1), fine_maximum(highest_maximum_tier, percentage_of_turnover, 1500000003), _).
+
+test(bound_lowest_tier_tie_is_the_fixed_amount) :-
+    administrative_fine_maximum([attribute(infringed_provision, incorrect_incomplete_or_misleading_information_in_reply_to_request), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 0)], date(2028, 1, 1), fine_maximum(lowest_maximum_tier, fixed_amount, 500000000), [cite(eu_reg_2024_2847_art_64_4)]).
+
+test(bound_undertaking_referral_in_the_middle_tier) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_19), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, unsure), attribute(total_worldwide_annual_turnover_in_euros, 5)], date(2028, 1, 1), needs_legal_review(open_textured(offender_is_undertaking, cite(eu_reg_2024_2847_art_64_3)), [inputs_relied_on([offender_is_open_source_software_steward-false, offender_is_undertaking-unsure])]), []).
+
+test(bound_steward_referral) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_47), attribute(offender_is_open_source_software_steward, unsure), attribute(offender_is_undertaking, false)], date(2028, 1, 1), needs_legal_review(open_textured(offender_is_open_source_software_steward, cite(eu_reg_2024_2847_art_64_10_b)), [inputs_relied_on([offender_is_open_source_software_steward-unsure, offender_is_undertaking-false])]), []).
+
+test(bound_input_problems) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_99)], date(2028, 1, 1), input_problems([wrong_type(infringed_provision)]), []).
+
+% ---- the status projection with the status bound ----------------------
+
+test(status_holds_with_the_verdict_bound) :-
+    cra_administrative_fines_profile_for(steward_middle_tier, Request),
+    cra_administrative_fines_status(Request, fine_excluded(open_source_software_steward)).
+
+test(another_bound_status_is_rejected, fail) :-
+    cra_administrative_fines_profile_for(steward_middle_tier, Request),
+    cra_administrative_fines_status(Request, fine_maximum(_, _, _)).
+
+% ---- input tolerance of the input check -------------------------------
+
+test(an_absent_key_is_not_a_problem) :-
+    cra_administrative_fines_input_problems([attribute(infringed_provision, article_13)], []).
+
+test(an_unbound_profile_is_wrong_type) :-
+    cra_administrative_fines_input_problems(_, [wrong_type(profile)]).
+
+test(a_partial_list_is_wrong_type) :-
+    cra_administrative_fines_input_problems([attribute(infringed_provision, article_13)|_], [wrong_type(profile)]).
+
+test(a_list_with_an_unbound_element_is_wrong_type) :-
+    cra_administrative_fines_input_problems([attribute(infringed_provision, article_13), _], [wrong_type(profile)]).
+
+test(a_compound_key_is_unknown_as_given) :-
+    cra_administrative_fines_input_problems([attribute(colour(red), 1)], Problems),
+    Problems == [unknown_key(colour(red))].
+
+test(an_unbound_value_is_wrong_type) :-
+    cra_administrative_fines_input_problems([attribute(offender_is_undertaking, _)], [wrong_type(offender_is_undertaking)]).
+
+test(a_duplicate_with_different_values_is_only_a_duplicate) :-
+    cra_administrative_fines_input_problems([attribute(offender_is_undertaking, true), attribute(offender_is_undertaking, 7)], Problems),
+    Problems == [duplicate_key(offender_is_undertaking)].
+
+test(an_integer_and_a_float_key_are_two_unknown_keys) :-
+    cra_administrative_fines_input_problems([attribute(7, a), attribute(7.0, b), attribute(7, c)], Problems),
+    Problems == [unknown_key(7), unknown_key(7.0)].
+
+test(a_quoted_string_judgement_is_wrong_type) :-
+    cra_administrative_fines_input_problems([attribute(offender_is_open_source_software_steward, "true")], [wrong_type(offender_is_open_source_software_steward)]).
+
+test(a_present_steward_is_checked_even_in_the_highest_tier) :-
+    administrative_fine_maximum([attribute(infringed_provision, article_13), attribute(offender_is_open_source_software_steward, maybe), attribute(offender_is_undertaking, false)], date(2028, 1, 1), input_problems([wrong_type(offender_is_open_source_software_steward)]), []).
+
+test(an_unbound_date_is_wrong_type) :-
+    administrative_fine_maximum([], _, input_problems([wrong_type(infringement_date)]), []).
+
+test(a_float_year_is_wrong_type) :-
+    administrative_fine_maximum([], date(2028.0, 1, 1), input_problems([wrong_type(infringement_date)]), []).
+
+test(the_date_problem_follows_the_profile_problems) :-
+    administrative_fine_maximum([attribute(colour, red)], date(2027, 2, 29), input_problems([unknown_key(colour), wrong_type(infringement_date)]), []).
+
+:- end_module(test_input_mode).

@@ -1,0 +1,132 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: every result read out, and the
+% enumerations (duty argument unbound, the full item lists, the checklist).
+% Each fixture subject yields exactly its one expected status.
+% Run: python -m clausal.testing eu/data_protection/gdpr_accountability_security/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/data_protection/gdpr_accountability_security/gdpr_accountability_security, [
+    decide_gdpr_accountability_security/2,
+    gdpr_accountability_security_status/2,
+    gdpr_accountability_security_checklist/2,
+    duty_status/5,
+    non_binding_items/3,
+    joint_controller_arrangement/3,
+    joint_controller_arrangement_content/4
+]).
+:- use_module(eu/data_protection/gdpr_accountability_security/fixtures, [gdpr_accountability_security_profile_for/2]).
+
+true_statement(attested(true, attestation(host_system, attestation_time, controller_statement, none))).
+false_statement(attested(false, attestation(host_system, attestation_time, controller_statement, none))).
+
+expected_status(all_statements_true, compliant).
+expected_status(security_statement_false, not_compliant).
+expected_status(accountability_statement_absent, review_required).
+expected_status(by_default_storage_aspect_false, not_compliant).
+expected_status(by_default_all_aspects_true, compliant).
+expected_status(by_default_crisp_fact_false, not_compliant).
+expected_status(by_default_crisp_fact_true, compliant).
+expected_status(joint_arrangement_in_place, compliant).
+expected_status(joint_arrangement_missing, compliant).
+expected_status(joint_controllers_unsure, compliant).
+expected_status(not_joint_controllers, compliant).
+expected_status(joint_law_sets_responsibilities, compliant).
+expected_status(joint_law_key_absent, compliant).
+expected_status(content_requirements_met, compliant).
+expected_status(content_essence_not_available, compliant).
+expected_status(content_roles_statement_false, compliant).
+expected_status(content_roles_statement_absent, compliant).
+expected_status(duplicated_accountability_statement, input_problems([duplicate_key(accountability_demonstrated)])).
+expected_status(unknown_key_present, input_problems([unknown_key(controller_location)])).
+expected_status(wrong_type_judgement, input_problems([wrong_type(controllers_jointly_determine_purposes_and_means)])).
+
+subject_statuses(Subject, Statuses) :-
+    gdpr_accountability_security_profile_for(Subject, Profile),
+    findall(Status, gdpr_accountability_security_status(Profile, Status), Statuses).
+
+test(every_subject_yields_its_one_status) :-
+    findall(Subject-Statuses, (expected_status(Subject, _), subject_statuses(Subject, Statuses)), Answers),
+    findall(Subject-[Status], expected_status(Subject, Status), Expected),
+    Answers == Expected.
+
+test(the_verdict_carries_a_citation) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    decide_gdpr_accountability_security(Profile, gdpr_accountability_security_verdict(compliant, [_FirstCitation|_OtherCitations])).
+
+test(the_checklist_cites_every_duty) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    findall(Items, gdpr_accountability_security_checklist(Profile, Items), Answers),
+    Answers == [[item(accountability, met, cite(eu_reg_2016_679_art_5_2)), item(controller_measures, met, cite(eu_reg_2016_679_art_24_1)), item(data_protection_policies, met, cite(eu_reg_2016_679_art_24_2)), item(data_protection_by_design, met, cite(eu_reg_2016_679_art_25_1)), item(data_protection_by_default, met, cite(eu_reg_2016_679_art_25_2)), item(security_of_processing, met, cite(eu_reg_2016_679_art_32_1)), item(processing_on_instructions, met, cite(eu_reg_2016_679_art_32_4))]].
+
+test(the_checklist_marks_an_absent_statement_unknown) :-
+    gdpr_accountability_security_profile_for(accountability_statement_absent, Profile),
+    gdpr_accountability_security_checklist(Profile, [item(accountability, unknown([accountability_demonstrated]), cite(eu_reg_2016_679_art_5_2))|_]).
+
+test(the_duty_argument_enumerates_each_duty_once) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    findall(Duty-Result, duty_status(Profile, Duty, Result, _, _), Answers),
+    msort(Answers, Sorted),
+    Sorted == [accountability-met, controller_measures-met, data_protection_by_default-met, data_protection_by_design-met, data_protection_policies-met, processing_on_instructions-met, security_of_processing-met].
+
+test(an_absent_statement_reads_out_its_referral) :-
+    findall(Result-Basis-Citations, duty_status([], accountability, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_5_2), cite(controller_compliance_demonstration)), [resolution(cite(controller_compliance_demonstration), not_attempted), inputs_relied_on([accountability_demonstrated-absent])])-[]-[]].
+
+test(a_false_aspect_reads_out_its_statement) :-
+    gdpr_accountability_security_profile_for(by_default_storage_aspect_false, Profile),
+    false_statement(FalseStatement),
+    findall(Result-Basis-Citations, duty_status(Profile, data_protection_by_default, Result, Basis, Citations), Answers),
+    Answers == [not_met-[outside_fact(by_default_storage_period_limited_to_necessary, FalseStatement)]-[cite(eu_reg_2016_679_art_25_2)]].
+
+test(the_first_false_aspect_alone_decides) :-
+    false_statement(FalseStatement),
+    Profile = [attribute(by_default_accessibility_limited_to_necessary, FalseStatement), attribute(by_default_amount_collected_limited_to_necessary, FalseStatement)],
+    findall(Basis, duty_status(Profile, data_protection_by_default, not_met, Basis, _), Answers),
+    Answers == [[outside_fact(by_default_amount_collected_limited_to_necessary, FalseStatement)]].
+
+test(a_false_aspect_overrides_a_true_overall_statement) :-
+    true_statement(TrueStatement),
+    false_statement(FalseStatement),
+    Profile = [attribute(by_default_only_necessary_data_processed, TrueStatement), attribute(by_default_extent_of_processing_limited_to_necessary, FalseStatement)],
+    findall(Result, duty_status(Profile, data_protection_by_default, Result, _, _), Answers),
+    Answers == [not_met].
+
+test(the_accountability_principles_are_listed_in_order) :-
+    findall(Items, non_binding_items([], accountability_principles, Items), Answers),
+    Answers == [[non_binding_item(lawfulness_fairness_transparency, cite(eu_reg_2016_679_art_5_1_a)), non_binding_item(purpose_limitation, cite(eu_reg_2016_679_art_5_1_b)), non_binding_item(data_minimisation, cite(eu_reg_2016_679_art_5_1_c)), non_binding_item(accuracy, cite(eu_reg_2016_679_art_5_1_d)), non_binding_item(storage_limitation, cite(eu_reg_2016_679_art_5_1_e)), non_binding_item(integrity_and_confidentiality, cite(eu_reg_2016_679_art_5_1_f))]].
+
+test(the_security_examples_are_listed_in_order) :-
+    findall(Items, non_binding_items([], security_measures, Items), Answers),
+    Answers == [[non_binding_item(pseudonymisation_and_encryption, cite(eu_reg_2016_679_art_32_1_a)), non_binding_item(confidentiality_integrity_availability_resilience, cite(eu_reg_2016_679_art_32_1_b)), non_binding_item(restore_availability_and_access, cite(eu_reg_2016_679_art_32_1_c)), non_binding_item(regular_testing_assessing_evaluating, cite(eu_reg_2016_679_art_32_1_d))]].
+
+expected_arrangement(all_statements_true, indeterminate([controllers_jointly_determine_purposes_and_means]), []).
+expected_arrangement(not_joint_controllers, not_joint_controllers, [cite(eu_reg_2016_679_art_26_1)]).
+expected_arrangement(joint_law_key_absent, indeterminate([responsibilities_set_by_union_or_member_state_law]), []).
+expected_arrangement(joint_law_sets_responsibilities, arrangement_not_required, [cite(eu_reg_2016_679_art_26_1)]).
+expected_arrangement(joint_arrangement_in_place, arrangement_in_place, [cite(eu_reg_2016_679_art_26_1)]).
+expected_arrangement(joint_arrangement_missing, arrangement_missing, [cite(eu_reg_2016_679_art_26_1)]).
+expected_arrangement(joint_controllers_unsure, needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_1)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means-unsure])]), []).
+
+test(every_arrangement_subject_reads_out_once) :-
+    findall(Subject-Answers, (expected_arrangement(Subject, _, _), gdpr_accountability_security_profile_for(Subject, Profile), findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers)), Got),
+    findall(Subject-[Result-Citations], expected_arrangement(Subject, Result, Citations), Expected),
+    Got == Expected.
+
+test(the_content_requirements_read_out_met) :-
+    gdpr_accountability_security_profile_for(content_requirements_met, Profile),
+    true_statement(TrueStatement),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [content_requirements_met-[outside_fact(arrangement_reflects_roles_and_relationships, TrueStatement)]-[cite(eu_reg_2016_679_art_26_2)]].
+
+test(the_content_roles_statement_absent_reads_out_its_referral) :-
+    gdpr_accountability_security_profile_for(content_roles_statement_absent, Profile),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_26_2), cite(arrangement_roles_statement)), [resolution(cite(arrangement_roles_statement), not_attempted), inputs_relied_on([arrangement_reflects_roles_and_relationships-absent])])-[]-[]].
+
+test(the_content_essence_absent_reads_out_indeterminate) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [indeterminate([essence_of_arrangement_made_available])-[]-[]].
+
+:- end_module(test_output_mode).

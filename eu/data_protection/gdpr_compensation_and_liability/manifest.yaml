@@ -15,14 +15,12 @@ modules:
   - "gdpr_compensation_and_liability"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
-# in sync with the :- module(...) export lists re-exported via the package
-# facade __init__.clausal. The root vocabulary atoms the scorer reads as
-# package-root attributes are exported as name/0 facts by the slice.
+# public_interface: name/arity PREDICATES, grouped per submodule -- keep in sync
+# with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
-  # (gdpr_compensation_and_liability_input_problems/2 is defined in the kernel
-  #  and re-exported by queries.clausal; listed once, under queries)
+  # (gdpr_compensation_and_liability_input_problems/2 is re-exported by queries.clausal)
   # -- citations.clausal --
   - "citation/2"
   - "implements/1"
@@ -33,6 +31,10 @@ public_interface:
   - "gdpr_compensation_and_liability_checklist/2"
   - "gdpr_compensation_and_liability_decision_resolvable/1"
   - "gdpr_compensation_and_liability_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_compensation_and_liability_profile_keys/1"
+  - "gdpr_compensation_and_liability_input_problems/2"
+  - "gdpr_compensation_and_liability_what_if/4"
   - "right_not_established/0"
   - "not_liable_for_damage/0"
   - "exempt_from_liability/0"
@@ -53,63 +55,67 @@ public_interface:
   - "unknown_key/1"
   - "wrong_type/1"
   - "duplicate_key/1"
-  - "party_role/0"
-  - "involved_in_the_processing/0"
-  - "processor_breached_obligations_directed_to_processors/0"
-  - "processor_acted_outside_or_contrary_to_lawful_instructions/0"
-  - "damage_suffered/0"
-  - "infringement_of_the_regulation_occurred/0"
-  - "damage_resulted_from_the_infringement/0"
-  - "not_in_any_way_responsible_for_the_event/0"
-  - "controller/0"
-  - "processor/0"
-  - "unsure/0"
-  - "absent/0"
-  - "not_attempted/0"
-  # -- queries.clausal --
-  - "gdpr_compensation_and_liability_profile_keys/1"
-  - "gdpr_compensation_and_liability_input_problems/2"
-  - "gdpr_compensation_and_liability_what_if/4"
   # -- fixtures.clausal --
   - "gdpr_compensation_and_liability_subject/1"
   - "gdpr_compensation_and_liability_profile_for/2"
   - "gdpr_compensation_and_liability_assess/2"
+
+# root_atoms: the bare root_exports atoms the reference scorer reads as
+# package-root attributes. An export list holds only name/arity entries, so
+# these atoms are listed here and the generated facade makes them reachable.
+root_atoms:
+  - "party_role"
+  - "involved_in_the_processing"
+  - "processor_breached_obligations_directed_to_processors"
+  - "processor_acted_outside_or_contrary_to_lawful_instructions"
+  - "damage_suffered"
+  - "infringement_of_the_regulation_occurred"
+  - "damage_resulted_from_the_infringement"
+  - "not_in_any_way_responsible_for_the_event"
+  - "controller"
+  - "processor"
+  - "unsure"
+  - "absent"
+  - "not_attempted"
+  - "right_not_established"
+  - "not_liable_for_damage"
+  - "exempt_from_liability"
+  - "liable_for_damage"
 
 # Independence classification: no external scorer yet -- the only check is a
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
 # Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. It imports only the kit (formalize_lib), no shared package.
+# domain imports. The package imports only the kit module formalize_lib and
+# library(reif); no shared backbone package.
 uses: []
 
-scope: >-
-  For ONE claim against ONE party (the caller, stated to be EITHER the
-  controller OR the processor of the processing in question), whether that
-  party is liable to compensate damage under Article 82(1) to (3) of
-  Regulation (EU) 2016/679 (GDPR): the three conditions of Art 82(1) (damage,
-  an infringement, the damage resulting from it) are the caller's tri-state
-  judgements and are never decided here; Art 82(2) is read as the controller
-  limb (involvement in the processing) and the processor limb (a breach of
-  processor obligations or acting outside or contrary to lawful instructions),
-  both crisp statements of the caller; the Art 82(3) exemption is an attested
-  outside fact that the order copies and never assesses. Answers are
-  right_not_established, not_liable_for_damage, exempt_from_liability or
-  liable_for_damage, or a non-final indeterminate([KEY]), needs_legal_review
-  (open_textured or cross_reference_unresolved) or input_problems. Out of
-  scope: the amount of compensation, joint liability for the entire damage
-  and recourse (Art 82(4) and (5), deferred), the competent court (Art 82(6)
-  and Art 79, deferred or excluded), fines (Arts 83 and 84), who is a
-  controller or processor (Art 4(7), (8)) and which obligations are directed
-  to processors (Art 28) -- these are handed to the caller or a lawyer.
+scope: "For ONE claim against ONE party (the caller, who states that it is the
+  controller or the processor of the processing in question): is the caller liable
+  under Article 82(1) to (3) GDPR to compensate a person for material or non-material
+  damage? Decided here: the three conditions of Art 82(1) (damage, infringement,
+  causal link) read as the caller's tri-state judgements and never tested; the
+  controller and processor limbs of Art 82(2) read from the caller's crisp statements;
+  the exemption of Art 82(3) read from an attested outside statement that is copied
+  and never decided. Answers: right_not_established, not_liable_for_damage,
+  exempt_from_liability, liable_for_damage, or indeterminate / needs_legal_review /
+  input_problems. Out of scope: the amount of compensation, joint liability for the
+  entire damage and recourse (Art 82(4) and (5), deferred), the competent courts
+  (Art 82(6), deferred; Art 79), fines (Arts 83 and 84), who is a controller or
+  processor (Art 4(7) and (8)) and which obligations are directed to processors
+  (Art 28): handed to the caller or a lawyer."
 
 sources:
-  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1 -- Article 82(1), (2) and (3) formalized; Article 82(4), (5) and (6) quoted and deferred; consolidated text 02016R0679-20160504, units parag_082.001 to parag_082.006 (pinned by tools/pin_statute.py, fetched 2026-11-12)"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
+    2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, Article 82(1),
+    (2) and (3) (formalised) and Article 82(4) to (6) (quoted for the deferral);
+    pinned consolidated text 02016R0679-20160504, units parag_082.001 to parag_082.006"
 
 query_interface:
-  2: "decide_gdpr_compensation_and_liability/2"      # eligibility: the verdict with its citations
-  7: "gdpr_compensation_and_liability_checklist/2"   # justification: cited checklist, one item per condition
-  16: "gdpr_compensation_and_liability_what_if/4"    # what_if: re-evaluate under an overridden key
+  2: "compensation_liability/4"                          # eligibility: the step ladder verdict
+  7: "gdpr_compensation_and_liability_checklist/2"       # justification: cited checklist
+  16: "gdpr_compensation_and_liability_what_if/4"        # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_heading

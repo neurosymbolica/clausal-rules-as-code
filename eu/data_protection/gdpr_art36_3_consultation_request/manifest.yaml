@@ -62,7 +62,9 @@ public_interface:
   - "gdpr_art36_3_consultation_request_profile_for/2"
   - "gdpr_art36_3_consultation_request_assess/2"
 
-# root_exports: every bare atom the scorer resolves on the package root.
+# root_exports: every bare atom the scorer resolves on the package root (the
+# ten profile keys, the three result atoms, the six item atoms, absent and
+# not_attempted). Atoms need no export; this list records them.
 root_exports:
   - consultation_under_article_36_1
   - joint_controllers_or_processors_involved
@@ -91,36 +93,33 @@ root_exports:
 independence: no_external_scorer
 
 # Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. The domain imports only kit modules (formalize_lib,
-# kit/query_combinators), which are not backbone packages.
+# domain imports. This domain imports only the kit (formalize_lib, library(reif)).
 uses: []
 
-scope: 'What the controller must provide to the supervisory authority when it consults
+scope: "What the controller must provide to the supervisory authority when it consults
   the authority under Article 36(1) of Regulation (EU) 2016/679: the six items of
   Article 36(3), points (a) to (f), read as a checklist of presence (not adequacy).
-  Two questions are answered: whether the consultation request holds every item that
-  applies (consultation_request_status/4) and which items that apply are not provided
-  (missing_consultation_request_items/4). Out of scope: whether the controller must
-  consult (Art 36(1) and 36(5), decided in gdpr-impact-assessment-prior-consultation),
-  whether an impact assessment was required or what it must contain (Art 35, decided
-  in gdpr-impact-assessment-assessment-duty-stated-risk), who is a controller, joint
-  controller or processor (an attested outside fact; Arts 4(7), 4(8), 26 and 28),
-  whether a data protection officer must be designated (Art 37), and what the authority
-  does after the request (Art 36(2) and Arts 51, 55, 56, 58). No date is computed.'
+  Decided here: whether the consultation request holds every item that applies
+  (consultation_request_status/4) and which items that apply are not provided
+  (missing_consultation_request_items/4); a consultation not under Article 36(1) is
+  not_governed_by_article_36_3. Out of scope: whether the controller must consult
+  (Art 36(1) and 36(5), gdpr-impact-assessment-prior-consultation), whether an impact
+  assessment was required or has its Art 35(7) contents (gdpr-impact-assessment-assessment-duty-stated-risk),
+  who is a controller, joint controller or processor (attested outside fact; Arts
+  4(7), 4(8), 26, 28), whether a data protection officer must be designated (Art 37),
+  and what the supervisory authority does after the request (Art 36(2)). No date is computed."
 
 sources:
-  - 'Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
-    2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated
-    text 02016R0679-20160504: Article 36(3), points (a) to (f) (formalised); Article
-    36(1) and 36(5) (read only to say which consultation the key consultation_under_article_36_1
-    names).'
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504; Article 36(3) opening words and points (a) to (f) (units parag_036.003, point_036.003_a to point_036.003_f)"
+  - "Regulation (EU) 2016/679, Article 36(1) (unit parag_036.001), read only to fix which consultation Article 36(3) governs (reading (1))"
+  - "Regulation (EU) 2016/679, Article 36(5) (unit parag_036.005), read only for reading (1) and open question Q1"
 
 query_interface:
-  2: "gdpr_art36_3_consultation_request_status/2"           # status verdict projection
-  4: "missing_consultation_request_items/4"                 # enumeration: items that apply and are missing
-  7: "gdpr_art36_3_consultation_request_checklist/2"        # justification: one cited row per point
-  13: "consultation_request_status/4"                       # compliance_check: is the request complete
-  16: "gdpr_art36_3_consultation_request_what_if/4"         # what_if: re-evaluate under an overridden key
+  2: "gdpr_art36_3_consultation_request_status/2"        # status projection of the verdict
+  4: "missing_consultation_request_items/4"              # enumeration: every item that applies and is missing
+  7: "gdpr_art36_3_consultation_request_checklist/2"     # justification: one item per point with its cite
+  13: "consultation_request_status/4"                    # compliance_check: complete / incomplete / not governed
+  16: "gdpr_art36_3_consultation_request_what_if/4"      # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings

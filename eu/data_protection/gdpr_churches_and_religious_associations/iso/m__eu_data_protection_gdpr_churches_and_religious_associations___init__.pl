@@ -1,0 +1,43 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_churches_and_religious_associations___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_churches_and_religious_associations_kernel, [gdpr_churches_and_religious_associations_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_churches_and_religious_associations_citations, [citation/2, implements/1]).
+:- use_module(m__eu_data_protection_gdpr_churches_and_religious_associations_gdpr_churches_and_religious_associations, [article_91_2_not_engaged/0, church_rules_continuation/4, church_rules_may_continue_to_apply/0, church_rules_not_covered_by_article_91_1/0, church_supervision/4, decide_gdpr_churches_and_religious_associations/2, gdpr_churches_and_religious_associations_checklist/2, gdpr_churches_and_religious_associations_decision_resolvable/1, gdpr_churches_and_religious_associations_status/2, gdpr_churches_and_religious_associations_status_values/1, specific_supervisory_authority_not_permitted/0, specific_supervisory_authority_permitted/0, subject_to_independent_supervisory_authority/0]).
+:- use_module(m__eu_data_protection_gdpr_churches_and_religious_associations_queries, [body_is_church_or_religious_association_or_community/0, comprehensive_rules_relating_to_protection_with_regard_to_processing/0, gdpr_churches_and_religious_associations_eligibility/2, gdpr_churches_and_religious_associations_profile_keys/1, gdpr_churches_and_religious_associations_what_if/4, rules_applied_at_entry_into_force_of_the_regulation/0, rules_applied_in_a_member_state/0, rules_brought_into_line_with_the_regulation/0, specific_authority_fulfils_chapter_vi_conditions/0, supervisory_authority_is_specific/0, unsure/0]).
+:- use_module(m__eu_data_protection_gdpr_churches_and_religious_associations_fixtures, [gdpr_churches_and_religious_associations_assess/2, gdpr_churches_and_religious_associations_profile_for/2, gdpr_churches_and_religious_associations_subject/1]).
+
+root_export(absent).
+root_export(article_91_2_not_engaged).
+root_export(attestation).
+root_export(attested).
+root_export(body_is_church_or_religious_association_or_community).
+root_export(church_rules_may_continue_to_apply).
+root_export(church_rules_not_covered_by_article_91_1).
+root_export(comprehensive_rules_relating_to_protection_with_regard_to_processing).
+root_export(cross_reference_unresolved).
+root_export(document).
+root_export(duplicate_key).
+root_export(indeterminate).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(needs_legal_review).
+root_export(not_attempted).
+root_export(open_textured).
+root_export(outside_fact).
+root_export(resolution).
+root_export(rules_applied_at_entry_into_force_of_the_regulation).
+root_export(rules_applied_in_a_member_state).
+root_export(rules_brought_into_line_with_the_regulation).
+root_export(specific_authority_fulfils_chapter_vi_conditions).
+root_export(specific_supervisory_authority_not_permitted).
+root_export(specific_supervisory_authority_permitted).
+root_export(subject_to_independent_supervisory_authority).
+root_export(supervisory_authority_is_specific).
+root_export(unknown_key).
+root_export(unsure).
+root_export(url).
+root_export(wrong_type).

@@ -1,0 +1,229 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__us_colorado_cpa_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__us_colorado_cpa_colorado_cpa, [decide_colorado_cpa/2, colorado_cpa_status/2, colorado_cpa_checklist/2, colorado_cpa_decision_resolvable/1, colorado_cpa_status_values/1, applicability_status/3, minors_duties_applicability/3, response_deadline/4, extended_response_deadline/4, appeal_response_deadline/4, extended_appeal_response_deadline/4, cure_period_last_day/4, attorney_general_action_status/5, universal_opt_out_recognition_date/4]).
+:- use_module(m__us_colorado_cpa_fixtures, [colorado_cpa_subject/1, colorado_cpa_profile_for/2, colorado_cpa_assess/2]).
+:- use_module(m__us_colorado_cpa_kernel, [colorado_cpa_input_problems/2]).
+:- use_module(m__us_colorado_cpa_queries, [colorado_cpa_consumer_threshold/3]).
+
+applicability_of(Subject, Expected) :-
+    colorado_cpa_profile_for(Subject, Profile),
+    findall(Result, applicability_status(Profile, Result, _), Results),
+    Results == [Expected].
+
+minors_of(Subject, Expected) :-
+    colorado_cpa_profile_for(Subject, Profile),
+    findall(Result, minors_duties_applicability(Profile, Result, _), Results),
+    Results == [Expected].
+
+action_of(Subject, NoticeReceived, ReferenceDate, Expected) :-
+    colorado_cpa_profile_for(Subject, Profile),
+    findall(Result, attorney_general_action_status(Profile, NoticeReceived, ReferenceDate, Result, _), Results),
+    Results == [Expected].
+
+test(at_one_hundred_thousand_consumers_the_controller_is_in_scope) :-
+    applicability_of(large_linked_controller, in_scope).
+test(one_below_one_hundred_thousand_without_sale_revenue_is_out_of_scope) :-
+    applicability_of(controller_just_below_general_threshold, out_of_scope).
+test(at_twenty_five_thousand_with_sale_revenue_is_in_scope) :-
+    applicability_of(sale_controller_at_threshold, in_scope).
+test(one_below_twenty_five_thousand_is_out_of_scope) :-
+    applicability_of(sale_controller_just_below_threshold, out_of_scope).
+test(a_small_controller_with_biometric_data_is_biometric_only) :-
+    applicability_of(small_controller_with_biometric_data, biometric_only_scope).
+test(an_unlinked_controller_with_biometric_data_is_biometric_only) :-
+    applicability_of(unlinked_controller_with_biometric_data, biometric_only_scope).
+test(an_unlinked_controller_without_biometric_data_is_out_of_scope) :-
+    applicability_of(unlinked_controller_without_biometric_data, out_of_scope).
+test(a_glba_financial_institution_is_exempt_with_its_clause) :-
+    colorado_cpa_profile_for(glba_financial_institution, Profile),
+    findall(Result - Citations, applicability_status(Profile, Result, Citations), Answers),
+    Answers == [exempt_entity - [cite(us_co_crs_6_1_1304_2_q)]].
+test(an_air_carrier_is_exempt_with_its_clause) :-
+    colorado_cpa_profile_for(regulated_air_carrier, Profile),
+    applicability_status(Profile, exempt_entity, [cite(us_co_crs_6_1_1304_2_l)]).
+test(a_securities_association_is_exempt_with_its_clause) :-
+    colorado_cpa_profile_for(registered_securities_association, Profile),
+    applicability_status(Profile, exempt_entity, [cite(us_co_crs_6_1_1304_2_m)]).
+test(an_unsure_link_goes_to_a_lawyer) :-
+    applicability_of(controller_with_unsure_link, needs_legal_review(open_textured(colorado_link_for_general_duties, cite(us_co_crs_6_1_1304_1_a_i_a)), [inputs_relied_on([colorado_link_for_general_duties - unsure])])).
+test(an_unsure_link_with_biometric_data_unknown_names_that_key) :-
+    applicability_of(controller_with_unsure_link_and_biometric_data_unknown, indeterminate([processes_biometric_data])).
+test(a_missing_entity_category_is_named) :-
+    applicability_of(controller_without_entity_category, indeterminate([entity_category])).
+test(a_middle_count_names_the_revenue_key) :-
+    applicability_of(middle_count_controller_without_revenue_fact, indeterminate([revenue_or_discount_from_sale])).
+test(an_unlisted_entity_category_is_an_input_problem) :-
+    applicability_of(controller_with_unlisted_entity_category, input_problems([wrong_type(entity_category)])).
+test(a_duplicated_key_is_an_input_problem) :-
+    applicability_of(controller_with_duplicated_count, input_problems([duplicate_key(consumer_count)])).
+test(a_not_final_answer_has_no_citations) :-
+    colorado_cpa_profile_for(controller_with_unsure_link, Profile),
+    applicability_status(Profile, _, []).
+test(in_scope_cites_limb_one) :-
+    colorado_cpa_profile_for(large_linked_controller, Profile),
+    applicability_status(Profile, in_scope, Citations),
+    clausal_msort(Citations, Sorted),
+    clausal_msort([cite(us_co_crs_6_1_1304_1_a), cite(us_co_crs_6_1_1304_1_a_i_a), cite(us_co_crs_6_1_1304_1_a_i_b)], Sorted).
+test(the_provenance_term_marks_the_deciding_step) :-
+    Element = provenance(applicability_status_step_ten, [cite(us_co_crs_6_1_1304_1_a_i_a)]),
+    Element = provenance(Clause, Citations),
+    Clause == applicability_status_step_ten,
+    Citations == [cite(us_co_crs_6_1_1304_1_a_i_a)].
+test(a_review_context_may_carry_a_provenance_element) :-
+    Context = [inputs_relied_on([colorado_link_for_general_duties - unsure]), provenance(applicability_status_step_ten, [cite(us_co_crs_6_1_1304_1_a_i_a)])],
+    Context = [inputs_relied_on(Pairs), provenance(_Clause, _Citations)],
+    Pairs == [colorado_link_for_general_duties - unsure].
+test(a_well_formed_fixture_has_no_input_problem) :-
+    colorado_cpa_profile_for(large_linked_controller, Profile),
+    colorado_cpa_input_problems(Profile, []).
+test(the_input_check_gives_a_bare_list) :-
+    colorado_cpa_input_problems([attribute(mystery, 1), attribute(consumer_count, -1)], Problems),
+    Problems == [wrong_type(consumer_count), unknown_key(mystery)].
+test(a_non_list_profile_is_wrong_type) :-
+    colorado_cpa_input_problems(nonsense, [wrong_type(profile)]).
+test(the_facade_verdict_mirrors_applicability) :-
+    colorado_cpa_assess(sale_controller_at_threshold, colorado_cpa_verdict(in_scope, [_|_])).
+test(the_facade_status_of_a_near_miss_is_out_of_scope) :-
+    colorado_cpa_profile_for(sale_controller_just_below_threshold, Profile),
+    colorado_cpa_status(Profile, out_of_scope).
+test(every_final_facade_status_is_in_the_vocabulary) :-
+    colorado_cpa_status_values(StatusValues),
+    colorado_cpa_profile_for(small_controller_with_biometric_data, Profile),
+    decide_colorado_cpa(Profile, colorado_cpa_verdict(Status, _)),
+    member(Status, StatusValues).
+test(every_subject_resolves_exactly_once) :-
+    findall(Subject, colorado_cpa_subject(Subject), Subjects),
+    findall(Subject - Verdict, (member(Subject, Subjects), colorado_cpa_assess(Subject, Verdict)), Answers),
+    length(Subjects, SubjectCount),
+    length(Answers, SubjectCount).
+test(the_checklist_is_non_empty_and_cited) :-
+    colorado_cpa_profile_for(large_linked_controller, Profile),
+    colorado_cpa_decision_resolvable(Profile),
+    colorado_cpa_checklist(Profile, Checklist),
+    length(Checklist, 4),
+    member(item(consumer_threshold, met, [cite(us_co_crs_6_1_1304_1_a_i_b)]), Checklist).
+test(the_near_miss_checklist_shows_the_unmet_threshold) :-
+    colorado_cpa_profile_for(sale_controller_just_below_threshold, Profile),
+    colorado_cpa_checklist(Profile, Checklist),
+    member(item(consumer_threshold, unmet(below_consumer_threshold), [cite(us_co_crs_6_1_1304_1_a_i_b)]), Checklist).
+test(the_sale_threshold_flip_point) :-
+    colorado_cpa_consumer_threshold(true, 25000, [cite(us_co_crs_6_1_1304_1_a_i_b)]).
+test(the_general_threshold_flip_point) :-
+    colorado_cpa_consumer_threshold(false, 100000, [cite(us_co_crs_6_1_1304_1_a_i_b)]).
+test(the_minors_sections_apply_with_the_link) :-
+    colorado_cpa_profile_for(minors_linked_controller, Profile),
+    minors_duties_applicability(Profile, in_scope, [cite(us_co_crs_6_1_1304_1_b)]).
+test(the_minors_sections_do_not_apply_without_the_link) :-
+    minors_of(minors_unlinked_controller, out_of_scope).
+test(an_unsure_minors_link_goes_to_a_lawyer) :-
+    minors_of(minors_unsure_link_controller, needs_legal_review(open_textured(colorado_link_for_minors_duties, cite(us_co_crs_6_1_1304_1_b)), [inputs_relied_on([colorado_link_for_minors_duties - unsure])])).
+test(an_exempt_institution_is_exempt_from_the_minors_sections) :-
+    minors_of(glba_financial_institution, exempt_entity).
+test(the_response_deadline_is_forty_five_days_after_receipt) :-
+    findall(Deadline - Citations, response_deadline([], date(2026, 1, 1), Deadline, Citations), Answers),
+    Answers == [date(2026, 2, 15) - [cite(us_co_crs_6_1_1306_2_a), cite(us_co_crs_6_1_1306_2_b)]].
+test(a_request_received_a_day_later_is_due_a_day_later) :-
+    response_deadline([], date(2026, 1, 2), date(2026, 2, 16), _).
+test(a_false_date_is_an_input_problem) :-
+    response_deadline([], date(2027, 2, 29), input_problems([wrong_type(received_date)]), []).
+test(the_extended_response_deadline_is_ninety_days_after_receipt) :-
+    colorado_cpa_profile_for(response_extension_granted, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), date(2026, 4, 1), [cite(us_co_crs_6_1_1306_2_a)]).
+test(a_late_extension_notice_gives_no_extension) :-
+    colorado_cpa_profile_for(response_extension_notice_late, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), no_extension_available, [cite(us_co_crs_6_1_1306_2_a)]).
+test(an_unsure_extension_necessity_goes_to_a_lawyer) :-
+    colorado_cpa_profile_for(response_extension_necessity_unsure, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), needs_legal_review(open_textured(extension_reasonably_necessary, cite(us_co_crs_6_1_1306_2_a)), [inputs_relied_on([extension_reasonably_necessary - unsure])]), []).
+test(the_appeal_deadline_is_forty_five_days_after_receipt) :-
+    appeal_response_deadline([], date(2026, 3, 1), date(2026, 4, 15), [cite(us_co_crs_6_1_1306_3_b)]).
+test(the_extended_appeal_deadline_is_one_hundred_and_five_days_after_receipt) :-
+    colorado_cpa_profile_for(appeal_extension_granted, Profile),
+    extended_appeal_response_deadline(Profile, date(2026, 3, 1), date(2026, 6, 14), [cite(us_co_crs_6_1_1306_3_b)]).
+test(an_unnecessary_appeal_extension_is_not_available) :-
+    colorado_cpa_profile_for(appeal_extension_not_necessary, Profile),
+    extended_appeal_response_deadline(Profile, date(2026, 3, 1), no_extension_available, [cite(us_co_crs_6_1_1306_3_b)]).
+test(an_unsure_appeal_extension_goes_to_a_lawyer) :-
+    colorado_cpa_profile_for(appeal_extension_necessity_unsure, Profile),
+    extended_appeal_response_deadline(Profile, date(2026, 3, 1), needs_legal_review(open_textured(appeal_extension_reasonably_necessary, cite(us_co_crs_6_1_1306_3_b)), [inputs_relied_on([appeal_extension_reasonably_necessary - unsure])]), []).
+test(the_cure_period_ends_sixty_days_after_receipt) :-
+    cure_period_last_day([], date(2026, 3, 1), date(2026, 4, 30), [cite(us_co_crs_6_1_1311_1_d_ii)]).
+test(a_notice_on_the_first_day_in_force_has_a_cure_period) :-
+    cure_period_last_day([], date(2025, 10, 1), date(2025, 11, 30), [cite(us_co_crs_6_1_1311_1_d_ii)]).
+test(a_notice_the_day_before_is_outside_the_provision) :-
+    cure_period_last_day([], date(2025, 9, 30), cure_provision_not_in_force, [cite(us_co_crs_6_1_1311_1_d_ii)]).
+test(a_notice_on_the_last_day_in_force_runs_past_the_repeal) :-
+    cure_period_last_day([], date(2026, 12, 30), date(2027, 2, 28), _).
+test(a_notice_on_the_repeal_day_is_outside_the_provision) :-
+    cure_period_last_day([], date(2026, 12, 31), cure_provision_not_in_force, _).
+test(the_sixtieth_day_is_still_running) :-
+    action_of(minors_enforcement_uncured, date(2026, 3, 1), date(2026, 4, 30), cure_period_running).
+test(the_day_after_an_uncured_violation_may_be_sued) :-
+    action_of(minors_enforcement_uncured, date(2026, 3, 1), date(2026, 5, 1), action_may_be_brought).
+test(the_day_after_a_cured_violation_may_not_be_sued) :-
+    action_of(minors_enforcement_cured, date(2026, 3, 1), date(2026, 5, 1), no_action_for_cured_violation).
+test(an_unknown_cure_is_named_after_the_period) :-
+    action_of(minors_enforcement_cure_unknown, date(2026, 3, 1), date(2026, 5, 1), indeterminate([cured_within_cure_period])).
+test(a_day_before_receipt_is_notice_not_yet_received) :-
+    action_of(minors_enforcement_uncured, date(2026, 3, 1), date(2026, 2, 28), notice_not_yet_received).
+test(a_notice_before_the_provision_never_counts) :-
+    action_of(minors_enforcement_uncured, date(2025, 9, 30), date(2026, 6, 1), notice_not_yet_received).
+test(no_cure_possible_needs_no_notice) :-
+    action_of(minors_enforcement_cure_impossible, date(2026, 3, 1), date(2026, 4, 1), cure_requirement_not_applicable).
+test(the_last_day_in_force_still_applies_the_provision) :-
+    action_of(minors_enforcement_uncured, date(2026, 3, 1), date(2026, 12, 30), action_may_be_brought).
+test(the_repeal_day_is_outside_the_provision) :-
+    action_of(minors_enforcement_uncured, date(2026, 3, 1), date(2026, 12, 31), cure_provision_not_in_force).
+test(the_action_status_cites_the_cure_provision) :-
+    colorado_cpa_profile_for(minors_enforcement_uncured, Profile),
+    attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 5, 1), action_may_be_brought, [cite(us_co_crs_6_1_1311_1_d_ii)]).
+test(a_mechanism_listed_on_new_year_is_recognised_from_the_effective_day) :-
+    colorado_cpa_profile_for(targeted_advertising_controller, Profile),
+    findall(FirstDay, universal_opt_out_recognition_date(Profile, date(2024, 1, 1), FirstDay, _), FirstDays),
+    FirstDays == [date(2024, 7, 1)].
+test(a_mechanism_listed_a_day_later_is_recognised_a_day_later) :-
+    colorado_cpa_profile_for(targeted_advertising_controller, Profile),
+    universal_opt_out_recognition_date(Profile, date(2024, 1, 2), date(2024, 7, 2), _).
+test(six_months_from_the_end_of_august_clamp_to_a_leap_day) :-
+    colorado_cpa_profile_for(targeted_advertising_controller, Profile),
+    universal_opt_out_recognition_date(Profile, date(2027, 8, 31), date(2028, 2, 29), Citations),
+    clausal_msort(Citations, Sorted),
+    clausal_msort([cite(us_co_crs_6_1_1306_1_a_iv_b), cite(us_co_ccr_904_3_rule_5_08_a), cite(us_co_ccr_904_3_rule_5_08_a_3), cite(us_co_ccr_904_3_rule_5_07_f)], Sorted).
+test(no_targeted_advertising_means_no_recognition_duty) :-
+    colorado_cpa_profile_for(controller_without_targeted_advertising, Profile),
+    universal_opt_out_recognition_date(Profile, date(2024, 1, 1), no_recognition_duty, [cite(us_co_crs_6_1_1306_1_a_iv_b)]).
+test(an_unknown_purpose_is_named) :-
+    universal_opt_out_recognition_date([], date(2024, 1, 1), indeterminate([processes_for_targeted_advertising_or_sale]), []).
+test(a_list_date_before_two_thousand_is_an_input_problem) :-
+    universal_opt_out_recognition_date([], date(1999, 12, 31), input_problems([wrong_type(list_added_date)]), []).
+
+test(one_below_one_hundred_thousand_is_not_in_scope, fail) :-
+    applicability_of(controller_just_below_general_threshold, in_scope).
+test(an_exempt_air_carrier_is_not_in_scope, fail) :-
+    applicability_of(regulated_air_carrier, in_scope).
+test(the_unlinked_controller_is_not_in_scope_for_minors, fail) :-
+    minors_of(minors_unlinked_controller, in_scope).
+test(the_response_deadline_is_not_day_forty_four, fail) :-
+    response_deadline([], date(2026, 1, 1), date(2026, 2, 14), _).
+test(a_late_extension_notice_gives_no_date, fail) :-
+    colorado_cpa_profile_for(response_extension_notice_late, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), date(_, _, _), _).
+test(a_cured_violation_is_not_open_to_action, fail) :-
+    action_of(minors_enforcement_cured, date(2026, 3, 1), date(2026, 5, 1), action_may_be_brought).
+test(no_targeted_advertising_gives_no_date, fail) :-
+    colorado_cpa_profile_for(controller_without_targeted_advertising, Profile),
+    universal_opt_out_recognition_date(Profile, date(2024, 1, 1), date(_, _, _), _).
+
+cp_test_names([at_one_hundred_thousand_consumers_the_controller_is_in_scope, one_below_one_hundred_thousand_without_sale_revenue_is_out_of_scope, at_twenty_five_thousand_with_sale_revenue_is_in_scope, one_below_twenty_five_thousand_is_out_of_scope, a_small_controller_with_biometric_data_is_biometric_only, an_unlinked_controller_with_biometric_data_is_biometric_only, an_unlinked_controller_without_biometric_data_is_out_of_scope, a_glba_financial_institution_is_exempt_with_its_clause, an_air_carrier_is_exempt_with_its_clause, a_securities_association_is_exempt_with_its_clause, an_unsure_link_goes_to_a_lawyer, an_unsure_link_with_biometric_data_unknown_names_that_key, a_missing_entity_category_is_named, a_middle_count_names_the_revenue_key, an_unlisted_entity_category_is_an_input_problem, a_duplicated_key_is_an_input_problem, a_not_final_answer_has_no_citations, in_scope_cites_limb_one, the_provenance_term_marks_the_deciding_step, a_review_context_may_carry_a_provenance_element, a_well_formed_fixture_has_no_input_problem, the_input_check_gives_a_bare_list, a_non_list_profile_is_wrong_type, the_facade_verdict_mirrors_applicability, the_facade_status_of_a_near_miss_is_out_of_scope, every_final_facade_status_is_in_the_vocabulary, every_subject_resolves_exactly_once, the_checklist_is_non_empty_and_cited, the_near_miss_checklist_shows_the_unmet_threshold, the_sale_threshold_flip_point, the_general_threshold_flip_point, the_minors_sections_apply_with_the_link, the_minors_sections_do_not_apply_without_the_link, an_unsure_minors_link_goes_to_a_lawyer, an_exempt_institution_is_exempt_from_the_minors_sections, the_response_deadline_is_forty_five_days_after_receipt, a_request_received_a_day_later_is_due_a_day_later, a_false_date_is_an_input_problem, the_extended_response_deadline_is_ninety_days_after_receipt, a_late_extension_notice_gives_no_extension, an_unsure_extension_necessity_goes_to_a_lawyer, the_appeal_deadline_is_forty_five_days_after_receipt, the_extended_appeal_deadline_is_one_hundred_and_five_days_after_receipt, an_unnecessary_appeal_extension_is_not_available, an_unsure_appeal_extension_goes_to_a_lawyer, the_cure_period_ends_sixty_days_after_receipt, a_notice_on_the_first_day_in_force_has_a_cure_period, a_notice_the_day_before_is_outside_the_provision, a_notice_on_the_last_day_in_force_runs_past_the_repeal, a_notice_on_the_repeal_day_is_outside_the_provision, the_sixtieth_day_is_still_running, the_day_after_an_uncured_violation_may_be_sued, the_day_after_a_cured_violation_may_not_be_sued, an_unknown_cure_is_named_after_the_period, a_day_before_receipt_is_notice_not_yet_received, a_notice_before_the_provision_never_counts, no_cure_possible_needs_no_notice, the_last_day_in_force_still_applies_the_provision, the_repeal_day_is_outside_the_provision, the_action_status_cites_the_cure_provision, a_mechanism_listed_on_new_year_is_recognised_from_the_effective_day, a_mechanism_listed_a_day_later_is_recognised_a_day_later, six_months_from_the_end_of_august_clamp_to_a_leap_day, no_targeted_advertising_means_no_recognition_duty, an_unknown_purpose_is_named, a_list_date_before_two_thousand_is_an_input_problem]).
+cp_test_fail_names([one_below_one_hundred_thousand_is_not_in_scope, an_exempt_air_carrier_is_not_in_scope, the_unlinked_controller_is_not_in_scope_for_minors, the_response_deadline_is_not_day_forty_four, a_late_extension_notice_gives_no_date, a_cured_violation_is_not_open_to_action, no_targeted_advertising_gives_no_date]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

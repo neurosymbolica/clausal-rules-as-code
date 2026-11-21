@@ -1,70 +1,72 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_joint_controllers (deontic family).
+%
+% Source: Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504
+% (fmx4 cut by tools/pin_statute.py, fetched 2026-11-12):
+%   Art 26(3)  [parag_026.003] rights against each of the joint controllers;
+%   Art 28(10) [parag_028.010] a processor that determines the purposes and means
+%              is considered a controller (the pointer to Art 26);
+%   Art 82(4)  [parag_082.004] liability of each responsible party for the entire damage;
+%   Art 82(5)  [parag_082.005] claim back after full compensation.
+% Drafter's reading, not a lawyer's.
+%
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. This domain has ONE
-% determination slice (gdpr_joint_controllers.clausal), so no domain
-% predicate is shared and nothing beyond the scaffold's input check
-% lives here.
+% PREDICATES that two or more files CALL. This domain has ONE determination
+% slice (gdpr_joint_controllers.clausal), so no domain predicate is shared.
 % Exception: the scaffold writes the order's input check
-% gdpr_joint_controllers_input_problems/2 here, exported, for the slice and
-% queries.clausal to import:
-%   :- use_module(eu/data_protection/gdpr_joint_controllers/kernel, [gdpr_joint_controllers_input_problems/2]).
-% The input check is profile plumbing: it decides no statutory condition
-% and carries no implements/1 marker.
+% gdpr_joint_controllers_input_problems/2 here, exported, for every slice to
+% import. It applies no provision and carries no implements/1 marker.
 %
-% Source (the law the slice formalizes; a reading, not a lawyer's):
-%   Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504
-%   (fmx4 cut by tools/pin_statute.py, fetched 2026-11-12):
-%   - Art 26(3)  [parag_026.003]  rights in respect of and against each joint controller;
-%   - Art 28(10) [parag_028.010]  a processor determining purposes and means is
-%                                 considered a controller (pointer to Art 26);
-%   - Art 82(4)  [parag_082.004]  liability of each responsible party for the entire damage;
-%   - Art 82(5)  [parag_082.005]  claim back after full compensation.
-%   Deferred, read only through profile keys: Art 26(1) and (2)
-%   (gdpr-accountability-security), Art 82(1) to (3)
-%   (gdpr-compensation-and-liability), the rest of Art 28
-%   (gdpr-processor-contract), Art 4 (the common-definitions orders).
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
 %
-% Atoms and data terms need NO declaration and NO import. The comment
-% block below only RECORDS the result terms so every file spells them
-% alike (spelling is the interface: a different spelling never matches).
+% RESULT TERMS (spelled exactly as the order pins them):
 %
-% ---- Result terms built by the slice gdpr_joint_controllers.clausal ----
-% The order's queries (PROFILE first, exactly ONE solution each):
 %   rights_against_each_joint_controller(Profile, Result, Citations)
 %     Result: not_joint_controllers | rights_exercisable_against_this_controller
-%             | a status compound (below).
+%             | a status compound.
+%     Citations: set-like list of cite(Key), Key from
+%             eu_reg_2016_679_art_26_3, eu_reg_2016_679_art_28_10.
+%
 %   liability_for_the_entire_damage(Profile, Result, Basis, Citations)
 %     Result: not_responsible_for_the_damage | no_other_responsible_party
 %             | liable_for_the_entire_damage | a status compound.
+%     Basis:  [outside_fact(responsible_under_article_82_2_and_3, Attested)] on a
+%             final Result (Attested the attested(...) term exactly as supplied),
+%             [] otherwise.
+%     Citations: [cite(eu_reg_2016_679_art_82_4)] on a final Result, [] otherwise.
+%
 %   recourse_after_full_compensation(Profile, Result, Basis, Citations)
 %     Result: not_entitled_to_claim_back | entitled_to_claim_back(Parties)
-%             (Parties: other_responsible_parties exactly as given)
+%             (Parties the value of other_responsible_parties exactly as given)
 %             | a status compound.
-%   Basis: [outside_fact(responsible_under_article_82_2_and_3, Attested)]
-%     where the limb copies the attested term exactly as supplied, else [].
-%   Citations: a set-like list of cite(Key) terms; [] on every not-final Result.
-% Status compounds (the bare atom indeterminate is NEVER written):
-%   input_problems(Problems)     Problems a list of duplicate_key(Key),
-%                                wrong_type(Key) and unknown_key(Key) terms;
-%   indeterminate([Key])         the ONE first missing key, never the
-%                                outside fact;
-%   needs_legal_review(Reason, Context)
-%     Reason open_textured(Input, cite(Key)),
-%       Context [inputs_relied_on(Pairs)];
-%     Reason cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4),
-%                                       cite(responsibility_under_article_82_statement)),
-%       Context [resolution(cite(responsibility_under_article_82_statement), not_attempted),
-%                inputs_relied_on([responsible_under_article_82_2_and_3-absent])].
-% Outside fact as supplied:
-%   attested(true | false, attestation(By, At, Reason, Evidence)),
-%   Evidence none | url(Url, RetrievedAt) | document(UploadId, Sha256).
-% Facade verdict (eligibility view of the Art 82(5) claim back):
-%   gdpr_joint_controllers_verdict(Status, Citations)
-%   Status: eligible | ineligible | unresolved | referred_for_legal_review
-%           | malformed_input; Citations the recourse query's cite(Key) list.
-% Facade checklist rows: item(RequirementId, ItemStatus, cite(Key)).
+%     Basis:  the copied outside_fact item at steps C1 and C8, [] otherwise.
+%     Citations: [cite(eu_reg_2016_679_art_82_5)] on a final Result, [] otherwise.
+%
+%   Status compounds (never written bare):
+%     indeterminate([Key])            -- one missing key;
+%     needs_legal_review(open_textured(Key, cite(Citation)),
+%                        [inputs_relied_on([Key-unsure])]);
+%     needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4),
+%                                                   cite(responsibility_under_article_82_statement)),
+%                        [resolution(cite(responsibility_under_article_82_statement), not_attempted),
+%                         inputs_relied_on([responsible_under_article_82_2_and_3-absent])])
+%                                     -- THE ABSENT REFERRAL;
+%     input_problems(Problems)        -- Problems a list of duplicate_key(Key),
+%                                        wrong_type(Key) and unknown_key(Key).
+%
+%   Facade verdict of the slice (claim back under Art 82(5)):
+%     gdpr_joint_controllers_verdict(Status, Citations)
+%       Status: eligible | ineligible | indeterminate
+%       Citations: a list of cite(Key) terms ([] when indeterminate).
+%   Checklist items: item(Id, ItemStatus, cite(Key)) of formalize_lib, ids
+%     responsible_under_article_82, other_responsible_party_listed,
+%     full_compensation_paid.
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
 % =====================================================================
 
 :- module(kernel, [gdpr_joint_controllers_input_problems/2]).

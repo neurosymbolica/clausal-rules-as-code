@@ -4,7 +4,7 @@
 
 ## Scope
 
-Regulation (EU) 2016/679 (GDPR) Arts 77(1), 78(1), 78(2), 79(1) and 79(2): for the facts a caller states about one situation, whether the right to lodge a complaint with a supervisory authority exists, whether the judicial remedy against a legally binding decision of a supervisory authority concerning the caller exists, whether the judicial remedy against a competent authority that does not handle a complaint or does not inform within three months exists, whether the judicial remedy against a controller or processor exists, and which courts Art 79(2) names. Each right is stated independently. Out of scope (handed to the caller, a lawyer or a sibling order): whether a complaint or claim would succeed, whether processing infringes the Regulation, whether the data subject's view is right, which authority to choose, the competence of the authority under Arts 55 and 56 (an attested outside fact), the counting of the three months, the legal characterisations legally binding and concerning them (tri-state judgements; unsure refers), Art 77(2), Art 78(3) and (4), Arts 80 and 82 and the definition of data subject in Art 4(1).
+For the facts a caller states in one profile, whether the data subject (or, for Art 78(1), any natural or legal person) has each of the rights of Regulation (EU) 2016/679 Arts 77(1), 78(1), 78(2) and 79(1), and which courts Art 79(2) names for proceedings against a controller or processor. Decided here: the right to lodge a complaint with a supervisory authority (Art 77(1)); the judicial remedy against a legally binding decision of a supervisory authority concerning the caller (Art 78(1), 'legally binding' and 'concerning them' handed to the caller as tri-state judgements); the judicial remedy where the competent authority does not handle a complaint or does not inform within three months (Art 78(2), competence under Arts 55 and 56 an attested outside fact, the three months stated by the caller); the judicial remedy against a controller or processor (Art 79(1)); and the courts of Art 79(2). Out of scope: whether a complaint or claim would succeed, whether the processing infringes the Regulation, which remedy comes first (each right is stated independently), the authority's duty to inform (Art 77(2)), the courts and the forwarding of Art 78(3) and (4), competence (Arts 55 and 56), ...
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Regulation (EU) 2016/679 (GDPR) Arts 77(1), 78(1), 78(2), 79(1) and 79(2): for t
 
 ## What was checked
 
-- 220 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 153 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

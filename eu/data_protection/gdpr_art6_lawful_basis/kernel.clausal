@@ -1,61 +1,88 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_art6_lawful_basis (deontic family).
-% Source: Regulation (EU) 2016/679 (GDPR) Art 6(1) (first words, points (a)
-% to (f) and last subparagraph), Art 6(3) first sentence and Art 6(4) first
-% words, pinned consolidated English Formex text 02016R0679-20160504
-% (fetched 2026-09-05). The order has no date argument.
-%
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. Here that is the order's input
-% check gdpr_art6_lawful_basis_input_problems/2, which the scaffold writes
-% from the typed input contract (profile: attribute_list). It is exported
-% for the slice and queries to import:
-%   :- use_module(eu/data_protection/gdpr_art6_lawful_basis/kernel, [gdpr_art6_lawful_basis_input_problems/2]).
-% Every other predicate (way table, way states, referral builders, PAIRS)
-% has ONE caller, the slice gdpr_art6_lawful_basis.clausal, and lives there.
-% The input check is structural (profile shape and key types). It decides
-% no statutory condition, so it carries no implements/1 marker.
+% PREDICATES that two or more files CALL.
 %
-% Atoms and data terms need NO declaration and NO import. The comment
-% block below only RECORDS the result terms, so every file spells them alike.
+% Source: Regulation (EU) 2016/679 (GDPR), Art 6(1) (first words, points (a)
+% to (f) and the last subparagraph), Art 6(3) first sentence and Art 6(4)
+% with its points (a) to (e); pinned consolidated English Formex text
+% 02016R0679-20160504 (fetched 2026-09-05). The order has no date argument.
 %
-% RESULT TERMS (the called contract; RESULT is ONE atom or ONE status
-% compound itself, BASIS and CITATIONS are each ONE flat list):
-%   lawful_basis_status(Profile, Result, Basis, Citations)
-%     Result: eligible | ineligible | indeterminate([Key])
-%           | needs_legal_review(open_textured(Key, cite(Citation)),
-%                                [inputs_relied_on(Pairs)])
-%           | needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)),
-%                                [resolution(cite(Target), not_attempted),
-%                                 inputs_relied_on([Key-absent])])
-%           | input_problems(Problems)
-%     Basis: outside_fact(Key, Attested) and flagged(Key, Attested) items,
-%            Attested copied unchanged; [] unless Result is final.
-%     Citations: set-like list of cite(Key); [] unless Result is final.
-%   purpose_compatibility(Profile, Result, Basis, Citations)
-%     Result: purpose_compatible | purpose_not_compatible
-%           | compatibility_test_not_engaged | indeterminate([Key])
-%           | needs_legal_review(open_textured(compatible_purpose,
-%                                cite(eu_reg_2016_679_art_6_4)),
-%                                [inputs_relied_on([new_purpose_processing-true,
-%                                                   compatible_purpose-unsure])])
-%           | input_problems(Problems)
-%     Basis: always []. Citations: [cite(eu_reg_2016_679_art_6_4)] when final.
-%   gdpr_art6_lawful_basis_input_problems(Profile, Problems)
-%     Problems: [] or duplicate_key(Key), wrong_type(Key), unknown_key(Key)
-%     items; [wrong_type(profile)] alone for a profile that is not an
-%     attribute list.
-%   Facade term of the one slice:
+% Shared here:
+%   gdpr_art6_lawful_basis_input_problems/2 -- THE INPUT CHECK, written by the
+%     scaffold from the typed input contract; every query, the facade and the
+%     fixtures call it first.
+%   gdpr_art6_lawful_basis_root_keys/1 -- the twenty profile keys in
+%     root_exports order (= input_contract order). The input check here and
+%     the determination slice (first-key-in-root-order selection, PAIRS order)
+%     both read it.
+%
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
+%
+% RESULT TERMS built by the slice gdpr_art6_lawful_basis.clausal:
+%   lawful_basis_status(Profile, Result, Basis, Citations)  (Art 6(1))
+%   purpose_compatibility(Profile, Result, Basis, Citations) (Art 6(4))
+%     Result   -- ONE of the bare atoms eligible, ineligible (lawful basis);
+%                 purpose_compatible, purpose_not_compatible,
+%                 compatibility_test_not_engaged, compatibility_not_ascertained
+%                 (compatibility); or ONE status compound, never wrapped:
+%                   input_problems(Problems)
+%                   indeterminate([Key])            -- one bare key atom
+%                   needs_legal_review(open_textured(Key, cite(Citation)),
+%                                      [inputs_relied_on(Pairs)])
+%                   needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)),
+%                                      [resolution(cite(Target), not_attempted),
+%                                       inputs_relied_on([Key-absent])])
+%     Basis    -- flat list of outside_fact(Key, Attested) and
+%                 flagged(Key, Attested), Attested the attested(...) term as
+%                 supplied; [] unless Result is final; always [] for
+%                 purpose_compatibility/4.
+%     Citations -- set-like flat list of cite(Key) terms; [] unless final.
+%   Facade verdict term (scaffold):
 %     gdpr_art6_lawful_basis_verdict(Status, Citations)
-%     Status is the Result of lawful_basis_status/4, Citations its Citations.
-% The bare atom indeterminate is never written; true and false are never
-% verdict atoms.
+%       Status    -- the Result of lawful_basis_status/4;
+%       Citations -- its Citations list.
+%   Checklist items (formalize_lib item/3):
+%     item(WayIdentifier, Status, cite(PointCitation)), Status met,
+%     unmet(failing_keys(Keys)) or unknown(Keys).
+%   Input problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key);
+%     a profile that is not an attribute list gives [wrong_type(profile)].
+% Shared across files: the checklist row id `overall` and the value atom
+% `absent` (atoms -- nothing to export).
 % =====================================================================
 
-:- module(kernel, [gdpr_art6_lawful_basis_input_problems/2]).
+:- module(kernel, [gdpr_art6_lawful_basis_input_problems/2, gdpr_art6_lawful_basis_root_keys/1]).
 
 :- use_module(library(reif), [memberd_t/3]).
+
+% ---- the twenty profile keys, in root_exports order ---------------
+% basis_claimed (1); the six ways' keys (2) to (11); the two flag-only outside
+% facts (12), (13); the Art 6(4) keys (14), (15); the five OPTIONAL factor
+% keys (16) to (20).
+gdpr_art6_lawful_basis_root_keys([
+    basis_claimed,
+    consent_given_and_conditions_met,
+    contract_necessary,
+    legal_obligation_necessary,
+    legal_obligation_laid_down_by_law,
+    vital_interests_necessary,
+    public_interest_task_necessary,
+    public_interest_task_laid_down_by_law,
+    processing_by_public_authority_in_its_tasks,
+    legitimate_interests_pursued,
+    interests_overridden,
+    child_data_subject,
+    special_category,
+    new_purpose_processing,
+    compatible_purpose,
+    link_between_purposes_taken_into_account,
+    collection_context_taken_into_account,
+    nature_of_data_taken_into_account,
+    possible_consequences_taken_into_account,
+    appropriate_safeguards_taken_into_account
+]).
 
 % ---- input checks: the problems a profile has, if any -----------
 % gdpr_art6_lawful_basis_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -84,7 +111,7 @@ gdpr_art6_lawful_basis_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    Keys = [basis_claimed, consent_given_and_conditions_met, contract_necessary, legal_obligation_necessary, legal_obligation_laid_down_by_law, vital_interests_necessary, public_interest_task_necessary, public_interest_task_laid_down_by_law, processing_by_public_authority_in_its_tasks, legitimate_interests_pursued, interests_overridden, child_data_subject, special_category, new_purpose_processing, compatible_purpose],
+    gdpr_art6_lawful_basis_root_keys(Keys),
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 
@@ -104,6 +131,11 @@ key_type(child_data_subject, outside_fact).
 key_type(special_category, outside_fact).
 key_type(new_purpose_processing, boolean).
 key_type(compatible_purpose, judgement).
+key_type(link_between_purposes_taken_into_account, boolean).
+key_type(collection_context_taken_into_account, boolean).
+key_type(nature_of_data_taken_into_account, boolean).
+key_type(possible_consequences_taken_into_account, boolean).
+key_type(appropriate_safeguards_taken_into_account, boolean).
 
 % attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
 % items, whatever each Key is; false for anything else, an unbound Term or item included.
@@ -197,6 +229,7 @@ values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
     values_in_type_t(Elements, Key, Type, T).
 
 % A value with an unbound part is outside every type; a ground one is checked.
+% This is also the only test made of the four attestation arguments.
 value_in_type_t(Type, Value, T) :-
     term_variables(Value, Variables),
     ground_value_in_type_t(Variables, Type, Value, T).
@@ -256,5 +289,21 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(root_keys_are_twenty) :-
+    gdpr_art6_lawful_basis_root_keys(Keys),
+    length(Keys, 20).
+test(empty_profile_has_no_problem) :-
+    gdpr_art6_lawful_basis_input_problems([], []).
+test(unbound_profile_is_wrong_type) :-
+    gdpr_art6_lawful_basis_input_problems(_, [wrong_type(profile)]).
+test(bare_true_outside_fact_is_wrong_type) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(special_category, true)], [wrong_type(special_category)]).
+test(attested_outside_fact_is_well_formed) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(special_category, attested(true, attestation(by, at, reason, none)))], []).
+test(duplicate_key_is_named_once) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, true), attribute(contract_necessary, unsure)], [duplicate_key(contract_necessary)]).
+test(unknown_key_is_named) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(colour, blue)], [unknown_key(colour)]).
 
 :- end_module(kernel).

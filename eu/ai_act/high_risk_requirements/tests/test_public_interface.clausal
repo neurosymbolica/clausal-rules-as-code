@@ -1,0 +1,268 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade (what an external caller sees). The obligation
+% (#14) and deadline (#15) queries are imported from the queries module.
+% Run: python -m clausal.testing eu/ai_act/high_risk_requirements/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/ai_act/high_risk_requirements, [
+    high_risk_requirement_status/5,
+    documentation_element_status/4,
+    high_risk_requirements_input_problems/2,
+    decide_high_risk_requirements/2,
+    high_risk_requirements_status/2,
+    high_risk_requirements_checklist/2,
+    high_risk_requirements_decision_resolvable/1,
+    high_risk_requirements_status_values/1,
+    high_risk_requirements_subject/1,
+    high_risk_requirements_profile_for/2,
+    high_risk_requirements_assess/2
+]).
+:- use_module(eu/ai_act/high_risk_requirements/queries, [
+    high_risk_requirements_what_if/4,
+    high_risk_requirements_obligations/3,
+    high_risk_requirements_compliance_date/4
+]).
+
+% ---- the expected verdict of every fixture subject --------------------
+expected_verdict(annex_iii_on_application_date, requirement_applies).
+expected_verdict(annex_iii_day_before_application_date, not_applicable_on_date).
+expected_verdict(annex_i_only_on_application_date, requirement_applies).
+expected_verdict(annex_i_only_day_before_application_date, not_applicable_on_date).
+expected_verdict(dual_route_on_annex_iii_application_date, requirement_applies).
+expected_verdict(not_a_high_risk_system, not_a_high_risk_ai_system).
+expected_verdict(annex_i_system_after_application_date, requirement_applies).
+expected_verdict(point_one_a_system_logging, requirement_applies).
+expected_verdict(other_annex_iii_system_logging, requirement_does_not_apply).
+expected_verdict(verification_exception_both_conditions, requirement_does_not_apply).
+expected_verdict(verification_purposes_without_law_view, requirement_applies).
+expected_verdict(annex_x_component_day_before_deadline, compliance_required_by_31_december_2030).
+expected_verdict(annex_x_component_on_deadline, requirement_applies).
+expected_verdict(existing_system_without_changes, existing_system_without_significant_changes_not_covered).
+expected_verdict(existing_system_with_changes, requirement_applies).
+expected_verdict(public_authority_system_day_before_deadline, compliance_required_by_2_august_2030).
+expected_verdict(public_authority_system_on_deadline, requirement_applies).
+expected_verdict(system_without_training_data, requirement_applies_to_testing_data_sets_only).
+expected_verdict(system_with_training_data, requirement_applies).
+expected_verdict(small_enterprise_provider_documentation, requirement_applies_and_the_simplified_form_may_be_used).
+expected_verdict(large_provider_documentation, requirement_applies).
+expected_verdict(component_photographs_not_a_component, element_not_required).
+expected_verdict(component_photographs_component, element_required).
+expected_verdict(annex_i_section_a_information_unrelated, element_not_required).
+expected_verdict(annex_i_section_a_information_related, element_required).
+expected_verdict(pre_determined_changes_absent, element_not_required).
+expected_verdict(pre_determined_changes_present, element_required).
+expected_verdict(log_mechanisms_open_element, element_required_subject_to_an_open_condition).
+expected_verdict(instructions_for_use_element, element_required).
+expected_verdict(missing_annex_iii_classification, indeterminate([system_is_a_high_risk_ai_system_listed_in_annex_iii])).
+expected_verdict(unsure_design_changes, needs_legal_review(open_textured(significant_changes_in_design_as_from_the_chapter_iii_date, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_as_from_the_chapter_iii_date-unsure, intended_to_be_used_by_public_authorities-false])])).
+expected_verdict(malformed_classification_value, input_problems([wrong_type(system_is_a_high_risk_ai_system_listed_in_annex_iii)])).
+
+well_cited([cite(Key)|Citations]) :-
+    atom(Key),
+    maplist(cite_term, Citations).
+
+cite_term(cite(Key)) :-
+    atom(Key).
+
+empty_list([]).
+
+cited_item(item(_, _, [cite(_)|_])).
+
+% ---- every subject, its one expected verdict ---------------------------
+test(every_subject_has_an_expected_verdict) :-
+    findall(Subject, high_risk_requirements_subject(Subject), Subjects),
+    msort(Subjects, Got),
+    findall(Subject, expected_verdict(Subject, _), ExpectedSubjects),
+    msort(ExpectedSubjects, Want),
+    Got == Want.
+
+test(every_subject_resolves_to_exactly_its_expected_verdict) :-
+    findall(Subject-Status,
+            ( high_risk_requirements_subject(Subject),
+              high_risk_requirements_assess(Subject, high_risk_requirements_verdict(Status, _))
+            ),
+            Pairs),
+    msort(Pairs, Got),
+    findall(Subject-Status, expected_verdict(Subject, Status), ExpectedPairs),
+    msort(ExpectedPairs, Want),
+    Got == Want.
+
+test(final_verdicts_carry_citations) :-
+    high_risk_requirements_status_values(Values),
+    findall(Citations,
+            ( high_risk_requirements_subject(Subject),
+              high_risk_requirements_assess(Subject, high_risk_requirements_verdict(Status, Citations)),
+              member(Status, Values)
+            ),
+            CitationLists),
+    CitationLists = [_|_],
+    maplist(well_cited, CitationLists).
+
+test(not_final_verdicts_carry_no_citations) :-
+    findall(Citations,
+            ( high_risk_requirements_subject(Subject),
+              high_risk_requirements_assess(Subject, high_risk_requirements_verdict(Status, Citations)),
+              compound(Status)
+            ),
+            CitationLists),
+    length(CitationLists, 3),
+    maplist(empty_list, CitationLists).
+
+% ---- near-miss pairs, each verdict named --------------------------------
+test(the_annex_iii_date_itself_applies) :-
+    high_risk_requirements_assess(annex_iii_on_application_date, high_risk_requirements_verdict(requirement_applies, _)).
+test(the_day_before_the_annex_iii_date_does_not) :-
+    high_risk_requirements_assess(annex_iii_day_before_application_date, high_risk_requirements_verdict(not_applicable_on_date, _)).
+test(the_day_before_the_annex_iii_date_is_not_applies, fail) :-
+    high_risk_requirements_assess(annex_iii_day_before_application_date, high_risk_requirements_verdict(requirement_applies, _)).
+test(the_annex_i_date_itself_applies) :-
+    high_risk_requirements_assess(annex_i_only_on_application_date, high_risk_requirements_verdict(requirement_applies, _)).
+test(the_day_before_the_annex_i_date_does_not) :-
+    high_risk_requirements_assess(annex_i_only_day_before_application_date, high_risk_requirements_verdict(not_applicable_on_date, _)).
+test(the_annex_x_deadline_day_before) :-
+    high_risk_requirements_assess(annex_x_component_day_before_deadline, high_risk_requirements_verdict(compliance_required_by_31_december_2030, _)).
+test(the_annex_x_deadline_itself) :-
+    high_risk_requirements_assess(annex_x_component_on_deadline, high_risk_requirements_verdict(requirement_applies, _)).
+test(the_annex_x_deadline_itself_is_not_transitional, fail) :-
+    high_risk_requirements_assess(annex_x_component_on_deadline, high_risk_requirements_verdict(compliance_required_by_31_december_2030, _)).
+test(the_public_authority_deadline_day_before) :-
+    high_risk_requirements_assess(public_authority_system_day_before_deadline, high_risk_requirements_verdict(compliance_required_by_2_august_2030, _)).
+test(the_public_authority_deadline_itself) :-
+    high_risk_requirements_assess(public_authority_system_on_deadline, high_risk_requirements_verdict(requirement_applies, _)).
+test(the_verification_exception_needs_both_conditions) :-
+    high_risk_requirements_assess(verification_exception_both_conditions, high_risk_requirements_verdict(requirement_does_not_apply, [cite(eu_reg_2024_1689_art_14_5)])).
+test(the_verification_applies_with_purposes_only) :-
+    high_risk_requirements_assess(verification_purposes_without_law_view, high_risk_requirements_verdict(requirement_applies, _)).
+test(an_unchanged_existing_system_is_not_covered) :-
+    high_risk_requirements_assess(existing_system_without_changes, high_risk_requirements_verdict(existing_system_without_significant_changes_not_covered, [cite(eu_reg_2024_1689_art_111_2)])).
+test(a_changed_existing_system_is_covered) :-
+    high_risk_requirements_assess(existing_system_with_changes, high_risk_requirements_verdict(requirement_applies, _)).
+test(a_changed_existing_system_is_not_uncovered, fail) :-
+    high_risk_requirements_assess(existing_system_with_changes, high_risk_requirements_verdict(existing_system_without_significant_changes_not_covered, _)).
+
+% ---- the called contract, directly --------------------------------------
+test(the_contract_cites_article_8_1_with_the_requirement) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirement_status(Profile, transparency_and_instructions_for_use, date(2028, 1, 1), Result, Citations),
+    Result == requirement_applies,
+    sort(Citations, Got),
+    sort([cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_13_1), cite(eu_reg_2024_1689_art_13_2)], Want),
+    Got == Want.
+test(the_contract_gives_one_answer) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    findall(Result, high_risk_requirement_status(Profile, record_keeping, date(2028, 1, 1), Result, _), Results),
+    length(Results, 1).
+test(an_element_with_its_condition_false) :-
+    documentation_element_status([attribute(pre_determined_changes_to_the_system_and_its_performance, false)], article_13_3_point_c, element_not_required, Citations),
+    sort(Citations, Got),
+    sort([cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_c)], Want),
+    Got == Want.
+test(an_element_with_its_condition_true) :-
+    documentation_element_status([attribute(pre_determined_changes_to_the_system_and_its_performance, true)], article_13_3_point_c, element_required, _).
+test(the_input_check_names_an_unknown_key) :-
+    high_risk_requirements_input_problems([attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
+test(the_input_check_passes_a_fixture_profile) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_input_problems(Profile, []).
+
+% ---- the referral context and its optional provenance(CLAUSE, CITATIONS) --
+% The order makes the second CONTEXT item provenance/2 optional and not
+% compared: this package gives [inputs_relied_on(PAIRS)] alone, and a caller
+% may extend it with provenance(CLAUSE, CITATIONS) without changing the answer.
+test(the_referral_context_admits_an_optional_provenance) :-
+    high_risk_requirements_assess(unsure_design_changes, high_risk_requirements_verdict(needs_legal_review(Reason, Context), [])),
+    Context = [inputs_relied_on(Pairs)],
+    Extended = [inputs_relied_on(Pairs), provenance(Reason, [cite(eu_reg_2024_1689_art_111_2)])],
+    Extended = [_, provenance(Clause, ProvenanceCitations)],
+    functor(provenance(Clause, ProvenanceCitations), provenance, 2),
+    Reason == open_textured(significant_changes_in_design_as_from_the_chapter_iii_date, cite(eu_reg_2024_1689_art_111_2)),
+    well_cited(ProvenanceCitations).
+test(the_referral_context_carries_no_provenance_here, fail) :-
+    high_risk_requirements_assess(unsure_design_changes, high_risk_requirements_verdict(needs_legal_review(_, Context), [])),
+    member(provenance(_, _), Context).
+
+% ---- facade: status, checklist, resolvable ------------------------------
+test(the_status_projection_gives_the_bare_result) :-
+    high_risk_requirements_profile_for(system_without_training_data, Profile),
+    high_risk_requirements_status(requirement_case(Profile, data_and_data_governance, date(2028, 1, 1)), requirement_applies_to_testing_data_sets_only).
+test(the_requirement_checklist_has_nine_cited_items) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_checklist(requirement_case(Profile, risk_management_system, date(2028, 1, 1)), Items),
+    length(Items, 9),
+    maplist(cited_item, Items).
+test(the_element_checklist_has_thirty_seven_cited_items) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_checklist(element_case(Profile, annex_iv_point_1_a), Items),
+    length(Items, 37),
+    maplist(cited_item, Items).
+test(a_settled_fixture_is_resolvable) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_decision_resolvable(requirement_case(Profile, risk_management_system, date(2028, 1, 1))).
+test(a_fixture_missing_a_key_is_not_resolvable, fail) :-
+    high_risk_requirements_profile_for(missing_annex_iii_classification, Profile),
+    high_risk_requirements_decision_resolvable(requirement_case(Profile, risk_management_system, date(2028, 1, 1))).
+test(decide_wraps_the_contract_answer) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    decide_high_risk_requirements(requirement_case(Profile, human_oversight, date(2028, 1, 1)), high_risk_requirements_verdict(requirement_applies, _)).
+
+% ---- what-if ----------------------------------------------------------------
+test(what_if_the_system_is_not_listed_in_annex_iii) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_what_if(requirement_case(Profile, risk_management_system, date(2028, 1, 1)), system_is_a_high_risk_ai_system_listed_in_annex_iii, false, high_risk_requirements_verdict(not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_8_1)])).
+test(what_if_the_missing_key_is_supplied) :-
+    high_risk_requirements_profile_for(missing_annex_iii_classification, Profile),
+    high_risk_requirements_what_if(requirement_case(Profile, risk_management_system, date(2028, 1, 1)), system_is_a_high_risk_ai_system_listed_in_annex_iii, true, high_risk_requirements_verdict(requirement_applies, _)).
+test(what_if_the_system_is_a_component_of_products) :-
+    high_risk_requirements_profile_for(component_photographs_not_a_component, Profile),
+    high_risk_requirements_what_if(element_case(Profile, annex_iv_point_1_f), system_is_a_component_of_products, true, high_risk_requirements_verdict(element_required, _)).
+
+% ---- #14 obligations ------------------------------------------------------
+test(the_obligations_of_an_annex_iii_system) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_obligations(Profile, date(2028, 1, 1), Obligations),
+    findall(Requirement, member(item(Requirement, _, _), Obligations), Requirements),
+    Requirements == [risk_management_system, data_and_data_governance, technical_documentation, record_keeping, transparency_and_instructions_for_use, human_oversight, accuracy_robustness_and_cybersecurity].
+test(the_logging_minimum_is_not_an_obligation_of_another_system, fail) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_obligations(Profile, date(2028, 1, 1), Obligations),
+    member(item(minimum_logging_capabilities_for_point_1_a_systems, _, _), Obligations).
+test(no_obligation_before_the_annex_iii_date) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_obligations(Profile, date(2027, 12, 1), Obligations),
+    Obligations == [].
+test(a_missing_key_is_surfaced_instead_of_obligations) :-
+    high_risk_requirements_profile_for(missing_annex_iii_classification, Profile),
+    high_risk_requirements_obligations(Profile, date(2028, 1, 1), Obligations),
+    Obligations == [item(risk_management_system, indeterminate([system_is_a_high_risk_ai_system_listed_in_annex_iii]), [])].
+test(a_malformed_profile_is_surfaced_as_input_problems) :-
+    high_risk_requirements_obligations(not_a_list, date(2028, 1, 1), Obligations),
+    Obligations == [item(input_check, input_problems([wrong_type(profile)]), [])].
+
+% ---- #15 compliance dates ---------------------------------------------------
+test(an_annex_iii_system_complies_from_2_december_2027) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_compliance_date(Profile, risk_management_system, ComplianceDate, Citations),
+    ComplianceDate == date(2027, 12, 2),
+    sort(Citations, Got),
+    sort([cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_9_1)], Want),
+    Got == Want.
+test(an_annex_i_only_system_complies_from_2_august_2028) :-
+    high_risk_requirements_profile_for(annex_i_only_on_application_date, Profile),
+    high_risk_requirements_compliance_date(Profile, human_oversight, date(2028, 8, 2), _).
+test(an_annex_x_component_complies_from_31_december_2030) :-
+    high_risk_requirements_profile_for(annex_x_component_on_deadline, Profile),
+    high_risk_requirements_compliance_date(Profile, risk_management_system, date(2030, 12, 31), _).
+test(a_public_authority_system_complies_from_2_august_2030) :-
+    high_risk_requirements_profile_for(public_authority_system_on_deadline, Profile),
+    high_risk_requirements_compliance_date(Profile, record_keeping, date(2030, 8, 2), _).
+test(a_system_that_is_not_high_risk_has_no_compliance_date) :-
+    high_risk_requirements_profile_for(not_a_high_risk_system, Profile),
+    high_risk_requirements_compliance_date(Profile, human_oversight, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_8_1)]).
+test(an_unchanged_existing_system_has_no_compliance_date) :-
+    high_risk_requirements_profile_for(existing_system_without_changes, Profile),
+    high_risk_requirements_compliance_date(Profile, record_keeping, existing_system_without_significant_changes_not_covered, _).
+
+:- end_module(test_public_interface).

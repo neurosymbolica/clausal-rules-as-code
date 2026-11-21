@@ -1,108 +1,125 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_load.clausal -- LOAD: the shared floor of eu/nis2_supervision_fines
-% (kernel and citations) loads, the result terms the order pins build and
-% destructure, the verdict atoms are distinct, and the real citation records
-% resolve. Self-contained: the determination slices are not referenced here.
+% (kernel and citations) loads, its result terms build and destructure,
+% the verdict and status atoms the order pins are distinct, and the real
+% citation records resolve.
+% Self-contained: it references no determination slice (they are authored
+% later), only predicates the kernel and citations modules export.
 % Run: cd <corpus root> && python -m clausal.testing \
 %      eu/nis2_supervision_fines/tests/test_load.clausal
 % =====================================================================
 :- module(test_load, []).
-:- use_module(eu/nis2_supervision_fines/kernel, [nis2_supervision_fines_input_problems/2, nis2_supervision_fines_pairs/3, nis2_supervision_fines_missing_in_order/3]).
-:- use_module(eu/nis2_supervision_fines/citations, [citation/2, implements/1]).
-
-% ---- the input check loads and answers exactly once -------------------
-test(a_well_formed_profile_has_exactly_one_empty_problem_list) :-
-    findall(Problems, nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, 600000000)], Problems), Answers),
-    Answers == [[]].
-
-test(an_unknown_key_is_named) :-
-    findall(Problems, nis2_supervision_fines_input_problems([attribute(colour, red)], Problems), Answers),
-    Answers == [[unknown_key(colour)]].
-
-test(an_unknown_key_is_not_a_clean_profile, fail) :-
-    nis2_supervision_fines_input_problems([attribute(colour, red)], []).
-
-test(a_non_list_profile_is_wrong_type) :-
-    nis2_supervision_fines_input_problems(essential, [wrong_type(profile)]).
-
-test(unsure_on_a_judgement_key_is_well_typed) :-
-    nis2_supervision_fines_input_problems([attribute(gdpr_fine_for_same_conduct, unsure)], []).
-
-test(unsure_on_a_crisp_key_is_not_well_typed, fail) :-
-    nis2_supervision_fines_input_problems([attribute(gdpr_fine_imposed_under_art_58_2_i, unsure)], []).
-
-% ---- the shared plumbing loads ---------------------------------------
-test(pairs_are_the_present_judgements_in_order) :-
-    findall(Pairs, nis2_supervision_fines_pairs([attribute(earlier_measures_ineffective, unsure)], [earlier_measures_ineffective], Pairs), Answers),
-    Answers == [[earlier_measures_ineffective-unsure]].
-
-test(missing_keys_are_named_in_root_order) :-
-    nis2_supervision_fines_missing_in_order([], [entity_class, worldwide_annual_turnover_eur], Missing),
-    Missing == [entity_class, worldwide_annual_turnover_eur].
+:- use_module(eu/nis2_supervision_fines/kernel, [nis2_supervision_fines_input_problems/2, nis2_supervision_fines_relied_pairs/3]).
+:- use_module(eu/nis2_supervision_fines/citations, [citation/2, citation_vocabulary/1, implements/1]).
 
 % ---- the result terms build and destructure ---------------------------
 test(the_ceiling_term_carries_amount_and_basis) :-
     Ceiling = minimum_national_maximum(10000000, fixed_amount),
     Ceiling = minimum_national_maximum(AmountEur, Basis),
-    AmountEur =:= 10000000,
+    AmountEur == 10000000,
     Basis == fixed_amount.
 
-test(the_power_term_carries_kind_measure_and_citation) :-
-    Power = power(escalation, suspend_certification_or_authorisation, cite(eu_dir_2022_2555_art_32_5_a)),
+test(the_power_term_carries_kind_measure_and_cite) :-
+    Power = power(supervision, security_scans, cite(eu_dir_2022_2555_art_33_2_c)),
     Power = power(Kind, Measure, cite(Key)),
-    Kind == escalation,
-    Measure == suspend_certification_or_authorisation,
-    citation(Key, _).
+    Kind == supervision,
+    Measure == security_scans,
+    Key == eu_dir_2022_2555_art_33_2_c.
 
 test(the_not_exercisable_term_carries_its_reason) :-
-    Result = not_exercisable(important_entity),
+    Result = not_exercisable(no_deadline_set),
     Result = not_exercisable(Reason),
-    Reason == important_entity.
+    Reason == no_deadline_set.
+
+test(the_duty_list_carries_its_citations) :-
+    Duty = [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1)), inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))],
+    Duty = [inform_gdpr_supervisory_authorities(cite(FirstKey)), inform_supervisory_authority_in_own_member_state(cite(SecondKey))],
+    FirstKey == eu_dir_2022_2555_art_35_1,
+    SecondKey == eu_dir_2022_2555_art_35_3.
 
 test(the_referral_term_carries_reason_and_context) :-
     Status = needs_legal_review(open_textured(earlier_measures_ineffective, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on([earlier_measures_ineffective-unsure])]),
-    Status = needs_legal_review(open_textured(Input, cite(Key)), [inputs_relied_on(Pairs)]),
+    Status = needs_legal_review(open_textured(Input, cite(Citation)), [inputs_relied_on(Pairs)]),
     Input == earlier_measures_ineffective,
-    Pairs == [earlier_measures_ineffective-unsure],
-    citation(Key, _).
+    Citation == eu_dir_2022_2555_art_32_5,
+    Pairs == [earlier_measures_ineffective-unsure].
 
-test(the_duty_terms_carry_their_citations) :-
-    Duty = [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1)), inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))],
-    Duty = [inform_gdpr_supervisory_authorities(cite(FirstKey)), inform_supervisory_authority_in_own_member_state(cite(SecondKey))],
-    citation(FirstKey, _),
-    citation(SecondKey, _).
+test(the_indeterminate_term_names_one_key) :-
+    Status = indeterminate([infringed_provision]),
+    Status = indeterminate([MissingKey]),
+    MissingKey == infringed_provision.
 
-test(the_indeterminate_term_is_a_compound_not_a_bare_atom, fail) :-
-    indeterminate([entity_class]) = indeterminate.
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = nis2_supervision_fines_verdict(eligible, [cite(eu_dir_2022_2555_art_34_4)]),
+    Verdict = nis2_supervision_fines_verdict(Status, Citations),
+    Status == eligible,
+    Citations == [cite(eu_dir_2022_2555_art_34_4)].
 
-% ---- the verdict atoms are distinct ----------------------------------
+% ---- the pinned atoms are distinct ------------------------------------
 test(the_verdict_atoms_are_distinct) :-
-    dif(fine_barred, fine_not_barred),
-    dif(exercisable, no_union_minimum),
-    dif(fixed_amount, turnover_percentage),
-    dif(supervision, enforcement),
-    dif(enforcement, escalation).
+    dif(eligible, ineligible),
+    dif(eligible, indeterminate),
+    dif(ineligible, invalid_profile).
 
-test(the_reason_atoms_are_distinct) :-
-    dif(important_entity, public_administration_entity),
-    dif(measures_not_ineffective, no_deadline_set),
+test(the_gdpr_bar_atoms_are_distinct) :-
+    dif(fine_barred, fine_not_barred).
+
+test(the_basis_atoms_are_distinct) :-
+    dif(fixed_amount, turnover_percentage).
+
+test(the_escalation_atoms_are_distinct) :-
+    dif(exercisable, not_exercisable(important_entity)),
+    dif(public_administration_entity, measures_not_ineffective),
     dif(no_deadline_set, action_taken_within_deadline).
 
+% ---- the input check of the kernel loads and answers ------------------
+test(a_well_formed_profile_has_no_problem) :-
+    nis2_supervision_fines_input_problems([attribute(entity_class, important), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, 600000000)], []).
+
+test(the_input_check_gives_one_answer) :-
+    findall(Problems, nis2_supervision_fines_input_problems([attribute(entity_class, essential)], Problems), Answers),
+    Answers == [[]].
+
+test(an_unknown_key_is_a_problem) :-
+    nis2_supervision_fines_input_problems([attribute(sector, energy)], [unknown_key(sector)]).
+
+test(an_unknown_key_is_not_a_clean_profile, fail) :-
+    nis2_supervision_fines_input_problems([attribute(sector, energy)], []).
+
+test(a_judgement_given_unsure_is_well_formed) :-
+    nis2_supervision_fines_input_problems([attribute(gdpr_fine_for_same_conduct, unsure)], []).
+
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    nis2_supervision_fines_input_problems([attribute(deadline_set_for_necessary_action, unsure)], [wrong_type(deadline_set_for_necessary_action)]).
+
+% ---- the pairs rule of the kernel loads and answers -------------------
+test(the_pairs_keep_present_judgements_in_order) :-
+    nis2_supervision_fines_relied_pairs([attribute(gdpr_fine_for_same_conduct, unsure), attribute(infringement_may_entail_notifiable_personal_data_breach, true)], [infringement_may_entail_notifiable_personal_data_breach, gdpr_fine_for_same_conduct], [infringement_may_entail_notifiable_personal_data_breach-true, gdpr_fine_for_same_conduct-unsure]).
+
+test(the_pairs_of_an_empty_profile_are_empty) :-
+    nis2_supervision_fines_relied_pairs([], [earlier_measures_ineffective], []).
+
 % ---- the real citation records resolve --------------------------------
-test(the_essential_fine_floor_citation_is_recorded) :-
+test(the_essential_floor_citation_is_recorded) :-
     citation(eu_dir_2022_2555_art_34_4, _Record).
 
-test(the_important_fine_floor_citation_is_recorded) :-
-    citation(eu_dir_2022_2555_art_34_5, _Record).
+test(the_escalation_citation_is_recorded) :-
+    citation(eu_dir_2022_2555_art_32_5, _Record).
 
-test(the_escalation_citation_is_implemented) :-
-    implements(eu_dir_2022_2555_art_32_5).
+test(the_gdpr_bar_citation_is_in_the_vocabulary) :-
+    citation_vocabulary(eu_dir_2022_2555_art_35_2).
 
-test(the_placeholder_citation_is_not_recorded, fail) :-
-    citation(eu_todo_primary_source, _Record).
+test(a_recorded_key_is_implemented) :-
+    implements(eu_dir_2022_2555_art_35_1).
 
-test(a_shortened_citation_is_not_implemented, fail) :-
-    implements(eu_dir_2022_2555_art_35).
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_dir_2022_2555_art_36).
+
+test(a_lead_in_key_is_not_in_the_vocabulary, fail) :-
+    citation_vocabulary(eu_dir_2022_2555_art_32_2).
+
+test(a_lead_in_key_is_recorded) :-
+    citation(eu_dir_2022_2555_art_32_2, _Record).
 
 :- end_module(test_load).

@@ -1,0 +1,249 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__us_texas_tdpsa_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__us_texas_tdpsa_texas_tdpsa, [decide_texas_tdpsa/2, texas_tdpsa_status/2, texas_tdpsa_checklist/2, texas_tdpsa_decision_resolvable/1, texas_tdpsa_status_values/1, applicability_status/4, response_deadline/4, extended_response_deadline/4, appeal_response_deadline/4, cure_period_last_day/4, attorney_general_action_status/5, civil_penalty_maximum/3]).
+:- use_module(m__us_texas_tdpsa_fixtures, [texas_tdpsa_subject/1, texas_tdpsa_profile_for/2, texas_tdpsa_assess/2]).
+:- use_module(m__us_texas_tdpsa_kernel, [texas_tdpsa_input_problems/2]).
+
+subjects_resolve_once([]).
+subjects_resolve_once([Subject|Subjects]) :-
+    findall(Verdict, texas_tdpsa_assess(Subject, Verdict), Verdicts),
+    length(Verdicts, 1),
+    subjects_resolve_once(Subjects).
+
+subjects_have_cited_checklists([]).
+subjects_have_cited_checklists([Subject|Subjects]) :-
+    texas_tdpsa_profile_for(Subject, Profile),
+    texas_tdpsa_checklist(Profile, [item(_, _, cite(_))|_]),
+    subjects_have_cited_checklists(Subjects).
+
+evidence_profile(Evidence, [attribute(entity_category, none_of_the_excluded_categories), attribute(processes_or_sells_personal_data, true), attribute(conducts_business_in_texas_or_serves_texas_residents, true), attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, Evidence)))]).
+
+test(in_scope_controller_is_in_scope) :-
+    findall(Status, texas_tdpsa_assess(in_scope_controller, texas_tdpsa_verdict(Status, _)), Statuses),
+    Statuses == [in_scope].
+test(in_scope_controller_carries_the_eleven_citations) :-
+    texas_tdpsa_assess(in_scope_controller, texas_tdpsa_verdict(in_scope, Citations)),
+    length(Citations, 11),
+    member(cite(us_tx_bc_541_002_a_3), Citations).
+test(in_scope_controller_shows_the_attestation_in_basis) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    findall(Result - Basis, applicability_status(Profile, Result, Basis, _), Answers),
+    Answers == [in_scope - [outside_fact(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, none)))]].
+test(small_business_attested_is_out_of_scope_with_basis) :-
+    texas_tdpsa_profile_for(small_business_attested, Profile),
+    findall(Result - Basis, applicability_status(Profile, Result, Basis, _), Answers),
+    Answers == [out_of_scope - [outside_fact(small_business_as_defined_by_sba, attested(true, attestation(host_user, host_time, size_review, none)))]].
+test(nonprofit_excluded_is_out_of_scope_without_basis) :-
+    texas_tdpsa_profile_for(nonprofit_excluded, Profile),
+    findall(Result - Basis, applicability_status(Profile, Result, Basis, _), Answers),
+    Answers == [out_of_scope - []].
+test(not_processing_personal_data_is_out_of_scope) :-
+    texas_tdpsa_status_of(not_processing_personal_data, out_of_scope).
+test(not_conducting_business_is_out_of_scope) :-
+    texas_tdpsa_status_of(not_conducting_business, out_of_scope).
+test(entity_category_missing_is_indeterminate) :-
+    texas_tdpsa_profile_for(entity_category_missing, Profile),
+    findall(Result - Basis - Citations, applicability_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [indeterminate([entity_category]) - [] - []].
+test(sba_absent_is_referred) :-
+    texas_tdpsa_profile_for(sba_absent_referral, Profile),
+    findall(Result - Citations, applicability_status(Profile, Result, _, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(us_tx_bc_541_002_a_3), cite(sba_small_business_size_determination)), [resolution(cite(sba_small_business_size_determination), not_attempted), inputs_relied_on([small_business_as_defined_by_sba - absent])]) - []].
+test(conducts_business_unsure_goes_to_a_lawyer) :-
+    texas_tdpsa_profile_for(conducts_business_unsure, Profile),
+    findall(Result, applicability_status(Profile, Result, _, _), Answers),
+    Answers == [needs_legal_review(open_textured(conducts_business_in_texas_or_serves_texas_residents, cite(us_tx_bc_541_002_a_1)), [inputs_relied_on([conducts_business_in_texas_or_serves_texas_residents - unsure])])].
+test(malformed_duplicate_key_is_an_input_problem) :-
+    texas_tdpsa_profile_for(malformed_duplicate_key, Profile),
+    findall(Result - Basis - Citations, applicability_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [input_problems([duplicate_key(entity_category)]) - [] - []].
+test(input_check_lists_the_duplicate_bare) :-
+    texas_tdpsa_profile_for(malformed_duplicate_key, Profile),
+    findall(Problems, texas_tdpsa_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(entity_category)]].
+test(input_check_accepts_a_well_formed_profile) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    texas_tdpsa_input_problems(Profile, []).
+test(input_check_refuses_a_bare_attestation_value) :-
+    texas_tdpsa_input_problems([attribute(small_business_as_defined_by_sba, false)], [wrong_type(small_business_as_defined_by_sba)]).
+test(input_check_refuses_a_non_list) :-
+    texas_tdpsa_input_problems(not_a_profile, [wrong_type(profile)]).
+test(url_evidence_is_accepted_and_copied_into_basis) :-
+    Evidence = url('https://www.ecfr.gov/current/title-13/chapter-I/part-121', retrieved_2026_11_16),
+    evidence_profile(Evidence, Profile),
+    texas_tdpsa_input_problems(Profile, []),
+    findall(Result - Basis, applicability_status(Profile, Result, Basis, _), Answers),
+    Answers == [in_scope - [outside_fact(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, Evidence)))]].
+test(url_evidence_with_an_unbound_part_is_wrong_type) :-
+    evidence_profile(url(_UnboundLocation, retrieved_2026_11_16), Profile),
+    texas_tdpsa_input_problems(Profile, [wrong_type(small_business_as_defined_by_sba)]).
+test(document_evidence_is_accepted_and_copied_into_basis) :-
+    Evidence = document(upload_0001, sha256_digest),
+    evidence_profile(Evidence, Profile),
+    texas_tdpsa_input_problems(Profile, []),
+    findall(Result - Basis, applicability_status(Profile, Result, Basis, _), Answers),
+    Answers == [in_scope - [outside_fact(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, Evidence)))]].
+test(document_evidence_with_an_unbound_part_is_wrong_type) :-
+    evidence_profile(document(upload_0001, _UnboundDigest), Profile),
+    texas_tdpsa_input_problems(Profile, [wrong_type(small_business_as_defined_by_sba)]).
+test(provenance_is_an_optional_trailing_context_element) :-
+    Context = [inputs_relied_on([conducts_business_in_texas_or_serves_texas_residents - unsure]), provenance(applicability_step_five, [cite(us_tx_bc_541_002_a_1)])],
+    Context = [inputs_relied_on(Pairs), provenance(Clause, Citations)],
+    Pairs == [conducts_business_in_texas_or_serves_texas_residents - unsure],
+    Clause == applicability_step_five,
+    Citations == [cite(us_tx_bc_541_002_a_1)].
+test(provenance_is_not_part_of_the_scored_referral) :-
+    texas_tdpsa_profile_for(conducts_business_unsure, Profile),
+    applicability_status(Profile, needs_legal_review(_, Context), [], []),
+    Context == [inputs_relied_on([conducts_business_in_texas_or_serves_texas_residents - unsure])].
+test(final_statuses_are_in_the_status_vocabulary) :-
+    texas_tdpsa_status_values(StatusValues),
+    texas_tdpsa_assess(in_scope_controller, texas_tdpsa_verdict(InScopeStatus, _)),
+    member(InScopeStatus, StatusValues),
+    texas_tdpsa_assess(nonprofit_excluded, texas_tdpsa_verdict(OutStatus, _)),
+    member(OutStatus, StatusValues).
+test(every_subject_resolves_exactly_once) :-
+    findall(Subject, texas_tdpsa_subject(Subject), Subjects),
+    length(Subjects, 21),
+    subjects_resolve_once(Subjects).
+test(every_subject_has_a_cited_checklist) :-
+    findall(Subject, texas_tdpsa_subject(Subject), Subjects),
+    subjects_have_cited_checklists(Subjects).
+test(in_scope_checklist_is_all_met) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    texas_tdpsa_decision_resolvable(Profile),
+    texas_tdpsa_checklist(Profile, Checklist),
+    Checklist == [item(not_an_excluded_kind_of_person, met, cite(us_tx_bc_541_002_b)), item(processes_or_sells_personal_data, met, cite(us_tx_bc_541_002_a_2)), item(conducts_business_in_texas_or_serves_texas_residents, met, cite(us_tx_bc_541_002_a_1)), item(not_a_small_business, met, cite(us_tx_bc_541_002_a_3))].
+test(decide_matches_the_status_projection) :-
+    texas_tdpsa_profile_for(nonprofit_excluded, Profile),
+    decide_texas_tdpsa(Profile, texas_tdpsa_verdict(Status, _)),
+    texas_tdpsa_status(Profile, Status),
+    Status == out_of_scope.
+test(response_deadline_is_the_forty_fifth_day) :-
+    findall(Result - Citations, response_deadline([], date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [date(2026, 2, 15) - [cite(us_tx_bc_541_052_b), cite(us_tx_bc_541_052_c)]].
+test(response_deadline_ignores_unread_keys) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    response_deadline(Profile, date(2026, 1, 1), date(2026, 2, 15), _).
+test(response_deadline_refuses_an_unreal_day) :-
+    findall(Result - Citations, response_deadline([], date(2026, 2, 30), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(received_date)]) - []].
+test(appeal_deadline_is_the_sixtieth_day) :-
+    findall(Result - Citations, appeal_response_deadline([], date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [date(2026, 3, 2) - [cite(us_tx_bc_541_053_c)]].
+test(extension_granted_is_the_ninetieth_day) :-
+    texas_tdpsa_profile_for(extension_granted, Profile),
+    findall(Result - Citations, extended_response_deadline(Profile, date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [date(2026, 4, 1) - [cite(us_tx_bc_541_052_b)]].
+test(extension_notice_late_gives_no_extension) :-
+    texas_tdpsa_profile_for(extension_notice_late, Profile),
+    findall(Result, extended_response_deadline(Profile, date(2026, 1, 1), Result, _), Answers),
+    Answers == [no_extension_available].
+test(extension_necessity_unsure_goes_to_a_lawyer) :-
+    texas_tdpsa_profile_for(extension_necessity_unsure, Profile),
+    findall(Result - Citations, extended_response_deadline(Profile, date(2026, 1, 1), Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(extension_reasonably_necessary, cite(us_tx_bc_541_052_b)), [inputs_relied_on([extension_reasonably_necessary - unsure])]) - []].
+test(extension_notice_missing_is_named) :-
+    texas_tdpsa_profile_for(extension_notice_missing, Profile),
+    findall(Result, extended_response_deadline(Profile, date(2026, 1, 1), Result, _), Answers),
+    Answers == [indeterminate([extension_notice_given_within_initial_period])].
+test(cure_period_ends_on_the_thirtieth_day) :-
+    findall(Result - Citations, cure_period_last_day([], date(2026, 3, 1), Result, Citations), Answers),
+    Answers == [date(2026, 3, 31) - [cite(us_tx_bc_541_154), cite(us_tx_bc_541_154_1)]].
+test(cure_completed_is_running_on_the_last_day) :-
+    texas_tdpsa_profile_for(cure_completed, Profile),
+    findall(Result - Citations, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 3, 31), Result, Citations), Answers),
+    Answers == [cure_period_running - [cite(us_tx_bc_541_154)]].
+test(cure_completed_bars_the_action_the_day_after) :-
+    texas_tdpsa_profile_for(cure_completed, Profile),
+    findall(Result, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), Result, _), Answers),
+    Answers == [no_action_for_cured_violation].
+test(statement_breached_allows_the_action) :-
+    texas_tdpsa_profile_for(statement_breached, Profile),
+    findall(Result, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), Result, _), Answers),
+    Answers == [action_may_be_brought].
+test(statement_breached_action_cites_the_penalty) :-
+    texas_tdpsa_profile_for(statement_breached, Profile),
+    attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), action_may_be_brought, Citations),
+    length(Citations, 8),
+    member(cite(us_tx_bc_541_155_a), Citations).
+test(statement_breached_is_still_running_on_the_last_day) :-
+    texas_tdpsa_profile_for(statement_breached, Profile),
+    attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 3, 31), cure_period_running, _).
+test(cure_not_achieved_allows_the_action) :-
+    texas_tdpsa_profile_for(cure_not_achieved, Profile),
+    findall(Result, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), Result, _), Answers),
+    Answers == [action_may_be_brought].
+test(cure_keys_missing_names_the_first) :-
+    texas_tdpsa_profile_for(cure_keys_missing, Profile),
+    findall(Result - Citations, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), Result, Citations), Answers),
+    Answers == [indeterminate([cured_within_cure_period]) - []].
+test(reference_day_before_notice_is_an_input_problem) :-
+    texas_tdpsa_profile_for(cure_completed, Profile),
+    findall(Result - Citations, attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 2, 28), Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(reference_date)]) - []].
+test(reference_day_on_notice_day_is_running) :-
+    texas_tdpsa_profile_for(cure_completed, Profile),
+    attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 3, 1), cure_period_running, _).
+test(penalty_three_violations_is_22500_dollars) :-
+    texas_tdpsa_profile_for(penalty_three_violations, Profile),
+    findall(Result - Citations, civil_penalty_maximum(Profile, Result, Citations), Answers),
+    Answers == [22500 - [cite(us_tx_bc_541_155_a)]].
+test(penalty_zero_violations_is_zero) :-
+    texas_tdpsa_profile_for(penalty_zero_violations, Profile),
+    findall(Result, civil_penalty_maximum(Profile, Result, _), Answers),
+    Answers == [0].
+test(penalty_no_ground_gives_no_civil_penalty) :-
+    texas_tdpsa_profile_for(penalty_no_ground, Profile),
+    findall(Result - Citations, civil_penalty_maximum(Profile, Result, Citations), Answers),
+    Answers == [no_civil_penalty - [cite(us_tx_bc_541_155_a)]].
+test(penalty_count_missing_is_named) :-
+    texas_tdpsa_profile_for(penalty_count_missing, Profile),
+    findall(Result - Citations, civil_penalty_maximum(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([violation_count]) - []].
+test(penalty_ground_missing_is_named_before_the_count) :-
+    findall(Result, civil_penalty_maximum([attribute(violation_count, 3)], Result, _), Answers),
+    Answers == [indeterminate([violation_after_cure_period_or_statement_breach])].
+
+test(in_scope_controller_is_not_out_of_scope, fail) :-
+    texas_tdpsa_assess(in_scope_controller, texas_tdpsa_verdict(out_of_scope, _)).
+test(small_business_attested_is_not_in_scope, fail) :-
+    texas_tdpsa_assess(small_business_attested, texas_tdpsa_verdict(in_scope, _)).
+test(nonprofit_excluded_is_not_in_scope, fail) :-
+    texas_tdpsa_assess(nonprofit_excluded, texas_tdpsa_verdict(in_scope, _)).
+test(response_deadline_is_not_the_forty_sixth_day, fail) :-
+    response_deadline([], date(2026, 1, 1), date(2026, 2, 16), _).
+test(appeal_deadline_is_not_the_sixty_first_day, fail) :-
+    appeal_response_deadline([], date(2026, 1, 1), date(2026, 3, 3), _).
+test(extension_granted_is_not_refused, fail) :-
+    texas_tdpsa_profile_for(extension_granted, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), no_extension_available, _).
+test(extension_notice_late_gives_no_date, fail) :-
+    texas_tdpsa_profile_for(extension_notice_late, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), date(_, _, _), _).
+test(cure_period_does_not_end_on_the_thirty_first_day, fail) :-
+    cure_period_last_day([], date(2026, 3, 1), date(2026, 4, 1), _).
+test(cure_completed_does_not_allow_the_action, fail) :-
+    texas_tdpsa_profile_for(cure_completed, Profile),
+    attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), action_may_be_brought, _).
+test(penalty_no_ground_gives_no_figure, fail) :-
+    texas_tdpsa_profile_for(penalty_no_ground, Profile),
+    civil_penalty_maximum(Profile, 22500, _).
+
+texas_tdpsa_status_of(Subject, Status) :-
+    texas_tdpsa_profile_for(Subject, Profile),
+    findall(Found, texas_tdpsa_status(Profile, Found), Statuses),
+    Statuses == [Status].
+
+cp_test_names([in_scope_controller_is_in_scope, in_scope_controller_carries_the_eleven_citations, in_scope_controller_shows_the_attestation_in_basis, small_business_attested_is_out_of_scope_with_basis, nonprofit_excluded_is_out_of_scope_without_basis, not_processing_personal_data_is_out_of_scope, not_conducting_business_is_out_of_scope, entity_category_missing_is_indeterminate, sba_absent_is_referred, conducts_business_unsure_goes_to_a_lawyer, malformed_duplicate_key_is_an_input_problem, input_check_lists_the_duplicate_bare, input_check_accepts_a_well_formed_profile, input_check_refuses_a_bare_attestation_value, input_check_refuses_a_non_list, url_evidence_is_accepted_and_copied_into_basis, url_evidence_with_an_unbound_part_is_wrong_type, document_evidence_is_accepted_and_copied_into_basis, document_evidence_with_an_unbound_part_is_wrong_type, provenance_is_an_optional_trailing_context_element, provenance_is_not_part_of_the_scored_referral, final_statuses_are_in_the_status_vocabulary, every_subject_resolves_exactly_once, every_subject_has_a_cited_checklist, in_scope_checklist_is_all_met, decide_matches_the_status_projection, response_deadline_is_the_forty_fifth_day, response_deadline_ignores_unread_keys, response_deadline_refuses_an_unreal_day, appeal_deadline_is_the_sixtieth_day, extension_granted_is_the_ninetieth_day, extension_notice_late_gives_no_extension, extension_necessity_unsure_goes_to_a_lawyer, extension_notice_missing_is_named, cure_period_ends_on_the_thirtieth_day, cure_completed_is_running_on_the_last_day, cure_completed_bars_the_action_the_day_after, statement_breached_allows_the_action, statement_breached_action_cites_the_penalty, statement_breached_is_still_running_on_the_last_day, cure_not_achieved_allows_the_action, cure_keys_missing_names_the_first, reference_day_before_notice_is_an_input_problem, reference_day_on_notice_day_is_running, penalty_three_violations_is_22500_dollars, penalty_zero_violations_is_zero, penalty_no_ground_gives_no_civil_penalty, penalty_count_missing_is_named, penalty_ground_missing_is_named_before_the_count]).
+cp_test_fail_names([in_scope_controller_is_not_out_of_scope, small_business_attested_is_not_in_scope, nonprofit_excluded_is_not_in_scope, response_deadline_is_not_the_forty_sixth_day, appeal_deadline_is_not_the_sixty_first_day, extension_granted_is_not_refused, extension_notice_late_gives_no_date, cure_period_does_not_end_on_the_thirty_first_day, cure_completed_does_not_allow_the_action, penalty_no_ground_gives_no_figure]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

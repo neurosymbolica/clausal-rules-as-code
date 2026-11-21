@@ -6,20 +6,25 @@
 :- use_module(library(dif)).
 :- use_module(clausal_hof, [exclude/3]).
 :- use_module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2]).
-:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_gdpr_chapter_v_extras, [gdpr_chapter_v_extras_status/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_gdpr_chapter_v_extras, [second_subparagraph_duty/5, foreign_judgment_or_decision_recognition/4, onward_transfer_condition/4, gdpr_chapter_v_extras_status/2]).
 
 gdpr_chapter_v_extras_profile_keys([transfer_relies_on_article_49_1_second_subparagraph, party_role, supervisory_authority_informed_of_transfer, data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests, assessment_documented_in_records, suitable_safeguards_documented_in_records, third_country_judgment_or_decision_requires_transfer, international_agreement_basis_for_judgment_or_decision, transfer_is_onward_transfer, onward_transfer_has_chapter_v_basis]).
 
 gdpr_chapter_v_extras_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    revised_profile(Profile, OverriddenKey, NewValue, RevisedProfile),
-    gdpr_chapter_v_extras_status(RevisedProfile, NewStatus).
+    gdpr_chapter_v_extras_input_problems(Profile, Problems),
+    what_if_status(Problems, Profile, OverriddenKey, NewValue, NewStatus).
 
-revised_profile(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|KeptAttributes]) :-
-    exclude(attribute_for_key(OverriddenKey), Profile, KeptAttributes).
+what_if_status([], Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_chapter_v_extras_status(Hypothesis, NewStatus).
+what_if_status([_|_], Profile, _, _, NewStatus) :-
+    gdpr_chapter_v_extras_status(Profile, NewStatus).
 
-attribute_for_key(OverriddenKey, Element) :-
-    nonvar(Element),
-    Element = attribute(ElementKey, _),
+override_attribute(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_with_key(OverriddenKey), Profile, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attribute_with_key(OverriddenKey, attribute(ElementKey, _)) :-
     ElementKey == OverriddenKey.
 
 no_second_subparagraph_transfer.
@@ -48,21 +53,31 @@ inform_data_subject.
 
 document_assessment_and_safeguards.
 
-test(the_schema_has_eleven_keys) :-
-    gdpr_chapter_v_extras_profile_keys(Keys),
-    length(Keys, 11).
-test(a_what_if_on_an_onward_basis_clears_the_breach) :-
-    Attestation = attestation(host_user, host_timestamp, fixture_statement, none),
-    Profile = [attribute(transfer_is_onward_transfer, attested(true, Attestation)), attribute(onward_transfer_has_chapter_v_basis, attested(false, Attestation))],
-    findall(Status, gdpr_chapter_v_extras_what_if(Profile, onward_transfer_has_chapter_v_basis, attested(true, Attestation), Status), Statuses),
-    Statuses == [more_input_needed].
-test(a_what_if_with_a_bare_boolean_outside_fact_is_an_input_problem) :-
-    gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, true, input_problems([wrong_type(transfer_is_onward_transfer)])).
-test(the_result_atoms_are_declared) :-
+test(profile_keys_are_the_eleven_contract_keys) :-
+    gdpr_chapter_v_extras_profile_keys(ProfileKeys),
+    length(ProfileKeys, 11).
+test(what_if_flips_the_onward_basis) :-
+    findall(Status, gdpr_chapter_v_extras_what_if([attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none))), attribute(onward_transfer_has_chapter_v_basis, attested(false, attestation(by, at, reason, none)))], onward_transfer_has_chapter_v_basis, attested(true, attestation(by, at, reason, none)), Status), Statuses),
+    Statuses == [onward_transfer_may_take_place].
+test(what_if_adds_an_absent_key) :-
+    findall(Status, gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, attested(false, attestation(by, at, reason, none)), Status), Statuses),
+    Statuses == [not_an_onward_transfer].
+test(what_if_keeps_input_problems) :-
+    findall(Status, gdpr_chapter_v_extras_what_if(not_a_list, transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none)), Status), Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+test(re_exported_duty_query_answers_once) :-
+    findall(Result, second_subparagraph_duty([attribute(party_role, processor)], inform_supervisory_authority, Result, _, _), Results),
+    Results == [not_a_processor_duty].
+test(re_exported_article_48_query_answers_once) :-
+    findall(Result, foreign_judgment_or_decision_recognition([attribute(third_country_judgment_or_decision_requires_transfer, attested(false, attestation(by, at, reason, none)))], Result, _, _), Results),
+    Results == [article_48_not_engaged].
+test(re_exported_input_check_answers_once) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(party_role, controller), attribute(party_role, controller)], Problems), Answers),
+    Answers == [[duplicate_key(party_role)]].
+test(re_exported_input_check_called_directly) :-
+    gdpr_chapter_v_extras_input_problems([attribute(party_role, controller)], Problems),
+    Problems == [].
+test(result_constructor_atoms_resolve) :-
     duty_met,
     not_a_processor_duty,
-    onward_transfer_may_take_place,
     inform_data_subject.
-
-test(a_what_if_with_a_bare_boolean_is_not_clear, fail) :-
-    gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, true, no_condition_breached).

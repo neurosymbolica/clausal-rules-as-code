@@ -1,37 +1,82 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % queries.clausal -- QUERY-COMBINATOR layer for eu/nis2_domain_name_data.
-% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
-% predicates it calls, and nothing else.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and the provenance marker, and nothing else.
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive) Article 28(1) to (6)
+% (OJ L 333, 27.12.2022; CELEX 32022L2555).
 %
-% #2  eligibility   : decide_nis2_domain_name_data/2 (slice)
-% #7  justification: nis2_domain_name_data_checklist/2 (slice), cite per item
-% #15 deadline      : access_reply_deadline/2, access_reply_hours_elapsed/3,
-%                     access_reply_outcome/4 (native datetime)
-% #16 what-if       : nis2_domain_name_data_what_if/4
+% Query types served (the slice owns #2 eligibility and #7 justification:
+% decide_nis2_domain_name_data/2, nis2_domain_name_data_status/2 and
+% nis2_domain_name_data_checklist/2; the five contract queries live there too,
+% access_reply_timeliness/3 being the #15 deadline verdict):
+%   nis2_domain_name_data_what_if/4        (#16 what-if): override one key, re-evaluate
+%   nis2_domain_name_data_profile_keys/1   the profile key schema, contract order
+%   nis2_domain_name_data_input_problems/2 the input check (re-exported from kernel)
+%   nis2_domain_name_data_reply_deadline/2 (#15 deadline): the latest moment of the
+%       Art 28(5) reply, on native datetime; missing it gives late(hour_limit)
+%       from access_reply_timeliness/3
+%   nis2_domain_name_data_hours_elapsed/3  (#15 deadline): whole hours from receipt to
+%       reply, a part of an hour rounded UP (reading 7, Q8)
+%
+% The 72-hour figure is NOT restated here: it is read back out of the
+% slice as the flip point of access_reply_timeliness/3 (the last hour that
+% is on_time, the next hour late(hour_limit)).
+%
+% Result constructors, result atoms, the seven profile key atoms and the
+% judgement value unsure are recorded below as predicates so the package
+% root exposes them (root_exports); they are never called as queries.
+%
+% Kit gap (NOTES S2): kit/deadline_lib counts whole DAYS; Art 28(5) counts
+% HOURS, so the hour helpers are local on library(datetime).
+% Kit gap: kit/query_combinators override_key/4 works on dicts; this
+% order's profile is an attribute list, so the override is local.
 % =====================================================================
 
 :- module(queries, [
     nis2_domain_name_data_profile_keys/1,
     nis2_domain_name_data_input_problems/2,
     nis2_domain_name_data_what_if/4,
-    access_reply_deadline/2,
-    access_reply_hours_elapsed/3,
-    access_reply_outcome/4
+    nis2_domain_name_data_reply_deadline/2,
+    nis2_domain_name_data_hours_elapsed/3,
+    provider_type/0,
+    point_of_contact_email_address_differs_from_registrant/0,
+    point_of_contact_telephone_number_differs_from_registrant/0,
+    registration_data_is_personal_data/0,
+    requester_is_legitimate_access_seeker/0,
+    request_is_lawful_and_duly_substantiated/0,
+    reply_without_undue_delay/0,
+    unsure/0,
+    tld_name_registry/0,
+    domain_name_registration_service_entity/0,
+    other/0,
+    must_publish_without_undue_delay/0,
+    no_publication_duty/0,
+    must_provide_access/0,
+    no_duty_to_provide_access/0,
+    on_time/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    duty/2,
+    field/2,
+    late/1
 ]).
 
 :- use_module(library(clpz)).
-:- use_module(library(datetime), [date_add/3, date_diff/3, timedelta/3]).
-:- use_module(eu/nis2_domain_name_data/citations, [implements/1]).
+:- use_module(library(datetime), [timedelta/3, date_add/3, date_diff/3]).
 :- use_module(eu/nis2_domain_name_data/kernel, [nis2_domain_name_data_input_problems/2]).
-:- use_module(eu/nis2_domain_name_data/nis2_domain_name_data, [
-    nis2_domain_name_data_status/2,
-    access_reply_timeliness/3
-]).
+:- use_module(eu/nis2_domain_name_data/citations, [implements/1]).
+:- use_module(eu/nis2_domain_name_data/nis2_domain_name_data, [nis2_domain_name_data_status/2, access_reply_timeliness/3]).
 
-% Art 28(5): the 72-hour reply limit, declared once; seconds per hour.
-:- constant_value(reply_limit_hours, 72).
-:- constant_value(seconds_per_hour, 3600).
+% The search ceiling for the flip-point scan (not a statutory figure).
+:- constant_value(hour_search_ceiling, 1000).
 
 % schema of top-level profile keys: the keys of the order's typed input contract, in its order
 nis2_domain_name_data_profile_keys([provider_type, point_of_contact_email_address_differs_from_registrant, point_of_contact_telephone_number_differs_from_registrant, registration_data_is_personal_data, requester_is_legitimate_access_seeker, request_is_lawful_and_duly_substantiated, reply_without_undue_delay]).
@@ -41,35 +86,119 @@ nis2_domain_name_data_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
     override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
     nis2_domain_name_data_status(Hypothesis, NewStatus).
 
-% override_attribute(Profile, Key, Value, NewProfile): drop every attribute
-% for Key and append the new one.
-override_attribute([], Key, Value, [attribute(Key, Value)]).
-override_attribute([attribute(Key, _)|Rest], Key, Value, NewProfile) :-
-    override_attribute(Rest, Key, Value, NewProfile).
-override_attribute([attribute(OtherKey, OtherValue)|Rest], Key, Value, [attribute(OtherKey, OtherValue)|NewRest]) :-
-    dif(OtherKey, Key),
-    override_attribute(Rest, Key, Value, NewRest).
+% override_attribute(Profile, Key, Value, Hypothesis): every attribute(Key, _)
+% is dropped and one attribute(Key, Value) is added at the end (list plumbing).
+override_attribute([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+override_attribute([Element|Elements], OverriddenKey, NewValue, Hypothesis) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey,
+    override_attribute(Elements, OverriddenKey, NewValue, Hypothesis).
+override_attribute([Element|Elements], OverriddenKey, NewValue, [Element|Hypothesis]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== OverriddenKey,
+    override_attribute(Elements, OverriddenKey, NewValue, Hypothesis).
+override_attribute([Element|Elements], OverriddenKey, NewValue, [Element|Hypothesis]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    override_attribute(Elements, OverriddenKey, NewValue, Hypothesis).
 
-% #15 deadline: the reply is due 72 hours after receipt of the request.
-% Consequence of missing it: late(hour_limit), no exception (Art 28(5)).
-access_reply_deadline(ReceiptDatetime, DeadlineDatetime) :-
+% ---- #15 deadline: the Art 28(5) reply limit, on native datetime ------
+
+% The flip point of the slice: the last whole hour that is on_time when the
+% reply is without undue delay, the next hour being late(hour_limit).
+% Exactly one hour flips, so this has exactly one solution.
+reply_hour_limit(LimitHours) :-
     implements(eu_dir_2022_2555_art_28_5),
-    PeriodSeconds #= constant(reply_limit_hours) * constant(seconds_per_hour),
-    timedelta(0, PeriodSeconds, ReplyPeriod),
+    Ceiling #= constant(hour_search_ceiling),
+    between(0, Ceiling, LimitHours),
+    access_reply_timeliness([attribute(reply_without_undue_delay, true)], LimitHours, on_time),
+    NextHours #= LimitHours + 1,
+    access_reply_timeliness([attribute(reply_without_undue_delay, true)], NextHours, late(hour_limit)).
+
+% Art 28(5) second sentence: 'in any event within 72 hours of receipt'.
+% The latest reply moment is receipt plus the limit in hours.
+nis2_domain_name_data_reply_deadline(ReceiptDatetime, DeadlineDatetime) :-
+    implements(eu_dir_2022_2555_art_28_5),
+    reply_hour_limit(LimitHours),
+    LimitSeconds #= LimitHours * 3600,
+    timedelta(0, LimitSeconds, ReplyPeriod),
     date_add(ReceiptDatetime, ReplyPeriod, DeadlineDatetime).
 
-% Elapsed time from receipt to reply, rounded UP to whole hours.
-access_reply_hours_elapsed(ReceiptDatetime, ReplyDatetime, HoursElapsed) :-
+% Whole hours from receipt to reply, a part of an hour counted as a whole
+% hour (reading 7, Q8). A reply before receipt has no solution.
+nis2_domain_name_data_hours_elapsed(ReceiptDatetime, ReplyDatetime, HoursElapsed) :-
     implements(eu_dir_2022_2555_art_28_5),
     date_diff(ReplyDatetime, ReceiptDatetime, Difference),
-    timedelta(Days, DaySeconds, Difference),
-    TotalSeconds #= Days * 86400 + DaySeconds,
+    timedelta(ElapsedDays, ElapsedDaySeconds, Difference),
+    TotalSeconds #= ElapsedDays * 86400 + ElapsedDaySeconds,
     TotalSeconds #>= 0,
-    HoursElapsed #= (TotalSeconds + constant(seconds_per_hour) - 1) // constant(seconds_per_hour).
+    HoursElapsed #= (TotalSeconds + 3599) // 3600.
 
-% Timeliness of a reply from its two instants.
-access_reply_outcome(Profile, ReceiptDatetime, ReplyDatetime, Result) :-
-    access_reply_hours_elapsed(ReceiptDatetime, ReplyDatetime, HoursElapsed),
-    access_reply_timeliness(Profile, HoursElapsed, Result).
+% ---- profile key atoms and the judgement value (root_exports; never queries) --
+
+% The seven keys of the input contract, in contract order.
+provider_type.
+point_of_contact_email_address_differs_from_registrant.
+point_of_contact_telephone_number_differs_from_registrant.
+registration_data_is_personal_data.
+requester_is_legitimate_access_seeker.
+request_is_lawful_and_duly_substantiated.
+reply_without_undue_delay.
+
+% The judgement value besides true and false.
+unsure.
+
+% ---- result atoms and result constructors (root_exports; never queries) --
+
+% provider_type atoms (reading 2).
+tld_name_registry.
+domain_name_registration_service_entity.
+other.
+
+% publication_duty/3 result atoms.
+must_publish_without_undue_delay.
+no_publication_duty.
+
+% access_duty/3 result atoms.
+must_provide_access.
+no_duty_to_provide_access.
+
+% access_reply_timeliness/3 result atom and compound.
+on_time.
+late(hour_limit).
+late(without_undue_delay).
+
+% Status compounds.
+indeterminate([MissingKey]) :-
+    atom(MissingKey).
+needs_legal_review(open_textured(ReviewKey, cite(ReviewCitation)), [inputs_relied_on(Pairs)|_]) :-
+    atom(ReviewKey),
+    atom(ReviewCitation),
+    is_list(Pairs).
+open_textured(TexturedKey, cite(TexturedCitation)) :-
+    atom(TexturedKey),
+    atom(TexturedCitation).
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+provenance(DecidingClause, Citations) :-
+    atom(DecidingClause),
+    is_list(Citations).
+input_problems([_|_]).
+unknown_key(ProblemKey) :-
+    atom(ProblemKey).
+wrong_type(ProblemKey) :-
+    atom(ProblemKey).
+duplicate_key(ProblemKey) :-
+    atom(ProblemKey).
+
+% List term constructors.
+duty(DutyName, cite(DutyCitation)) :-
+    atom(DutyName),
+    atom(DutyCitation).
+field(FieldName, cite(FieldCitation)) :-
+    atom(FieldName),
+    atom(FieldCitation).
 
 :- end_module(queries).

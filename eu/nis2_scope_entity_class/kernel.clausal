@@ -1,47 +1,85 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/nis2_scope_entity_class (eligibility family).
-% Source: Directive (EU) 2022/2555 (NIS 2), Art 2 (scope) and Art 3 (essential and
-% important entities); size categories by Art 2 of the Annex to Recommendation
-% 2003/361/EC as Art 2(1) of the Directive refers to it.
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
 %
-% DAG root of the determination-slices layout. It holds ONLY the predicates that
-% two or more files CALL. The only one is the order's input check
-% nis2_scope_entity_class_input_problems/2, which the scaffold writes here,
-% exported, for every slice to import:
-%   :- use_module(eu/nis2_scope_entity_class/kernel, [nis2_scope_entity_class_input_problems/2]).
-% It is not defined or exported anywhere else.
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive) Art 2 (scope) and
+% Art 3(1) and (2) (essential and important entities), pinned unit text of
+% 32022L2555 (OJ L 333, 27.12.2022; raw sha256
+% 6ee66d5c419d9a056fb98d94083cacf9b818803bd6b416435718e0d4919cb589), with the
+% size ceilings of Article 2 of the Annex to Commission Recommendation
+% 2003/361/EC to which Art 2(1) refers (quoted from raw pin 32003H0361; not a
+% pinned unit of this domain).
 %
-% Atoms and data terms need NO declaration and NO import. Nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
-% result terms so every file spells them alike.
+% What lives here:
+% - nis2_scope_entity_class_input_problems/2: the order's INPUT CHECK, written
+%   by the scaffold from the typed input contract (attribute_list) and
+%   imported by the slice and by queries.clausal;
+% - nis2_scope_entity_class_profile_key_order/1: the twenty-one profile keys
+%   in root_exports / input_contract order. The input check reads it, the
+%   slice reads it (the order of MISSING_KEYS candidates, of the unsure
+%   referral and of the PAIRS of inputs_relied_on/1), and fixtures and tests
+%   read it (generators).
+% It decides no statutory condition, so no clause here carries a marker.
 %
-% NOTHING SINGLE-CALLER LIVES HERE. A predicate only ONE file calls is
-% defined in THAT file; move it here when a SECOND file calls it.
+% Atoms and data terms need NO declaration and NO import.
 %
-% Result terms (the single determination slice nis2_scope_entity_class builds them):
-%   nis2_scope_entity_class_verdict(Status, Citations)
-%       Status: eligible (in scope) | ineligible (out of scope) | a compound status
-%       Citations: a set-like list of cite(Key) terms
+% Result terms (spelled exactly as the order pins them). Every query yields
+% exactly ONE solution (Answer, Citations):
 %   size_class(Profile, Size, Citations)
-%       Size: microenterprise | small_enterprise | medium_sized_enterprise | large_enterprise | status
+%     Size: microenterprise | small_enterprise | medium_sized_enterprise
+%           | large_enterprise | a status compound
 %   scope_decision(Profile, Result, Citations)
-%       Result: in_scope | out_of_scope | status
+%     Result: in_scope | out_of_scope | a status compound
 %   entity_class(Profile, Class, Citations)
-%       Class: essential_entity | important_entity | out_of_scope | status
-% Compound statuses (never written as bare atoms):
-%   indeterminate(MissingKeys)   MissingKeys: non-empty list of bare key atoms
-%   needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)])
-%       Pairs: list of Key-Value pairs of the judgement keys present;
-%       an optional trailing provenance(Clause, Citations) item is unscored
-%   input_problems(Problems)     Problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key)
-%                                or [wrong_type(profile)] alone
-% Shared across the slices: the checklist row id `overall` (an atom -- nothing to export).
+%     Class: essential_entity | important_entity | out_of_scope
+%            | a status compound
+%   Citations: a flat set-like list of cite(Key), Key a bare citation atom of
+%     citations.clausal citation_vocabulary/2; [] for every status compound.
+% Status compounds (each stands alone in the answer position, never in a
+% list; the bare atom indeterminate is NEVER written):
+%   input_problems(Problems)  -- Problems the non-empty list of this check
+%   indeterminate([Key])      -- exactly ONE bare missing key atom
+%   needs_legal_review(open_textured(Key, cite(CiteKey)),
+%                      [inputs_relied_on(Pairs)])
+%     -- Pairs: Key-Value pairs of the present judgement keys, in key
+%        order; an unscored provenance(Clause, Citations) may follow.
+% Input problem terms: duplicate_key(Key), wrong_type(Key), unknown_key(Key),
+%   and wrong_type(profile) alone for a profile that is not an attribute list.
+% Facade verdict term of the one determination slice:
+%   nis2_scope_entity_class_verdict(Class, Citations)
+%     Class the entity_class/3 answer, Citations its citation list.
 % =====================================================================
 
-:- module(kernel, [nis2_scope_entity_class_input_problems/2]).
+:- module(kernel, [nis2_scope_entity_class_input_problems/2, nis2_scope_entity_class_profile_key_order/1]).
 
 :- use_module(library(reif), [memberd_t/3]).
+
+% ---- the profile keys, in root_exports and input_contract order ----
+nis2_scope_entity_class_profile_key_order([
+    annex_i_type,
+    annex_ii_type,
+    services_or_activities_in_union,
+    staff_headcount,
+    annual_turnover_eur,
+    annual_balance_sheet_total_eur,
+    public_electronic_communications_provider,
+    trust_service_provider_status,
+    tld_name_registry,
+    dns_service_provider,
+    sole_provider_of_an_essential_service_in_a_member_state,
+    disruption_could_significantly_impact_public_safety_security_or_health,
+    disruption_could_induce_a_significant_systemic_risk,
+    critical_by_specific_national_or_regional_importance,
+    public_administration_kind,
+    public_administration_in_national_security_defence_or_law_enforcement,
+    critical_entity_under_directive_2022_2557,
+    domain_name_registration_service_entity,
+    exempted_from_dora_scope_by_member_state,
+    identified_by_member_state_as_essential_entity,
+    former_operator_of_essential_services_kept_essential_by_member_state
+]).
 
 % ---- input checks: the problems a profile has, if any -----------
 % nis2_scope_entity_class_input_problems(Profile, Problems): Problems = [] means the profile can be
@@ -66,7 +104,7 @@ nis2_scope_entity_class_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    Keys = [annex_i_type, annex_ii_type, services_or_activities_in_union, staff_headcount, annual_turnover_eur, annual_balance_sheet_total_eur, public_electronic_communications_provider, trust_service_provider_status, tld_name_registry, dns_service_provider, sole_provider_of_an_essential_service_in_a_member_state, disruption_could_significantly_impact_public_safety_security_or_health, disruption_could_induce_a_significant_systemic_risk, critical_by_specific_national_or_regional_importance, public_administration_kind, public_administration_in_national_security_defence_or_law_enforcement, critical_entity_under_directive_2022_2557, domain_name_registration_service_entity, exempted_from_dora_scope_by_member_state, identified_by_member_state_as_essential_entity, former_operator_of_essential_services_kept_essential_by_member_state],
+    nis2_scope_entity_class_profile_key_order(Keys),
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 
@@ -240,5 +278,23 @@ not_below_zero_t(true, Value, true) :-
     Value >= 0.
 not_below_zero_t(true, Value, false) :-
     Value < 0.
+
+test(the_key_order_holds_twenty_one_keys) :-
+    nis2_scope_entity_class_profile_key_order(Keys),
+    length(Keys, 21).
+test(a_well_formed_profile_has_no_problem) :-
+    nis2_scope_entity_class_input_problems([attribute(annex_i_type, unsure), attribute(staff_headcount, 12), attribute(public_administration_kind, central_government)], []).
+test(an_empty_profile_has_no_problem) :-
+    nis2_scope_entity_class_input_problems([], []).
+test(a_repeated_key_is_a_duplicate_only) :-
+    nis2_scope_entity_class_input_problems([attribute(tld_name_registry, true), attribute(tld_name_registry, maybe)], [duplicate_key(tld_name_registry)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    nis2_scope_entity_class_input_problems([attribute(colour, red), attribute(staff_headcount, -1), attribute(annex_i_type, yes), attribute(colour, blue)], [wrong_type(annex_i_type), wrong_type(staff_headcount), unknown_key(colour)]).
+test(a_crisp_key_given_unsure_is_a_wrong_type) :-
+    nis2_scope_entity_class_input_problems([attribute(dns_service_provider, unsure)], [wrong_type(dns_service_provider)]).
+test(a_list_with_a_foreign_element_is_not_a_profile) :-
+    nis2_scope_entity_class_input_problems([attribute(annex_i_type, true), foo], [wrong_type(profile)]).
+test(a_well_formed_profile_is_not_refused, fail) :-
+    nis2_scope_entity_class_input_problems([attribute(annex_i_type, true)], [wrong_type(profile)]).
 
 :- end_module(kernel).

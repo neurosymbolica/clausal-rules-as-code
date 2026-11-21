@@ -1,0 +1,124 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for ind/dpdp_research_state_processing.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Declared query types and where each is served:
+%   #2 eligibility   -- decide_dpdp_research_state_processing/2 and
+%                       dpdp_research_state_processing_status/2 (slice):
+%                       one verdict per profile, holding the three contract
+%                       RESULTs (research_exemption/3,
+%                       state_processing_standards/3,
+%                       state_processing_disapplied_provisions/3), each
+%                       answered on its own (reading (17)).
+%   #7 justification -- dpdp_research_state_processing_checklist/2 (slice):
+%                       one checklist row per query, each row carrying its
+%                       own cite(Key) provenance list exactly as the ladder
+%                       step that decided it states.
+%   #16 what-if      -- dpdp_research_state_processing_what_if/4 (here):
+%                       override one key and re-evaluate the status.
+% Open-textured judgements are never replaced by a crisp test: an unsure
+% judgement stays unsure under a what-if and is referred by the slice.
+%
+% NOTE: kit/query_combinators override_key/4 works on a dict; the profile
+% of this order is an ATTRIBUTE LIST [attribute(Key, Value), ...], so the
+% override is list plumbing here (it decides nothing statutory). Candidate
+% kit helper: an attribute-list override_key.
+%
+% dpdp_research_state_processing_profile_keys/1: the eighteen contract keys
+% in input_contract order.
+% dpdp_research_state_processing_input_problems/2: the kernel's typed input
+% check, re-exported as the scaffold wrote it ([] = no problem).
+%
+% RESULT CONSTRUCTORS (exported, never called as queries): indeterminate/1,
+% needs_legal_review/2, open_textured/2, inputs_relied_on/1, provenance/2,
+% input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1. Their
+% clauses only recognise the shape of the term.
+% ROOT ATOMS: the eighteen profile key atoms, the eight result atoms and
+% the judgement value unsure are listed under root_atoms in manifest.yaml
+% (an export list holds only name/arity entries); the generated package
+% facade carries them as module attributes.
+% =====================================================================
+
+:- module(queries, [
+    dpdp_research_state_processing_profile_keys/1,
+    dpdp_research_state_processing_input_problems/2,
+    dpdp_research_state_processing_what_if/4,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(ind/dpdp_research_state_processing/kernel, [dpdp_research_state_processing_input_problems/2]).
+:- use_module(ind/dpdp_research_state_processing/dpdp_research_state_processing, [dpdp_research_state_processing_status/2]).
+
+% Schema of top-level profile keys: the keys of the order's typed input
+% contract, in its order (root_exports order).
+dpdp_research_state_processing_profile_keys([section_7_in_force_on_reference_date, section_17_in_force_on_reference_date, reference_date, processing_necessary_for_research_archiving_or_statistical_purposes, personal_data_to_be_used_for_decision_specific_to_data_principal, processing_for_section_7_b_use, lawful_manner, limited_to_necessary_personal_data, completeness_accuracy_and_consistency, retention_only_while_required, reasonable_security_safeguards, intimation_to_data_principal, business_contact_for_questions, link_and_means_to_exercise_rights, consistent_with_other_applicable_standards, accountability_for_observance, processing_by_state_or_instrumentality, purpose_includes_decision_affecting_data_principal]).
+
+% #16 what-if: re-evaluate the three determinations with one key
+% hypothetically set (replaced if present, added if absent). The hypothesis
+% goes through the same input check and ladders as any profile, so it also
+% yields exactly one status.
+dpdp_research_state_processing_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    without_key(Profile, OverriddenKey, OtherElements),
+    dpdp_research_state_processing_status([attribute(OverriddenKey, NewValue)|OtherElements], NewStatus).
+
+% List plumbing: every element of the profile except those for the key.
+without_key([], _, []).
+without_key([attribute(Key, _)|Elements], OverriddenKey, Kept) :-
+    Key == OverriddenKey,
+    without_key(Elements, OverriddenKey, Kept).
+without_key([attribute(Key, Value)|Elements], OverriddenKey, [attribute(Key, Value)|Kept]) :-
+    Key \== OverriddenKey,
+    without_key(Elements, OverriddenKey, Kept).
+without_key([Element|Elements], OverriddenKey, [Element|Kept]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    without_key(Elements, OverriddenKey, Kept).
+
+% ---- result constructors: shape recognisers only --------------------
+indeterminate(MissingKeys) :-
+    is_list(MissingKeys).
+
+needs_legal_review(Reason, Context) :-
+    compound(Reason),
+    is_list(Context).
+
+open_textured(Key, Citation) :-
+    atom(Key),
+    compound(Citation).
+
+inputs_relied_on(Pairs) :-
+    is_list(Pairs).
+
+provenance(Clause, Citations) :-
+    nonvar(Clause),
+    is_list(Citations).
+
+input_problems(Problems) :-
+    is_list(Problems).
+
+unknown_key(Key) :-
+    term_variables(Key, _Variables).
+
+wrong_type(Key) :-
+    atom(Key).
+
+duplicate_key(Key) :-
+    atom(Key).
+
+test(what_if_replaces_a_present_key) :-
+    dpdp_research_state_processing_what_if([attribute(section_17_in_force_on_reference_date, true)],
+                                           section_17_in_force_on_reference_date,
+                                           false,
+                                           determinations(not_in_force, indeterminate([section_7_in_force_on_reference_date]), not_in_force)).
+
+:- end_module(queries).

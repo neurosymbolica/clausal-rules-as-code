@@ -1,4 +1,4 @@
-# Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no date argument. ONE question: whether a processing, described by one profile, has a lawful ...
+# Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no date argument. Two bounded questions. (1) lawful_basis_status/4: whether one processing, ...
 
 `eu/data_protection/gdpr_art6_lawful_basis`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 228/228 | none (no provision-tracking ledger) | pass | pass | pass |
+| 247/247 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no date argument. ONE question: whether a processing, described by one profile, has a lawful basis under Art 6(1) and which of points (a) to (f) holds (lawful_basis_status/4), with Art 6(3) first sentence read as two attested outside facts for points (c) and (e) and the last subparagraph of Art 6(1) barring point (f) for public authorities in their tasks; and the Art 6(4) compatibility test for processing for a new purpose (purpose_compatibility/4). 'Necessary', the balance of point (f) and compatibility are judgements the caller states (true, false or unsure); unsure goes to a lawyer. Point (a) rests on the host's attested statement of the consent package (Art 7 decided by the order gdpr-consent-conditions). Out of scope: compliance with the Regulation as a whole, Art 5(1)(a), Art 9 (special categories only flagged), Art 10, Arts 12 to 14; Art 6(2), the rest of Art 6(3), Art 6(4)(a) to (e), Art 4(11) and Art 8 are deferred.
+Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no date argument. Two bounded questions. (1) lawful_basis_status/4: whether one processing, described by one attribute-list profile, has a lawful basis under Art 6(1), and which of points (a) to (f) holds: point (a) read as the host's attested statement that consent was given with its conditions met (Art 7 is decided by the order gdpr-consent-conditions); points (b) to (e) as caller judgements of necessity; points (c) and (e) also need the attested statement that the basis is laid down by Union or Member State law (Art 6(3) first sentence); point (f) needs the caller's judgement of the legitimate interest and of the balance, and is barred for a public authority in its tasks (Art 6(1) last subparagraph). basis_claimed restricts the question to one point. (2) purpose_compatibility/4: the Art 6(4) compatibility test for processing for a new purpose, with the five factors of points (a) to (e) as optional crisp keys and the weighing left to the caller's judgement. Open-textured judgements are stated by the caller and an unsure one goes to a lawyer (needs_legal_review). Out of scope: compliance with the Regulation ...
 
 ## Pinned sources
 
@@ -51,11 +51,11 @@ Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no date 
 
     **Consequence for a user:** No answer says whether the basis is laid down by Union law or by Member State law.
 
-??? info "art_6_4_factors"
+??? info "art_6_4_first_words_route_keys"
 
-    **Why:** The five factors of Art 6(4)(a) to (e) are what the caller takes into account when it states the judgement compatible_purpose; they are not formalised and change no answer (reading (10), Q14).
+    **Why:** Art 6(4) first words: the two routes (based on the data subject's consent; based on a Union or Member State law which constitutes a necessary and proportionate measure to safeguard the objectives of Art 23(1)) have no keys of their own; new_purpose_processing carries them (Q13, Q18). The route keys can change an answer, so absent cannot read as today; a later amendment.
 
-    **Consequence for a user:** purpose_compatibility/4 does not check how the caller weighed the factors.
+    **Consequence for a user:** The caller states the routes only through new_purpose_processing; no answer reads a route separately.
 
 ??? info "art_8_child_consent_information_society_services"
 

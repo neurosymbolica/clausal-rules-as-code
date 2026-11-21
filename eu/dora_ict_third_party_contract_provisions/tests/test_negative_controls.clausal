@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed -> different answer), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. A negative states "no
+% solution" as `test(Name, fail) :- Goal.`; each is paired with a positive
+% test asserting the answer the near miss DOES get, so a misspelt atom
+% shows up as a failing positive test.
+% Routes: R1/R5 (base list vs all elements), R2, R3, R4, S1 (base false),
+% S1 (Art 30(3) false), the derogation, S2, S3, M1, M3 naming, R0/S0/M0.
+% Run: python -m clausal.testing eu/dora_ict_third_party_contract_provisions/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_ict_third_party_contract_provisions/dora_ict_third_party_contract_provisions, [
+    contract_provisions_required/3,
+    contract_provisions_sufficient/3,
+    contract_provisions_missing/3,
+    dora_ict_third_party_contract_provisions_status_values/1
+]).
+:- use_module(eu/dora_ict_third_party_contract_provisions/fixtures, [dora_ict_third_party_contract_provisions_profile_for/2]).
+
+subject_required(Subject, Result) :-
+    dora_ict_third_party_contract_provisions_profile_for(Subject, Profile),
+    contract_provisions_required(Profile, Result, _).
+
+subject_sufficient(Subject, Result) :-
+    dora_ict_third_party_contract_provisions_profile_for(Subject, Profile),
+    contract_provisions_sufficient(Profile, Result, _).
+
+subject_missing(Subject, Result) :-
+    dora_ict_third_party_contract_provisions_profile_for(Subject, Profile),
+    contract_provisions_missing(Profile, Result, _).
+
+test(the_status_table_names_both_final_answers) :-
+    dora_ict_third_party_contract_provisions_status_values(StatusValues),
+    StatusValues == [sufficient, insufficient].
+
+% ---- R1 / R5: the critical-or-important judgement decides the list -----
+test(a_non_critical_arrangement_requires_fourteen_elements) :-
+    subject_required(not_critical_all_met, required(Elements)),
+    length(Elements, 14).
+test(a_non_critical_arrangement_does_not_require_twenty_one, fail) :-
+    subject_required(not_critical_all_met, required(Elements)),
+    length(Elements, 21).
+test(a_critical_arrangement_requires_twenty_one) :-
+    subject_required(critical_all_met, required(Elements)),
+    length(Elements, 21).
+test(a_critical_arrangement_does_not_require_only_fourteen, fail) :-
+    subject_required(critical_all_met, required(Elements)),
+    length(Elements, 14).
+
+% ---- R2: the absent critical-or-important judgement --------------------
+test(required_asks_when_the_critical_function_is_absent) :-
+    subject_required(critical_absent_art_30_3_met, indeterminate([supports_critical_or_important_function])).
+test(required_does_not_ask_when_the_critical_function_is_given, fail) :-
+    subject_required(critical_all_met, indeterminate(_)).
+
+% ---- R3: the absent microenterprise fact before a referral ---------------
+test(required_asks_for_the_absent_microenterprise_fact) :-
+    subject_required(critical_unsure_microenterprise_absent, indeterminate([financial_entity_is_microenterprise])).
+test(required_does_not_ask_once_the_microenterprise_fact_is_given, fail) :-
+    subject_required(critical_unsure, indeterminate(_)).
+
+% ---- R4: the unsure critical-or-important judgement is referred ----------
+test(required_refers_an_unsure_critical_function) :-
+    subject_required(critical_unsure, needs_legal_review(open_textured(supports_critical_or_important_function, _), _)).
+test(required_does_not_refer_while_a_key_is_absent, fail) :-
+    subject_required(critical_unsure_microenterprise_absent, needs_legal_review(_, _)).
+test(required_does_not_refer_a_decided_critical_function, fail) :-
+    subject_required(critical_all_met, needs_legal_review(_, _)).
+
+% ---- S1: a false base element ------------------------------------------
+test(a_false_base_element_is_insufficient) :-
+    subject_sufficient(not_critical_incident_assistance_false, insufficient).
+test(the_same_contract_with_the_element_is_sufficient) :-
+    subject_sufficient(not_critical_all_met, sufficient).
+test(the_same_contract_with_the_element_is_not_insufficient, fail) :-
+    subject_sufficient(not_critical_all_met, insufficient).
+
+% ---- S1: a false Art 30(3) element counts only for a critical function ----
+test(a_false_art_30_3_element_is_insufficient_for_a_critical_function) :-
+    subject_sufficient(critical_exit_strategy_false, insufficient).
+test(a_false_art_30_3_element_is_sufficient_without_a_critical_function) :-
+    subject_sufficient(not_critical_art_30_3_false, sufficient).
+test(a_false_art_30_3_element_is_not_insufficient_without_a_critical_function, fail) :-
+    subject_sufficient(not_critical_art_30_3_false, insufficient).
+
+% ---- the microenterprise derogation (reading (7)) -----------------------
+test(a_microenterprise_delegation_meets_the_monitoring_requirement) :-
+    subject_sufficient(microenterprise_delegation, sufficient).
+test(a_refused_delegation_is_insufficient) :-
+    subject_sufficient(microenterprise_delegation_refused, insufficient).
+test(a_refused_delegation_is_not_sufficient, fail) :-
+    subject_sufficient(microenterprise_delegation_refused, sufficient).
+test(a_delegation_outside_a_microenterprise_is_insufficient) :-
+    subject_sufficient(not_microenterprise_delegation, insufficient).
+test(a_delegation_outside_a_microenterprise_is_not_sufficient, fail) :-
+    subject_sufficient(not_microenterprise_delegation, sufficient).
+
+% ---- S2: an absent key that can still change the answer ------------------
+test(an_absent_critical_function_is_asked_when_art_30_3_is_open) :-
+    subject_sufficient(critical_absent_art_30_3_open, indeterminate([supports_critical_or_important_function])).
+test(an_absent_critical_function_does_not_matter_when_art_30_3_is_met) :-
+    subject_sufficient(critical_absent_art_30_3_met, sufficient).
+test(an_absent_critical_function_is_not_asked_when_art_30_3_is_met, fail) :-
+    subject_sufficient(critical_absent_art_30_3_met, indeterminate(_)).
+
+% ---- S3: an unsure judgement that can change the answer ------------------
+test(an_unsure_document_is_referred) :-
+    subject_sufficient(document_unsure, needs_legal_review(open_textured(contract_is_single_written_document, _), _)).
+test(a_decided_document_is_not_referred, fail) :-
+    subject_sufficient(critical_all_met, needs_legal_review(_, _)).
+
+% ---- M1: a false key does not end the missing query ----------------------
+test(the_missing_list_waits_for_an_absent_base_key) :-
+    subject_missing(base_false_and_absent, indeterminate([contract_provides_termination_for_significant_breach])).
+test(with_every_key_given_the_missing_list_is_final) :-
+    subject_missing(not_critical_incident_assistance_false, missing([incident_assistance])).
+test(with_every_key_given_the_missing_list_does_not_wait, fail) :-
+    subject_missing(not_critical_incident_assistance_false, indeterminate(_)).
+
+% ---- M3: the name of a failed monitoring requirement ---------------------
+test(a_microenterprise_misses_the_delegated_assurance) :-
+    subject_missing(microenterprise_delegation_refused, missing([monitoring_rights_of_the_financial_entity_or_delegated_assurance])).
+test(another_entity_misses_its_own_monitoring_rights) :-
+    subject_missing(not_microenterprise_delegation, missing([monitoring_rights_of_the_financial_entity])).
+test(another_entity_is_not_offered_the_delegated_assurance, fail) :-
+    subject_missing(not_microenterprise_delegation, missing([monitoring_rights_of_the_financial_entity_or_delegated_assurance])).
+
+% ---- R0 / S0 / M0: input problems first -----------------------------------
+test(duplicate_and_unknown_keys_are_refused) :-
+    subject_sufficient(duplicate_and_unknown_keys, input_problems([duplicate_key(supports_critical_or_important_function), unknown_key(colour)])).
+test(the_well_formed_baseline_is_not_refused, fail) :-
+    subject_sufficient(not_critical_all_met, input_problems(_)).
+
+:- end_module(test_negative_controls).

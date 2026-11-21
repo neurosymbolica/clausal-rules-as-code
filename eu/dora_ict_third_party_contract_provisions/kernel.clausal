@@ -1,0 +1,248 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/dora_ict_third_party_contract_provisions (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% Exception: the scaffold writes the order's input check
+% dora_ict_third_party_contract_provisions_input_problems/2 here, exported, for every
+% slice (and queries.clausal) to import. It is kept as the scaffold wrote it.
+%
+% Source: Regulation (EU) 2022/2554 (Digital Operational Resilience Act, DORA),
+% 32022R2554, OJ L 333, 27.12.2022, p. 1 (original OJ text, no consolidated
+% version pinned): Art 28(7) (termination circumstances), Art 30(1) (one
+% written document), Art 30(2) (elements of every arrangement), Art 30(3)
+% (additional elements for ICT services supporting critical or important
+% functions, with the microenterprise derogation from point (e) in its
+% closing words). The input check itself decides no statutory condition: it
+% checks the typed input contract of the order and carries no provenance
+% marker.
+%
+% deontic family: STATUS is a content-obligation vocabulary (what a contract
+% must contain, whether it contains it, what it lacks).
+%
+% Atoms and data terms need NO declaration and NO import. Nothing
+% vocabulary-shaped lives here; the comment block below only RECORDS the
+% result terms so every file spells them alike.
+%
+% Result term of the one determination slice
+% (dora_ict_third_party_contract_provisions.clausal):
+%   dora_ict_third_party_contract_provisions_verdict(Status, Citations)
+%     Status    -- the RESULT of contract_provisions_sufficient/3: the atom
+%                  sufficient, the atom insufficient, or a status compound;
+%     Citations -- a set-like list of cite(Key) terms: the four paragraph
+%                  keys eu_reg_2022_2554_art_28_7, eu_reg_2022_2554_art_30_1,
+%                  eu_reg_2022_2554_art_30_2, eu_reg_2022_2554_art_30_3 on a
+%                  final answer, [] on every status compound.
+%
+% The three called queries (Profile, Result, Citations):
+%   contract_provisions_required/3 -- Result required(Elements), Elements a
+%     list of element atoms in ELEMENT ORDER (fourteen base elements, or all
+%     twenty-one, with monitoring_rights_of_the_financial_entity_or_delegated_assurance
+%     at position 19 for a microenterprise);
+%   contract_provisions_sufficient/3 -- Result sufficient | insufficient;
+%   contract_provisions_missing/3 -- Result none_missing | missing(Elements),
+%     Elements non-empty, in ELEMENT ORDER.
+% Status compounds (never final, Citations []):
+%   indeterminate([Key])            -- exactly one bare key atom;
+%   needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                      [inputs_relied_on(Pairs)])
+%                                   -- Pairs Key-Value, root_exports order;
+%   input_problems(Problems)        -- duplicate_key(Key), wrong_type(Key),
+%                                      unknown_key(Key) in the order below.
+% The bare atoms indeterminate, needs_legal_review and input_problems are
+% NEVER written.
+% Judgement values: the atoms true, false, unsure (financial_entity_is_microenterprise:
+% true or false only).
+% =====================================================================
+
+:- module(kernel, [dora_ict_third_party_contract_provisions_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% dora_ict_third_party_contract_provisions_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+dora_ict_third_party_contract_provisions_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [contract_provides_termination_for_significant_breach, contract_provides_termination_for_circumstances_altering_performance, contract_provides_termination_for_risk_management_weaknesses, contract_provides_termination_where_supervision_impeded, contract_is_single_written_document, contract_provides_description_of_functions_services_and_subcontracting, contract_provides_service_and_data_locations, contract_provides_data_protection_provisions, contract_provides_data_access_recovery_and_return, contract_provides_service_level_descriptions, contract_provides_incident_assistance, contract_provides_cooperation_with_authorities, contract_provides_termination_rights_and_notice_periods, contract_provides_security_awareness_and_training_participation, supports_critical_or_important_function, contract_provides_full_service_levels_with_performance_targets, contract_provides_notice_periods_and_reporting_obligations, contract_provides_contingency_plans_and_security_measures, contract_provides_threat_led_penetration_testing_participation, contract_provides_monitoring_rights_of_the_authorities, contract_provides_exit_strategy_and_transition_period, contract_provides_monitoring_rights_of_the_financial_entity, financial_entity_is_microenterprise, contract_provides_delegated_access_inspection_and_audit],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(contract_provides_termination_for_significant_breach, judgement).
+key_type(contract_provides_termination_for_circumstances_altering_performance, judgement).
+key_type(contract_provides_termination_for_risk_management_weaknesses, judgement).
+key_type(contract_provides_termination_where_supervision_impeded, judgement).
+key_type(contract_is_single_written_document, judgement).
+key_type(contract_provides_description_of_functions_services_and_subcontracting, judgement).
+key_type(contract_provides_service_and_data_locations, judgement).
+key_type(contract_provides_data_protection_provisions, judgement).
+key_type(contract_provides_data_access_recovery_and_return, judgement).
+key_type(contract_provides_service_level_descriptions, judgement).
+key_type(contract_provides_incident_assistance, judgement).
+key_type(contract_provides_cooperation_with_authorities, judgement).
+key_type(contract_provides_termination_rights_and_notice_periods, judgement).
+key_type(contract_provides_security_awareness_and_training_participation, judgement).
+key_type(supports_critical_or_important_function, judgement).
+key_type(contract_provides_full_service_levels_with_performance_targets, judgement).
+key_type(contract_provides_notice_periods_and_reporting_obligations, judgement).
+key_type(contract_provides_contingency_plans_and_security_measures, judgement).
+key_type(contract_provides_threat_led_penetration_testing_participation, judgement).
+key_type(contract_provides_monitoring_rights_of_the_authorities, judgement).
+key_type(contract_provides_exit_strategy_and_transition_period, judgement).
+key_type(contract_provides_monitoring_rights_of_the_financial_entity, judgement).
+key_type(financial_entity_is_microenterprise, fact).
+key_type(contract_provides_delegated_access_inspection_and_audit, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(fact, Value, T) :-
+    in_type_t(boolean, Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

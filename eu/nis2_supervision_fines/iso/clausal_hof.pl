@@ -16,7 +16,7 @@
 % (kit/formalize_lib.clausal's eval_requirements/4, query_combinators'
 % flip_scan/bisect_flip/what_if, ...).
 % Measured, Scryer cargo:0.10.0: `existence_error(procedure, call_goal/5)`.
-% The design note (clausal/implementation_plans/
+% The design note (implementation_plans/
 % prolog-lambda-lowering.md) §5 records the same for include/3 and widens it:
 % include/3, exclude/3, partition/4, msort/2, last/2, max_by/3, min_by/3,
 % take_while/3, drop_while/3, span/4, group_by/3, sort_by/3, filter_map/3,
@@ -38,8 +38,9 @@
 % exclude/3 and partition/4 were therefore left out: nothing in the kit
 % consumed them, and a companion predicate no program reaches is a dead
 % instrument that reads as a passing test. They were added 2026-11-09 when a
-% producer package did reach one (queries.clausal: exclude(has_attribute_key(Key), ...);
-% 8 Scryer existence_errors, the build process). They follow the engine
+% producer package did reach one (a GDPR special-categories package,
+% queries.clausal: exclude(has_attribute_key(Key), ...);
+% 8 Scryer existence_errors). They follow the engine
 % exactly, measured on it: the test's FIRST solution decides each element, a
 % successful test keeps its bindings, a failed one leaves none, and the
 % predicate has one answer. findall(X/R, exclude(pair, [X-a, 3-b], R), L)
@@ -89,7 +90,7 @@
 %     a test with two solutions makes include/3 yield two results, and a
 %     projection with two keys makes max_by/3 yield two maxima. Closing it
 %     needs a cut, `->', or a reified-truth if_/3 -- the note calls that a
-%     companion-STYLE decision for the operator, not a correctness question,
+%     companion-STYLE decision for the owner, not a correctness question,
 %     and this file keeps the house style.
 %  2. RESIDUAL CHOICE POINT. include/3 and max_pick/6 leave one behind (the
 %     price of disjoint guards instead of a cut). An unwrapped top-level

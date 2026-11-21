@@ -1,75 +1,82 @@
 # SIGNATURE — eu/nis2_supervision_fines
 
+This is the authoring plan for the later phases. The layout is:
+
+`kernel -> citations -> parameters -> nis2_supervision_fines -> queries -> fixtures -> package facade`
+
+The one determination slice is `nis2_supervision_fines.clausal`, and it is self-contained. It owns:
+
+- its statutory VALUE facts;
+- its arithmetic;
+- the five contracted queries;
+- its checklist requirements, verdict and per-rule tests.
+
+`kernel.clausal` holds only what the slice and the `queries` / facade layers must share. `parameters.clausal` declares NO domain figure: every figure lives in the slice. `parameters.clausal` keeps only its scaffold module header and exports nothing new.
+
 ## Public query surface (summary)
 
-### The facade verdict
+The five contracted queries:
 
-`decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(Status, Citations))` answers one question: is the Art 34 administrative fine available to the competent authority on the stated facts?
+- `fine_ceiling_floor/3`
+- `minimum_powers/2`
+- `escalation_powers_exercisable/3`
+- `fine_barred_by_gdpr_fine/3`
+- `data_protection_authority_information/2`
 
-`nis2_supervision_fines_status(Profile, Status)` projects the Status.
+The input check is `nis2_supervision_fines_input_problems/2`.
 
-`nis2_supervision_fines_checklist(Profile, Checklist)` gives the cited checklist, which serves query types #2 and #7.
+The facade predicates:
 
-### The six contract predicates
+- `decide_nis2_supervision_fines(PROFILE, nis2_supervision_fines_verdict(STATUS, CITATIONS))`
+- `nis2_supervision_fines_status(PROFILE, STATUS)`
+- `nis2_supervision_fines_checklist(PROFILE, CHECKLIST)`
+- `nis2_supervision_fines_what_if(PROFILE, KEY, VALUE, VERDICT)`
 
-These live in the slice and are re-exported by the facade:
+**Totality.** Every public predicate yields EXACTLY ONE solution for every ground PROFILE, the ill-formed profiles included. No public predicate is a bare atom beside a same-name compound: `indeterminate` is never written at arity 0. No figure is imported from another domain; all figures are declared in the slice with `:- constant_value(...)`.
 
-- `fine_ceiling_floor/3`;
-- `minimum_powers/2`;
-- `escalation_powers_exercisable/3`;
-- `fine_barred_by_gdpr_fine/3`;
-- `data_protection_authority_information/2`;
-- `nis2_supervision_fines_input_problems/2`.
+## Verdict STATUS atoms (replacing the scaffold placeholder)
 
-### Totality and determinism
+STATUS is one of these, for query types #2 and #7:
 
-Every public predicate is TOTAL and DETERMINISTIC. It gives exactly one solution for every ground profile, including ill-formed ones, which give `input_problems(Problems)`.
+- `eligible`: a NIS2 Art 34 fine is open, with a Union minimum national ceiling. The infringement is of Art 21 or 23, the entity class and turnover are known, and the fine is not barred by a GDPR fine under Art 35(2).
+- `ineligible`: some checklist item is unmet. Either there is no Union minimum (another provision was infringed), or the fine is barred by a GDPR fine.
+- `indeterminate`: no item is unmet and some item is unknown. The unknown is either a needed key that is absent, or an open-textured judgement given as `unsure`. That judgement is handed to the user or lawyer through the matching contracted query's `needs_legal_review`; there is no crisp test.
+- `invalid_profile`: the input check found problems.
 
-All statutory figures are declared once as `constant_value` facts inside the slice. Nothing is imported from another domain.
+The labels passed to the checklist engine are `labels(eligible, indeterminate, ineligible)`. `invalid_profile` is a separate head-folded clause guarded by a non-empty PROBLEMS list.
 
-## Verdict STATUS atoms
+Contracted result atoms and constructors (exact):
 
-These replace the placeholder `{ required, permitted, not_applicable }`.
+- `minimum_national_maximum/2`, `fixed_amount`, `turnover_percentage`, `no_union_minimum`
+- `power/3`, with KIND `supervision`, `enforcement` or `escalation`
+- `exercisable`, `not_exercisable/1`, with REASON `important_entity`, `public_administration_entity`, `measures_not_ineffective`, `no_deadline_set` or `action_taken_within_deadline`
+- `fine_barred`, `fine_not_barred`
+- `inform_gdpr_supervisory_authorities/1`, `inform_supervisory_authority_in_own_member_state/1`
+- `indeterminate/1`, `needs_legal_review/2`, `open_textured/2`, `inputs_relied_on/1`, `provenance/2`
+- `input_problems/1`, `unknown_key/1`, `wrong_type/1`, `duplicate_key/1`
 
-- `eligible`: the Art 34 fine is available. The infringement is of Art 21 or 23, the class is known and there is no GDPR bar.
-- `ineligible`: the fine is not available. Either the infringement is `other`, or the fine is barred by a GDPR Art 58(2)(i) fine for the same conduct (Art 35(2)).
-- `indeterminate(MissingKeys)`: needed keys are absent. They are listed in root_exports order.
-- `needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)])`: the facts are complete, but an unsure judgement decides.
-- `input_problems(Problems)`: the input check failed. Citations are `[]`.
+## Profile keys (attribute list `[attribute(KEY, VALUE), ...]`, read only with profile_get/3)
 
-The bare atom `indeterminate` is never written.
+The twelve keys, in root_exports and input_contract order. The key names are fixed by the contract; the money key is unit-suffixed, and there are no dates.
 
-The contract result constructors (exported, never queried) are:
+| # | Key | Kind | Values |
+|---|-----|------|--------|
+| 1 | `entity_class` | enumeration | `essential`, `important` |
+| 2 | `infringed_provision` | enumeration | `art_21`, `art_23`, `other` |
+| 3 | `worldwide_annual_turnover_eur` | non-negative integer | whole euros |
+| 4 | `entity_is_public_administration` | crisp | `true`, `false` |
+| 5 | `earlier_measures_ineffective` | judgement | `true`, `false`, `unsure` |
+| 6 | `deadline_set_for_necessary_action` | crisp | `true`, `false` |
+| 7 | `required_action_taken_within_deadline` | crisp | `true`, `false` |
+| 8 | `infringement_may_entail_notifiable_personal_data_breach` | judgement | `true`, `false`, `unsure` |
+| 9 | `authority_became_aware_in_supervision_or_enforcement` | crisp | `true`, `false` |
+| 10 | `data_protection_authority_in_other_member_state` | crisp | `true`, `false` |
+| 11 | `gdpr_fine_imposed_under_art_58_2_i` | crisp | `true`, `false` |
+| 12 | `gdpr_fine_for_same_conduct` | judgement | `true`, `false`, `unsure` |
 
-- `indeterminate/1`, `needs_legal_review/2`, `open_textured/2`, `inputs_relied_on/1`, `provenance/2`;
-- `input_problems/1`, `unknown_key/1`, `wrong_type/1`, `duplicate_key/1`;
-- `minimum_national_maximum/2`, `power/3`, `not_exercisable/1`;
-- `inform_gdpr_supervisory_authorities/1`, `inform_supervisory_authority_in_own_member_state/1`.
+The turnover is in whole euros, as the contract fixes, not in cents. It is the preceding financial year's turnover of the undertaking to which the entity belongs.
 
-## Profile keys
-
-The profile is an attribute list `[attribute(Key, Value), ...]`, read only with `profile_get/3`, `profile_has/2` and `profile_lacks/2`. It has twelve keys, in root_exports and input_contract order:
-
-| # | Key | Type |
-|---|---|---|
-| 1 | `entity_class` | enumeration `essential` / `important` |
-| 2 | `infringed_provision` | enumeration `art_21` / `art_23` / `other` |
-| 3 | `worldwide_annual_turnover_eur` | non-negative integer, whole euros (contract-fixed unit) |
-| 4 | `entity_is_public_administration` | crisp |
-| 5 | `earlier_measures_ineffective` | judgement (`true` / `false` / `unsure`) |
-| 6 | `deadline_set_for_necessary_action` | crisp |
-| 7 | `required_action_taken_within_deadline` | crisp |
-| 8 | `infringement_may_entail_notifiable_personal_data_breach` | judgement |
-| 9 | `authority_became_aware_in_supervision_or_enforcement` | crisp |
-| 10 | `data_protection_authority_in_other_member_state` | crisp |
-| 11 | `gdpr_fine_imposed_under_art_58_2_i` | crisp |
-| 12 | `gdpr_fine_for_same_conduct` | judgement |
-
-No date keys are used.
-
-## Citation-key atoms
-
-The canonical lexicon scheme is `_lexicon/citations.yaml`. These atoms are the `citation_vocabulary`, written verbatim and never shortened further.
+## Citation-key atoms (citations.clausal, `citation_vocabulary/1` facts; canonical lexicon scheme)
 
 - Art 32(2): `eu_dir_2022_2555_art_32_2_a`, `eu_dir_2022_2555_art_32_2_b`, `eu_dir_2022_2555_art_32_2_c`, `eu_dir_2022_2555_art_32_2_d`, `eu_dir_2022_2555_art_32_2_e`, `eu_dir_2022_2555_art_32_2_f`, `eu_dir_2022_2555_art_32_2_g`
 - Art 32(4): `eu_dir_2022_2555_art_32_4_a`, `eu_dir_2022_2555_art_32_4_b`, `eu_dir_2022_2555_art_32_4_c`, `eu_dir_2022_2555_art_32_4_d`, `eu_dir_2022_2555_art_32_4_e`, `eu_dir_2022_2555_art_32_4_f`, `eu_dir_2022_2555_art_32_4_g`, `eu_dir_2022_2555_art_32_4_h`, `eu_dir_2022_2555_art_32_4_i`
@@ -79,237 +86,302 @@ The canonical lexicon scheme is `_lexicon/citations.yaml`. These atoms are the `
 - Art 34: `eu_dir_2022_2555_art_34_4`, `eu_dir_2022_2555_art_34_5`
 - Art 35: `eu_dir_2022_2555_art_35_1`, `eu_dir_2022_2555_art_35_2`, `eu_dir_2022_2555_art_35_3`
 
-`citations.clausal` declares each as `citation_vocabulary(Key)` with its unit id.
+No other citation atom is used, and none is shortened.
 
-## Public predicates
+## Public predicates (one line each)
 
-- `fine_ceiling_floor(Profile, Ceiling, Citations)`: the least national maximum fine. Ceiling is one of:
-  - `minimum_national_maximum(AmountEur, Basis)`, where Basis is `fixed_amount` or `turnover_percentage`;
-  - `no_union_minimum`;
-  - `indeterminate(Keys)`;
-  - `input_problems(Problems)`.
-
-  It cites Art 34(4) or 34(5).
-- `minimum_powers(Profile, Powers)`: ONE article-ordered list of `power(Kind, Measure, cite(Key))`, or a status compound. It cites Art 32(2), (4) and (5), or Art 33(2) and (4).
-- `escalation_powers_exercisable(Profile, Result, Citations)`: Result is `exercisable` or `not_exercisable(Reason)`, or a status compound. It cites Art 32(5).
-- `fine_barred_by_gdpr_fine(Profile, Result, Citations)`: Result is `fine_barred` or `fine_not_barred`, or a status compound. It cites Art 35(2), and Art 35(1) inside open_textured.
-- `data_protection_authority_information(Profile, Duty)`: ONE list of duties (`[]` when none), or a status compound. It cites Art 35(1) and 35(3).
-- `nis2_supervision_fines_input_problems(Profile, Problems)`: the typed input check. Problems is `[]` or an ordered list of problem terms. It is the input_contract and has no legal citation.
-- `decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(Status, Citations))`: the facade verdict on fine availability. Citations is the set of the checklist items' cites, or `[]` when Status is input_problems. It cites Art 34(4) or (5) and Art 35(2).
-- `nis2_supervision_fines_status(Profile, Status)`: the Status projection of decide.
-- `nis2_supervision_fines_checklist(Profile, Checklist)`: a list of `item(RequirementId, ItemStatus, cite(Key))`. ItemStatus is one of formalize_lib `met`, `unmet(Reason)` or `unknown(Keys)`. Every item, met included, carries a cite.
-- `nis2_supervision_fines_what_if(Profile, Key, Value, Verdict)`: re-decides on the profile with `attribute(Key, Value)` set by `profile_set/3`. Verdict is the `nis2_supervision_fines_verdict/2` of the edited profile.
-- `nis2_supervision_fines_fixture(Name, Profile)` (fixtures.clausal): the named test profiles. There are one or more per limb, plus the boundary cases at the fixed/percentage tie:
-  - essential turnover 500 000 000 gives exactly 10 000 000, basis `fixed_amount`;
-  - essential turnover 500 000 001 gives 10 000 001, basis `turnover_percentage`, rounded up;
-  - important turnover 500 000 000 gives exactly 7 000 000, basis `fixed_amount`.
+- `nis2_supervision_fines_input_problems(Profile, Problems)`: THE INPUT CHECK. Gives the bare list of problems:
+  - `duplicate_key/1`, else `wrong_type/1`, per contract key in contract order;
+  - then `unknown_key/1` in order of first occurrence;
+  - `[wrong_type(profile)]` for a non-attribute-list.
+  Citation: input_contract.
+- `fine_ceiling_floor(Profile, Ceiling, Citations)`: the least national maximum fine (limbs (0) to (4)). Citation: `eu_dir_2022_2555_art_34_4` (essential) or `eu_dir_2022_2555_art_34_5` (important); both for `no_union_minimum`.
+- `minimum_powers(Profile, Powers)`: the ordered list of `power(Kind, Measure, cite(Key))`, or one status compound (limbs (0), (5) to (7)). Citations: Art 32(2)(a) to (g), 32(4)(a) to (i), 32(5)(a) and (b); Art 33(2)(a) to (f), 33(4)(a) to (h).
+- `escalation_powers_exercisable(Profile, Result, Citations)`: `exercisable`, `not_exercisable(Reason)` or a status compound (limbs (0), (8), (9)). Citation: `eu_dir_2022_2555_art_32_5`.
+- `fine_barred_by_gdpr_fine(Profile, Result, Citations)`: `fine_barred`, `fine_not_barred` or a status compound (limbs (0), (10), (10a), (10b), (11)). Citations: `eu_dir_2022_2555_art_35_2`, with `eu_dir_2022_2555_art_35_1` in a referral.
+- `data_protection_authority_information(Profile, Duty)`: the ordered duty list or a status compound (limbs (0), (12), (12a), (12b), (13), (14)). Citations: `eu_dir_2022_2555_art_35_1`, `eu_dir_2022_2555_art_35_3`.
+- `decide_nis2_supervision_fines(Profile, Verdict)`: `nis2_supervision_fines_verdict(Status, Citations)`. Status is from the STATUS atoms above; Citations is the set of item citations, or `[]` for `invalid_profile`. Citations: Art 34(4) or (5), Art 35(2).
+- `nis2_supervision_fines_status(Profile, Status)`: the Status of `decide_nis2_supervision_fines/2`. Same citations.
+- `nis2_supervision_fines_checklist(Profile, Checklist)`: a list of `item(RequirementId, Status, cite(Key))` in requirement order, or `[]` for an invalid profile. Every item cites, met items included.
+- `nis2_supervision_fines_what_if(Profile, Key, Value, Verdict)`: replaces or adds `attribute(Key, Value)` with `profile_set/3`, then gives `decide_nis2_supervision_fines/2` on the edited profile. It yields one solution. Same citations as the verdict.
+- Fixtures (fixtures.clausal): `nis2_supervision_fines_fixture(Name, Profile)` facts for the named cases in the slice test plan, and `nis2_supervision_fines_fixture_names(Names)`.
 
 ## Planned reuse (manifest `uses:`)
 
-- **formalize_lib** provides:
-  - profile access: `profile_get/3`, `profile_has/2`, `profile_lacks/2`, `profile_set/3`, `missing_keys/3`;
-  - the checklist engine: `assess/6`, `has_unmet/1`, `has_unknown/1`;
-  - constructors and vocabulary: `item/3`, `unmet/1`, `unknown/1`, `labels/3`, `attribute/2`, `met`;
-  - `int_max/3`, for the higher of the fixed and percentage amounts.
+- **formalize_lib** — the predicates used, and what each is for:
+  - `profile_get/3`, `profile_has/2`, `profile_lacks/2`: every key read, presence first, then value.
+  - `profile_set/3`: what_if.
+  - `eval_requirements/4`, `decide_labeled/3`: the facade checklist and its verdict. The domain `nis2_supervision_fines_requirement/4` is injected as a closure, RequirementId first.
+  - `labels/3`, `item/3`, `unmet/1`, `unknown/1`, `attribute/2`: constructors.
+  - `memberd/2`, `not_member/2`: the input check (contract membership, first-occurrence detection).
+  - `int_max/3`: the higher of FIXED and PERCENT_AMOUNT.
+- **validate_props** (tests only): `run_props/1`, `prop_totality/3`, `prop_determinism/3`, `prop_citation_complete/3`, `prop_boundary_coverage/2`, `prop_missing_key_coverage/3`, `bad_citation/1`.
+- **Not used.** These do not apply to this order:
+  - `kit/compliance_lib`: the deontic modality is fixed by the text, with no norm conflict to resolve.
+  - `kit/deadline_lib`, `date_time`: there are no dates; the Art 32(5) deadline is a crisp input.
+  - `kit/query_combinators`: what_if is over an attribute list via profile_set/3.
+  - `country`, `currency_vocab`: the amounts are always EUR, and the currency is not carried as a value.
+- **Local helper** (no kit module; recorded in NOTES.md S3): `nis2_supervision_fines_ceiling_division/3`.
 
-  The requirement predicate is passed to `assess/6` as the closure `nis2_supervision_fines_requirement`, with head `nis2_supervision_fines_requirement(RequirementId, Profile, Status, Citation)`.
-- **validate_props**: `run_props/1`, `prop_totality/3`, `prop_determinism/3`, `prop_citation_complete/3`, `prop_boundary_coverage/2` and `prop_missing_key_coverage/3`, in the test modes.
-- **Not used, with reasons:**
-  - `check_tri/4` is not used for the open-textured keys, because the contract needs `needs_legal_review`, not a Kleene unknown. The facade checklist maps the slice result instead.
-  - deadline_lib is not used: no dates.
-  - currency_vocab is not used: the unit is in the key name.
-- **Local, with a reuse note in the working notes (not published):** the attribute-list input checker.
+## kernel.clausal (shared floor — only what slice AND queries/facade both need)
 
-## Layout
+- `nis2_supervision_fines_contract_key(Position, Key, Type)`: twelve facts, Position 1 to 12, in the table order above. Type is one of:
+  - `judgement`
+  - `crisp`
+  - `enumeration([Atom, ...])`
+  - `non_negative_integer`
+- `nis2_supervision_fines_input_problems(Profile, Problems)`: THE INPUT CHECK as specified. It is shared because the slice uses it as limb (0) and the facade uses it for `invalid_profile`. Details:
+  - Attribute-list test first. Any non-list, or any element not `attribute(_, _)`, gives `[wrong_type(profile)]`.
+  - Then, per contract key in position order: the count of occurrences above 1 gives `duplicate_key(Key)`, with no value read. Else a single present value outside its type gives `wrong_type(Key)`. An absent key gives no problem.
+  - Then `unknown_key(Key)` per non-contract key at its first occurrence.
+  - Each clause is disjoint, with no cut.
+- `nis2_supervision_fines_relied_pairs(Profile, JudgementKeys, Pairs)`: THE PAIRS RULE. It gives the `Key-Value` pairs of the listed judgement keys that are present, in the order given, which callers pass in root_exports order.
 
-The package layout is `kernel -> citations -> parameters -> nis2_supervision_fines -> queries -> fixtures -> package facade`. It is unchanged.
+## parameters.clausal
 
-- `parameters.clausal` holds no statutory figure. The figures live in the slice; parameters keeps only the scaffold's empty export.
-- `queries.clausal` re-exports the six contract predicates and holds decide, status, checklist and what_if.
+It declares no domain value; all statutory figures are owned by the slice. It keeps its scaffold module header only.
 
-The seven test modes are:
+## SLICE: nis2_supervision_fines.clausal
 
-1. load;
-2. per-rule unit;
-3. boundary;
-4. missing-key;
-5. input-check;
-6. counting (`findall` length 1 per query per fixture);
-7. properties (validate_props).
+### Statutory VALUE facts owned here (`:- constant_value(Name, Value).`, read with `constant(Name)`)
 
-## kernel.clausal (shared floor)
+- `essential_entity_fixed_floor_eur` = 10000000 (Art 34(4))
+- `essential_entity_turnover_share_numerator` = 2 (Art 34(4))
+- `essential_entity_turnover_share_denominator` = 100 (Art 34(4))
+- `important_entity_fixed_floor_eur` = 7000000 (Art 34(5))
+- `important_entity_turnover_share_numerator` = 14 (Art 34(5))
+- `important_entity_turnover_share_denominator` = 1000 (Art 34(5))
 
-The kernel owns the only predicates shared between the slice and queries/facade:
+The power tables are ordered facts in this file:
 
-- `nis2_supervision_fines_contract_key(Key, Type)`: twelve facts in contract order. Type is one of:
-  - `enumeration([essential, important])`;
-  - `enumeration([art_21, art_23, other])`;
-  - `non_negative_integer`;
-  - `crisp`;
-  - `judgement`.
-- `nis2_supervision_fines_input_problems(Profile, Problems)`: exactly one solution, computed in this order.
-  1. If Profile is not a proper list, or any element is not `attribute(Key, Value)`, the answer is `[wrong_type(profile)]` alone.
-  2. Otherwise, for each contract key in order:
-     - `duplicate_key(Key)` if it occurs more than once, with its values not read;
-     - else `wrong_type(Key)` if it is present with a value outside its type:
-       - a judgement value is not `true`, `false` or `unsure`;
-       - a crisp value is not `true` or `false`;
-       - an enumeration value is not one of its atoms;
-       - a turnover is not an integer `>= 0`; a float or rational is wrong.
-  3. Then `unknown_key(Key)` for each non-contract key, in order of first occurrence, deduplicated.
-
-  Absence is never a problem.
-- `nis2_supervision_fines_pairs(Profile, JudgementKeys, Pairs)`: the `Key-Value` pairs of the listed judgement keys that are PRESENT, in the given (root_exports) order, unsure ones included.
-- `nis2_supervision_fines_missing_in_order(Profile, Keys, Missing)`: the absent keys of Keys in root_exports order, built on `missing_keys/3`.
-
-## Slice: nis2_supervision_fines.clausal
-
-### Statutory VALUE facts (owned here, nowhere else)
-
-```
-:- constant_value(essential_fixed_maximum_floor_eur, 10000000).      % Art 34(4)
-:- constant_value(essential_turnover_percentage_numerator, 2).        % Art 34(4): 2 %
-:- constant_value(essential_turnover_percentage_denominator, 100).
-:- constant_value(important_fixed_maximum_floor_eur, 7000000).       % Art 34(5)
-:- constant_value(important_turnover_percentage_numerator, 14).       % Art 34(5): 1,4 %
-:- constant_value(important_turnover_percentage_denominator, 1000).
-```
-
-Power tables are facts in article order, keyed by an ordinal so the list is built once by `findall` over the ordered facts. That gives one list and one solution.
-
-- `essential_power(Ordinal, Kind, Measure, CitationKey)` has 1 to 16, the Art 32(2)(a) to (g) and Art 32(4)(a) to (i) rows of the LIMBS.
-- `essential_escalation_power(Ordinal, Measure, CitationKey)` has 1 to 2: Art 32(5)(a) `suspend_certification_or_authorisation` and Art 32(5)(b) `request_temporary_management_ban`.
-- `important_power(Ordinal, Kind, Measure, CitationKey)` has 1 to 14, the Art 33(2)(a) to (f) and Art 33(4)(a) to (h) rows of the LIMBS.
-
-The measure atoms are exactly those of the LIMBS. Supervision measures are:
-
-- `on_site_inspections_and_off_site_supervision`, `on_site_inspections_and_off_site_ex_post_supervision`;
-- `regular_and_targeted_security_audits`, `targeted_security_audits`, `ad_hoc_audits`;
-- `security_scans`, `information_requests`, `data_access_requests`, `implementation_evidence_requests`.
-
-Enforcement measures are:
-
-- `warnings`, `binding_instructions_or_remedy_orders`, `cease_and_desist_orders`, `compliance_orders`;
-- `inform_affected_persons_orders`, `audit_recommendation_orders`, `monitoring_officer`, `publication_orders`;
-- `administrative_fine`.
+- `nis2_supervision_fines_power_row(EntityClass, Position, Kind, Measure, CitationKey)`, with these rows:
+  - `important`: 14 rows (Art 33(2)(a) to (f), then 33(4)(a) to (h)).
+  - `essential`: 16 base rows (Art 32(2)(a) to (g), then 32(4)(a) to (i)).
+  - `essential_escalation`: 2 rows (Art 32(5)(a) and (b)).
+- The measure atoms are exactly those of THE LIMBS steps (6) and (7):
+  - `on_site_inspections_and_off_site_ex_post_supervision`
+  - `on_site_inspections_and_off_site_supervision`
+  - `targeted_security_audits`
+  - `regular_and_targeted_security_audits`
+  - `ad_hoc_audits`
+  - `security_scans`
+  - `information_requests`
+  - `data_access_requests`
+  - `implementation_evidence_requests`
+  - `warnings`
+  - `binding_instructions_or_remedy_orders`
+  - `cease_and_desist_orders`
+  - `compliance_orders`
+  - `inform_affected_persons_orders`
+  - `audit_recommendation_orders`
+  - `monitoring_officer`
+  - `publication_orders`
+  - `administrative_fine`
+  - `suspend_certification_or_authorisation`
+  - `request_temporary_management_ban`
+- The list is built with one `findall/3` over the ordered rows, then `msort` on Position. It is returned as ONE list, so the query has a single solution.
 
 ### Derived arithmetic
 
-`nis2_supervision_fines_percentage_amount_eur(Class, TurnoverEur, PercentAmountEur)` computes the ceiling division `(TurnoverEur * Numerator + Denominator - 1) // Denominator`, with the class constants.
+- `nis2_supervision_fines_ceiling_division(Dividend, Divisor, Quotient)`: `Quotient is (Dividend + Divisor - 1) // Divisor`. It needs non-negative integers, all bound.
+- `nis2_supervision_fines_least_maximum(EntityClass, TurnoverEur, AmountEur, Basis)`:
+  - PERCENT_AMOUNT = ceiling_division(TurnoverEur * Numerator, Denominator).
+  - AmountEur = int_max(FIXED, PERCENT_AMOUNT).
+  - Two disjoint clauses fold Basis into the head: `fixed_amount` when FIXED >= PERCENT_AMOUNT, and `turnover_percentage` when FIXED < PERCENT_AMOUNT.
 
-`nis2_supervision_fines_least_maximum(Class, TurnoverEur, AmountEur, Basis)` has two disjoint clauses:
+### Rules / requirements (the limbs; each a set of disjoint head-folded clauses, no cut, no if-then-else)
 
-- `Basis = fixed_amount` when `Fixed >= PercentAmount`, with `AmountEur = Fixed`;
-- `Basis = turnover_percentage` when `Fixed < PercentAmount`, with `AmountEur = PercentAmount`.
+**Limb (0), for every query.** When `nis2_supervision_fines_input_problems(Profile, Problems)` gives Problems different from `[]`, the answer is `input_problems(Problems)`, with Citations `[]` for the arity-3 queries. Every other clause is guarded by Problems = `[]`.
 
-The ground basis is folded into each head (C17).
+**`fine_ceiling_floor/3`**
 
-### Rules (each a disjoint clause set; the first applicable step decides)
+- (1) `infringed_provision` absent gives `indeterminate([infringed_provision])`, `[]`.
+- (2) `other` gives `no_union_minimum`, `[cite(eu_dir_2022_2555_art_34_4), cite(eu_dir_2022_2555_art_34_5)]`.
+- (3) For `art_21` or `art_23`:
+  - `entity_class` absent gives `indeterminate([entity_class])`;
+  - else the turnover absent gives `indeterminate([worldwide_annual_turnover_eur])`.
+- (4) `minimum_national_maximum(AmountEur, Basis)`, `[cite(art_34_4)]` for essential or `[cite(art_34_5)]` for important.
 
-Every query has a step (0): `nis2_supervision_fines_input_problems(Profile, Problems)` with `Problems \= []`. It gives `input_problems(Problems)` with Citations `[]`, or no citations argument for the two-argument queries. Every later clause carries the guard `Problems = []`.
+**`minimum_powers/2`**
 
-#### fine_ceiling_floor/3
+- (5) `entity_class` absent gives `indeterminate([entity_class])`.
+- (6) `important` gives the 14 rows.
+- (7) `essential`:
+  - public administration absent gives `indeterminate([entity_is_public_administration])`;
+  - `true` gives the 16 rows;
+  - `false` gives the 16 rows followed by the 2 escalation rows.
 
-1. `infringed_provision` absent: `indeterminate([infringed_provision])`, `[]`.
-2. `other`: `no_union_minimum`, `[cite(eu_dir_2022_2555_art_34_4), cite(eu_dir_2022_2555_art_34_5)]`.
-3. `art_21` or `art_23`, with `entity_class` or `worldwide_annual_turnover_eur` absent: `indeterminate(Missing)` in root order, `[]`.
-4. Both present: `minimum_national_maximum(AmountEur, Basis)` from `least_maximum`. Citations are `[cite(eu_dir_2022_2555_art_34_4)]` for essential and `[cite(eu_dir_2022_2555_art_34_5)]` for important. `entity_is_public_administration` is not read (Q7).
+**`escalation_powers_exercisable/3`**
 
-#### minimum_powers/2
+- (8) `important` gives `not_exercisable(important_entity)`, `[cite(eu_dir_2022_2555_art_32_5)]`.
+- (9) Class essential or absent. A failing condition is any of:
+  - C1 `entity_is_public_administration` = `true`;
+  - C2 `earlier_measures_ineffective` = `false`;
+  - C3 `deadline_set_for_necessary_action` = `false`;
+  - C4 `required_action_taken_within_deadline` = `true`.
 
-5. `entity_class` absent: `indeterminate([entity_class])`.
-6. `important`: the 14 important rows.
-7. `essential`:
-   - `entity_is_public_administration` absent: `indeterminate([entity_is_public_administration])`;
-   - `true`: the 16 rows;
-   - `false`: the 16 rows followed by the 2 escalation rows.
+  The clauses for (9), in order:
+  - **First failing condition decides.** For each Cn there is a clause: Cn fails, and every earlier Ci is not failing (absent, unsure, or passing). That clause gives `not_exercisable(Reason)`, `[cite(eu_dir_2022_2555_art_32_5)]`. The reasons are `public_administration_entity`, `measures_not_ineffective`, `no_deadline_set` and `action_taken_within_deadline`. No condition is read for its absence of failure through the class.
+  - **Class absent.** No condition fails and the class is absent: `indeterminate([entity_class])`, `[]`.
+  - **Condition absent.** No condition fails, the class is essential, and some condition is absent: `indeterminate([FirstAbsent])`, in root_exports order 4, 5, 6, 7.
+  - **Referral.** All four are present, none fails, and C2 = `unsure`: `needs_legal_review(open_textured(earlier_measures_ineffective, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on([earlier_measures_ineffective-unsure])])`, `[]`.
+  - **Otherwise** `exercisable`, `[cite(eu_dir_2022_2555_art_32_5)]`.
 
-#### escalation_powers_exercisable/3
+**`fine_barred_by_gdpr_fine/3`**
 
-8. `entity_class` absent: `indeterminate([entity_class])`, `[]`. `important`: `not_exercisable(important_entity)`, `[cite(eu_dir_2022_2555_art_32_5)]`.
-9. `essential`. Each failing clause requires that every earlier condition is not failing, meaning its key is absent or has a non-failing value. The steps run in this order:
-   - C1 key `true`: `not_exercisable(public_administration_entity)`.
-   - C2 key `false`: `not_exercisable(measures_not_ineffective)`.
-   - C3 key `false`: `not_exercisable(no_deadline_set)`.
-   - C4 key `true`: `not_exercisable(action_taken_within_deadline)`.
+- (10) Any of these keys `false` gives `fine_not_barred`, `[cite(eu_dir_2022_2555_art_35_2)]`. The rule is ONE clause guarded by "some condition false", so a profile with two false conditions still yields ONE solution. Use the first false condition in root order as the witness, with the earlier ones not false. The keys are:
+  - D2 `infringement_may_entail_notifiable_personal_data_breach`
+  - D1 `gdpr_fine_imposed_under_art_58_2_i`
+  - D3 `gdpr_fine_for_same_conduct`
+- (10a) No condition false and the provision is `other`: `fine_not_barred`, `[cite(art_35_2)]`.
+- (10b) No condition false and the provision is absent: `indeterminate([infringed_provision])`, `[]`.
+- (11) `art_21` or `art_23`, in order:
+  - the first absent of D2, D1, D3 (positions 8, 11, 12) gives `indeterminate([Key])`, `[]`;
+  - else D2 `unsure` gives a referral citing `eu_dir_2022_2555_art_35_1`;
+  - else D3 `unsure` gives a referral citing `eu_dir_2022_2555_art_35_2`;
+  - the referral PAIRS are the present values of D2 then D3, and its Citations are `[]`;
+  - else `fine_barred`, `[cite(eu_dir_2022_2555_art_35_2)]`.
 
-   These four cite `[cite(eu_dir_2022_2555_art_32_5)]`.
-   - Else, if any of keys 4, 5, 6 or 7 is absent: `indeterminate(Missing)`, `[]`.
-   - Else, if C2 is `unsure`: `needs_legal_review(open_textured(earlier_measures_ineffective, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on([earlier_measures_ineffective-unsure])])`, `[]`.
-   - Else: `exercisable`, `[cite(eu_dir_2022_2555_art_32_5)]`.
+**`data_protection_authority_information/2`**
 
-#### fine_barred_by_gdpr_fine/3
+- (12) Either E2 (key 8) or E1 (key 9) `false` gives `[]` (one clause, as for (10)).
+- (12a) The provision is `other`: `[]`.
+- (12b) The provision is absent: `indeterminate([infringed_provision])`.
+- (13) `art_21` or `art_23`, in order:
+  - E2 absent gives `indeterminate([infringement_may_entail_notifiable_personal_data_breach])`;
+  - else E1 absent gives `indeterminate([authority_became_aware_in_supervision_or_enforcement])`;
+  - else E2 `unsure` and E1 `true`:
+    - key 10 absent gives `indeterminate([data_protection_authority_in_other_member_state])`;
+    - key 10 present gives `needs_legal_review(open_textured(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)), [inputs_relied_on([infringement_may_entail_notifiable_personal_data_breach-unsure])])`.
+- (14) Both conditions `true`:
+  - key 10 absent gives `indeterminate([data_protection_authority_in_other_member_state])`;
+  - `false` gives `[inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1))]`;
+  - `true` gives `[inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1)), inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))]`.
 
-The conditions use keys 8, 11 and 12 only. Key 9 is never read here.
+### Checklist requirements (`nis2_supervision_fines_requirement(RequirementId, Profile, Status, Citation)`, injected into eval_requirements/4)
 
-10. `infringed_provision` absent: `indeterminate([infringed_provision])`, `[]`. `other`: `fine_not_barred`, `[cite(eu_dir_2022_2555_art_35_2)]`.
-11. `art_21` or `art_23`:
-    - any of keys 8, 11 or 12 PRESENT and `false`: `fine_not_barred`, `[cite(eu_dir_2022_2555_art_35_2)]`;
-    - else any absent: `indeterminate(Missing)`, `[]`;
-    - else key 8 is `unsure`: `needs_legal_review(open_textured(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)), [inputs_relied_on(Pairs)])`, `[]`;
-    - else key 12 is `unsure`: the same with `open_textured(gdpr_fine_for_same_conduct, cite(eu_dir_2022_2555_art_35_2))`, `[]`;
-    - else: `fine_barred`, `[cite(eu_dir_2022_2555_art_35_2)]`.
+Each requirement has three mutually exclusive clauses: met, unmet or unknown.
 
-    Pairs are the present values of keys 8 and 12, in that order.
+- **`union_fine_floor_applies`**, read from `fine_ceiling_floor/3`.
+  - `minimum_national_maximum(_, _)` is `met`.
+  - `no_union_minimum` is `unmet(no_union_minimum)`.
+  - `indeterminate([Key])` is `unknown([Key])`.
+  - Citation: `cite(eu_dir_2022_2555_art_34_5)` when `entity_class` is `important`, else `cite(eu_dir_2022_2555_art_34_4)`.
+- **`fine_not_barred_by_gdpr_fine`**, read from `fine_barred_by_gdpr_fine/3`.
+  - `fine_not_barred` is `met`.
+  - `fine_barred` is `unmet(fine_barred_by_gdpr_fine)`.
+  - `indeterminate([Key])` is `unknown([Key])`.
+  - `needs_legal_review(open_textured(Key, _), _)` is `unknown([Key])`: the judgement is handed to the user, with no crisp test.
+  - Citation: `cite(eu_dir_2022_2555_art_35_2)`.
 
-#### data_protection_authority_information/2
+Requirement order: `[union_fine_floor_applies, fine_not_barred_by_gdpr_fine]`.
 
-12. `infringed_provision` absent: `indeterminate([infringed_provision])`. `other`: `[]`.
-13. `art_21` or `art_23`:
-    - key 8 or key 9 PRESENT and `false`: `[]`;
-    - else either absent: `indeterminate(Missing)`, in root order 8 then 9;
-    - else key 8 is `unsure`: `needs_legal_review(open_textured(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)), [inputs_relied_on([infringement_may_entail_notifiable_personal_data_breach-unsure])])`. Key 10 is not yet needed, so it is not named.
-14. Both `true`:
-    - key 10 absent: `indeterminate([data_protection_authority_in_other_member_state])`;
-    - `false`: `[inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1))]`;
-    - `true`: that duty followed by `inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))`.
+### Verdict atoms
 
-An optional unscored `provenance(Clause, Citations)` may follow the Pairs inside `inputs_relied_on`. It is omitted in this order, to keep the answers canonical.
+- `eligible`, `ineligible`, `indeterminate`: from `decide_labeled/3` with `labels(eligible, indeterminate, ineligible)`. Any unmet item gives ineligible, else any unknown item gives indeterminate, else eligible.
+- `invalid_profile`: from the input check. The checklist is then `[]` and the citations `[]`.
 
-### Facade checklist requirements (the slice exports the requirement predicate)
+### Predicates this slice SHARES (and therefore lives in kernel.clausal)
 
-The head is `nis2_supervision_fines_requirement(RequirementId, Profile, Status, Citation)`. It has three mutually exclusive clauses per requirement (met / unmet / unknown) and is run by `assess/6` with `labels(eligible, indeterminate, ineligible)`.
+- `nis2_supervision_fines_input_problems/2`
+- `nis2_supervision_fines_contract_key/3`
+- `nis2_supervision_fines_relied_pairs/3`
 
-- `infringement_of_article_21_or_23`:
-  - `art_21` or `art_23` is `met`; `other` is `unmet(infringement_outside_article_21_or_23)`; absent is `unknown([infringed_provision])`;
-  - the cite is `cite(eu_dir_2022_2555_art_34_5)` when `entity_class` is `important`, else `cite(eu_dir_2022_2555_art_34_4)`; these clauses are disjoint on that guard.
-- `entity_class_established`:
-  - present is `met`; absent is `unknown([entity_class])`;
-  - the cite is `cite(eu_dir_2022_2555_art_34_4)` for essential or absent and `cite(eu_dir_2022_2555_art_34_5)` for important.
-- `fine_not_barred_by_gdpr_fine`:
-  - it maps `fine_barred_by_gdpr_fine/3`: `fine_not_barred` is `met`; `fine_barred` is `unmet(fine_barred_by_gdpr_fine)`;
-  - `indeterminate(Keys)` maps to `unknown(Keys)`;
-  - `needs_legal_review(open_textured(Key, Cite), Context)` maps to `unknown([Key])`;
-  - the cite is always `cite(eu_dir_2022_2555_art_35_2)`.
+Nothing else is shared. The value facts, power tables, arithmetic, limbs, requirements and verdict are all local to this slice.
 
-The status mapping in queries.clausal is one clause per disjoint route:
+### Per-rule test plan (tests/; seven modes; expected answers)
 
-1. input problems give `input_problems(P)`;
-2. else `has_unmet` gives `ineligible`;
-3. else, if any absent key is in the checklist's unknown items, the answer is `indeterminate(Missing)`. Missing names the absent keys over keys 1, 2, 8, 11 and 12, in root order, as the queries name them;
-4. else, if the GDPR query gives `needs_legal_review(R, C)`, the answer is that same compound;
-5. else `eligible`.
+**Fine floors**
 
-Open-textured judgements are always handed to the user, never crisped.
+| Profile | Expected `fine_ceiling_floor` answer |
+|---|---|
+| essential, art_21, turnover 600000000 | `minimum_national_maximum(12000000, turnover_percentage)`, `[cite(eu_dir_2022_2555_art_34_4)]` |
+| essential, art_23, turnover 500000000 (tie) | `minimum_national_maximum(10000000, fixed_amount)` |
+| essential, turnover 500000001 | `minimum_national_maximum(10000001, turnover_percentage)` (rounded up) |
+| essential, turnover 0 | `minimum_national_maximum(10000000, fixed_amount)` |
+| important, art_21, turnover 500000000 (tie) | `minimum_national_maximum(7000000, fixed_amount)`, `[cite(eu_dir_2022_2555_art_34_5)]` |
+| important, turnover 500000001 | `minimum_national_maximum(7000001, turnover_percentage)` |
+| infringed_provision other | `no_union_minimum`, both Art 34 cites |
+| provision absent | `indeterminate([infringed_provision])` |
+| art_21, class and turnover absent | `indeterminate([entity_class])` |
+| art_21, essential, turnover absent | `indeterminate([worldwide_annual_turnover_eur])` |
 
-### Verdict atoms of this slice
+**Minimum powers**
 
-The slice uses:
+| Profile | Expected `minimum_powers` answer |
+|---|---|
+| important | 14 items in order |
+| essential, public administration false | 18 items in order |
+| essential, public administration true | 16 items, no escalation |
+| essential, public administration absent | `indeterminate([entity_is_public_administration])` |
+| class absent | `indeterminate([entity_class])` |
 
-- `minimum_national_maximum/2`, `no_union_minimum`;
-- `power/3`;
-- `exercisable`, `not_exercisable/1` with reasons `important_entity`, `public_administration_entity`, `measures_not_ineffective`, `no_deadline_set` and `action_taken_within_deadline`;
-- `fine_barred`, `fine_not_barred`;
-- `inform_gdpr_supervisory_authorities/1`, `inform_supervisory_authority_in_own_member_state/1`;
-- the status compounds `indeterminate/1`, `needs_legal_review/2` and `input_problems/1`;
-- the facade atoms `eligible` and `ineligible`.
+**Escalation**
 
-### Shared with other files (kernel only)
+| Profile | Expected `escalation_powers_exercisable` answer |
+|---|---|
+| important, whatever else | `not_exercisable(important_entity)` |
+| class absent, public administration true | `not_exercisable(public_administration_entity)` |
+| essential, public administration absent, earlier false | `not_exercisable(measures_not_ineffective)` |
+| C1 absent, C3 false | `not_exercisable(no_deadline_set)` |
+| class absent, C1 to C4 passing | `indeterminate([entity_class])` |
+| essential, false/unsure/(deadline absent) | `indeterminate([deadline_set_for_necessary_action])` |
+| essential, false/unsure/true/false | `needs_legal_review(open_textured(earlier_measures_ineffective, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on([earlier_measures_ineffective-unsure])])`, `[]` |
+| essential, false/true/true/false | `exercisable` |
 
-The slice uses three kernel predicates:
+**GDPR bar**
 
-- `nis2_supervision_fines_input_problems/2`;
-- `nis2_supervision_fines_pairs/3`;
-- `nis2_supervision_fines_missing_in_order/3`.
+| Profile | Expected `fine_barred_by_gdpr_fine` answer |
+|---|---|
+| D1 false, provision absent | `fine_not_barred` |
+| two conditions false | ONE solution `fine_not_barred` |
+| no condition false, provision other | `fine_not_barred` |
+| no condition false, provision absent | `indeterminate([infringed_provision])` |
+| art_21, D2 absent, D3 unsure | `indeterminate([infringement_may_entail_notifiable_personal_data_breach])` |
+| art_21, D2 unsure, D1 true, D3 unsure | review on D2, citing art_35_1, PAIRS `[infringement_may_entail_notifiable_personal_data_breach-unsure, gdpr_fine_for_same_conduct-unsure]` |
+| art_21, D2 true, D1 true, D3 unsure | review on D3, citing art_35_2 |
+| all true, art_23 | `fine_barred` |
 
-Nothing else crosses the slice boundary. The slice reads its citation atoms from `citations.clausal`'s vocabulary only.
+**Duty to inform**
+
+| Profile | Expected `data_protection_authority_information` answer |
+|---|---|
+| E1 false | `[]` |
+| provision other, neither false | `[]` |
+| provision absent | `indeterminate([infringed_provision])` |
+| art_21, E2 unsure, E1 true, key 10 absent | `indeterminate([data_protection_authority_in_other_member_state])` |
+| art_21, E2 unsure, E1 true, key 10 present | review on E2 |
+| art_21, both true, key 10 false | one item |
+| art_21, both true, key 10 true | two items in order |
+
+**Input check**
+
+| Profile | Expected `nis2_supervision_fines_input_problems` answer |
+|---|---|
+| well-formed | `[]` |
+| entity_class twice | `[duplicate_key(entity_class)]`, never also wrong_type |
+| crisp key `unsure` | `[wrong_type(Key)]` |
+| turnover -1 or 1.5 | `[wrong_type(worldwide_annual_turnover_eur)]` |
+| foo key twice | `[unknown_key(foo)]` |
+| ordering | duplicate or wrong_type in contract order, then unknown_key in first-occurrence order |
+| `not_a_list`, or a list with a bare atom | `[wrong_type(profile)]` |
+| each query on a bad profile | `input_problems(Problems)`, with `[]` citations |
+
+**Facade**
+
+| Profile | Expected verdict |
+|---|---|
+| essential, art_21, turnover, D1 false | `eligible`, citations `{art_34_4, art_35_2}` |
+| provision other | `ineligible` |
+| all GDPR conditions true, art_21 | `ineligible` |
+| D3 unsure | `indeterminate` |
+| bad profile | `invalid_profile` |
+
+what_if: setting `infringed_provision` to `other` flips eligible to ineligible.
+
+**Properties**, via validate_props:
+
+- totality and determinism: every query has exactly one solution over a generated grid of profiles, including absent and unsure values;
+- citation completeness: every cite is in `citation_vocabulary`;
+- missing-key coverage: each absent needed key is named singly;
+- boundary coverage: the tie turnovers 500000000 for both classes.

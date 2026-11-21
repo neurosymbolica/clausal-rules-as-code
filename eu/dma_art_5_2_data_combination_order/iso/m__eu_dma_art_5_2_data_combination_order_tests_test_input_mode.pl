@@ -1,0 +1,134 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dma_art_5_2_data_combination_order_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_kernel, [dma_art_5_2_data_combination_order_input_problems/2]).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_dma_art_5_2_data_combination_order, [article_5_application_status/4, personal_data_practice_status/4, consent_request_repetition_status/6, dma_art_5_2_data_combination_order_status/2, dma_art_5_2_data_combination_order_status_values/1]).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_fixtures, [dma_art_5_2_data_combination_order_profile_for/2]).
+
+stated(Truth, attested(Truth, attestation(host_operator, attested_on_2026_11_19, caller_statement, none))).
+
+test(status_holds_with_the_verdict_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_combining_with_consent, Profile),
+    dma_art_5_2_data_combination_order_status(Profile, practice_allowed_with_consent).
+test(application_answer_fully_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_combining_with_consent, Profile),
+    stated(true, Designation),
+    article_5_application_status(Profile, article_5_obligations_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)], [cite(eu_reg_2022_1925_art_5_1)]).
+test(application_not_listed_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_not_listed, Profile),
+    article_5_application_status(Profile, article_5_obligations_do_not_apply, _, _).
+test(other_basis_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_cross_use_no_choice_legal_obligation, Profile),
+    personal_data_practice_status(Profile, practice_allowed_on_other_legal_basis, _, _).
+test(prohibited_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_sign_in_consent_refused_no_basis, Profile),
+    personal_data_practice_status(Profile, practice_prohibited, _, _).
+test(outside_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_none_of_the_four, Profile),
+    personal_data_practice_status(Profile, practice_outside_article_5_2, _, _).
+test(not_listed_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(not_listed_everything_unsure, Profile),
+    personal_data_practice_status(Profile, article_5_obligations_do_not_apply, _, _).
+test(practice_named_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(practice_missing, Profile),
+    personal_data_practice_status(Profile, indeterminate([practice_under_article_5_2]), [], []).
+test(choice_named_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(choice_missing, Profile),
+    personal_data_practice_status(Profile, indeterminate([end_user_presented_with_specific_choice]), [], []).
+test(repetition_permitted_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_listed_not_yet_repeated, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2026, 3, 9), repeated_request_permitted, _, _).
+test(repetition_not_permitted_bound) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_listed_already_repeated, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2026, 3, 9), repeated_request_not_permitted, _, _).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    article_5_application_status(_UnboundProfile, input_problems([wrong_type(profile)]), [], []).
+test(a_partial_list_is_not_an_attribute_list) :-
+    dma_art_5_2_data_combination_order_profile_for(partial_list_profile, Profile),
+    personal_data_practice_status(Profile, input_problems([wrong_type(profile)]), [], []).
+test(a_non_attribute_element_is_not_an_attribute_list) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(practice_under_article_5_2, unsure), colour], Problems),
+    Problems == [wrong_type(profile)].
+test(an_atom_is_not_an_attribute_list) :-
+    dma_art_5_2_data_combination_order_input_problems(nothing, Problems),
+    Problems == [wrong_type(profile)].
+test(the_empty_profile_is_well_formed) :-
+    dma_art_5_2_data_combination_order_input_problems([], Problems),
+    Problems == [].
+test(an_unbound_attestation_reason_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_profile_for(unbound_attestation_reason, Profile),
+    article_5_application_status(Profile, input_problems([wrong_type(designated_as_gatekeeper_for_core_platform_service)]), [], []).
+test(duplicates_then_unknown_keys) :-
+    dma_art_5_2_data_combination_order_profile_for(duplicate_and_unknown_keys, Profile),
+    dma_art_5_2_data_combination_order_input_problems(Profile, Problems),
+    Problems == [duplicate_key(practice_under_article_5_2), unknown_key(colour)].
+test(equal_duplicate_values_are_still_a_duplicate) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(consent_request_already_repeated_in_period, true), attribute(consent_request_already_repeated_in_period, true)], Problems),
+    Problems == [duplicate_key(consent_request_already_repeated_in_period)].
+test(problems_follow_the_contract_order) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(colour, red), attribute(consent_request_already_repeated_in_period, maybe), attribute(practice_under_article_5_2, maybe), attribute(colour, blue)], Problems),
+    Problems == [wrong_type(practice_under_article_5_2), wrong_type(consent_request_already_repeated_in_period), unknown_key(colour)].
+test(a_number_key_is_an_unknown_key) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(42, true)], Problems),
+    Problems == [unknown_key(42)].
+test(an_unbound_key_is_named_as_given) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(FreeKey, true)], Problems),
+    Problems = [unknown_key(NamedKey)],
+    NamedKey == FreeKey.
+test(an_unbound_value_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(practice_under_article_5_2, _UnboundValue)], Problems),
+    Problems == [wrong_type(practice_under_article_5_2)].
+test(a_plain_boolean_outside_fact_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(end_user_consent_given, true)], Problems),
+    Problems == [wrong_type(end_user_consent_given)].
+test(a_three_argument_attestation_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(end_user_consent_given, attested(true, attestation(host_operator, noon, none)))], Problems),
+    Problems == [wrong_type(end_user_consent_given)].
+test(an_unsure_outside_fact_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, attested(unsure, attestation(host_operator, noon, statement, none)))], Problems),
+    Problems == [wrong_type(gatekeeper_may_rely_on_article_6_1_c_d_or_e)].
+test(an_unsure_crisp_key_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(consent_request_already_repeated_in_period, unsure)], Problems),
+    Problems == [wrong_type(consent_request_already_repeated_in_period)].
+test(an_unsure_judgement_is_well_formed) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(end_user_presented_with_specific_choice, unsure)], Problems),
+    Problems == [].
+test(an_unsure_practice_is_well_formed) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(practice_under_article_5_2, unsure)], Problems),
+    Problems == [].
+test(input_problems_come_before_every_other_step) :-
+    stated(false, Designation),
+    personal_data_practice_status([attribute(designated_as_gatekeeper_for_core_platform_service, Designation), attribute(colour, red)], input_problems([unknown_key(colour)]), [], []).
+test(an_unread_key_is_still_checked) :-
+    article_5_application_status([attribute(end_user_presented_with_specific_choice, maybe)], input_problems([wrong_type(end_user_presented_with_specific_choice)]), [], []).
+test(a_request_before_the_refusal_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_listed_not_yet_repeated, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2025, 3, 9), input_problems([wrong_type(request_date)]), [], []).
+test(an_impossible_request_day_is_wrong_type) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_listed_not_yet_repeated, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2025, 4, 31), input_problems([wrong_type(request_date)]), [], []).
+test(an_invalid_refusal_skips_the_order_check) :-
+    consent_request_repetition_status([], date(2025, 2, 30), date(2024, 1, 1), input_problems([wrong_type(refusal_date)]), [], []).
+test(year_zero_is_not_a_day) :-
+    consent_request_repetition_status([], date(0, 1, 1), date(2024, 1, 1), input_problems([wrong_type(refusal_date)]), [], []).
+test(profile_problems_precede_date_problems) :-
+    consent_request_repetition_status([attribute(consent_request_already_repeated_in_period, unsure)], date(2025, 3, 10), date(2025, 3, 1), input_problems([wrong_type(consent_request_already_repeated_in_period), wrong_type(request_date)]), [], []).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_combining_with_consent, Profile),
+    dma_art_5_2_data_combination_order_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, practice_allowed_with_consent),
+    dma_art_5_2_data_combination_order_status(Profile, Other).
+
+cp_test_names([status_holds_with_the_verdict_bound, application_answer_fully_bound, application_not_listed_bound, other_basis_bound, prohibited_bound, outside_bound, not_listed_bound, practice_named_bound, choice_named_bound, repetition_permitted_bound, repetition_not_permitted_bound, an_unbound_profile_is_not_an_attribute_list, a_partial_list_is_not_an_attribute_list, a_non_attribute_element_is_not_an_attribute_list, an_atom_is_not_an_attribute_list, the_empty_profile_is_well_formed, an_unbound_attestation_reason_is_wrong_type, duplicates_then_unknown_keys, equal_duplicate_values_are_still_a_duplicate, problems_follow_the_contract_order, a_number_key_is_an_unknown_key, an_unbound_key_is_named_as_given, an_unbound_value_is_wrong_type, a_plain_boolean_outside_fact_is_wrong_type, a_three_argument_attestation_is_wrong_type, an_unsure_outside_fact_is_wrong_type, an_unsure_crisp_key_is_wrong_type, an_unsure_judgement_is_well_formed, an_unsure_practice_is_well_formed, input_problems_come_before_every_other_step, an_unread_key_is_still_checked, a_request_before_the_refusal_is_wrong_type, an_impossible_request_day_is_wrong_type, an_invalid_refusal_skips_the_order_check, year_zero_is_not_a_day, profile_problems_precede_date_problems]).
+cp_test_fail_names([every_other_bound_status_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,4 +1,4 @@
-# Whether the contract or other legal act between a controller and a processor meets Article 28 of Regulation (EU) 2016/679, as a checklist: sufficient guarantees (Art ...
+# Regulation (EU) 2016/679 (GDPR) Article 28, as a checklist over a profile of a controller-processor arrangement: whether the contract or other legal act has the content ...
 
 `eu/data_protection/gdpr_processor_contract`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 201/201 | none (no provision-tracking ledger) | pass | pass | pass |
+| 216/216 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Whether the contract or other legal act between a controller and a processor meets Article 28 of Regulation (EU) 2016/679, as a checklist: sufficient guarantees (Art 28(1)); binding, Union or Member State law and writing (Art 28(3), (9)); the seven content elements and the eight stipulations (a) to (h) of Art 28(3) plus the notice of an infringing instruction (second subparagraph); and, when another processor is engaged, the conditions of Art 28(2) and (4). The role gates (Art 4(8) processor, Art 28(10) processor that becomes a controller) are evaluated first. Out of scope and deferred: Art 29 conduct, the Art 28(4) liability sentence, Art 28(5) codes and certification as a limb, the content of standard clauses (Art 28(6) to (8), recorded only as the outside fact standard_clauses_adopted), Art 6 lawfulness and Chapter V transfers.
+Regulation (EU) 2016/679 (GDPR) Article 28, as a checklist over a profile of a controller-processor arrangement: whether the contract or other legal act has the content Art 28 requires -- sufficient guarantees (Art 28(1)); binding on the processor and governed by Union or Member State law (Art 28(3), first sentence); in writing including electronic form (Art 28(9)); the seven content elements and the stipulations of points (a) to (h) of Art 28(3) and its second subparagraph; and, when another processor is engaged, the conditions of Art 28(2) and (4). The answer lists every missing limb cited to its point. Two role judgements gate the checklist: processing on behalf of a controller (Art 4(8), else not_applicable) and a processor determining purposes and means (Art 28(10), referred as a deferred provision). Adopted standard contractual clauses (Art 28(6) to (8)) are recorded as an attested outside fact and never change the status. Out of scope: the processor's conduct (Art 29), the Art 28(4) liability sentence, the Art 28(10) consequences (Art 26, Arts 82 to 84), the content of Arts 32 to 36 and Chapter III, Art 6 lawfulness and Chapter V transfers (sibling orders), and the content ...
 
 ## Pinned sources
 

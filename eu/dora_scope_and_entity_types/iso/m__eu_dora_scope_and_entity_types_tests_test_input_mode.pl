@@ -1,0 +1,140 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_scope_and_entity_types_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_scope_and_entity_types_dora_scope_and_entity_types, [dora_scope_decision/3, dora_entity_category/3, dora_scope_and_entity_types_status/2, dora_scope_and_entity_types_status_values/1]).
+:- use_module(m__eu_dora_scope_and_entity_types_kernel, [dora_scope_and_entity_types_input_problems/2]).
+:- use_module(m__eu_dora_scope_and_entity_types_fixtures, [dora_scope_and_entity_types_profile_for/2]).
+
+test(in_scope_holds_with_the_answer_bound) :-
+    dora_scope_and_entity_types_profile_for(credit_institution_not_giro_in_scope, Profile),
+    dora_scope_decision(Profile, in_scope(credit_institution), [cite(eu_reg_2022_2554_art_2_1_a)]).
+test(out_of_scope_holds_with_the_answer_bound) :-
+    dora_scope_and_entity_types_profile_for(credit_institution_giro_out_of_scope, Profile),
+    dora_scope_decision(Profile, out_of_scope, [cite(eu_reg_2022_2554_art_2_3_f)]).
+test(indeterminate_holds_with_the_key_bound) :-
+    dora_scope_and_entity_types_profile_for(credit_institution_giro_absent_indeterminate, Profile),
+    dora_scope_decision(Profile, indeterminate([post_office_giro_institution_under_article_2_5_3_of_directive_2013_36]), []).
+test(input_problems_hold_with_the_problems_bound) :-
+    dora_scope_and_entity_types_profile_for(unsure_crisp_value_wrong_type, Profile),
+    dora_scope_decision(Profile, input_problems([wrong_type(post_office_giro_institution_under_article_2_5_3_of_directive_2013_36)]), []).
+test(category_financial_entity_holds_with_the_answer_bound) :-
+    dora_scope_and_entity_types_profile_for(investment_firm_not_exempted_in_scope, Profile),
+    dora_entity_category(Profile, financial_entity, [cite(eu_reg_2022_2554_art_2_1_e), cite(eu_reg_2022_2554_art_2_2)]).
+test(category_provider_holds_with_the_answer_bound) :-
+    dora_scope_and_entity_types_profile_for(third_party_service_provider_in_scope, Profile),
+    dora_entity_category(Profile, ict_third_party_service_provider, [cite(eu_reg_2022_2554_art_2_1_u), cite(eu_reg_2022_2554_art_3_19)]).
+test(status_holds_with_the_verdict_bound) :-
+    dora_scope_and_entity_types_profile_for(payment_institution_in_scope, Profile),
+    findall(Status, dora_scope_and_entity_types_status(Profile, Status), [BaselineStatus]),
+    BaselineStatus == in_scope(payment_institution),
+    dora_scope_and_entity_types_status(Profile, BaselineStatus).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    dora_scope_and_entity_types_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(the_input_check_has_one_answer_for_an_unbound_profile) :-
+    findall(Problems, dora_scope_and_entity_types_input_problems(_, Problems), Answers),
+    length(Answers, 1).
+test(a_partial_list_is_not_an_attribute_list) :-
+    dora_scope_and_entity_types_input_problems([attribute(dora_entity_type, trading_venue)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_element_is_not_an_attribute) :-
+    dora_scope_and_entity_types_input_problems([attribute(dora_entity_type, trading_venue), _], Problems),
+    Problems == [wrong_type(profile)].
+test(a_foreign_element_gives_the_profile_problem_alone) :-
+    dora_scope_and_entity_types_input_problems([attribute(colour, blue), trading_venue], Problems),
+    Problems == [wrong_type(profile)].
+test(an_atom_is_not_an_attribute_list) :-
+    dora_scope_and_entity_types_input_problems(not_an_attribute_list, Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_key_is_named_as_given) :-
+    dora_scope_and_entity_types_input_problems([attribute(UnboundKey, true)], Problems),
+    Problems = [unknown_key(NamedKey)],
+    NamedKey == UnboundKey.
+test(two_unbound_keys_are_two_keys) :-
+    dora_scope_and_entity_types_input_problems([attribute(FirstKey, true), attribute(SecondKey, true)], Problems),
+    Problems = [unknown_key(FirstNamed), unknown_key(SecondNamed)],
+    FirstNamed == FirstKey,
+    SecondNamed == SecondKey.
+test(a_number_key_is_unknown_as_given) :-
+    dora_scope_and_entity_types_input_problems([attribute(7, true)], Problems),
+    Problems == [unknown_key(7)].
+test(a_compound_key_is_unknown_as_given) :-
+    dora_scope_and_entity_types_input_problems([attribute(entity(type), true)], Problems),
+    Problems == [unknown_key(entity(type))].
+test(an_unbound_value_is_wrong_type) :-
+    dora_scope_and_entity_types_input_problems([attribute(dora_entity_type, _)], Problems),
+    Problems == [wrong_type(dora_entity_type)].
+test(a_float_member_count_is_wrong_type) :-
+    dora_scope_and_entity_types_input_problems([attribute(iorp_pension_scheme_members_total, 15.0)], Problems),
+    Problems == [wrong_type(iorp_pension_scheme_members_total)].
+test(a_negative_member_count_is_wrong_type) :-
+    dora_scope_and_entity_types_input_problems([attribute(iorp_pension_scheme_members_total, -1)], Problems),
+    Problems == [wrong_type(iorp_pension_scheme_members_total)].
+test(an_atom_member_count_is_wrong_type) :-
+    dora_scope_and_entity_types_input_problems([attribute(iorp_pension_scheme_members_total, fifteen)], Problems),
+    Problems == [wrong_type(iorp_pension_scheme_members_total)].
+test(zero_members_is_well_formed) :-
+    dora_scope_and_entity_types_input_problems([attribute(iorp_pension_scheme_members_total, 0)], Problems),
+    Problems == [].
+test(unsure_is_not_a_crisp_value) :-
+    dora_scope_and_entity_types_input_problems([attribute(financial_entity_is_microenterprise, unsure)], Problems),
+    Problems == [wrong_type(financial_entity_is_microenterprise)].
+test(an_unlisted_type_atom_is_wrong_type) :-
+    dora_scope_and_entity_types_input_problems([attribute(dora_entity_type, bank)], Problems),
+    Problems == [wrong_type(dora_entity_type)].
+test(an_equal_duplicate_is_only_a_duplicate) :-
+    dora_scope_and_entity_types_input_problems([attribute(dora_entity_type, trading_venue), attribute(dora_entity_type, trading_venue)], Problems),
+    Problems == [duplicate_key(dora_entity_type)].
+test(a_duplicate_reads_none_of_its_values) :-
+    dora_scope_and_entity_types_input_problems([attribute(financial_entity_is_microenterprise, unsure), attribute(financial_entity_is_microenterprise, true)], Problems),
+    Problems == [duplicate_key(financial_entity_is_microenterprise)].
+test(a_repeated_unknown_key_is_named_once) :-
+    dora_scope_and_entity_types_input_problems([attribute(colour, blue), attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
+test(problems_follow_contract_order_then_first_occurrence) :-
+    dora_scope_and_entity_types_input_problems([attribute(zeta_key, 1), attribute(iorp_pension_scheme_members_total, 1.5), attribute(dora_entity_type, trading_venue), attribute(dora_entity_type, credit_institution), attribute(zeta_key, 2), attribute(alpha_key, 1)], Problems),
+    Problems == [duplicate_key(dora_entity_type), wrong_type(iorp_pension_scheme_members_total), unknown_key(zeta_key), unknown_key(alpha_key)].
+test(an_absent_key_is_not_a_problem) :-
+    dora_scope_and_entity_types_input_problems([], Problems),
+    Problems == [].
+test(an_exclusion_key_of_another_type_is_not_a_problem) :-
+    dora_scope_and_entity_types_input_problems([attribute(dora_entity_type, trading_venue), attribute(aifm_under_article_3_2_of_directive_2011_61, true)], Problems),
+    Problems == [].
+test(both_size_facts_true_is_not_a_problem) :-
+    dora_scope_and_entity_types_input_problems([attribute(financial_entity_is_microenterprise, true), attribute(financial_entity_is_small_or_medium_sized_enterprise, true)], Problems),
+    Problems == [].
+test(the_queries_refuse_a_profile_with_problems_first) :-
+    findall(Result - Citations, dora_entity_category([attribute(dora_entity_type, trading_venue), attribute(colour, blue)], Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(colour)]) - []].
+
+test(out_of_scope_is_rejected_for_an_in_scope_entity, fail) :-
+    dora_scope_and_entity_types_profile_for(credit_institution_not_giro_in_scope, Profile),
+    dora_scope_decision(Profile, out_of_scope, _).
+test(a_wrong_citation_is_rejected_when_bound, fail) :-
+    dora_scope_and_entity_types_profile_for(credit_institution_giro_out_of_scope, Profile),
+    dora_scope_decision(Profile, out_of_scope, [cite(eu_reg_2022_2554_art_2_1)]).
+test(a_wrong_missing_key_is_rejected_when_bound, fail) :-
+    dora_scope_and_entity_types_profile_for(credit_institution_giro_absent_indeterminate, Profile),
+    dora_scope_decision(Profile, indeterminate([dora_entity_type]), _).
+test(category_financial_entity_is_rejected_for_a_provider, fail) :-
+    dora_scope_and_entity_types_profile_for(third_party_service_provider_in_scope, Profile),
+    dora_entity_category(Profile, financial_entity, _).
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_scope_and_entity_types_profile_for(payment_institution_in_scope, Profile),
+    findall(Status, dora_scope_and_entity_types_status(Profile, Status), [BaselineStatus]),
+    dora_scope_and_entity_types_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_scope_and_entity_types_status(Profile, Other).
+
+cp_test_names([in_scope_holds_with_the_answer_bound, out_of_scope_holds_with_the_answer_bound, indeterminate_holds_with_the_key_bound, input_problems_hold_with_the_problems_bound, category_financial_entity_holds_with_the_answer_bound, category_provider_holds_with_the_answer_bound, status_holds_with_the_verdict_bound, an_unbound_profile_is_not_an_attribute_list, the_input_check_has_one_answer_for_an_unbound_profile, a_partial_list_is_not_an_attribute_list, an_unbound_element_is_not_an_attribute, a_foreign_element_gives_the_profile_problem_alone, an_atom_is_not_an_attribute_list, an_unbound_key_is_named_as_given, two_unbound_keys_are_two_keys, a_number_key_is_unknown_as_given, a_compound_key_is_unknown_as_given, an_unbound_value_is_wrong_type, a_float_member_count_is_wrong_type, a_negative_member_count_is_wrong_type, an_atom_member_count_is_wrong_type, zero_members_is_well_formed, unsure_is_not_a_crisp_value, an_unlisted_type_atom_is_wrong_type, an_equal_duplicate_is_only_a_duplicate, a_duplicate_reads_none_of_its_values, a_repeated_unknown_key_is_named_once, problems_follow_contract_order_then_first_occurrence, an_absent_key_is_not_a_problem, an_exclusion_key_of_another_type_is_not_a_problem, both_size_facts_true_is_not_a_problem, the_queries_refuse_a_profile_with_problems_first]).
+cp_test_fail_names([out_of_scope_is_rejected_for_an_in_scope_entity, a_wrong_citation_is_rejected_when_bound, a_wrong_missing_key_is_rejected_when_bound, category_financial_entity_is_rejected_for_a_provider, every_other_bound_status_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

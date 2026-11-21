@@ -6,55 +6,38 @@
 :- use_module(library(dif)).
 :- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_kernel, [gdpr_common_definitions_data_and_processing_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_citations, [citation/2, implements/1]).
-:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_gdpr_common_definitions_data_and_processing, [consent_elements/2, data_and_processing_outside_facts/2, decide_gdpr_common_definitions_data_and_processing/2, filing_system/2, gdpr_common_definitions_data_and_processing_checklist/2, gdpr_common_definitions_data_and_processing_decision_resolvable/1, gdpr_common_definitions_data_and_processing_status/2, gdpr_common_definitions_data_and_processing_status_values/1, information_society_service/2, international_organisation/2, personal_data/2, personal_data_breach/2, processing/2, profiling/2, pseudonymisation/2, receiving_body_is_recipient/2, receiving_body_is_third_party/2, restriction_of_processing/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_gdpr_common_definitions_data_and_processing, [attestation/4, attested/2, consent_elements/2, cross_reference_unresolved/2, data_and_processing_outside_facts/2, decide_gdpr_common_definitions_data_and_processing/2, definition_answer/3, document/2, duplicate_key/1, filing_system/2, gdpr_common_definitions_data_and_processing_checklist/2, gdpr_common_definitions_data_and_processing_decision_resolvable/1, gdpr_common_definitions_data_and_processing_status/2, gdpr_common_definitions_data_and_processing_status_values/1, indeterminate/1, information_society_service/2, input_problems/1, inputs_relied_on/1, international_organisation/2, needs_legal_review/2, open_textured/2, outside_fact/2, personal_data/2, personal_data_breach/2, processing/2, profiling/2, provenance/2, pseudonymisation/2, receiving_body_is_recipient/2, receiving_body_is_third_party/2, resolution/2, restriction_of_processing/2, unmet_elements/1, url/2, wrong_type/1]).
 :- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_queries, [gdpr_common_definitions_data_and_processing_profile_keys/1, gdpr_common_definitions_data_and_processing_what_if/4]).
 :- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_fixtures, [gdpr_common_definitions_data_and_processing_assess/2, gdpr_common_definitions_data_and_processing_profile_for/2, gdpr_common_definitions_data_and_processing_subject/1]).
 
 root_export(absent).
 root_export(additional_information_kept_separately).
 root_export(agreement_by_statement_or_clear_affirmative_action).
-root_export(attestation).
-root_export(attested).
 root_export(attribution_needs_additional_information).
 root_export(body_set_up_by_agreement_between_countries).
 root_export(breach_led_to_listed_outcome).
 root_export(breach_of_security).
-root_export(cross_reference_unresolved).
 root_export(data_disclosed_to_receiving_body).
-root_export(definition_answer).
-root_export(document).
-root_export(duplicate_key).
 root_export(evaluates_personal_aspects_of_natural_person).
-root_export(indeterminate).
 root_export(indication_freely_given).
 root_export(indication_informed).
 root_export(indication_specific).
 root_export(indication_unambiguous).
 root_export(information_relates_to_natural_person).
-root_export(input_problems).
-root_export(inputs_relied_on).
 root_export(measures_prevent_attribution).
 root_export(natural_person_identifiable).
 root_export(natural_person_identified).
-root_export(needs_legal_review).
 root_export(none).
 root_export(not_attempted).
-root_export(open_textured).
 root_export(operation_performed_on_the_data).
 root_export(organisation_governed_by_public_international_law).
-root_export(outside_fact).
 root_export(processing_automated).
-root_export(provenance).
 root_export(receiving_body_authorised_under_direct_authority).
 root_export(receiving_body_is_controller_or_processor).
 root_export(receiving_body_is_data_subject).
 root_export(receiving_body_public_authority_in_particular_inquiry).
-root_export(resolution).
 root_export(service_is_information_society_service).
 root_export(stored_data_marked_to_limit_future_processing).
 root_export(structured_set_accessible_by_specific_criteria).
 root_export(unknown_key).
-root_export(unmet_elements).
 root_export(unsure).
-root_export(url).
-root_export(wrong_type).

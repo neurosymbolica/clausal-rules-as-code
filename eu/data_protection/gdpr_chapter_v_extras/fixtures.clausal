@@ -1,35 +1,19 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % fixtures.clausal -- representative profiles for eu/data_protection/gdpr_chapter_v_extras.
-% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
-% predicate it calls -- that is the whole import list. Profile keys and
-% subject ids are atoms and need no import.
+% A TOP-LAYER consumer: imports only the slice's PUBLIC predicate it calls.
 %
 % A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
-% typed input contract). An outside fact is attested(Value,
-% attestation(By, At, Reason, Evidence)); By and At are placeholders the
-% host would supply.
+% typed input contract). Outside facts take the attested wrapper
+% attested(true | false, attestation(By, At, Reason, Evidence)).
 %
-% This order has no numeric threshold, so the near-miss controls are
-% ONE-KEY flips: each control differs from its positive case in one key
-% (one fulfilment key false or absent, one outside fact flipped or absent,
-% one outside fact given as a bare boolean). Expected facade statuses:
-%   controller_all_duties_met                      no_condition_breached
-%   controller_data_subject_not_told_interests     condition_breached
-%   controller_supervisory_authority_not_informed  condition_breached
-%   controller_safeguards_not_documented           condition_breached
-%   processor_documentation_met                    no_condition_breached
-%   processor_documentation_pending                more_input_needed
-%   no_second_subparagraph_transfer_stated         no_condition_breached
-%   second_subparagraph_unstated                   more_input_needed
-%   party_role_unstated                            more_input_needed
-%   foreign_judgment_with_agreement                no_condition_breached
-%   foreign_judgment_without_agreement             condition_breached
-%   foreign_judgment_agreement_unstated            more_input_needed
-%   onward_transfer_with_basis                     no_condition_breached
-%   onward_transfer_without_basis                  condition_breached
-%   onward_transfer_basis_unstated                 more_input_needed
-%   malformed_bare_boolean_outside_fact            input_problems([wrong_type(transfer_is_onward_transfer)])
+% The order has no numeric threshold, so the near-miss controls are ONE-KEY
+% flips: for every route, a positive subject and a control that differs from
+% it in one key (a fulfilment key true -> false, a role controller ->
+% processor, an outside fact true -> false, or a key removed) and gets the
+% neighbouring answer. Each subject names the route it exercises; the
+% expected answers live in tests/test_public_interface.clausal and are read
+% through the facade checklist (one row per duty and per limb).
 % =====================================================================
 
 :- module(fixtures, [
@@ -41,230 +25,235 @@
 :- use_module(eu/data_protection/gdpr_chapter_v_extras/gdpr_chapter_v_extras, [decide_gdpr_chapter_v_extras/2]).
 
 % ---- Subject registry ------------------------------------------------
-gdpr_chapter_v_extras_subject(controller_all_duties_met).
-gdpr_chapter_v_extras_subject(controller_data_subject_not_told_interests).
-gdpr_chapter_v_extras_subject(controller_supervisory_authority_not_informed).
-gdpr_chapter_v_extras_subject(controller_safeguards_not_documented).
-gdpr_chapter_v_extras_subject(processor_documentation_met).
-gdpr_chapter_v_extras_subject(processor_documentation_pending).
-gdpr_chapter_v_extras_subject(no_second_subparagraph_transfer_stated).
-gdpr_chapter_v_extras_subject(second_subparagraph_unstated).
+% Art 49(1), second subparagraph, second sentence (inform the supervisory authority)
+gdpr_chapter_v_extras_subject(supervisory_authority_informed).
+gdpr_chapter_v_extras_subject(supervisory_authority_not_informed).
+gdpr_chapter_v_extras_subject(supervisory_authority_information_unstated).
+% Reading (5) and Q9: the processor and the duties to inform
+gdpr_chapter_v_extras_subject(processor_asks_about_informing).
+gdpr_chapter_v_extras_subject(processor_asks_with_transfer_fact_absent).
+gdpr_chapter_v_extras_subject(controller_asks_with_transfer_fact_absent).
 gdpr_chapter_v_extras_subject(party_role_unstated).
-gdpr_chapter_v_extras_subject(foreign_judgment_with_agreement).
-gdpr_chapter_v_extras_subject(foreign_judgment_without_agreement).
-gdpr_chapter_v_extras_subject(foreign_judgment_agreement_unstated).
-gdpr_chapter_v_extras_subject(onward_transfer_with_basis).
-gdpr_chapter_v_extras_subject(onward_transfer_without_basis).
+% Reading (2): not a second-subparagraph transfer
+gdpr_chapter_v_extras_subject(transfer_not_under_second_subparagraph).
+gdpr_chapter_v_extras_subject(transfer_not_under_second_subparagraph_role_unstated).
+% Art 49(1), second subparagraph, third sentence (inform the data subject)
+gdpr_chapter_v_extras_subject(data_subject_fully_informed).
+gdpr_chapter_v_extras_subject(data_subject_not_told_of_interests).
+gdpr_chapter_v_extras_subject(data_subject_interests_refused_transfer_unstated).
+gdpr_chapter_v_extras_subject(data_subject_transfer_information_unstated).
+% Art 49(6) (document the assessment and the safeguards)
+gdpr_chapter_v_extras_subject(records_complete_for_processor).
+gdpr_chapter_v_extras_subject(records_lack_safeguards).
+gdpr_chapter_v_extras_subject(records_lack_assessment_safeguards_unstated).
+gdpr_chapter_v_extras_subject(records_safeguards_unstated).
+% Art 48
+gdpr_chapter_v_extras_subject(judgment_not_requiring_transfer).
+gdpr_chapter_v_extras_subject(judgment_with_international_agreement).
+gdpr_chapter_v_extras_subject(judgment_without_international_agreement).
+gdpr_chapter_v_extras_subject(judgment_agreement_unstated).
+gdpr_chapter_v_extras_subject(judgment_unstated_agreement_stated).
+% Art 44, first sentence (onward transfers)
+gdpr_chapter_v_extras_subject(onward_transfer_with_chapter_v_basis).
+gdpr_chapter_v_extras_subject(onward_transfer_without_chapter_v_basis).
 gdpr_chapter_v_extras_subject(onward_transfer_basis_unstated).
-gdpr_chapter_v_extras_subject(malformed_bare_boolean_outside_fact).
-
-% fixture_statement(Value, Attested): an attested outside fact (plumbing).
-fixture_statement(Value, attested(Value, attestation(host_user, host_timestamp, fixture_statement, none))).
+gdpr_chapter_v_extras_subject(transfer_not_onward).
+gdpr_chapter_v_extras_subject(transfer_not_onward_with_link_evidence).
+gdpr_chapter_v_extras_subject(onward_status_unstated_basis_stated).
+% The input check and the empty profile
+gdpr_chapter_v_extras_subject(duplicated_party_role).
+gdpr_chapter_v_extras_subject(bare_boolean_outside_fact).
+gdpr_chapter_v_extras_subject(unknown_key_supplied).
+gdpr_chapter_v_extras_subject(empty_profile).
+% Every limb answered at once
+gdpr_chapter_v_extras_subject(complete_transfer_file).
 
 % ---- Profiles --------------------------------------------------------
-% Second subparagraph, controller: every duty met; Art 48 and Art 44 not engaged.
-gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile) :-
-    fixture_statement(true, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(supervisory_authority_informed_of_transfer, true),
-        attribute(data_subject_informed_of_transfer, true),
-        attribute(data_subject_informed_of_compelling_legitimate_interests, true),
-        attribute(assessment_documented_in_records, true),
-        attribute(suitable_safeguards_documented_in_records, true),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss: the data subject was not told of the compelling legitimate interests.
-gdpr_chapter_v_extras_profile_for(controller_data_subject_not_told_interests, Profile) :-
-    fixture_statement(true, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(supervisory_authority_informed_of_transfer, true),
-        attribute(data_subject_informed_of_transfer, true),
-        attribute(data_subject_informed_of_compelling_legitimate_interests, false),
-        attribute(assessment_documented_in_records, true),
-        attribute(suitable_safeguards_documented_in_records, true),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss: the supervisory authority was not informed.
-gdpr_chapter_v_extras_profile_for(controller_supervisory_authority_not_informed, Profile) :-
-    fixture_statement(true, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(supervisory_authority_informed_of_transfer, false),
-        attribute(data_subject_informed_of_transfer, true),
-        attribute(data_subject_informed_of_compelling_legitimate_interests, true),
-        attribute(assessment_documented_in_records, true),
-        attribute(suitable_safeguards_documented_in_records, true),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss: the suitable safeguards are not documented in the records.
-gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile) :-
-    fixture_statement(true, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(supervisory_authority_informed_of_transfer, true),
-        attribute(data_subject_informed_of_transfer, true),
-        attribute(data_subject_informed_of_compelling_legitimate_interests, true),
-        attribute(assessment_documented_in_records, true),
-        attribute(suitable_safeguards_documented_in_records, false),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Processor: the duties to inform are not its duties; documentation met.
-gdpr_chapter_v_extras_profile_for(processor_documentation_met, Profile) :-
-    fixture_statement(true, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, processor),
-        attribute(assessment_documented_in_records, true),
-        attribute(suitable_safeguards_documented_in_records, true),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss: the safeguards documentation key is absent.
-gdpr_chapter_v_extras_profile_for(processor_documentation_pending, Profile) :-
-    fixture_statement(true, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, processor),
-        attribute(assessment_documented_in_records, true),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% The transfer is stated not to rely on the second subparagraph.
-gdpr_chapter_v_extras_profile_for(no_second_subparagraph_transfer_stated, Profile) :-
-    fixture_statement(false, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss: the second-subparagraph statement is absent (the duties refer).
-gdpr_chapter_v_extras_profile_for(second_subparagraph_unstated, Profile) :-
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss of controller_all_duties_met: party_role absent.
-gdpr_chapter_v_extras_profile_for(party_role_unstated, Profile) :-
-    fixture_statement(true, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(supervisory_authority_informed_of_transfer, true),
-        attribute(data_subject_informed_of_transfer, true),
-        attribute(data_subject_informed_of_compelling_legitimate_interests, true),
-        attribute(assessment_documented_in_records, true),
-        attribute(suitable_safeguards_documented_in_records, true),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Art 48: a third-country judgment based on an international agreement.
-gdpr_chapter_v_extras_profile_for(foreign_judgment_with_agreement, Profile) :-
-    fixture_statement(false, TransferStatement),
-    fixture_statement(true, JudgmentStatement),
-    fixture_statement(true, AgreementStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(international_agreement_basis_for_judgment_or_decision, AgreementStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss: no international agreement.
-gdpr_chapter_v_extras_profile_for(foreign_judgment_without_agreement, Profile) :-
-    fixture_statement(false, TransferStatement),
-    fixture_statement(true, JudgmentStatement),
-    fixture_statement(false, AgreementStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(international_agreement_basis_for_judgment_or_decision, AgreementStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Near-miss: the agreement statement is absent (referred).
-gdpr_chapter_v_extras_profile_for(foreign_judgment_agreement_unstated, Profile) :-
-    fixture_statement(false, TransferStatement),
-    fixture_statement(true, JudgmentStatement),
-    fixture_statement(false, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Art 44: an onward transfer with its own Chapter V basis.
-gdpr_chapter_v_extras_profile_for(onward_transfer_with_basis, Profile) :-
-    fixture_statement(false, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(true, OnwardStatement),
-    fixture_statement(true, OnwardBasisStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement),
-        attribute(onward_transfer_has_chapter_v_basis, OnwardBasisStatement)
-    ].
-% Near-miss: the onward transfer has no Chapter V basis.
-gdpr_chapter_v_extras_profile_for(onward_transfer_without_basis, Profile) :-
-    fixture_statement(false, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(true, OnwardStatement),
-    fixture_statement(false, OnwardBasisStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement),
-        attribute(onward_transfer_has_chapter_v_basis, OnwardBasisStatement)
-    ].
-% Near-miss: the onward transfer's Chapter V answer is absent (referred).
-gdpr_chapter_v_extras_profile_for(onward_transfer_basis_unstated, Profile) :-
-    fixture_statement(false, TransferStatement),
-    fixture_statement(false, JudgmentStatement),
-    fixture_statement(true, OnwardStatement),
-    Profile = [
-        attribute(transfer_relies_on_article_49_1_second_subparagraph, TransferStatement),
-        attribute(party_role, controller),
-        attribute(third_country_judgment_or_decision_requires_transfer, JudgmentStatement),
-        attribute(transfer_is_onward_transfer, OnwardStatement)
-    ].
-% Malformed: an outside fact given as a bare boolean (control: onward_transfer_with_basis).
-gdpr_chapter_v_extras_profile_for(malformed_bare_boolean_outside_fact, Profile) :-
-    Profile = [
-        attribute(transfer_is_onward_transfer, true)
-    ].
+
+% Controller, second-subparagraph transfer, authority informed: duty_met.
+gdpr_chapter_v_extras_profile_for(supervisory_authority_informed, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(supervisory_authority_informed_of_transfer, true)
+]).
+% Near-miss: authority not informed: duty_not_met.
+gdpr_chapter_v_extras_profile_for(supervisory_authority_not_informed, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(supervisory_authority_informed_of_transfer, false)
+]).
+% Near-miss: the fulfilment key removed: indeterminate.
+gdpr_chapter_v_extras_profile_for(supervisory_authority_information_unstated, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller)
+]).
+% Near-miss of the first: role processor: not_a_processor_duty.
+gdpr_chapter_v_extras_profile_for(processor_asks_about_informing, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, processor),
+    attribute(supervisory_authority_informed_of_transfer, true)
+]).
+% Q9: a stated processor decides a duty to inform before the absent transfer fact.
+gdpr_chapter_v_extras_profile_for(processor_asks_with_transfer_fact_absent, [
+    attribute(party_role, processor)
+]).
+% Near-miss of Q9: controller with the transfer fact absent: referral.
+gdpr_chapter_v_extras_profile_for(controller_asks_with_transfer_fact_absent, [
+    attribute(party_role, controller),
+    attribute(supervisory_authority_informed_of_transfer, true)
+]).
+% Role removed, transfer fact present: party_role is named.
+gdpr_chapter_v_extras_profile_for(party_role_unstated, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(supervisory_authority_informed_of_transfer, true)
+]).
+% Transfer not under the second subparagraph: the duty does not arise.
+gdpr_chapter_v_extras_profile_for(transfer_not_under_second_subparagraph, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(false, attestation(by, at, reason, none))),
+    attribute(party_role, controller)
+]).
+% Near-miss: role removed: a duty to inform names party_role first.
+gdpr_chapter_v_extras_profile_for(transfer_not_under_second_subparagraph_role_unstated, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(false, attestation(by, at, reason, none)))
+]).
+% Data subject told of the transfer and of the interests: duty_met.
+gdpr_chapter_v_extras_profile_for(data_subject_fully_informed, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(data_subject_informed_of_transfer, true),
+    attribute(data_subject_informed_of_compelling_legitimate_interests, true)
+]).
+% Near-miss: not told of the interests: duty_not_met (Q6).
+gdpr_chapter_v_extras_profile_for(data_subject_not_told_of_interests, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(data_subject_informed_of_transfer, true),
+    attribute(data_subject_informed_of_compelling_legitimate_interests, false)
+]).
+% A false key decides before an absent one is named.
+gdpr_chapter_v_extras_profile_for(data_subject_interests_refused_transfer_unstated, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(data_subject_informed_of_compelling_legitimate_interests, false)
+]).
+% Near-miss: the second element true, the first absent: the first is named.
+gdpr_chapter_v_extras_profile_for(data_subject_transfer_information_unstated, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(data_subject_informed_of_compelling_legitimate_interests, true)
+]).
+% Processor documents the assessment and the safeguards: duty_met (Q3).
+gdpr_chapter_v_extras_profile_for(records_complete_for_processor, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, processor),
+    attribute(assessment_documented_in_records, true),
+    attribute(suitable_safeguards_documented_in_records, true)
+]).
+% Near-miss: safeguards not documented: duty_not_met.
+gdpr_chapter_v_extras_profile_for(records_lack_safeguards, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, processor),
+    attribute(assessment_documented_in_records, true),
+    attribute(suitable_safeguards_documented_in_records, false)
+]).
+% Assessment not documented, safeguards absent: duty_not_met.
+gdpr_chapter_v_extras_profile_for(records_lack_assessment_safeguards_unstated, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(assessment_documented_in_records, false)
+]).
+% Near-miss: assessment documented, safeguards absent: indeterminate.
+gdpr_chapter_v_extras_profile_for(records_safeguards_unstated, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(assessment_documented_in_records, true)
+]).
+% Art 48 not engaged.
+gdpr_chapter_v_extras_profile_for(judgment_not_requiring_transfer, [
+    attribute(third_country_judgment_or_decision_requires_transfer, attested(false, attestation(by, at, reason, none)))
+]).
+% Judgment with an international agreement: not barred.
+gdpr_chapter_v_extras_profile_for(judgment_with_international_agreement, [
+    attribute(third_country_judgment_or_decision_requires_transfer, attested(true, attestation(by, at, reason, none))),
+    attribute(international_agreement_basis_for_judgment_or_decision, attested(true, attestation(by, at, reason, none)))
+]).
+% Near-miss: no international agreement: not recognisable or enforceable.
+gdpr_chapter_v_extras_profile_for(judgment_without_international_agreement, [
+    attribute(third_country_judgment_or_decision_requires_transfer, attested(true, attestation(by, at, reason, none))),
+    attribute(international_agreement_basis_for_judgment_or_decision, attested(false, attestation(by, at, reason, none)))
+]).
+% Near-miss: the agreement fact removed: referral on it.
+gdpr_chapter_v_extras_profile_for(judgment_agreement_unstated, [
+    attribute(third_country_judgment_or_decision_requires_transfer, attested(true, attestation(by, at, reason, none)))
+]).
+% The judgment fact removed: referral on it, the agreement fact behind it.
+gdpr_chapter_v_extras_profile_for(judgment_unstated_agreement_stated, [
+    attribute(international_agreement_basis_for_judgment_or_decision, attested(true, attestation(by, at, reason, none)))
+]).
+% Onward transfer with its own Chapter V basis: may take place.
+gdpr_chapter_v_extras_profile_for(onward_transfer_with_chapter_v_basis, [
+    attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none))),
+    attribute(onward_transfer_has_chapter_v_basis, attested(true, attestation(by, at, reason, none)))
+]).
+% Near-miss: no Chapter V basis: may not take place.
+gdpr_chapter_v_extras_profile_for(onward_transfer_without_chapter_v_basis, [
+    attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none))),
+    attribute(onward_transfer_has_chapter_v_basis, attested(false, attestation(by, at, reason, none)))
+]).
+% Near-miss: the basis fact removed: referral on it.
+gdpr_chapter_v_extras_profile_for(onward_transfer_basis_unstated, [
+    attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none)))
+]).
+% Not an onward transfer (the basis fact is not read).
+gdpr_chapter_v_extras_profile_for(transfer_not_onward, [
+    attribute(transfer_is_onward_transfer, attested(false, attestation(by, at, reason, none))),
+    attribute(onward_transfer_has_chapter_v_basis, attested(true, attestation(by, at, reason, none)))
+]).
+% The same with url evidence in the attestation (evidence is not inspected).
+gdpr_chapter_v_extras_profile_for(transfer_not_onward_with_link_evidence, [
+    attribute(transfer_is_onward_transfer, attested(false, attestation(by, at, reason, url(source_location, retrieved_at))))
+]).
+% The onward fact removed: referral on it, the basis fact behind it.
+gdpr_chapter_v_extras_profile_for(onward_status_unstated_basis_stated, [
+    attribute(onward_transfer_has_chapter_v_basis, attested(true, attestation(by, at, reason, none)))
+]).
+% Input check: a contract key twice.
+gdpr_chapter_v_extras_profile_for(duplicated_party_role, [
+    attribute(party_role, controller),
+    attribute(party_role, controller)
+]).
+% Input check: a bare boolean for an outside fact.
+gdpr_chapter_v_extras_profile_for(bare_boolean_outside_fact, [
+    attribute(transfer_is_onward_transfer, true)
+]).
+% Input check: a key outside the eleven.
+gdpr_chapter_v_extras_profile_for(unknown_key_supplied, [
+    attribute(transfer_is_onward_transfer, attested(false, attestation(by, at, reason, none))),
+    attribute(transfer_date, today)
+]).
+% Nothing stated: every limb refers on its first outside fact.
+gdpr_chapter_v_extras_profile_for(empty_profile, []).
+% Every contract key stated, every element done.
+gdpr_chapter_v_extras_profile_for(complete_transfer_file, [
+    attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+    attribute(party_role, controller),
+    attribute(supervisory_authority_informed_of_transfer, true),
+    attribute(data_subject_informed_of_transfer, true),
+    attribute(data_subject_informed_of_compelling_legitimate_interests, true),
+    attribute(assessment_documented_in_records, true),
+    attribute(suitable_safeguards_documented_in_records, true),
+    attribute(third_country_judgment_or_decision_requires_transfer, attested(true, attestation(by, at, reason, none))),
+    attribute(international_agreement_basis_for_judgment_or_decision, attested(true, attestation(by, at, reason, none))),
+    attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none))),
+    attribute(onward_transfer_has_chapter_v_basis, attested(true, attestation(by, at, reason, none)))
+]).
+% Scaffold baseline profile read by the scaffold tests (not a registered
+% subject): an onward transfer with its own Chapter V basis, a final answer
+% that carries its citation.
+gdpr_chapter_v_extras_profile_for(todo_baseline_subject, [
+    attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none))),
+    attribute(onward_transfer_has_chapter_v_basis, attested(true, attestation(by, at, reason, none)))
+]).
 
 % ---- Convenience wrapper ---------------------------------------------
 gdpr_chapter_v_extras_assess(Subject, Result) :-

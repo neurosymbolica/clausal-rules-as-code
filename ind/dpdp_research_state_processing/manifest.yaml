@@ -1,0 +1,361 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: ind/dpdp_research_state_processing
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dpdp_research_state_processing"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, plus the bare root-export atoms
+# (profile keys, result atoms, unsure) the scorer reads as package-root
+# module attributes -- keep in sync with the :- module(...) export lists
+# re-exported via the package facade __init__.clausal. The atoms are never
+# in a :- module export list; they are carried by root_atoms below.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dpdp_research_state_processing.clausal --
+  - "research_exemption/3"
+  - "state_processing_standards/3"
+  - "state_processing_disapplied_provisions/3"
+  - "decide_dpdp_research_state_processing/2"
+  - "dpdp_research_state_processing_status/2"
+  - "dpdp_research_state_processing_checklist/2"
+  - "dpdp_research_state_processing_decision_resolvable/1"
+  - "dpdp_research_state_processing_status_values/1"
+  # -- queries.clausal --
+  - "dpdp_research_state_processing_profile_keys/1"
+  - "dpdp_research_state_processing_input_problems/2"
+  - "dpdp_research_state_processing_what_if/4"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "exempt_from_act"
+  - "not_exempt"
+  - "not_in_force"
+  - "follows_second_schedule"
+  - "does_not_follow_second_schedule"
+  - "not_applicable"
+  - "sections_8_7_12_2_and_12_3_do_not_apply"
+  - "sections_8_7_and_12_3_do_not_apply"
+  - "unsure"
+  - "section_7_in_force_on_reference_date"
+  - "section_17_in_force_on_reference_date"
+  - "reference_date"
+  - "processing_necessary_for_research_archiving_or_statistical_purposes"
+  - "personal_data_to_be_used_for_decision_specific_to_data_principal"
+  - "processing_for_section_7_b_use"
+  - "lawful_manner"
+  - "limited_to_necessary_personal_data"
+  - "completeness_accuracy_and_consistency"
+  - "retention_only_while_required"
+  - "reasonable_security_safeguards"
+  - "intimation_to_data_principal"
+  - "business_contact_for_questions"
+  - "link_and_means_to_exercise_rights"
+  - "consistent_with_other_applicable_standards"
+  - "accountability_for_observance"
+  - "processing_by_state_or_instrumentality"
+  - "purpose_includes_decision_affecting_data_principal"
+  # -- fixtures.clausal --
+  - "dpdp_research_state_processing_subject/1"
+  - "dpdp_research_state_processing_profile_for/2"
+  - "dpdp_research_state_processing_assess/2"
+
+# root_atoms: the bare atoms the reference scorer reads off the package root
+# (the eighteen profile keys, the eight result atoms and the judgement value
+# unsure). The generated facade carries them; no module exports an atom.
+root_atoms:
+  - "exempt_from_act"
+  - "not_exempt"
+  - "not_in_force"
+  - "follows_second_schedule"
+  - "does_not_follow_second_schedule"
+  - "not_applicable"
+  - "sections_8_7_12_2_and_12_3_do_not_apply"
+  - "sections_8_7_and_12_3_do_not_apply"
+  - "unsure"
+  - "section_7_in_force_on_reference_date"
+  - "section_17_in_force_on_reference_date"
+  - "reference_date"
+  - "processing_necessary_for_research_archiving_or_statistical_purposes"
+  - "personal_data_to_be_used_for_decision_specific_to_data_principal"
+  - "processing_for_section_7_b_use"
+  - "lawful_manner"
+  - "limited_to_necessary_personal_data"
+  - "completeness_accuracy_and_consistency"
+  - "retention_only_while_required"
+  - "reasonable_security_safeguards"
+  - "intimation_to_data_principal"
+  - "business_contact_for_questions"
+  - "link_and_means_to_exercise_rights"
+  - "consistent_with_other_applicable_standards"
+  - "accountability_for_observance"
+  - "processing_by_state_or_instrumentality"
+  - "purpose_includes_decision_affecting_data_principal"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Shared backbone packages this domain imports.
+uses:
+  - "formalize_lib"
+
+scope: >-
+  Three determinations under the Digital Personal Data Protection Act 2023 and
+  the Digital Personal Data Protection Rules 2025, each asked about ONE
+  processing activity of personal data on ONE reference day and each answered
+  on its own: (a) research_exemption -- whether the Act does not apply to the
+  processing under s 17(2)(b) read with rule 16 and Second Schedule items (a),
+  (c), (d), (e), (f) and (h) (exempt_from_act, not_exempt, not_in_force);
+  (b) state_processing_standards -- whether processing by the State or an
+  instrumentality for a use under s 7(b) follows the Second Schedule standards
+  rule 5(1) requires (follows_second_schedule, does_not_follow_second_schedule,
+  not_applicable, not_in_force); (c) state_processing_disapplied_provisions --
+  which of s 8(7), s 12(2) and s 12(3) s 17(4) disapplies for processing by the
+  State or an instrumentality. Rules 5 and 16 are read as in force from 13 May
+  2027 (calculated from rule 1(4)); the commencement of s 7 and s 17 is stated
+  by the caller. Open-textured judgements (research purpose, s 7(b) use, the
+  seven open-textured standards, State or instrumentality, decision affecting
+  the Data Principal) are stated by the caller and referred to a lawyer when
+  unsure. Out of scope: the other exemptions of s 17 (s 17(1), s 17(2)(a),
+  s 17(3), s 17(5)), the other legitimate uses of s 7 (sibling order
+  ind/dpdp-notice-consent), the content of s 8(7), s 12(2) and s 12(3), any
+  Central Government notification or policy and any other law the Second
+  Schedule refers to.
+
+sources:
+  - "Digital Personal Data Protection Act, 2023 (No. 22 of 2023), Gazette of India Extraordinary, MeitY website PDF fetched 2026-11-13 (not India Code, not compared with the gazette): s 7(b), s 17(2), s 17(2)(b), s 17(4); definitions s 2(i), (j), (k), (t), (u), (x), (zb) relied on by readings."
+  - "Digital Personal Data Protection Rules, 2025, G.S.R. 846(E), Gazette of India Extraordinary (header dated 13 November 2025), English text, MeitY website PDF fetched 2026-11-13: rule 1(4), rule 5(1), rule 16 and the Second Schedule items (a) to (h) with (g)(i) to (iii)."
+
+query_interface:
+  2: "dpdp_research_state_processing_status/2"      # eligibility/status verdict: the three contract results
+  7: "dpdp_research_state_processing_checklist/2"   # justification: one cited row per query
+  16: "dpdp_research_state_processing_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: definitions_not_read
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2_a
+  - in-dpdp-act-2023-meity-pdf#s2_b
+  - in-dpdp-act-2023-meity-pdf#s2_c
+  - in-dpdp-act-2023-meity-pdf#s2_d
+  - in-dpdp-act-2023-meity-pdf#s2_e
+  - in-dpdp-act-2023-meity-pdf#s2_f
+  - in-dpdp-act-2023-meity-pdf#s2_g
+  - in-dpdp-act-2023-meity-pdf#s2_h
+  - in-dpdp-act-2023-meity-pdf#s2_j_i
+  - in-dpdp-act-2023-meity-pdf#s2_j_ii
+  - in-dpdp-act-2023-meity-pdf#s2_l
+  - in-dpdp-act-2023-meity-pdf#s2_m
+  - in-dpdp-act-2023-meity-pdf#s2_n
+  - in-dpdp-act-2023-meity-pdf#s2_o
+  - in-dpdp-act-2023-meity-pdf#s2_o_i
+  - in-dpdp-act-2023-meity-pdf#s2_o_ii
+  - in-dpdp-act-2023-meity-pdf#s2_p
+  - in-dpdp-act-2023-meity-pdf#s2_p_i
+  - in-dpdp-act-2023-meity-pdf#s2_p_ii
+  - in-dpdp-act-2023-meity-pdf#s2_q
+  - in-dpdp-act-2023-meity-pdf#s2_r
+  - in-dpdp-act-2023-meity-pdf#s2_s
+  - in-dpdp-act-2023-meity-pdf#s2_s_i
+  - in-dpdp-act-2023-meity-pdf#s2_s_ii
+  - in-dpdp-act-2023-meity-pdf#s2_s_iii
+  - in-dpdp-act-2023-meity-pdf#s2_s_iv
+  - in-dpdp-act-2023-meity-pdf#s2_s_v
+  - in-dpdp-act-2023-meity-pdf#s2_s_vi
+  - in-dpdp-act-2023-meity-pdf#s2_s_vii
+  - in-dpdp-act-2023-meity-pdf#s2_v
+  - in-dpdp-act-2023-meity-pdf#s2_w
+  - in-dpdp-act-2023-meity-pdf#s2_y
+  - in-dpdp-act-2023-meity-pdf#s2_z
+  - in-dpdp-act-2023-meity-pdf#s2_za
+  reason: The definitions of s 2 other than clauses (i), (j), (k), (t), (u), (x) and
+    (zb) are not read by any limb or reading of this order; the words they define,
+    where used, are read in their ordinary sense or by the caller.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: definitions_relied_on_by_readings
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2_i
+  - in-dpdp-act-2023-meity-pdf#s2_j
+  - in-dpdp-act-2023-meity-pdf#s2_k
+  - in-dpdp-act-2023-meity-pdf#s2_t
+  - in-dpdp-act-2023-meity-pdf#s2_u
+  - in-dpdp-act-2023-meity-pdf#s2_x
+  - in-dpdp-act-2023-meity-pdf#s2_zb
+  reason: 's 2(i) (Data Fiduciary), (j) (Data Principal), (k) (Data Processor), (t)
+    (personal data), (u) (personal data breach), (x) (processing) and (zb) (State)
+    are quoted because readings (6), (11) and (13) rely on them; no limb cites them:
+    the caller''s keys carry the facts they define.'
+  consequence: 'None for a caller: the standard keys, processing_for_section_7_b_use
+    and processing_by_state_or_instrumentality carry them.'
+  declaration: not_an_exception
+  debt: true
+- what: headings_and_lead_in
+  units:
+  - in-dpdp-act-2023-meity-pdf#s2
+  - in-dpdp-act-2023-meity-pdf#s17
+  - in-dpdp-rules-2025-meity-pdf#r1
+  - in-dpdp-rules-2025-meity-pdf#r2
+  reason: These units hold only the lead-in words of s 2 or the number or heading
+    of s 17, rule 1 and rule 2; every limb cites the sub-section or rule it reads.
+    Document structure.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: heading_of_rule_5
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r5
+  reason: The heading of rule 5 (processing of personal data for provision or issue
+    of subsidy, benefit, service, certificate, licence or permit by State and its
+    instrumentalities) is cited by no limb; reading (11) relies on it to read processing
+    'under this rule' as processing by the State or an instrumentality for a use under
+    s 7(b) (Q5).
+  consequence: state_processing_standards gives not_applicable when processing_for_section_7_b_use
+    is false; under the wider reading of Q5 some of those answers would read the standards
+    instead.
+  declaration: answered_with_caveat
+  debt: true
+- what: other_certain_legitimate_uses
+  units:
+  - in-dpdp-act-2023-meity-pdf#s7
+  - in-dpdp-act-2023-meity-pdf#s7_a
+  - in-dpdp-act-2023-meity-pdf#s7_c
+  - in-dpdp-act-2023-meity-pdf#s7_d
+  - in-dpdp-act-2023-meity-pdf#s7_e
+  - in-dpdp-act-2023-meity-pdf#s7_f
+  - in-dpdp-act-2023-meity-pdf#s7_g
+  - in-dpdp-act-2023-meity-pdf#s7_h
+  - in-dpdp-act-2023-meity-pdf#s7_h_explanation
+  - in-dpdp-act-2023-meity-pdf#s7_i
+  reason: 'The lead-in words of s 7 and its clauses (a) and (c) to (i), with the Explanation
+    to clause (h) (which names the Disaster Management Act 2005, not pinned: see that
+    instrument), are the other certain legitimate uses; they are read by the sibling
+    order on this Act, notice and consent (ind/dpdp-notice-consent), not here. Only
+    s 7(b), which rule 5 governs, is read (reading (11)).'
+  consequence: 'state_processing_standards reads no use other than s 7(b): processing
+    on another ground gives not_applicable when the caller says processing_for_section_7_b_use
+    is false.'
+  declaration: answered_with_caveat
+  debt: true
+- what: branches_of_section_7_b
+  units:
+  - in-dpdp-act-2023-meity-pdf#s7_b_i
+  - in-dpdp-act-2023-meity-pdf#s7_b_ii
+  reason: The two branches of s 7(b) (earlier consent; data in a notified State database)
+    are read inside the judgement processing_for_section_7_b_use (reading (11), Q5).
+  consequence: The answers never say which branch of s 7(b) applied.
+  declaration: answered_with_caveat
+  debt: true
+- what: illustrations
+  units:
+  - in-dpdp-act-2023-meity-pdf#s7_a_illustration
+  - in-dpdp-act-2023-meity-pdf#s7_a_illustration_I
+  - in-dpdp-act-2023-meity-pdf#s7_a_illustration_II
+  - in-dpdp-act-2023-meity-pdf#s7_b_illustration
+  reason: The Illustrations to s 7(a) and s 7(b) show applications of the text; they
+    add no rule this order reads.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: other_exemptions_of_section_17_1
+  units:
+  - in-dpdp-act-2023-meity-pdf#s17_1
+  - in-dpdp-act-2023-meity-pdf#s17_1_a
+  - in-dpdp-act-2023-meity-pdf#s17_1_b
+  - in-dpdp-act-2023-meity-pdf#s17_1_c
+  - in-dpdp-act-2023-meity-pdf#s17_1_d
+  - in-dpdp-act-2023-meity-pdf#s17_1_e
+  - in-dpdp-act-2023-meity-pdf#s17_1_f
+  - in-dpdp-act-2023-meity-pdf#s17_1_f_explanation
+  - in-dpdp-act-2023-meity-pdf#s17_1_illustration
+  reason: 's 17(1) disapplies Chapter II (except s 8(1) and (5)), Chapter III and
+    s 16 in six cases (legal claims; courts and regulators; offences; foreign Data
+    Principals under a contract; schemes of arrangement; defaulters'' financial information),
+    with an Explanation that takes two terms from the Insolvency and Bankruptcy Code
+    2016 (not pinned: see that instrument) and an Illustration. Not formalised here
+    by the law agent''s scope (asia-privacy-law, 2026-11-16); a later order if wanted
+    (reading (18), Q11).'
+  consequence: not_exempt and the other answers never say whether s 17(1) exempts
+    the processing.
+  declaration: answered_with_caveat
+  debt: true
+- what: exemptions_by_notification
+  units:
+  - in-dpdp-act-2023-meity-pdf#s17_2_a
+  - in-dpdp-act-2023-meity-pdf#s17_3
+  - in-dpdp-act-2023-meity-pdf#s17_3_explanation
+  - in-dpdp-act-2023-meity-pdf#s17_5
+  reason: 's 17(2)(a), s 17(3) with its Explanation and s 17(5) each turn on a Central
+    Government notification, none of which is pinned or has been seen: see the notification
+    (reading (18), Q11).'
+  consequence: not_exempt and the other answers never say whether a notified exemption
+    applies.
+  declaration: answered_with_caveat
+  debt: true
+- what: short_title_of_the_rules
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r1_1
+  reason: Rule 1(1) gives the short title of the Rules. Document structure.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: commencement_of_other_rules
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r1_2
+  - in-dpdp-rules-2025-meity-pdf#r1_3
+  reason: Rule 1(2) and (3) bring other rules into force (rules 1, 2 and 17 to 21
+    on publication; rule 4 after one year); only rule 1(4), which dates rules 5 and
+    16, is read.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: definitions_of_the_rules
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r2_1
+  - in-dpdp-rules-2025-meity-pdf#r2_1_a
+  - in-dpdp-rules-2025-meity-pdf#r2_1_b
+  - in-dpdp-rules-2025-meity-pdf#r2_1_c
+  - in-dpdp-rules-2025-meity-pdf#r2_1_d
+  - in-dpdp-rules-2025-meity-pdf#r2_2
+  reason: Rule 2 defines terms of the Rules (Act, techno-legal measures, user account,
+    verifiable consent) and carries the Act's definitions into the Rules; none of
+    the terms it defines is read by a limb of this order.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: meanings_in_rule_5_2
+  units:
+  - in-dpdp-rules-2025-meity-pdf#r5_2
+  - in-dpdp-rules-2025-meity-pdf#r5_2_a
+  - in-dpdp-rules-2025-meity-pdf#r5_2_b
+  - in-dpdp-rules-2025-meity-pdf#r5_2_c
+  - in-dpdp-rules-2025-meity-pdf#r5_2_c_i
+  - in-dpdp-rules-2025-meity-pdf#r5_2_c_ii
+  reason: Rule 5(2) says what a subsidy, benefit, service, certificate, licence or
+    permit provided or issued 'under law', 'under policy' or 'using public funds'
+    means in rule 5 and the Second Schedule; these are read inside the judgement processing_for_section_7_b_use
+    (reading (11), Q5).
+  consequence: The answers never say under which of the three a benefit was provided
+    or issued.
+  declaration: answered_with_caveat
+  debt: true

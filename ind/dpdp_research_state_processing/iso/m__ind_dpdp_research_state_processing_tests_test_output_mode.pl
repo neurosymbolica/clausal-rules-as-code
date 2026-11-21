@@ -1,0 +1,100 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_research_state_processing_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ind_dpdp_research_state_processing_dpdp_research_state_processing, [research_exemption/3, state_processing_standards/3, state_processing_disapplied_provisions/3, decide_dpdp_research_state_processing/2, dpdp_research_state_processing_status/2]).
+:- use_module(m__ind_dpdp_research_state_processing_fixtures, [dpdp_research_state_processing_subject/1, dpdp_research_state_processing_profile_for/2]).
+
+referral(Key, CitationKey, needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on([Key - unsure])])).
+
+only_status(Subject, Status) :-
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    findall(Found, dpdp_research_state_processing_status(Profile, Found), [Status]).
+
+expected_status(complete_processing, determinations(exempt_from_act, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(reference_day_before_commencement, determinations(not_in_force, not_in_force, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(reference_day_on_commencement, determinations(exempt_from_act, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(reference_day_after_commencement, determinations(exempt_from_act, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(section_seventeen_not_in_force, determinations(not_in_force, follows_second_schedule, not_in_force)).
+expected_status(section_seven_not_in_force, determinations(exempt_from_act, not_in_force, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(decision_specific_to_data_principal, determinations(not_exempt, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(not_research_purpose, determinations(not_exempt, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(lawful_manner_not_observed, determinations(not_exempt, does_not_follow_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(intimation_not_given, determinations(exempt_from_act, does_not_follow_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(not_section_seven_b_use, determinations(exempt_from_act, not_applicable, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(not_state_or_instrumentality, determinations(exempt_from_act, follows_second_schedule, not_applicable)).
+expected_status(purpose_includes_affecting_decision, determinations(exempt_from_act, follows_second_schedule, sections_8_7_and_12_3_do_not_apply)).
+expected_status(research_purpose_unsure, determinations(Research, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)) :-
+    referral(processing_necessary_for_research_archiving_or_statistical_purposes, in_dpdp_act_2023_s_17_2_b, Research).
+expected_status(accountability_unsure, determinations(Referral, Referral, sections_8_7_12_2_and_12_3_do_not_apply)) :-
+    referral(accountability_for_observance, in_dpdp_rules_2025_sch_2_h, Referral).
+expected_status(other_applicable_standards_unsure, determinations(exempt_from_act, Standards, sections_8_7_12_2_and_12_3_do_not_apply)) :-
+    referral(consistent_with_other_applicable_standards, in_dpdp_rules_2025_sch_2_g_iii, Standards).
+expected_status(state_use_unsure, determinations(exempt_from_act, Standards, sections_8_7_12_2_and_12_3_do_not_apply)) :-
+    referral(processing_for_section_7_b_use, in_dpdp_act_2023_s_7_b, Standards).
+expected_status(state_use_unsure_with_intimation_not_given, determinations(exempt_from_act, Standards, sections_8_7_12_2_and_12_3_do_not_apply)) :-
+    referral(processing_for_section_7_b_use, in_dpdp_act_2023_s_7_b, Standards).
+expected_status(state_body_unsure, determinations(exempt_from_act, follows_second_schedule, Disapplied)) :-
+    referral(processing_by_state_or_instrumentality, in_dpdp_act_2023_s_17_4, Disapplied).
+expected_status(decision_purpose_unsure, determinations(exempt_from_act, follows_second_schedule, Disapplied)) :-
+    referral(purpose_includes_decision_affecting_data_principal, in_dpdp_act_2023_s_17_4, Disapplied).
+expected_status(empty_profile, determinations(indeterminate([section_17_in_force_on_reference_date]), indeterminate([section_7_in_force_on_reference_date]), indeterminate([section_17_in_force_on_reference_date]))).
+expected_status(reference_date_missing, determinations(indeterminate([reference_date]), indeterminate([reference_date]), sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(lawful_manner_missing_with_research_purpose_unsure, determinations(indeterminate([lawful_manner]), indeterminate([lawful_manner]), sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(unknown_key_given, determinations(input_problems([unknown_key(colour)]), input_problems([unknown_key(colour)]), input_problems([unknown_key(colour)]))).
+expected_status(duplicate_key_given, determinations(input_problems([duplicate_key(lawful_manner)]), input_problems([duplicate_key(lawful_manner)]), input_problems([duplicate_key(lawful_manner)]))).
+expected_status(february_twenty_ninth_common_year, determinations(input_problems([wrong_type(reference_date)]), input_problems([wrong_type(reference_date)]), input_problems([wrong_type(reference_date)]))).
+expected_status(february_twenty_ninth_leap_year, determinations(exempt_from_act, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+expected_status(year_zero, determinations(input_problems([wrong_type(reference_date)]), input_problems([wrong_type(reference_date)]), input_problems([wrong_type(reference_date)]))).
+expected_status(year_ten_thousand, determinations(exempt_from_act, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+
+all_expected([]).
+all_expected([Subject|Subjects]) :-
+    expected_status(Subject, Expected),
+    only_status(Subject, Found),
+    Found == Expected,
+    all_expected(Subjects).
+
+test(every_subject_yields_exactly_its_expected_status) :-
+    findall(Subject, dpdp_research_state_processing_subject(Subject), Subjects),
+    all_expected(Subjects).
+test(the_day_before_commencement_reads_out_not_in_force_once) :-
+    dpdp_research_state_processing_profile_for(reference_day_before_commencement, Profile),
+    findall(Result - Citations, research_exemption(Profile, Result, Citations), Answers),
+    Answers == [not_in_force - [cite(in_dpdp_rules_2025_r_1_4), cite(in_dpdp_rules_2025_r_16), cite(in_dpdp_act_2023_s_17_2), cite(in_dpdp_act_2023_s_17_2_b)]].
+test(the_commencement_day_reads_out_exempt_once) :-
+    dpdp_research_state_processing_profile_for(reference_day_on_commencement, Profile),
+    findall(Result, research_exemption(Profile, Result, _), Results),
+    Results == [exempt_from_act].
+test(the_day_after_commencement_reads_out_follows_once) :-
+    dpdp_research_state_processing_profile_for(reference_day_after_commencement, Profile),
+    findall(Result, state_processing_standards(Profile, Result, _), Results),
+    Results == [follows_second_schedule].
+test(the_day_before_commencement_standards_read_out_not_in_force_once) :-
+    dpdp_research_state_processing_profile_for(reference_day_before_commencement, Profile),
+    findall(Result - Citations, state_processing_standards(Profile, Result, Citations), Answers),
+    Answers == [not_in_force - [cite(in_dpdp_rules_2025_r_1_4), cite(in_dpdp_rules_2025_r_5_1), cite(in_dpdp_act_2023_s_7_b)]].
+test(disapplied_provisions_reads_out_one_answer) :-
+    dpdp_research_state_processing_profile_for(purpose_includes_affecting_decision, Profile),
+    findall(Result - Citations, state_processing_disapplied_provisions(Profile, Result, Citations), Answers),
+    Answers == [sections_8_7_and_12_3_do_not_apply - [cite(in_dpdp_act_2023_s_17_4)]].
+test(the_verdict_carries_a_citation) :-
+    dpdp_research_state_processing_profile_for(complete_processing, Profile),
+    decide_dpdp_research_state_processing(Profile, dpdp_research_state_processing_verdict(_Status, [_FirstCitation|_OtherCitations])).
+test(the_verdict_of_a_non_final_profile_carries_no_citation) :-
+    dpdp_research_state_processing_profile_for(empty_profile, Profile),
+    decide_dpdp_research_state_processing(Profile, dpdp_research_state_processing_verdict(_Status, [])).
+test(an_early_day_settles_not_in_force_before_any_missing_key) :-
+    findall(Result, research_exemption([attribute(reference_date, date(2026, 1, 1))], Result, _), Results),
+    Results == [not_in_force].
+
+cp_test_names([every_subject_yields_exactly_its_expected_status, the_day_before_commencement_reads_out_not_in_force_once, the_commencement_day_reads_out_exempt_once, the_day_after_commencement_reads_out_follows_once, the_day_before_commencement_standards_read_out_not_in_force_once, disapplied_provisions_reads_out_one_answer, the_verdict_carries_a_citation, the_verdict_of_a_non_final_profile_carries_no_citation, an_early_day_settles_not_in_force_before_any_missing_key]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

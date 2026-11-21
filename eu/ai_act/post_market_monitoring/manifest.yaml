@@ -1,0 +1,404 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/ai_act/post_market_monitoring
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "post_market_monitoring"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- post_market_monitoring.clausal --
+  - "post_market_monitoring_duty_status/4"
+  - "post_market_monitoring_integration_status/3"
+  - "decide_post_market_monitoring/2"
+  - "post_market_monitoring_status/2"
+  - "post_market_monitoring_checklist/2"
+  - "post_market_monitoring_decision_resolvable/1"
+  - "post_market_monitoring_status_values/1"
+  # -- queries.clausal --
+  - "post_market_monitoring_profile_keys/1"
+  - "post_market_monitoring_input_problems/2"
+  - "post_market_monitoring_what_if/4"
+  - "not_applicable_on_date/0"
+  - "not_a_provider/0"
+  - "not_a_high_risk_ai_system/0"
+  - "compliance_required_by_31_december_2030/0"
+  - "existing_system_without_significant_changes_not_covered/0"
+  - "compliance_required_by_2_august_2030/0"
+  - "duty_applies/0"
+  - "integration_not_available/0"
+  - "integration_available/0"
+  - "date/3"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "post_market_monitoring_subject/1"
+  - "post_market_monitoring_profile_for/2"
+  - "post_market_monitoring_assess/2"
+
+# root_exports: bare atoms read by the caller as package-root module
+# attributes; each is exported (as a bare atom) by queries.clausal.
+root_exports:
+  - provider_of_the_system
+  - system_is_a_high_risk_ai_system_listed_in_annex_iii
+  - system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i
+  - component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027
+  - placed_on_the_market_or_put_into_service_before_the_chapter_iii_date
+  - significant_changes_in_design_as_from_the_chapter_iii_date
+  - intended_to_be_used_by_public_authorities
+  - covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i
+  - point_5_annex_iii_system_of_a_financial_institution_under_union_financial_services_law
+  - post_market_monitoring_system_and_plan_already_established_under_that_legislation
+  - integration_achieves_an_equivalent_level_of_protection
+  - unsure
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib,
+# kit/deadline_lib), no shared backbone package.
+uses: []
+
+scope: >-
+  Regulation (EU) 2024/1689 (Artificial Intelligence Act), consolidated text
+  02024R1689-20260727. Decided here: whether, on a given assessment date, the
+  actor named as provider of one AI system must establish and document a
+  post-market monitoring system based on a post-market monitoring plan that is
+  part of the technical documentation (Art 72(1) and 72(3), first and second
+  sentences), judged at the Chapter III application dates of Art 113, third
+  paragraph, point (c)(i) and (ii), with the transitional rules for Annex X
+  large-scale IT system components (Art 111(1)) and for systems already placed
+  on the market or put into service (Art 111(2)); and whether that provider has
+  the choice of Art 72(4) to integrate into a post-market monitoring system and
+  plan already established under Union harmonisation legislation of Annex I
+  Section A or Union financial services law. Out of scope: scope of the
+  Regulation (Art 2), the role of provider (Art 3(3), order scope-and-roles),
+  high-risk classification (Art 6, Annexes I and III), what the system collects
+  and analyses (Art 72(2)), proportionality, the technical documentation (Art 11,
+  Annex IV), the Commission template, and serious-incident reporting (Art 73).
+  Open-textured judgements (significant changes in design, intended use by
+  public authorities, equivalent level of protection) are handed to the caller
+  and, when unsure and decisive, referred to a lawyer.
+
+sources:
+  - 'Regulation (EU) 2024/1689 of the European Parliament and of the Council (Artificial Intelligence Act), OJ L, 2024/1689, 12.7.2024, consolidated text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744: Art 72(1), 72(3) and 72(4)'
+  - 'Regulation (EU) 2024/1689, Art 111(1) and 111(2) (AI systems already placed on the market or put into service)'
+  - 'Regulation (EU) 2024/1689, Art 113, third paragraph, point (c) with points (i) and (ii) (application of Chapter III, Sections 1 to 3)'
+  - 'Regulation (EU) 2024/1689, Art 3, points (3), (8), (9), (11) and (25) (definitions read into the keys)'
+
+query_interface:
+  2: "post_market_monitoring_status/2"                  # status verdict through the facade
+  7: "post_market_monitoring_checklist/2"               # justification: cite(...) per item
+  13: "post_market_monitoring_integration_status/3"     # compliance check: is integration under Art 72(4) open
+  14: "post_market_monitoring_duty_status/4"            # obligation surfacing: duty_applies
+  15: "post_market_monitoring_duty_status/4"            # deadline: compliance_required_by_* then duty_applies
+  16: "post_market_monitoring_what_if/4"                # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02024R1689-20260727#art_072
+  - 02024R1689-20260727#art_111
+  not_formalized_because: structural
+  declaration: not_an_exception
+  reason: 'The titles of Articles 72 and 111 carry no rule of their own: document
+    structure. Deferred so every unit of the pinned extract is accounted for.'
+  consequence: 'None for a caller: they carry no rule.'
+- what: definition_of_provider
+  units:
+  - 02024R1689-20260727#point_003_3
+  not_formalized_because: in_sibling
+  decided_in: scope-and-roles
+  declaration: not_an_exception
+  reason: Art 3(3) defines the provider; who is a provider is decided by the order
+    scope-and-roles and reaches this order as the key provider_of_the_system (reading
+    (3)).
+  consequence: The caller gives the role of provider from the rules on roles.
+- what: definitions_not_read_by_this_order
+  units:
+  - 02024R1689-20260727#art_003
+  - 02024R1689-20260727#point_003_1
+  - 02024R1689-20260727#point_003_2
+  - 02024R1689-20260727#point_003_4
+  - 02024R1689-20260727#point_003_5
+  - 02024R1689-20260727#point_003_6
+  - 02024R1689-20260727#point_003_7
+  - 02024R1689-20260727#point_003_10
+  - 02024R1689-20260727#point_003_12
+  - 02024R1689-20260727#point_003_13
+  - 02024R1689-20260727#point_003_14
+  - 02024R1689-20260727#point_003_14a
+  - 02024R1689-20260727#point_003_14b
+  - 02024R1689-20260727#point_003_15
+  - 02024R1689-20260727#point_003_16
+  - 02024R1689-20260727#point_003_17
+  - 02024R1689-20260727#point_003_18
+  - 02024R1689-20260727#point_003_19
+  - 02024R1689-20260727#point_003_20
+  - 02024R1689-20260727#point_003_21
+  - 02024R1689-20260727#point_003_22
+  - 02024R1689-20260727#point_003_23
+  - 02024R1689-20260727#point_003_24
+  - 02024R1689-20260727#point_003_26
+  - 02024R1689-20260727#point_003_27
+  - 02024R1689-20260727#point_003_28
+  - 02024R1689-20260727#point_003_29
+  - 02024R1689-20260727#point_003_30
+  - 02024R1689-20260727#point_003_31
+  - 02024R1689-20260727#point_003_32
+  - 02024R1689-20260727#point_003_33
+  - 02024R1689-20260727#point_003_34
+  - 02024R1689-20260727#point_003_35
+  - 02024R1689-20260727#point_003_36
+  - 02024R1689-20260727#point_003_37
+  - 02024R1689-20260727#point_003_38
+  - 02024R1689-20260727#point_003_39
+  - 02024R1689-20260727#point_003_40
+  - 02024R1689-20260727#point_003_41
+  - 02024R1689-20260727#point_003_42
+  - 02024R1689-20260727#point_003_43
+  - 02024R1689-20260727#point_003_44
+  - 02024R1689-20260727#point_003_45
+  - 02024R1689-20260727#point_003_45_a
+  - 02024R1689-20260727#point_003_45_b
+  - 02024R1689-20260727#point_003_46
+  - 02024R1689-20260727#point_003_47
+  - 02024R1689-20260727#point_003_48
+  - 02024R1689-20260727#point_003_49
+  - 02024R1689-20260727#point_003_49_a
+  - 02024R1689-20260727#point_003_49_b
+  - 02024R1689-20260727#point_003_49_c
+  - 02024R1689-20260727#point_003_49_d
+  - 02024R1689-20260727#point_003_50
+  - 02024R1689-20260727#point_003_51
+  - 02024R1689-20260727#point_003_52
+  - 02024R1689-20260727#point_003_53
+  - 02024R1689-20260727#point_003_54
+  - 02024R1689-20260727#point_003_55
+  - 02024R1689-20260727#point_003_56
+  - 02024R1689-20260727#point_003_57
+  - 02024R1689-20260727#point_003_58
+  - 02024R1689-20260727#point_003_59
+  - 02024R1689-20260727#point_003_60
+  - 02024R1689-20260727#point_003_61
+  - 02024R1689-20260727#point_003_61_a
+  - 02024R1689-20260727#point_003_61_a_i
+  - 02024R1689-20260727#point_003_61_a_ii
+  - 02024R1689-20260727#point_003_61_a_iii
+  - 02024R1689-20260727#point_003_61_b
+  - 02024R1689-20260727#point_003_62
+  - 02024R1689-20260727#point_003_63
+  - 02024R1689-20260727#point_003_64
+  - 02024R1689-20260727#point_003_65
+  - 02024R1689-20260727#point_003_66
+  - 02024R1689-20260727#point_003_67
+  - 02024R1689-20260727#point_003_68
+  debt: true
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 3 is pinned whole; its title and lead words ('For the purposes of this
+    Regulation, the following definitions apply') and its points other than (3), (8),
+    (9), (11) and (25), which define terms no query of this order reads. 77 units.
+  consequence: None for these answers.
+- what: definitions_read_into_the_keys
+  units:
+  - 02024R1689-20260727#point_003_8
+  - 02024R1689-20260727#point_003_9
+  - 02024R1689-20260727#point_003_11
+  - 02024R1689-20260727#point_003_25
+  debt: true
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 3, point (8) operator is read into reading (8) (a provider is an operator),
+    points (9) placing on the market and (11) putting into service into the meaning
+    of the key placed_on_the_market_or_put_into_service_before_the_chapter_iii_date,
+    and point (25) post-market monitoring system into the meaning of duty_applies;
+    they add no step of their own (reading (8), reading (5)).
+  consequence: The caller applies the definitions when it gives those keys and reads
+    the answer.
+- what: proportionality_of_the_post_market_monitoring_system
+  units:
+  - 02024R1689-20260727#parag_072.001
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 72(1): the words ''in a manner that is proportionate to the nature
+    of the AI technologies and the risks of the high-risk AI system'' are an open
+    word the order does not judge; the order reads who must establish and document
+    the system (reading (5), Q18).'
+  consequence: An answer duty_applies does not say what a proportionate system is,
+    nor that the provider has one.
+- what: content_of_the_post_market_monitoring_system
+  units:
+  - 02024R1689-20260727#parag_072.002
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 72(2) says what the system does: actively and systematically collect,
+    document and analyse relevant data on the performance of high-risk AI systems
+    throughout their lifetime, which allow the provider to evaluate their continuous
+    compliance with Chapter III, Section 2; where relevant, an analysis of the interaction
+    with other AI systems; and it does not cover sensitive operational data of deployers
+    which are law-enforcement authorities. No limb reads it (reading (5), Q19).'
+  consequence: An answer duty_applies does not say what the system must collect or
+    analyse.
+- what: guidance_and_template_of_the_commission
+  units:
+  - 02024R1689-20260727#parag_072.003
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 72(3), third sentence: the Commission, taking utmost account of the
+    opinion of the Board, adopts guidance, including a template, on the post-market
+    monitoring plan by 2 September 2027. It binds the Commission; the order reads
+    the first and second sentences (reading (12), Q15).'
+  consequence: No answer says whether the guidance and template have been adopted.
+- what: manner_and_extent_of_the_integration
+  units:
+  - 02024R1689-20260727#parag_072.004
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 72(4): the words ''as appropriate'', which elements are ''necessary'',
+    the purposes ''in order to ensure consistency, avoid duplications and minimise
+    additional burdens'' and the use of the template are not formalised; the order
+    reads whether the choice is open (reading (9), Q17, Q15).'
+  consequence: An answer integration_available does not say how far the integration
+    must go or how it is done.
+- what: evaluation_of_large_scale_it_systems
+  units:
+  - 02024R1689-20260727#parag_111.001
+  debt: true
+  partial: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: Art 111(1), second sentence (the requirements are taken into account in
+    the evaluation of each large-scale IT system and where its legal acts are replaced
+    or amended) binds those who evaluate the systems; the order reads the first sentence
+    only (reading (7)).
+  consequence: None for a provider's answer.
+- what: general_purpose_ai_model_transition
+  units:
+  - 02024R1689-20260727#parag_111.003
+  not_formalized_because: in_sibling
+  decided_in: gpai-models
+  declaration: not_an_exception
+  reason: Art 111(3) is the transition for providers of general-purpose AI models;
+    this order does not read it.
+  consequence: None for these answers.
+- what: article_50_2_transition
+  units:
+  - 02024R1689-20260727#parag_111.004
+  not_formalized_because: in_sibling
+  decided_in: transparency-art50
+  declaration: not_an_exception
+  reason: Art 111(4) is the transition for Art 50(2); this order does not read it.
+  consequence: None for these answers.
+- what: entry_into_force_and_general_date_of_article_113
+  units:
+  - 02024R1689-20260727#art_113
+  debt: true
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 113: the entry into force and the general date of the second paragraph
+    (2 August 2026), the date of Art 72 itself; no step reads it, because the classification
+    dates of point (c) are later and decide (reading (2), Q2, Q1).'
+  consequence: None for these answers, on the reading stated; read the other way the
+    general date would decide.
+- what: other_dates_of_article_113
+  units:
+  - 02024R1689-20260727#point_113_a
+  - 02024R1689-20260727#point_113_b
+  - 02024R1689-20260727#point_113_d
+  debt: true
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+  reason: 'Art 113, third paragraph, points (a), (b) and (d) are dating rules with
+    substance: they date Chapters I and II (with later dates for parts of Art 5),
+    Chapter III Section 4, Chapters V, VII and XII, Art 78 and Arts 102 to 110. None
+    of them dates Art 72 or Art 6, so no step of this order reads them (reading (2)).'
+  consequence: None for these answers.
+
+excluded_set:
+- what: scope_of_the_regulation
+  instrument: Regulation (EU) 2024/1689 Art 2 (not in this pin; the order scope-and-roles)
+  cites:
+  - 02024R1689-20260727#art_002
+  reason: Art 2 says to whom and to what the Regulation applies, including which articles
+    apply to high-risk systems related to products covered by the legislation of Section
+    B of Annex I; it is not pinned in this domain (reading (1)).
+  consequence: The caller first checks that the Regulation, and Art 72, apply to the
+    case; the answers assume they do.
+- what: classification_of_high_risk_ai_systems
+  instrument: Regulation (EU) 2024/1689 Art 6 and Annexes I and III (not in this pin;
+    the order high-risk-classification)
+  cites:
+  - 02024R1689-20260727#art_006
+  reason: Art 6 classifies AI systems as high-risk under Annex I (paragraph 1) and
+    Annex III (paragraphs 2 and 3); the classification is the caller's fact (reading
+    (4)).
+  consequence: The caller gives the classification keys from the classification rules.
+- what: technical_documentation
+  instrument: Regulation (EU) 2024/1689 Art 11 and Annex IV (not in this pin; the
+    order high-risk-requirements)
+  cites:
+  - 02024R1689-20260727#art_011
+  reason: Art 72(3) places the plan in the technical documentation referred to in
+    Annex IV; what that documentation holds and when it is drawn up are rules of Art
+    11 and Annex IV (reading (6)).
+  consequence: An answer duty_applies does not say what the technical documentation
+    must hold.
+- what: large_scale_it_systems_listed_in_annex_x
+  instrument: Regulation (EU) 2024/1689 Annex X (not in this pin)
+  cites:
+  - 02024R1689-20260727#division_annex_x
+  reason: Art 111(1) refers to the legal acts listed in Annex X; the Annex is not
+    pinned, so membership is the caller's fact (reading (7)).
+  consequence: The caller says whether the system is such a component.
+- what: harmonisation_and_financial_services_legislation
+  instrument: Regulation (EU) 2024/1689 Annex I, Section A, and Annex III, point 5
+    (not in this pin); Union financial services law
+  cites:
+  - 02024R1689-20260727#division_annex_i
+  reason: Art 72(4) refers to the Union harmonisation legislation listed in Section
+    A of Annex I, to point 5 of Annex III and to Union financial services law; none
+    is pinned, so coverage, the financial institution and the existing system and
+    plan are the caller's facts (reading (9), reading (10)).
+  consequence: The caller says whether the system is covered and whether a system
+    and plan already exist under that law.

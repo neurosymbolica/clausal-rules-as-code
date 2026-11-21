@@ -20,16 +20,16 @@ test(a_value_outside_the_type_of_contract_binding_on_processor_is_named) :-
     findall(Problems, gdpr_processor_contract_input_problems([attribute(contract_binding_on_processor, outside_the_type)], Problems), Answers),
     Answers = [Problems],
     memberchk(wrong_type(contract_binding_on_processor), Problems).
-test(a_value_outside_the_type_of_contract_governed_by_union_or_member_state_law_is_named) :-
-    findall(Problems, gdpr_processor_contract_input_problems([attribute(contract_governed_by_union_or_member_state_law, outside_the_type)], Problems), Answers),
+test(a_value_outside_the_type_of_contract_in_writing_is_named) :-
+    findall(Problems, gdpr_processor_contract_input_problems([attribute(contract_in_writing, outside_the_type)], Problems), Answers),
     Answers = [Problems],
-    memberchk(wrong_type(contract_governed_by_union_or_member_state_law), Problems).
+    memberchk(wrong_type(contract_in_writing), Problems).
 test(a_value_outside_the_type_of_subprocessor_authorisation_is_named) :-
     findall(Problems, gdpr_processor_contract_input_problems([attribute(subprocessor_authorisation, outside_the_type)], Problems), Answers),
     Answers = [Problems],
     memberchk(wrong_type(subprocessor_authorisation), Problems).
 
-cp_test_names([an_empty_attribute_list_gets_exactly_one_answer, a_profile_that_is_not_a_list_gets_one_non_empty_answer, an_unknown_key_is_named, a_value_outside_the_type_of_contract_binding_on_processor_is_named, a_value_outside_the_type_of_contract_governed_by_union_or_member_state_law_is_named, a_value_outside_the_type_of_subprocessor_authorisation_is_named]).
+cp_test_names([an_empty_attribute_list_gets_exactly_one_answer, a_profile_that_is_not_a_list_gets_one_non_empty_answer, an_unknown_key_is_named, a_value_outside_the_type_of_contract_binding_on_processor_is_named, a_value_outside_the_type_of_contract_in_writing_is_named, a_value_outside_the_type_of_subprocessor_authorisation_is_named]).
 cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.

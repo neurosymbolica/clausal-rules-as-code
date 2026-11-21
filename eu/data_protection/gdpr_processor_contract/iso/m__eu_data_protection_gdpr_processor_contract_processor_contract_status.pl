@@ -4,196 +4,248 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(library(pairs), [pairs_keys_values/3, pairs_keys/2]).
-:- use_module(library(reif), [(=)/3]).
-:- use_module(library(reif), [if_/3, memberd_t/3]).
+:- use_module(library(pairs), [pairs_keys_values/3]).
+:- use_module(clausal_lists_extra, [last/2]).
+:- use_module(library(reif), [memberd_t/3]).
 :- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
-:- use_module(m__eu_data_protection_gdpr_processor_contract_kernel, [gdpr_processor_contract_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_processor_contract_kernel, [gdpr_processor_contract_input_problems/2, gdpr_processor_contract_key_order/1]).
 :- use_module(m__eu_data_protection_gdpr_processor_contract_citations, [implements/1]).
 
 processor_contract_status_status_values([eligible, ineligible, not_applicable]).
 
-limb(contract_binding_on_processor, cite(eu_reg_2016_679_art_28_3), judgement, always).
-limb(contract_governed_by_union_or_member_state_law, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(contract_in_writing, cite(eu_reg_2016_679_art_28_9), crisp, always).
-limb(contract_sets_out_categories_of_data_subjects, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(contract_sets_out_controller_obligations_and_rights, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(contract_sets_out_duration, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(contract_sets_out_nature_of_processing, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(contract_sets_out_purpose_of_processing, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(contract_sets_out_subject_matter, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(contract_sets_out_type_of_personal_data, cite(eu_reg_2016_679_art_28_3), crisp, always).
-limb(controller_given_opportunity_to_object, cite(eu_reg_2016_679_art_28_2), crisp, general).
-limb(processor_informed_controller_of_intended_changes, cite(eu_reg_2016_679_art_28_2), crisp, general).
-limb(processor_provides_sufficient_guarantees, cite(eu_reg_2016_679_art_28_1), judgement, always).
-limb(stipulates_assistance_with_articles_32_to_36_obligations, cite(eu_reg_2016_679_art_28_3_f), crisp, always).
-limb(stipulates_assistance_with_data_subject_requests, cite(eu_reg_2016_679_art_28_3_e), crisp, always).
-limb(stipulates_conditions_for_engaging_another_processor, cite(eu_reg_2016_679_art_28_3_d), crisp, always).
-limb(stipulates_confidentiality_commitment, cite(eu_reg_2016_679_art_28_3_b), crisp, always).
-limb(stipulates_deletion_or_return_of_personal_data, cite(eu_reg_2016_679_art_28_3_g), crisp, always).
-limb(stipulates_information_and_audit_rights, cite(eu_reg_2016_679_art_28_3_h), crisp, always).
-limb(stipulates_notice_of_infringing_instruction, cite(eu_reg_2016_679_art_28_3_second_subpara), crisp, always).
-limb(stipulates_processing_only_on_documented_instructions, cite(eu_reg_2016_679_art_28_3_a), crisp, always).
-limb(stipulates_security_measures, cite(eu_reg_2016_679_art_28_3_c), crisp, always).
-limb(subprocessor_authorisation, cite(eu_reg_2016_679_art_28_2), enumerated, engaged).
-limb(subprocessor_authorisation_given_before_engagement, cite(eu_reg_2016_679_art_28_2), crisp, authorised).
-limb(subprocessor_contract_governed_by_union_or_member_state_law, cite(eu_reg_2016_679_art_28_4), crisp, engaged).
-limb(subprocessor_contract_in_writing, cite(eu_reg_2016_679_art_28_9), crisp, engaged).
-limb(subprocessor_engaged, cite(eu_reg_2016_679_art_28_2), engaged_flag, always).
-limb(subprocessor_obligations_same, cite(eu_reg_2016_679_art_28_4), judgement, engaged).
-limb(subprocessor_provides_sufficient_guarantees, cite(eu_reg_2016_679_art_28_4), judgement, engaged).
+limb_row(contract_binding_on_processor, judgement, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_governed_by_union_or_member_state_law, judgement, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_in_writing, crisp, cite(eu_reg_2016_679_art_28_9), always).
+limb_row(contract_sets_out_categories_of_data_subjects, crisp, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_sets_out_controller_obligations_and_rights, crisp, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_sets_out_duration, crisp, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_sets_out_nature_of_processing, crisp, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_sets_out_purpose_of_processing, crisp, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_sets_out_subject_matter, crisp, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(contract_sets_out_type_of_personal_data, crisp, cite(eu_reg_2016_679_art_28_3), always).
+limb_row(controller_given_opportunity_to_object, crisp, cite(eu_reg_2016_679_art_28_2), general).
+limb_row(processor_informed_controller_of_intended_changes, crisp, cite(eu_reg_2016_679_art_28_2), general).
+limb_row(processor_provides_sufficient_guarantees, judgement, cite(eu_reg_2016_679_art_28_1), always).
+limb_row(stipulates_assistance_with_articles_32_to_36_obligations, crisp, cite(eu_reg_2016_679_art_28_3_f), always).
+limb_row(stipulates_assistance_with_data_subject_requests, crisp, cite(eu_reg_2016_679_art_28_3_e), always).
+limb_row(stipulates_conditions_for_engaging_another_processor, crisp, cite(eu_reg_2016_679_art_28_3_d), always).
+limb_row(stipulates_confidentiality_commitment, crisp, cite(eu_reg_2016_679_art_28_3_b), always).
+limb_row(stipulates_deletion_or_return_of_personal_data, crisp, cite(eu_reg_2016_679_art_28_3_g), always).
+limb_row(stipulates_information_and_audit_rights, crisp, cite(eu_reg_2016_679_art_28_3_h), always).
+limb_row(stipulates_notice_of_infringing_instruction, crisp, cite(eu_reg_2016_679_art_28_3_second_subpara), always).
+limb_row(stipulates_processing_only_on_documented_instructions, crisp, cite(eu_reg_2016_679_art_28_3_a), always).
+limb_row(stipulates_security_measures, crisp, cite(eu_reg_2016_679_art_28_3_c), always).
+limb_row(subprocessor_authorisation, authorisation, cite(eu_reg_2016_679_art_28_2), engaged).
+limb_row(subprocessor_authorisation_given_before_engagement, crisp, cite(eu_reg_2016_679_art_28_2), authorised).
+limb_row(subprocessor_contract_governed_by_union_or_member_state_law, judgement, cite(eu_reg_2016_679_art_28_4), engaged).
+limb_row(subprocessor_contract_in_writing, crisp, cite(eu_reg_2016_679_art_28_9), engaged).
+limb_row(subprocessor_engaged, engagement, cite(eu_reg_2016_679_art_28_2), always).
+limb_row(subprocessor_obligations_same, judgement, cite(eu_reg_2016_679_art_28_4), engaged).
+limb_row(subprocessor_provides_sufficient_guarantees, judgement, cite(eu_reg_2016_679_art_28_4), engaged).
 
-value_state(crisp, true, met).
-value_state(crisp, false, unmet).
-value_state(crisp, absent, open_by_absence).
-value_state(judgement, true, met).
-value_state(judgement, false, unmet).
-value_state(judgement, unsure, open_by_judgement).
-value_state(judgement, absent, open_by_absence).
-value_state(enumerated, specific_written, met).
-value_state(enumerated, general_written, met).
-value_state(enumerated, none, unmet).
-value_state(enumerated, absent, open_by_absence).
-value_state(engaged_flag, true, met).
-value_state(engaged_flag, false, met).
-value_state(engaged_flag, absent, open_by_absence).
+non_limb_row(processing_on_behalf_of_controller).
+non_limb_row(processor_determines_purposes_and_means).
+non_limb_row(standard_clauses_adopted).
 
-read_key(Profile, Key, Value) :-
+judgement_keys([contract_binding_on_processor, contract_governed_by_union_or_member_state_law, processing_on_behalf_of_controller, processor_determines_purposes_and_means, processor_provides_sufficient_guarantees, subprocessor_contract_governed_by_union_or_member_state_law, subprocessor_obligations_same, subprocessor_provides_sufficient_guarantees]).
+
+reading(Profile, Key, present(Value)) :-
     profile_get(Profile, Key, Value).
-read_key(Profile, Key, absent) :-
+reading(Profile, Key, absent) :-
     profile_lacks(Profile, Key).
 
-condition_holds_t(always, _, _, true).
-condition_holds_t(engaged, true, _, true).
-condition_holds_t(engaged, false, _, false).
-condition_holds_t(engaged, absent, _, false).
-condition_holds_t(authorised, true, Authorisation, Holds) :-
-    memberd_t(Authorisation, [specific_written, general_written], Holds).
-condition_holds_t(authorised, false, _, false).
-condition_holds_t(authorised, absent, _, false).
-condition_holds_t(general, true, Authorisation, Holds) :-
-    memberd_t(Authorisation, [general_written], Holds).
-condition_holds_t(general, false, _, false).
-condition_holds_t(general, absent, _, false).
+limb_state(crisp, present(true), met).
+limb_state(crisp, present(false), unmet).
+limb_state(crisp, absent, open_by_absence).
+limb_state(judgement, present(true), met).
+limb_state(judgement, present(false), unmet).
+limb_state(judgement, present(unsure), open_by_judgement).
+limb_state(judgement, absent, open_by_absence).
+limb_state(engagement, present(true), met).
+limb_state(engagement, present(false), met).
+limb_state(engagement, absent, open_by_absence).
+limb_state(authorisation, present(specific_written), met).
+limb_state(authorisation, present(general_written), met).
+limb_state(authorisation, present(none), unmet).
+limb_state(authorisation, absent, open_by_absence).
 
-checklist_items(Profile, Items) :-
-    implements(eu_reg_2016_679_art_28_3),
-    read_key(Profile, subprocessor_engaged, Engaged),
-    read_key(Profile, subprocessor_authorisation, Authorisation),
-    findall(Key, limb(Key, _, _, _), Keys),
-    walk_limbs(Keys, Profile, Engaged, Authorisation, Items).
+condition_t(always, _, true).
+condition_t(engaged, Profile, Truth) :-
+    implements(eu_reg_2016_679_art_28_4),
+    reading(Profile, subprocessor_engaged, Reading),
+    engaged_t(Reading, Truth).
+condition_t(authorised, Profile, Truth) :-
+    implements(eu_reg_2016_679_art_28_2),
+    condition_t(engaged, Profile, Engaged),
+    authorised_given(Engaged, Profile, Truth).
+condition_t(general, Profile, Truth) :-
+    implements(eu_reg_2016_679_art_28_2),
+    condition_t(engaged, Profile, Engaged),
+    general_given(Engaged, Profile, Truth).
 
-walk_limbs([], _, _, _, []).
-walk_limbs([Key|Keys], Profile, Engaged, Authorisation, Items) :-
-    limb(Key, Citation, Kind, Condition),
-    condition_holds_t(Condition, Engaged, Authorisation, Holds),
-    walk_limbs(Keys, Profile, Engaged, Authorisation, LaterItems),
-    add_item(Holds, Key, Citation, Kind, Profile, LaterItems, Items).
+engaged_t(present(true), true).
+engaged_t(present(false), false).
+engaged_t(absent, false).
 
-add_item(false, _, _, _, _, Items, Items).
-add_item(true, Key, Citation, Kind, Profile, Items, [checklist_item(Key, Citation, State)|Items]) :-
-    read_key(Profile, Key, Value),
-    value_state(Kind, Value, State).
+authorised_given(false, _, false).
+authorised_given(true, Profile, Truth) :-
+    reading(Profile, subprocessor_authorisation, Reading),
+    written_authorisation_t(Reading, Truth).
 
-select_state(_, [], []).
-select_state(Wanted, [checklist_item(Key, Citation, State)|Items], Selected) :-
-    select_state(Wanted, Items, LaterSelected),
-    keep_item(State, Wanted, Key - Citation, LaterSelected, Selected).
+written_authorisation_t(present(specific_written), true).
+written_authorisation_t(present(general_written), true).
+written_authorisation_t(present(none), false).
+written_authorisation_t(absent, false).
 
-keep_item(State, Wanted, Pair, Later, Selected) :-
-    if_(State = Wanted, Selected = [Pair|Later], Selected = Later).
+general_given(false, _, false).
+general_given(true, Profile, Truth) :-
+    reading(Profile, subprocessor_authorisation, Reading),
+    general_authorisation_t(Reading, Truth).
 
-distinct_cites(Items, Citations) :-
-    distinct_cites(Items, [], Citations).
+general_authorisation_t(present(general_written), true).
+general_authorisation_t(present(specific_written), false).
+general_authorisation_t(present(none), false).
+general_authorisation_t(absent, false).
 
-distinct_cites([], Seen, Citations) :-
-    reverse(Seen, Citations).
-distinct_cites([checklist_item(_, Citation, _)|Items], Seen, Citations) :-
-    memberd_t(Citation, Seen, Present),
-    add_seen(Present, Citation, Seen, NewSeen),
-    distinct_cites(Items, NewSeen, Citations).
+key_role(Key, limb(Kind, CitationTerm, Condition)) :-
+    limb_row(Key, Kind, CitationTerm, Condition).
+key_role(Key, not_a_limb) :-
+    non_limb_row(Key).
 
-add_seen(true, _, Seen, Seen).
-add_seen(false, Citation, Seen, [Citation|Seen]).
+contract_items(Profile, Items) :-
+    gdpr_processor_contract_key_order(KeyOrder),
+    items_for(KeyOrder, Profile, Items).
 
-pairs_for([], _, []).
-pairs_for([standard_clauses_adopted|Keys], Profile, Pairs) :-
-    read_key(Profile, standard_clauses_adopted, Value),
-    pairs_for(Keys, Profile, LaterPairs),
-    standard_pair(Value, LaterPairs, Pairs).
-pairs_for([Key|Keys], Profile, Pairs) :-
-    dif(Key, standard_clauses_adopted),
-    read_key(Profile, Key, Value),
-    pairs_for(Keys, Profile, LaterPairs),
-    judgement_pair(Value, Key, LaterPairs, Pairs).
+items_for([], _, []).
+items_for([Key|Keys], Profile, Items) :-
+    key_role(Key, Role),
+    role_items(Role, Key, Profile, Items, Rest),
+    items_for(Keys, Profile, Rest).
 
-standard_pair(absent, Later, [standard_clauses_adopted - absent|Later]).
-standard_pair(attested(_, _), Later, Later).
+role_items(not_a_limb, _, _, Rest, Rest).
+role_items(limb(Kind, CitationTerm, Condition), Key, Profile, Items, Rest) :-
+    condition_t(Condition, Profile, Read),
+    read_items(Read, Kind, CitationTerm, Key, Profile, Items, Rest).
 
-judgement_pair(absent, _, Later, Later).
-judgement_pair(true, Key, Later, [Key - true|Later]).
-judgement_pair(false, Key, Later, [Key - false|Later]).
-judgement_pair(unsure, Key, Later, [Key - unsure|Later]).
+read_items(false, _, _, _, _, Rest, Rest).
+read_items(true, Kind, cite(Citation), Key, Profile, [checklist_item(Key, cite(Citation), State)|Rest], Rest) :-
+    reading(Profile, Key, Reading),
+    limb_state(Kind, Reading, State).
 
-engaged_pair_keys(true, [contract_binding_on_processor, processing_on_behalf_of_controller, processor_determines_purposes_and_means, processor_provides_sufficient_guarantees, standard_clauses_adopted, subprocessor_obligations_same, subprocessor_provides_sufficient_guarantees]).
-engaged_pair_keys(false, [contract_binding_on_processor, processing_on_behalf_of_controller, processor_determines_purposes_and_means, processor_provides_sufficient_guarantees, standard_clauses_adopted]).
-engaged_pair_keys(absent, [contract_binding_on_processor, processing_on_behalf_of_controller, processor_determines_purposes_and_means, processor_provides_sufficient_guarantees, standard_clauses_adopted]).
+partition_items([], [], [], []).
+partition_items([checklist_item(Key, CitationTerm, State)|Items], Unmet, Absent, Judgement) :-
+    partition_items(Items, LaterUnmet, LaterAbsent, LaterJudgement),
+    place_item(State, Key, CitationTerm, LaterUnmet, LaterAbsent, LaterJudgement, Unmet, Absent, Judgement).
+
+place_item(met, _, _, Unmet, Absent, Judgement, Unmet, Absent, Judgement).
+place_item(unmet, Key, CitationTerm, Unmet, Absent, Judgement, [Key - CitationTerm|Unmet], Absent, Judgement).
+place_item(open_by_absence, Key, _, Unmet, Absent, Judgement, Unmet, [Key|Absent], Judgement).
+place_item(open_by_judgement, Key, CitationTerm, Unmet, Absent, Judgement, Unmet, Absent, [Key - CitationTerm|Judgement]).
+
+item_key(checklist_item(Key, _, _), Key).
+
+distinct_citations(Items, Citations) :-
+    distinct_walk(Items, [], Reversed),
+    reverse(Reversed, Citations).
+
+distinct_walk([], Accumulated, Accumulated).
+distinct_walk([checklist_item(_, CitationTerm, _)|Items], Accumulated, Out) :-
+    memberd_t(CitationTerm, Accumulated, Seen),
+    add_citation(Seen, CitationTerm, Accumulated, Next),
+    distinct_walk(Items, Next, Out).
+
+add_citation(true, _, Accumulated, Accumulated).
+add_citation(false, CitationTerm, Accumulated, [CitationTerm|Accumulated]).
+
+context_for(Profile, ReadKeys, [inputs_relied_on(Pairs)]) :-
+    gdpr_processor_contract_key_order(KeyOrder),
+    pairs_for(KeyOrder, Profile, ReadKeys, Pairs).
+
+pairs_for([], _, _, []).
+pairs_for([Key|Keys], Profile, ReadKeys, Pairs) :-
+    pair_kind(Key, Kind),
+    pair_entry(Kind, Key, Profile, ReadKeys, Pairs, Rest),
+    pairs_for(Keys, Profile, ReadKeys, Rest).
+
+pair_kind(Key, Kind) :-
+    judgement_keys(JudgementKeys),
+    memberd_t(Key, JudgementKeys, IsJudgement),
+    memberd_t(Key, [standard_clauses_adopted], IsOutside),
+    kind_from(IsJudgement, IsOutside, Kind).
+
+kind_from(true, _, judgement).
+kind_from(false, true, outside_fact).
+kind_from(false, false, other).
+
+pair_entry(other, _, _, _, Rest, Rest).
+pair_entry(outside_fact, Key, Profile, _, Pairs, Rest) :-
+    reading(Profile, Key, Reading),
+    outside_pair(Reading, Key, Pairs, Rest).
+pair_entry(judgement, Key, Profile, ReadKeys, Pairs, Rest) :-
+    memberd_t(Key, ReadKeys, IsRead),
+    judgement_pair(IsRead, Key, Profile, Pairs, Rest).
+
+outside_pair(absent, Key, [Key - absent|Rest], Rest).
+outside_pair(present(_), _, Rest, Rest).
+
+judgement_pair(false, _, _, Rest, Rest).
+judgement_pair(true, Key, Profile, Pairs, Rest) :-
+    reading(Profile, Key, Reading),
+    present_pair(Reading, Key, Pairs, Rest).
+
+present_pair(absent, _, Rest, Rest).
+present_pair(present(Value), Key, [Key - Value|Rest], Rest).
 
 decide_processor_contract(Profile, Verdict) :-
     gdpr_processor_contract_input_problems(Profile, Problems),
-    problems_verdict(Problems, Profile, Verdict).
+    verdict_for_problems(Problems, Profile, Verdict).
 
-problems_verdict([Problem|Problems], _, processor_contract_verdict(input_problems([Problem|Problems]), [], [])).
-problems_verdict([], Profile, Verdict) :-
-    read_key(Profile, processing_on_behalf_of_controller, OnBehalf),
-    first_gate_verdict(OnBehalf, Profile, Verdict).
+verdict_for_problems([Problem|Problems], _, processor_contract_verdict(input_problems([Problem|Problems]), [], [])).
+verdict_for_problems([], Profile, Verdict) :-
+    implements(eu_reg_2016_679_art_4_1),
+    implements(eu_reg_2016_679_art_4_2),
+    reading(Profile, processing_on_behalf_of_controller, Reading),
+    first_gate(Reading, Profile, Verdict).
 
-first_gate_verdict(false, _, processor_contract_verdict(not_applicable, [], [cite(eu_reg_2016_679_art_4_8)])) :-
+first_gate(present(false), _, processor_contract_verdict(not_applicable, [], [cite(eu_reg_2016_679_art_4_8)])) :-
     implements(eu_reg_2016_679_art_4_8).
-first_gate_verdict(absent, _, processor_contract_verdict(indeterminate([processing_on_behalf_of_controller]), [], [])) :-
+first_gate(absent, _, processor_contract_verdict(indeterminate([processing_on_behalf_of_controller]), [], [])) :-
     implements(eu_reg_2016_679_art_4_8).
-first_gate_verdict(unsure, Profile, processor_contract_verdict(needs_legal_review(open_textured(processing_on_behalf_of_controller, cite(eu_reg_2016_679_art_4_8)), [inputs_relied_on(Pairs)]), [], [])) :-
+first_gate(present(unsure), Profile, processor_contract_verdict(needs_legal_review(open_textured(processing_on_behalf_of_controller, cite(eu_reg_2016_679_art_4_8)), Context), [], [])) :-
     implements(eu_reg_2016_679_art_4_8),
-    pairs_for([processing_on_behalf_of_controller, standard_clauses_adopted], Profile, Pairs).
-first_gate_verdict(true, Profile, Verdict) :-
+    context_for(Profile, [processing_on_behalf_of_controller], Context).
+first_gate(present(true), Profile, Verdict) :-
     implements(eu_reg_2016_679_art_4_8),
-    read_key(Profile, processor_determines_purposes_and_means, Determines),
-    second_gate_verdict(Determines, Profile, Verdict).
+    reading(Profile, processor_determines_purposes_and_means, Reading),
+    second_gate(Reading, Profile, Verdict).
 
-second_gate_verdict(true, Profile, processor_contract_verdict(needs_legal_review(deferred_provision(cite(eu_reg_2016_679_art_28_10)), [inputs_relied_on(Pairs)]), [], [])) :-
+second_gate(present(true), Profile, processor_contract_verdict(needs_legal_review(deferred_provision(cite(eu_reg_2016_679_art_28_10)), Context), [], [])) :-
     implements(eu_reg_2016_679_art_28_10),
-    pairs_for([processing_on_behalf_of_controller, processor_determines_purposes_and_means, standard_clauses_adopted], Profile, Pairs).
-second_gate_verdict(absent, _, processor_contract_verdict(indeterminate([processor_determines_purposes_and_means]), [], [])) :-
+    implements(eu_reg_2016_679_art_4_7),
+    context_for(Profile, [processing_on_behalf_of_controller, processor_determines_purposes_and_means], Context).
+second_gate(absent, _, processor_contract_verdict(indeterminate([processor_determines_purposes_and_means]), [], [])) :-
     implements(eu_reg_2016_679_art_28_10).
-second_gate_verdict(unsure, Profile, processor_contract_verdict(needs_legal_review(open_textured(processor_determines_purposes_and_means, cite(eu_reg_2016_679_art_28_10)), [inputs_relied_on(Pairs)]), [], [])) :-
+second_gate(present(unsure), Profile, processor_contract_verdict(needs_legal_review(open_textured(processor_determines_purposes_and_means, cite(eu_reg_2016_679_art_28_10)), Context), [], [])) :-
     implements(eu_reg_2016_679_art_28_10),
-    pairs_for([processing_on_behalf_of_controller, processor_determines_purposes_and_means, standard_clauses_adopted], Profile, Pairs).
-second_gate_verdict(false, Profile, Verdict) :-
+    context_for(Profile, [processing_on_behalf_of_controller, processor_determines_purposes_and_means], Context).
+second_gate(present(false), Profile, Verdict) :-
     implements(eu_reg_2016_679_art_28_10),
-    checklist_verdict(Profile, Verdict).
-
-checklist_verdict(Profile, Verdict) :-
-    implements(eu_reg_2016_679_art_28_3),
-    checklist_items(Profile, Items),
-    select_state(unmet, Items, Unmet),
-    select_state(open_by_absence, Items, Absent),
-    select_state(open_by_judgement, Items, Judgement),
+    contract_items(Profile, Items),
+    partition_items(Items, Unmet, Absent, Judgement),
     checklist_outcome(Unmet, Absent, Judgement, Items, Profile, Verdict).
 
-checklist_outcome([Missing|Unmet], _, _, _, _, processor_contract_verdict(ineligible, Keys, Citations)) :-
+checklist_outcome([First|Others], _, _, _, _, processor_contract_verdict(ineligible, Keys, Citations)) :-
     implements(eu_reg_2016_679_art_28_3),
-    pairs_keys_values([Missing|Unmet], Keys, Citations).
-checklist_outcome([], [Absent|Absents], _, _, _, processor_contract_verdict(indeterminate(Keys), [], [])) :-
+    pairs_keys_values([First|Others], Keys, Citations).
+checklist_outcome([], [Key|Keys], _, _, _, processor_contract_verdict(indeterminate([Key|Keys]), [], [])) :-
+    implements(eu_reg_2016_679_art_28_3).
+checklist_outcome([], [], [Key - CitationTerm|_], Items, Profile, processor_contract_verdict(needs_legal_review(open_textured(Key, CitationTerm), Context), [], [])) :-
     implements(eu_reg_2016_679_art_28_3),
-    pairs_keys([Absent|Absents], Keys).
-checklist_outcome([], [], [Key - Citation|_], _, Profile, processor_contract_verdict(needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]), [], [])) :-
-    implements(eu_reg_2016_679_art_28_3),
-    read_key(Profile, subprocessor_engaged, Engaged),
-    engaged_pair_keys(Engaged, PairKeys),
-    pairs_for(PairKeys, Profile, Pairs).
+    maplist(item_key, Items, ItemKeys),
+    context_for(Profile, [processing_on_behalf_of_controller, processor_determines_purposes_and_means|ItemKeys], Context).
 checklist_outcome([], [], [], Items, _, processor_contract_verdict(eligible, [], Citations)) :-
     implements(eu_reg_2016_679_art_28_3),
-    distinct_cites(Items, Citations).
+    distinct_citations(Items, Citations).
 
 processor_contract_status(Profile, Status) :-
     decide_processor_contract(Profile, processor_contract_verdict(Status, _, _)).
@@ -203,22 +255,28 @@ contract_missing_stipulations(Profile, Missing) :-
 
 contract_checklist(Profile, Items) :-
     gdpr_processor_contract_input_problems(Profile, Problems),
-    checklist_for(Problems, Profile, Items).
+    checklist_for_problems(Problems, Profile, Items).
 
-checklist_for([_|_], _, []).
-checklist_for([], Profile, Items) :-
-    checklist_items(Profile, Items).
+checklist_for_problems([_|_], _, []).
+checklist_for_problems([], Profile, Items) :-
+    contract_items(Profile, Items).
 
-processor_contract_outside_facts(Profile, Facts) :-
+processor_contract_outside_facts(Profile, OutsideFacts) :-
     gdpr_processor_contract_input_problems(Profile, Problems),
-    outside_facts_for(Problems, Profile, Facts).
+    outside_facts_for_problems(Problems, Profile, OutsideFacts).
 
-outside_facts_for([Problem|Problems], _, input_problems([Problem|Problems])).
-outside_facts_for([], Profile, [outside_fact(standard_clauses_adopted, Value)]) :-
-    read_key(Profile, standard_clauses_adopted, Value).
+outside_facts_for_problems([Problem|Problems], _, input_problems([Problem|Problems])).
+outside_facts_for_problems([], Profile, OutsideFacts) :-
+    implements(eu_reg_2016_679_art_28_6),
+    implements(eu_reg_2016_679_art_28_7),
+    reading(Profile, standard_clauses_adopted, Reading),
+    outside_fact_items(Reading, OutsideFacts).
 
-decide_processor_contract_status(Profile, Verdict) :-
-    decide_processor_contract(Profile, Verdict).
+outside_fact_items(present(Attested), [outside_fact(standard_clauses_adopted, Attested)]).
+outside_fact_items(absent, [outside_fact(standard_clauses_adopted, absent)]).
+
+decide_processor_contract_status(Profile, processor_contract_status_verdict(Status, Citations)) :-
+    decide_processor_contract(Profile, processor_contract_verdict(Status, _, Citations)).
 
 processor_contract_status_status(Profile, Status) :-
     processor_contract_status(Profile, Status).
@@ -228,3 +286,133 @@ processor_contract_status_checklist(Profile, Items) :-
 
 processor_contract_status_decision_resolvable(Profile) :-
     decide_processor_contract(Profile, _).
+
+complete_profile([attribute(processing_on_behalf_of_controller, true), attribute(processor_determines_purposes_and_means, false), attribute(processor_provides_sufficient_guarantees, true), attribute(contract_binding_on_processor, true), attribute(contract_governed_by_union_or_member_state_law, true), attribute(contract_in_writing, true), attribute(contract_sets_out_subject_matter, true), attribute(contract_sets_out_duration, true), attribute(contract_sets_out_nature_of_processing, true), attribute(contract_sets_out_purpose_of_processing, true), attribute(contract_sets_out_type_of_personal_data, true), attribute(contract_sets_out_categories_of_data_subjects, true), attribute(contract_sets_out_controller_obligations_and_rights, true), attribute(stipulates_processing_only_on_documented_instructions, true), attribute(stipulates_confidentiality_commitment, true), attribute(stipulates_security_measures, true), attribute(stipulates_conditions_for_engaging_another_processor, true), attribute(stipulates_assistance_with_data_subject_requests, true), attribute(stipulates_assistance_with_articles_32_to_36_obligations, true), attribute(stipulates_deletion_or_return_of_personal_data, true), attribute(stipulates_information_and_audit_rights, true), attribute(stipulates_notice_of_infringing_instruction, true), attribute(subprocessor_engaged, false)]).
+
+replace_value(_, _, [], []).
+replace_value(Key, Value, [attribute(ElementKey, Old)|Elements], [attribute(ElementKey, New)|Rest]) :-
+    memberd_t(ElementKey, [Key], Same),
+    chosen_value(Same, Value, Old, New),
+    replace_value(Key, Value, Elements, Rest).
+
+chosen_value(true, Value, _, Value).
+chosen_value(false, _, Old, Old).
+
+without_key(_, [], []).
+without_key(Key, [attribute(ElementKey, Value)|Elements], Out) :-
+    memberd_t(ElementKey, [Key], Same),
+    keep_attribute(Same, attribute(ElementKey, Value), Rest, Out),
+    without_key(Key, Elements, Rest).
+
+keep_attribute(true, _, Rest, Rest).
+keep_attribute(false, Attribute, Rest, [Attribute|Rest]).
+
+subprocessor_profile(Authorisation, Profile) :-
+    complete_profile(Base),
+    replace_value(subprocessor_engaged, true, Base, Engaged),
+    append(Engaged, [attribute(subprocessor_authorisation, Authorisation), attribute(subprocessor_authorisation_given_before_engagement, true), attribute(subprocessor_obligations_same, true), attribute(subprocessor_provides_sufficient_guarantees, true), attribute(subprocessor_contract_in_writing, true), attribute(subprocessor_contract_governed_by_union_or_member_state_law, true)], Profile).
+
+test(complete_contract_is_eligible_once) :-
+    complete_profile(Profile),
+    findall(Verdict, decide_processor_contract(Profile, Verdict), Verdicts),
+    Verdicts == [processor_contract_verdict(eligible, [], [cite(eu_reg_2016_679_art_28_3), cite(eu_reg_2016_679_art_28_9), cite(eu_reg_2016_679_art_28_1), cite(eu_reg_2016_679_art_28_3_f), cite(eu_reg_2016_679_art_28_3_e), cite(eu_reg_2016_679_art_28_3_d), cite(eu_reg_2016_679_art_28_3_b), cite(eu_reg_2016_679_art_28_3_g), cite(eu_reg_2016_679_art_28_3_h), cite(eu_reg_2016_679_art_28_3_second_subpara), cite(eu_reg_2016_679_art_28_3_a), cite(eu_reg_2016_679_art_28_3_c), cite(eu_reg_2016_679_art_28_2)])].
+test(adopted_standard_clauses_do_not_change_the_status) :-
+    complete_profile(Base),
+    append(Base, [attribute(standard_clauses_adopted, attested(true, attestation(host, moment, reason, none)))], Profile),
+    processor_contract_status(Profile, eligible).
+test(missing_security_clause_is_ineligible) :-
+    complete_profile(Base),
+    replace_value(stipulates_security_measures, false, Base, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(ineligible, [stipulates_security_measures], [cite(eu_reg_2016_679_art_28_3_c)])).
+test(missing_limbs_are_listed_in_key_order) :-
+    complete_profile(Base),
+    replace_value(stipulates_security_measures, false, Base, Middle),
+    replace_value(contract_binding_on_processor, false, Middle, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(ineligible, [contract_binding_on_processor, stipulates_security_measures], [cite(eu_reg_2016_679_art_28_3), cite(eu_reg_2016_679_art_28_3_c)])),
+    contract_missing_stipulations(Profile, [contract_binding_on_processor, stipulates_security_measures]).
+test(absent_writing_is_indeterminate) :-
+    complete_profile(Base),
+    without_key(contract_in_writing, Base, Profile),
+    processor_contract_status(Profile, indeterminate([contract_in_writing])),
+    contract_missing_stipulations(Profile, []).
+test(unmet_dominates_absence) :-
+    complete_profile(Base),
+    without_key(contract_in_writing, Base, Middle),
+    replace_value(stipulates_security_measures, false, Middle, Profile),
+    processor_contract_status(Profile, ineligible).
+test(unsure_guarantees_refer_with_pairs) :-
+    complete_profile(Base),
+    replace_value(processor_provides_sufficient_guarantees, unsure, Base, Profile),
+    findall(Status, processor_contract_status(Profile, Status), Statuses),
+    Statuses == [needs_legal_review(open_textured(processor_provides_sufficient_guarantees, cite(eu_reg_2016_679_art_28_1)), [inputs_relied_on([contract_binding_on_processor - true, contract_governed_by_union_or_member_state_law - true, processing_on_behalf_of_controller - true, processor_determines_purposes_and_means - false, processor_provides_sufficient_guarantees - unsure, standard_clauses_adopted - absent])])].
+test(processing_not_on_behalf_is_not_applicable) :-
+    complete_profile(Base),
+    replace_value(processing_on_behalf_of_controller, false, Base, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(not_applicable, [], [cite(eu_reg_2016_679_art_4_8)])).
+test(an_empty_profile_names_only_the_role_key) :-
+    processor_contract_status([], indeterminate([processing_on_behalf_of_controller])).
+test(unsure_role_refers_at_once) :-
+    processor_contract_status([attribute(processing_on_behalf_of_controller, unsure)], needs_legal_review(open_textured(processing_on_behalf_of_controller, cite(eu_reg_2016_679_art_4_8)), [inputs_relied_on([processing_on_behalf_of_controller - unsure, standard_clauses_adopted - absent])])).
+test(controller_by_purposes_and_means_is_deferred) :-
+    complete_profile(Base),
+    replace_value(processor_determines_purposes_and_means, true, Base, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(needs_legal_review(deferred_provision(cite(eu_reg_2016_679_art_28_10)), [inputs_relied_on([processing_on_behalf_of_controller - true, processor_determines_purposes_and_means - true, standard_clauses_adopted - absent])]), [], [])).
+test(absent_purposes_and_means_is_indeterminate) :-
+    processor_contract_status([attribute(processing_on_behalf_of_controller, true)], indeterminate([processor_determines_purposes_and_means])).
+test(specific_authorisation_with_subprocessor_is_eligible) :-
+    subprocessor_profile(specific_written, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(eligible, [], [cite(eu_reg_2016_679_art_28_3), cite(eu_reg_2016_679_art_28_9), cite(eu_reg_2016_679_art_28_1), cite(eu_reg_2016_679_art_28_3_f), cite(eu_reg_2016_679_art_28_3_e), cite(eu_reg_2016_679_art_28_3_d), cite(eu_reg_2016_679_art_28_3_b), cite(eu_reg_2016_679_art_28_3_g), cite(eu_reg_2016_679_art_28_3_h), cite(eu_reg_2016_679_art_28_3_second_subpara), cite(eu_reg_2016_679_art_28_3_a), cite(eu_reg_2016_679_art_28_3_c), cite(eu_reg_2016_679_art_28_2), cite(eu_reg_2016_679_art_28_4)])).
+test(general_authorisation_reads_the_notice_limbs) :-
+    subprocessor_profile(general_written, Profile),
+    processor_contract_status(Profile, indeterminate([controller_given_opportunity_to_object, processor_informed_controller_of_intended_changes])).
+test(notice_limbs_are_not_read_under_specific_authorisation) :-
+    subprocessor_profile(specific_written, Base),
+    append(Base, [attribute(processor_informed_controller_of_intended_changes, false)], Profile),
+    processor_contract_status(Profile, eligible).
+test(no_authorisation_is_ineligible) :-
+    subprocessor_profile(none, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(ineligible, [subprocessor_authorisation], [cite(eu_reg_2016_679_art_28_2)])).
+test(unread_subprocessor_keys_do_not_change_the_answer) :-
+    complete_profile(Base),
+    append(Base, [attribute(subprocessor_authorisation, none), attribute(subprocessor_contract_in_writing, false), attribute(subprocessor_obligations_same, false)], Profile),
+    processor_contract_status(Profile, eligible).
+test(a_wrong_type_gives_input_problems) :-
+    complete_profile(Base),
+    replace_value(contract_in_writing, unsure, Base, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(input_problems([wrong_type(contract_in_writing)]), [], [])),
+    contract_checklist(Profile, []),
+    contract_missing_stipulations(Profile, []),
+    processor_contract_outside_facts(Profile, input_problems([wrong_type(contract_in_writing)])).
+test(checklist_without_engagement_lists_twenty_one_items) :-
+    complete_profile(Base),
+    without_key(subprocessor_engaged, Base, Profile),
+    contract_checklist(Profile, Items),
+    length(Items, 21),
+    last(Items, checklist_item(subprocessor_engaged, cite(eu_reg_2016_679_art_28_2), open_by_absence)),
+    processor_contract_status(Profile, indeterminate([subprocessor_engaged])).
+test(checklist_is_independent_of_the_gates) :-
+    complete_profile(Base),
+    replace_value(processing_on_behalf_of_controller, false, Base, Profile),
+    contract_checklist(Profile, [checklist_item(contract_binding_on_processor, cite(eu_reg_2016_679_art_28_3), met)|_]).
+test(an_absent_outside_fact_is_recorded) :-
+    complete_profile(Profile),
+    processor_contract_outside_facts(Profile, [outside_fact(standard_clauses_adopted, absent)]).
+test(a_present_outside_fact_is_copied) :-
+    complete_profile(Base),
+    append(Base, [attribute(standard_clauses_adopted, attested(false, attestation(host, moment, reason, none)))], Profile),
+    processor_contract_outside_facts(Profile, [outside_fact(standard_clauses_adopted, attested(false, attestation(host, moment, reason, none)))]).
+test(scaffold_facade_projects_the_status) :-
+    complete_profile(Profile),
+    processor_contract_status_status(Profile, eligible),
+    processor_contract_status_decision_resolvable(Profile).
+
+test(complete_contract_is_not_ineligible, fail) :-
+    complete_profile(Profile),
+    processor_contract_status(Profile, ineligible).
+test(missing_security_clause_is_not_eligible, fail) :-
+    complete_profile(Base),
+    replace_value(stipulates_security_measures, false, Base, Profile),
+    processor_contract_status(Profile, eligible).
+test(no_authorisation_is_not_eligible, fail) :-
+    subprocessor_profile(none, Profile),
+    processor_contract_status(Profile, eligible).

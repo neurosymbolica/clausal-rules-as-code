@@ -4,306 +4,222 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(library(pairs), [pairs_keys/2, pairs_values/2]).
+:- use_module(library(pairs), [pairs_values/2]).
 :- use_module(library(reif), [memberd_t/3]).
-:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
-:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2, duty_argument_problems/2, absent_referral/2]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_chapter_v_extras_citations, [implements/1]).
 
-duty_row(inform_supervisory_authority, inform_duty, [supervisory_authority_informed_of_transfer], cite(eu_reg_2016_679_art_49_1_second_subpara)).
-duty_row(inform_data_subject, inform_duty, [data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests], cite(eu_reg_2016_679_art_49_1_second_subpara)).
-duty_row(document_assessment_and_safeguards, documentation_duty, [assessment_documented_in_records, suitable_safeguards_documented_in_records], cite(eu_reg_2016_679_art_49_6)).
+gdpr_chapter_v_extras_status_values([no_second_subparagraph_transfer, not_a_processor_duty, duty_met, duty_not_met, article_48_not_engaged, not_barred_by_article_48, not_recognisable_or_enforceable, not_an_onward_transfer, onward_transfer_may_take_place, onward_transfer_may_not_take_place]).
 
-gdpr_chapter_v_extras_status_values([no_condition_breached, more_input_needed, condition_breached]).
+duty_atoms([inform_supervisory_authority, inform_data_subject, document_assessment_and_safeguards]).
 
-outside_reading(Profile, OutsideKey, Attested) :-
-    profile_get(Profile, OutsideKey, Attested).
-outside_reading(Profile, OutsideKey, absent) :-
-    profile_lacks(Profile, OutsideKey).
+duty_row(inform_supervisory_authority, duty_to_inform, [supervisory_authority_informed_of_transfer], cite(eu_reg_2016_679_art_49_1_second_subpara)).
+duty_row(inform_data_subject, duty_to_inform, [data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests], cite(eu_reg_2016_679_art_49_1_second_subpara)).
+duty_row(document_assessment_and_safeguards, duty_to_document, [assessment_documented_in_records, suitable_safeguards_documented_in_records], cite(eu_reg_2016_679_art_49_6)).
 
-crisp_reading(Profile, CrispKey, Value) :-
-    profile_get(Profile, CrispKey, Value).
-crisp_reading(Profile, CrispKey, absent) :-
-    profile_lacks(Profile, CrispKey).
+outside_fact_row(transfer_relies_on_article_49_1_second_subparagraph, cite(eu_reg_2016_679_art_49_1_second_subpara), cite(second_subparagraph_transfer_statement)).
+outside_fact_row(third_country_judgment_or_decision_requires_transfer, cite(eu_reg_2016_679_art_48), cite(foreign_judgment_requires_transfer_statement)).
+outside_fact_row(international_agreement_basis_for_judgment_or_decision, cite(eu_reg_2016_679_art_48), cite(international_agreement_basis_statement)).
+outside_fact_row(transfer_is_onward_transfer, cite(eu_reg_2016_679_art_44), cite(onward_transfer_statement)).
+outside_fact_row(onward_transfer_has_chapter_v_basis, cite(eu_reg_2016_679_art_44), cite(onward_transfer_chapter_v_basis_statement)).
 
-role_reading(Profile, Role) :-
-    profile_get(Profile, party_role, Role).
-role_reading(Profile, absent) :-
-    profile_lacks(Profile, party_role).
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, present(Value)) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value).
+
+absent_referral(OutsideKey, needs_legal_review(cross_reference_unresolved(Citation, Target), [resolution(Target, not_attempted), inputs_relied_on([OutsideKey - absent])])) :-
+    outside_fact_row(OutsideKey, Citation, Target).
+
+duty_input_problems(Profile, Duty, Problems) :-
+    gdpr_chapter_v_extras_input_problems(Profile, ProfileProblems),
+    duty_problems(Duty, DutyProblems),
+    append(ProfileProblems, DutyProblems, Problems).
+
+duty_problems(Duty, [wrong_type(duty)]) :-
+    var(Duty).
+duty_problems(Duty, DutyProblems) :-
+    nonvar(Duty),
+    duty_atoms(DutyAtoms),
+    memberd_t(Duty, DutyAtoms, IsDuty),
+    known_duty_problems(IsDuty, DutyProblems).
+
+known_duty_problems(true, []).
+known_duty_problems(false, [wrong_type(duty)]).
 
 second_subparagraph_duty(Profile, Duty, Result, Basis, Citations) :-
-    gdpr_chapter_v_extras_input_problems(Profile, ProfileProblems),
-    duty_argument_problems(Duty, DutyProblems),
-    append(ProfileProblems, DutyProblems, Problems),
+    duty_input_problems(Profile, Duty, Problems),
     duty_answer(Problems, Profile, Duty, Result, Basis, Citations).
 
-duty_answer([FirstProblem|LaterProblems], _, _, input_problems([FirstProblem|LaterProblems]), [], []).
+duty_answer([Problem|Problems], _, _, input_problems([Problem|Problems]), [], []).
 duty_answer([], Profile, Duty, Result, Basis, Citations) :-
-    duty_row(Duty, Kind, _, _),
-    role_status(Kind, Profile, RoleStatus),
-    outside_reading(Profile, transfer_relies_on_article_49_1_second_subparagraph, TransferReading),
-    duty_route(RoleStatus, TransferReading, Profile, Duty, Result, Basis, Citations).
+    duty_row(Duty, DutyKind, FulfilmentKeys, DutyCitation),
+    key_state(Profile, party_role, RoleState),
+    key_state(Profile, transfer_relies_on_article_49_1_second_subparagraph, TransferState),
+    duty_step(DutyKind, RoleState, TransferState, Profile, FulfilmentKeys, DutyCitation, Result, Basis, Citations).
 
-role_status(inform_duty, Profile, RoleStatus) :-
+duty_step(duty_to_inform, present(processor), _, _, _, _, not_a_processor_duty, [], [cite(eu_reg_2016_679_art_49_1_second_subpara)]) :-
+    implements(eu_reg_2016_679_art_49_1_second_subpara).
+duty_step(duty_to_inform, absent, absent, _, _, _, Referral, [], []) :-
     implements(eu_reg_2016_679_art_49_1_second_subpara),
-    role_reading(Profile, RoleStatus).
-role_status(documentation_duty, _, not_read) :-
+    absent_referral(transfer_relies_on_article_49_1_second_subparagraph, Referral).
+duty_step(duty_to_inform, present(controller), absent, _, _, _, Referral, [], []) :-
+    implements(eu_reg_2016_679_art_49_1_second_subpara),
+    absent_referral(transfer_relies_on_article_49_1_second_subparagraph, Referral).
+duty_step(duty_to_document, _, absent, _, _, _, Referral, [], []) :-
+    implements(eu_reg_2016_679_art_49_6),
+    absent_referral(transfer_relies_on_article_49_1_second_subparagraph, Referral).
+duty_step(duty_to_inform, absent, present(_), _, _, _, indeterminate([party_role]), [], []) :-
+    implements(eu_reg_2016_679_art_49_1_second_subpara).
+duty_step(duty_to_inform, present(controller), present(attested(false, Attestation)), _, _, DutyCitation, no_second_subparagraph_transfer, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(false, Attestation))], [DutyCitation]) :-
+    implements(eu_reg_2016_679_art_49_1_second_subpara).
+duty_step(duty_to_document, _, present(attested(false, Attestation)), _, _, DutyCitation, no_second_subparagraph_transfer, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(false, Attestation))], [DutyCitation]) :-
     implements(eu_reg_2016_679_art_49_6).
-
-role_continues(controller).
-role_continues(absent).
-role_continues(not_read).
-
-duty_route(processor, _, _, _, not_a_processor_duty, [], [cite(eu_reg_2016_679_art_49_1_second_subpara)]) :-
-    implements(eu_reg_2016_679_art_49_1_second_subpara).
-duty_route(RoleStatus, absent, _, _, Result, [], []) :-
+duty_step(duty_to_inform, present(controller), present(attested(true, Attestation)), Profile, FulfilmentKeys, DutyCitation, Result, Basis, Citations) :-
     implements(eu_reg_2016_679_art_49_1_second_subpara),
-    role_continues(RoleStatus),
-    absent_referral(transfer_relies_on_article_49_1_second_subparagraph, Result).
-duty_route(absent, attested(_, _), _, _, indeterminate([party_role]), [], []) :-
-    implements(eu_reg_2016_679_art_49_1_second_subpara).
-duty_route(controller, attested(false, Attestation), _, Duty, no_second_subparagraph_transfer, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(false, Attestation))], [DutyCitation]) :-
-    implements(eu_reg_2016_679_art_49_1_second_subpara),
-    duty_row(Duty, inform_duty, _, DutyCitation).
-duty_route(not_read, attested(false, Attestation), _, Duty, no_second_subparagraph_transfer, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(false, Attestation))], [DutyCitation]) :-
+    fulfilment(Profile, FulfilmentKeys, Outcome),
+    fulfilment_answer(Outcome, attested(true, Attestation), DutyCitation, Result, Basis, Citations).
+duty_step(duty_to_document, _, present(attested(true, Attestation)), Profile, FulfilmentKeys, DutyCitation, Result, Basis, Citations) :-
     implements(eu_reg_2016_679_art_49_6),
-    duty_row(Duty, documentation_duty, _, DutyCitation).
-duty_route(controller, attested(true, Attestation), Profile, Duty, Result, Basis, Citations) :-
-    implements(eu_reg_2016_679_art_49_1_second_subpara),
-    duty_row(Duty, inform_duty, FulfilmentKeys, DutyCitation),
-    fulfilment_outcome(Profile, FulfilmentKeys, Outcome),
-    duty_result(Outcome, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(true, Attestation))], DutyCitation, Result, Basis, Citations).
-duty_route(not_read, attested(true, Attestation), Profile, Duty, Result, Basis, Citations) :-
-    implements(eu_reg_2016_679_art_49_6),
-    duty_row(Duty, documentation_duty, FulfilmentKeys, DutyCitation),
-    fulfilment_outcome(Profile, FulfilmentKeys, Outcome),
-    duty_result(Outcome, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(true, Attestation))], DutyCitation, Result, Basis, Citations).
+    implements(eu_reg_2016_679_art_30_1_e),
+    implements(eu_reg_2016_679_art_30_2_c),
+    implements(eu_reg_2016_679_art_30_5),
+    fulfilment(Profile, FulfilmentKeys, Outcome),
+    fulfilment_answer(Outcome, attested(true, Attestation), DutyCitation, Result, Basis, Citations).
 
-fulfilment_outcome(Profile, FulfilmentKeys, Outcome) :-
-    maplist(crisp_pair(Profile), FulfilmentKeys, Pairs),
-    pairs_values(Pairs, Readings),
-    memberd_t(false, Readings, HasFalse),
-    outcome_from(HasFalse, Pairs, Outcome).
+fulfilment(Profile, FulfilmentKeys, Outcome) :-
+    maplist(crisp_pair(Profile), FulfilmentKeys, KeyStates),
+    pairs_values(KeyStates, States),
+    memberd_t(false_value, States, HasFalse),
+    fulfilment_outcome(HasFalse, KeyStates, Outcome).
 
-crisp_pair(Profile, FulfilmentKey, FulfilmentKey - Reading) :-
-    crisp_reading(Profile, FulfilmentKey, Reading).
+crisp_pair(Profile, FulfilmentKey, FulfilmentKey - State) :-
+    key_state(Profile, FulfilmentKey, KeyState),
+    crisp_state(KeyState, State).
 
-outcome_from(true, _, not_met).
-outcome_from(false, Pairs, Outcome) :-
-    first_absent(Pairs, Outcome).
+crisp_state(absent, absent).
+crisp_state(present(true), true_value).
+crisp_state(present(false), false_value).
+
+fulfilment_outcome(true, _, not_met).
+fulfilment_outcome(false, KeyStates, Outcome) :-
+    first_absent(KeyStates, Outcome).
 
 first_absent([], met).
-first_absent([MissingKey - absent|_], missing(MissingKey)).
-first_absent([_ - true|Pairs], Outcome) :-
-    first_absent(Pairs, Outcome).
+first_absent([FulfilmentKey - absent|_], missing(FulfilmentKey)).
+first_absent([_ - true_value|KeyStates], Outcome) :-
+    first_absent(KeyStates, Outcome).
 
-duty_result(not_met, TransferBasis, DutyCitation, duty_not_met, TransferBasis, [DutyCitation]).
-duty_result(missing(MissingKey), _, _, indeterminate([MissingKey]), [], []).
-duty_result(met, TransferBasis, DutyCitation, duty_met, TransferBasis, [DutyCitation]).
+fulfilment_answer(not_met, Attested, DutyCitation, duty_not_met, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, Attested)], [DutyCitation]).
+fulfilment_answer(missing(FulfilmentKey), _, _, indeterminate([FulfilmentKey]), [], []).
+fulfilment_answer(met, Attested, DutyCitation, duty_met, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, Attested)], [DutyCitation]).
 
 foreign_judgment_or_decision_recognition(Profile, Result, Basis, Citations) :-
     gdpr_chapter_v_extras_input_problems(Profile, Problems),
-    recognition_answer(Problems, Profile, Result, Basis, Citations).
+    article_48_answer(Problems, Profile, Result, Basis, Citations).
 
-recognition_answer([FirstProblem|LaterProblems], _, input_problems([FirstProblem|LaterProblems]), [], []).
-recognition_answer([], Profile, Result, Basis, Citations) :-
-    outside_reading(Profile, third_country_judgment_or_decision_requires_transfer, JudgmentReading),
-    recognition_route(JudgmentReading, Profile, Result, Basis, Citations).
+article_48_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+article_48_answer([], Profile, Result, Basis, Citations) :-
+    key_state(Profile, third_country_judgment_or_decision_requires_transfer, JudgmentState),
+    key_state(Profile, international_agreement_basis_for_judgment_or_decision, AgreementState),
+    article_48_step(JudgmentState, AgreementState, Result, Basis, Citations).
 
-recognition_route(absent, _, Result, [], []) :-
+article_48_step(absent, _, Referral, [], []) :-
     implements(eu_reg_2016_679_art_48),
-    absent_referral(third_country_judgment_or_decision_requires_transfer, Result).
-recognition_route(attested(false, Attestation), _, article_48_not_engaged, [outside_fact(third_country_judgment_or_decision_requires_transfer, attested(false, Attestation))], [cite(eu_reg_2016_679_art_48)]) :-
+    absent_referral(third_country_judgment_or_decision_requires_transfer, Referral).
+article_48_step(present(attested(false, Attestation)), _, article_48_not_engaged, [outside_fact(third_country_judgment_or_decision_requires_transfer, attested(false, Attestation))], [cite(eu_reg_2016_679_art_48)]) :-
     implements(eu_reg_2016_679_art_48).
-recognition_route(attested(true, Attestation), Profile, Result, Basis, Citations) :-
+article_48_step(present(attested(true, _)), absent, Referral, [], []) :-
     implements(eu_reg_2016_679_art_48),
-    outside_reading(Profile, international_agreement_basis_for_judgment_or_decision, AgreementReading),
-    agreement_route(AgreementReading, attested(true, Attestation), Result, Basis, Citations).
-
-agreement_route(absent, _, Result, [], []) :-
-    implements(eu_reg_2016_679_art_48),
-    absent_referral(international_agreement_basis_for_judgment_or_decision, Result).
-agreement_route(attested(true, Attestation), JudgmentAttested, not_barred_by_article_48, [outside_fact(third_country_judgment_or_decision_requires_transfer, JudgmentAttested), outside_fact(international_agreement_basis_for_judgment_or_decision, attested(true, Attestation))], [cite(eu_reg_2016_679_art_48)]) :-
+    absent_referral(international_agreement_basis_for_judgment_or_decision, Referral).
+article_48_step(present(attested(true, JudgmentAttestation)), present(attested(true, AgreementAttestation)), not_barred_by_article_48, [outside_fact(third_country_judgment_or_decision_requires_transfer, attested(true, JudgmentAttestation)), outside_fact(international_agreement_basis_for_judgment_or_decision, attested(true, AgreementAttestation))], [cite(eu_reg_2016_679_art_48)]) :-
     implements(eu_reg_2016_679_art_48).
-agreement_route(attested(false, Attestation), JudgmentAttested, not_recognisable_or_enforceable, [outside_fact(third_country_judgment_or_decision_requires_transfer, JudgmentAttested), outside_fact(international_agreement_basis_for_judgment_or_decision, attested(false, Attestation))], [cite(eu_reg_2016_679_art_48)]) :-
+article_48_step(present(attested(true, JudgmentAttestation)), present(attested(false, AgreementAttestation)), not_recognisable_or_enforceable, [outside_fact(third_country_judgment_or_decision_requires_transfer, attested(true, JudgmentAttestation)), outside_fact(international_agreement_basis_for_judgment_or_decision, attested(false, AgreementAttestation))], [cite(eu_reg_2016_679_art_48)]) :-
     implements(eu_reg_2016_679_art_48).
 
 onward_transfer_condition(Profile, Result, Basis, Citations) :-
     gdpr_chapter_v_extras_input_problems(Profile, Problems),
     onward_answer(Problems, Profile, Result, Basis, Citations).
 
-onward_answer([FirstProblem|LaterProblems], _, input_problems([FirstProblem|LaterProblems]), [], []).
+onward_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
 onward_answer([], Profile, Result, Basis, Citations) :-
-    outside_reading(Profile, transfer_is_onward_transfer, OnwardReading),
-    onward_route(OnwardReading, Profile, Result, Basis, Citations).
+    key_state(Profile, transfer_is_onward_transfer, OnwardState),
+    key_state(Profile, onward_transfer_has_chapter_v_basis, ChapterState),
+    onward_step(OnwardState, ChapterState, Result, Basis, Citations).
 
-onward_route(absent, _, Result, [], []) :-
+onward_step(absent, _, Referral, [], []) :-
     implements(eu_reg_2016_679_art_44),
-    absent_referral(transfer_is_onward_transfer, Result).
-onward_route(attested(false, Attestation), _, not_an_onward_transfer, [outside_fact(transfer_is_onward_transfer, attested(false, Attestation))], [cite(eu_reg_2016_679_art_44)]) :-
+    absent_referral(transfer_is_onward_transfer, Referral).
+onward_step(present(attested(false, Attestation)), _, not_an_onward_transfer, [outside_fact(transfer_is_onward_transfer, attested(false, Attestation))], [cite(eu_reg_2016_679_art_44)]) :-
     implements(eu_reg_2016_679_art_44).
-onward_route(attested(true, Attestation), Profile, Result, Basis, Citations) :-
+onward_step(present(attested(true, _)), absent, Referral, [], []) :-
     implements(eu_reg_2016_679_art_44),
-    outside_reading(Profile, onward_transfer_has_chapter_v_basis, BasisReading),
-    onward_basis_route(BasisReading, attested(true, Attestation), Result, Basis, Citations).
-
-onward_basis_route(absent, _, Result, [], []) :-
-    implements(eu_reg_2016_679_art_44),
-    absent_referral(onward_transfer_has_chapter_v_basis, Result).
-onward_basis_route(attested(true, Attestation), OnwardAttested, onward_transfer_may_take_place, [outside_fact(transfer_is_onward_transfer, OnwardAttested), outside_fact(onward_transfer_has_chapter_v_basis, attested(true, Attestation))], [cite(eu_reg_2016_679_art_44)]) :-
+    absent_referral(onward_transfer_has_chapter_v_basis, Referral).
+onward_step(present(attested(true, OnwardAttestation)), present(attested(true, ChapterAttestation)), onward_transfer_may_take_place, [outside_fact(transfer_is_onward_transfer, attested(true, OnwardAttestation)), outside_fact(onward_transfer_has_chapter_v_basis, attested(true, ChapterAttestation))], [cite(eu_reg_2016_679_art_44)]) :-
     implements(eu_reg_2016_679_art_44).
-onward_basis_route(attested(false, Attestation), OnwardAttested, onward_transfer_may_not_take_place, [outside_fact(transfer_is_onward_transfer, OnwardAttested), outside_fact(onward_transfer_has_chapter_v_basis, attested(false, Attestation))], [cite(eu_reg_2016_679_art_44)]) :-
+onward_step(present(attested(true, OnwardAttestation)), present(attested(false, ChapterAttestation)), onward_transfer_may_not_take_place, [outside_fact(transfer_is_onward_transfer, attested(true, OnwardAttestation)), outside_fact(onward_transfer_has_chapter_v_basis, attested(false, ChapterAttestation))], [cite(eu_reg_2016_679_art_44)]) :-
     implements(eu_reg_2016_679_art_44).
 
-result_item_status(duty_met, met).
-result_item_status(duty_not_met, unmet(duty_not_met)).
-result_item_status(no_second_subparagraph_transfer, inapplicable).
-result_item_status(not_a_processor_duty, inapplicable).
-result_item_status(article_48_not_engaged, inapplicable).
-result_item_status(not_barred_by_article_48, met).
-result_item_status(not_recognisable_or_enforceable, unmet(not_recognisable_or_enforceable)).
-result_item_status(not_an_onward_transfer, inapplicable).
-result_item_status(onward_transfer_may_take_place, met).
-result_item_status(onward_transfer_may_not_take_place, unmet(onward_transfer_may_not_take_place)).
-result_item_status(indeterminate(MissingKeys), unknown(MissingKeys)).
-result_item_status(needs_legal_review(_, [_, inputs_relied_on(Pairs)]), unknown(ReferredKeys)) :-
-    pairs_keys(Pairs, ReferredKeys).
-
-duty_item(Profile, Duty, item(Duty, Status, DutyCitation)) :-
-    duty_row(Duty, _, _, DutyCitation),
-    second_subparagraph_duty(Profile, Duty, Result, _, _),
-    result_item_status(Result, Status).
-
-recognition_item(Profile, item(article_48_recognition, Status, cite(eu_reg_2016_679_art_48))) :-
-    foreign_judgment_or_decision_recognition(Profile, Result, _, _),
-    result_item_status(Result, Status).
-
-onward_item(Profile, item(onward_transfer, Status, cite(eu_reg_2016_679_art_44))) :-
-    onward_transfer_condition(Profile, Result, _, _),
-    result_item_status(Result, Status).
-
-facade_items(Profile, [SupervisoryItem, DataSubjectItem, DocumentationItem, RecognitionItem, OnwardItem]) :-
-    duty_item(Profile, inform_supervisory_authority, SupervisoryItem),
-    duty_item(Profile, inform_data_subject, DataSubjectItem),
-    duty_item(Profile, document_assessment_and_safeguards, DocumentationItem),
-    recognition_item(Profile, RecognitionItem),
-    onward_item(Profile, OnwardItem).
-
-gdpr_chapter_v_extras_checklist(Profile, Items) :-
-    gdpr_chapter_v_extras_input_problems(Profile, Problems),
-    checklist_from(Problems, Profile, Items).
-
-checklist_from([FirstProblem|LaterProblems], _, [item(input_check, unmet(input_problems([FirstProblem|LaterProblems])), [])]).
-checklist_from([], Profile, Items) :-
-    facade_items(Profile, Items).
-
-status_flag(met, clear).
-status_flag(inapplicable, clear).
-status_flag(unmet(_), breached).
-status_flag(unknown(_), open).
-
-item_flag(item(_, Status, _), Flag) :-
-    status_flag(Status, Flag).
-
-items_status(Items, Status) :-
-    maplist(item_flag, Items, Flags),
-    memberd_t(breached, Flags, HasBreach),
-    memberd_t(open, Flags, HasOpen),
-    verdict_status(HasBreach, HasOpen, Status).
-
-verdict_status(true, _, condition_breached).
-verdict_status(false, true, more_input_needed).
-verdict_status(false, false, no_condition_breached).
-
-items_citations(Items, Citations) :-
-    findall(Citation, member(item(_, _, Citation), Items), Collected),
-    sort(Collected, Citations).
-
-decide_gdpr_chapter_v_extras(Profile, gdpr_chapter_v_extras_verdict(Status, Citations)) :-
-    gdpr_chapter_v_extras_input_problems(Profile, Problems),
-    facade_verdict(Problems, Profile, Status, Citations).
-
-facade_verdict([FirstProblem|LaterProblems], _, input_problems([FirstProblem|LaterProblems]), []).
-facade_verdict([], Profile, Status, Citations) :-
-    facade_items(Profile, Items),
-    items_status(Items, Status),
-    items_citations(Items, Citations).
+decide_gdpr_chapter_v_extras(Profile, gdpr_chapter_v_extras_verdict(Result, Citations)) :-
+    onward_transfer_condition(Profile, Result, _Basis, Citations).
 
 gdpr_chapter_v_extras_status(Profile, Status) :-
-    decide_gdpr_chapter_v_extras(Profile, gdpr_chapter_v_extras_verdict(Status, _)).
+    decide_gdpr_chapter_v_extras(Profile, gdpr_chapter_v_extras_verdict(Status, _Citations)).
+
+gdpr_chapter_v_extras_checklist(Profile, [item(inform_supervisory_authority, SupervisoryResult, SupervisoryCitations), item(inform_data_subject, DataSubjectResult, DataSubjectCitations), item(document_assessment_and_safeguards, DocumentResult, DocumentCitations), item(article_48, JudgmentResult, JudgmentCitations), item(onward_transfer, OnwardResult, OnwardCitations)]) :-
+    second_subparagraph_duty(Profile, inform_supervisory_authority, SupervisoryResult, _, SupervisoryCitations),
+    second_subparagraph_duty(Profile, inform_data_subject, DataSubjectResult, _, DataSubjectCitations),
+    second_subparagraph_duty(Profile, document_assessment_and_safeguards, DocumentResult, _, DocumentCitations),
+    foreign_judgment_or_decision_recognition(Profile, JudgmentResult, _, JudgmentCitations),
+    onward_transfer_condition(Profile, OnwardResult, _, OnwardCitations).
 
 gdpr_chapter_v_extras_decision_resolvable(Profile) :-
-    decide_gdpr_chapter_v_extras(Profile, _).
+    decide_gdpr_chapter_v_extras(Profile, _Verdict).
 
-sample_attestation(attestation(host, stated_at, stated_reason, none)).
-
-test(the_supervisory_authority_duty_is_met_once) :-
-    sample_attestation(Attestation),
-    Profile = [attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, Attestation)), attribute(party_role, controller), attribute(supervisory_authority_informed_of_transfer, true)],
-    findall(Result - Basis - Citations, second_subparagraph_duty(Profile, inform_supervisory_authority, Result, Basis, Citations), Answers),
-    Answers == [duty_met - [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(true, Attestation))] - [cite(eu_reg_2016_679_art_49_1_second_subpara)]].
-test(a_processor_is_told_a_duty_to_inform_is_not_its_duty) :-
+test(processor_duty_to_inform_whatever_the_transfer_fact) :-
     findall(Result - Basis - Citations, second_subparagraph_duty([attribute(party_role, processor)], inform_data_subject, Result, Basis, Citations), Answers),
     Answers == [not_a_processor_duty - [] - [cite(eu_reg_2016_679_art_49_1_second_subpara)]].
-test(an_absent_fact_refers_before_party_role_is_named) :-
-    findall(Result, second_subparagraph_duty([], inform_supervisory_authority, Result, _, _), Answers),
-    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_49_1_second_subpara), cite(second_subparagraph_transfer_statement)), [resolution(cite(second_subparagraph_transfer_statement), not_attempted), inputs_relied_on([transfer_relies_on_article_49_1_second_subparagraph - absent])])].
-test(party_role_is_named_before_the_fact_false_is_read) :-
-    sample_attestation(Attestation),
-    findall(Result - Basis - Citations, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(false, Attestation))], inform_supervisory_authority, Result, Basis, Citations), Answers),
-    Answers == [indeterminate([party_role]) - [] - []].
-test(the_documentation_duty_ignores_party_role) :-
-    sample_attestation(Attestation),
-    findall(Result - Citations, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(false, Attestation)), attribute(party_role, processor)], document_assessment_and_safeguards, Result, _, Citations), Answers),
-    Answers == [no_second_subparagraph_transfer - [cite(eu_reg_2016_679_art_49_6)]].
-test(a_false_key_decides_before_an_absent_one) :-
-    sample_attestation(Attestation),
-    Profile = [attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, Attestation)), attribute(party_role, controller), attribute(data_subject_informed_of_compelling_legitimate_interests, false)],
-    findall(Result, second_subparagraph_duty(Profile, inform_data_subject, Result, _, _), Answers),
-    Answers == [duty_not_met].
-test(the_first_absent_fulfilment_key_is_named) :-
-    sample_attestation(Attestation),
-    findall(Result - Basis, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, Attestation))], document_assessment_and_safeguards, Result, Basis, _), Answers),
-    Answers == [indeterminate([assessment_documented_in_records]) - []].
-test(a_bad_profile_and_a_bad_duty_are_both_named) :-
-    findall(Result - Basis - Citations, second_subparagraph_duty(not_a_profile, _, Result, Basis, Citations), Answers),
-    Answers == [input_problems([wrong_type(profile), wrong_type(duty)]) - [] - []].
-test(article_48_is_not_engaged) :-
-    sample_attestation(Attestation),
-    findall(Result - Basis, foreign_judgment_or_decision_recognition([attribute(third_country_judgment_or_decision_requires_transfer, attested(false, Attestation))], Result, Basis, _), Answers),
-    Answers == [article_48_not_engaged - [outside_fact(third_country_judgment_or_decision_requires_transfer, attested(false, Attestation))]].
-test(article_48_bars_without_an_agreement) :-
-    sample_attestation(Attestation),
-    Profile = [attribute(third_country_judgment_or_decision_requires_transfer, attested(true, Attestation)), attribute(international_agreement_basis_for_judgment_or_decision, attested(false, Attestation))],
-    findall(Result - Citations, foreign_judgment_or_decision_recognition(Profile, Result, _, Citations), Answers),
-    Answers == [not_recognisable_or_enforceable - [cite(eu_reg_2016_679_art_48)]].
-test(article_48_agreement_absent_is_referred) :-
-    sample_attestation(Attestation),
-    findall(Result, foreign_judgment_or_decision_recognition([attribute(third_country_judgment_or_decision_requires_transfer, attested(true, Attestation))], Result, _, _), Answers),
-    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_48), cite(international_agreement_basis_statement)), [resolution(cite(international_agreement_basis_statement), not_attempted), inputs_relied_on([international_agreement_basis_for_judgment_or_decision - absent])])].
-test(an_onward_transfer_with_a_basis_may_take_place) :-
-    sample_attestation(Attestation),
-    Profile = [attribute(transfer_is_onward_transfer, attested(true, Attestation)), attribute(onward_transfer_has_chapter_v_basis, attested(true, Attestation))],
-    findall(Result - Basis - Citations, onward_transfer_condition(Profile, Result, Basis, Citations), Answers),
-    Answers == [onward_transfer_may_take_place - [outside_fact(transfer_is_onward_transfer, attested(true, Attestation)), outside_fact(onward_transfer_has_chapter_v_basis, attested(true, Attestation))] - [cite(eu_reg_2016_679_art_44)]].
-test(a_transfer_that_is_not_onward) :-
-    sample_attestation(Attestation),
-    findall(Result, onward_transfer_condition([attribute(transfer_is_onward_transfer, attested(false, Attestation)), attribute(onward_transfer_has_chapter_v_basis, attested(false, Attestation))], Result, _, _), Answers),
-    Answers == [not_an_onward_transfer].
-test(an_empty_profile_needs_more_input) :-
-    findall(Status, gdpr_chapter_v_extras_status([], Status), Statuses),
-    Statuses == [more_input_needed].
-test(a_breached_condition_is_reported) :-
-    sample_attestation(Attestation),
-    gdpr_chapter_v_extras_status([attribute(transfer_is_onward_transfer, attested(true, Attestation)), attribute(onward_transfer_has_chapter_v_basis, attested(false, Attestation))], condition_breached).
-test(a_bad_profile_gets_input_problems_in_the_facade) :-
-    decide_gdpr_chapter_v_extras([attribute(party_role, owner)], gdpr_chapter_v_extras_verdict(input_problems([wrong_type(party_role)]), [])).
+test(absent_transfer_fact_refers_before_party_role) :-
+    findall(Result, second_subparagraph_duty([], inform_supervisory_authority, Result, _, _), Results),
+    Results == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_49_1_second_subpara), cite(second_subparagraph_transfer_statement)), [resolution(cite(second_subparagraph_transfer_statement), not_attempted), inputs_relied_on([transfer_relies_on_article_49_1_second_subparagraph - absent])])].
+test(party_role_named_when_transfer_fact_present) :-
+    findall(Result, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(false, attestation(by, at, reason, none)))], inform_data_subject, Result, _, _), Results),
+    Results == [indeterminate([party_role])].
+test(controller_no_second_subparagraph_transfer) :-
+    findall(Result - Basis, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(false, attestation(by, at, reason, none))), attribute(party_role, controller)], inform_supervisory_authority, Result, Basis, _), Answers),
+    Answers == [no_second_subparagraph_transfer - [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(false, attestation(by, at, reason, none)))]].
+test(false_key_decides_before_absent_key) :-
+    findall(Result, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))), attribute(party_role, controller), attribute(data_subject_informed_of_compelling_legitimate_interests, false)], inform_data_subject, Result, _, _), Results),
+    Results == [duty_not_met].
+test(first_absent_fulfilment_key_named) :-
+    findall(Result, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))), attribute(party_role, controller), attribute(data_subject_informed_of_compelling_legitimate_interests, true)], inform_data_subject, Result, _, _), Results),
+    Results == [indeterminate([data_subject_informed_of_transfer])].
+test(documentation_duty_ignores_party_role) :-
+    findall(Result - Citations, second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))), attribute(party_role, processor), attribute(assessment_documented_in_records, true), attribute(suitable_safeguards_documented_in_records, true)], document_assessment_and_safeguards, Result, _, Citations), Answers),
+    Answers == [duty_met - [cite(eu_reg_2016_679_art_49_6)]].
+test(bad_profile_and_bad_duty) :-
+    findall(Result, second_subparagraph_duty(not_a_list, _, Result, _, _), Results),
+    Results == [input_problems([wrong_type(profile), wrong_type(duty)])].
+test(article_48_not_engaged) :-
+    findall(Result, foreign_judgment_or_decision_recognition([attribute(third_country_judgment_or_decision_requires_transfer, attested(false, attestation(by, at, reason, none)))], Result, _, _), Results),
+    Results == [article_48_not_engaged].
+test(article_48_bars_without_agreement) :-
+    findall(Result, foreign_judgment_or_decision_recognition([attribute(third_country_judgment_or_decision_requires_transfer, attested(true, attestation(by, at, reason, none))), attribute(international_agreement_basis_for_judgment_or_decision, attested(false, attestation(by, at, reason, none)))], Result, _, _), Results),
+    Results == [not_recognisable_or_enforceable].
+test(article_48_agreement_absent_refers) :-
+    findall(Result, foreign_judgment_or_decision_recognition([attribute(third_country_judgment_or_decision_requires_transfer, attested(true, attestation(by, at, reason, none)))], Result, _, _), Results),
+    Results == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_48), cite(international_agreement_basis_statement)), [resolution(cite(international_agreement_basis_statement), not_attempted), inputs_relied_on([international_agreement_basis_for_judgment_or_decision - absent])])].
+test(onward_transfer_may_take_place) :-
+    findall(Result, onward_transfer_condition([attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none))), attribute(onward_transfer_has_chapter_v_basis, attested(true, attestation(by, at, reason, none)))], Result, _, _), Results),
+    Results == [onward_transfer_may_take_place].
+test(not_an_onward_transfer) :-
+    findall(Result, onward_transfer_condition([attribute(transfer_is_onward_transfer, attested(false, attestation(by, at, reason, none)))], Result, _, _), Results),
+    Results == [not_an_onward_transfer].
+test(bare_boolean_outside_fact_is_wrong_type) :-
+    findall(Result, onward_transfer_condition([attribute(transfer_is_onward_transfer, true)], Result, _, _), Results),
+    Results == [input_problems([wrong_type(transfer_is_onward_transfer)])].
 
-test(the_supervisory_authority_duty_is_not_unmet, fail) :-
-    sample_attestation(Attestation),
-    Profile = [attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, Attestation)), attribute(party_role, controller), attribute(supervisory_authority_informed_of_transfer, true)],
-    second_subparagraph_duty(Profile, inform_supervisory_authority, duty_not_met, _, _).
-test(article_48_does_not_bar_with_an_agreement, fail) :-
-    sample_attestation(Attestation),
-    Profile = [attribute(third_country_judgment_or_decision_requires_transfer, attested(true, Attestation)), attribute(international_agreement_basis_for_judgment_or_decision, attested(true, Attestation))],
-    foreign_judgment_or_decision_recognition(Profile, not_recognisable_or_enforceable, _, _).
+test(documentation_duty_met_is_not_a_processor_duty, fail) :-
+    second_subparagraph_duty([attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))), attribute(party_role, processor), attribute(assessment_documented_in_records, true), attribute(suitable_safeguards_documented_in_records, true)], document_assessment_and_safeguards, not_a_processor_duty, _, _).

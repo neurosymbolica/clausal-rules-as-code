@@ -1,0 +1,112 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_high_risk_requirements_fixtures, [high_risk_requirements_subject/1, high_risk_requirements_profile_for/2, high_risk_requirements_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_hof, [exclude/3]).
+:- use_module(m__eu_ai_act_high_risk_requirements_high_risk_requirements, [decide_high_risk_requirements/2]).
+
+base_attributes([attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false), attribute(system_listed_under_point_1_a_of_annex_iii, false), attribute(used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum, false), attribute(union_or_national_law_considers_the_separate_verification_disproportionate, false), attribute(uses_techniques_involving_the_training_of_ai_models_with_data, true), attribute(provider_is_an_sme_including_a_start_up_or_an_smc, false), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, false), attribute(significant_changes_in_design_as_from_the_chapter_iii_date, false), attribute(intended_to_be_used_by_public_authorities, false), attribute(system_is_a_component_of_products, true), attribute(pre_determined_changes_to_the_system_and_its_performance, true), attribute(related_to_a_product_covered_by_annex_i_section_a, true)]).
+
+subject_profile(annex_iii_on_application_date, overrides([])).
+subject_profile(annex_iii_day_before_application_date, overrides([])).
+subject_profile(annex_i_only_on_application_date, overrides([system_is_a_high_risk_ai_system_listed_in_annex_iii - false, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i - true])).
+subject_profile(annex_i_only_day_before_application_date, overrides([system_is_a_high_risk_ai_system_listed_in_annex_iii - false, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i - true])).
+subject_profile(dual_route_on_annex_iii_application_date, overrides([system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i - true])).
+subject_profile(not_a_high_risk_system, overrides([system_is_a_high_risk_ai_system_listed_in_annex_iii - false])).
+subject_profile(annex_i_system_after_application_date, overrides([system_is_a_high_risk_ai_system_listed_in_annex_iii - false, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i - true])).
+subject_profile(point_one_a_system_logging, overrides([system_listed_under_point_1_a_of_annex_iii - true])).
+subject_profile(other_annex_iii_system_logging, overrides([])).
+subject_profile(verification_exception_both_conditions, overrides([system_listed_under_point_1_a_of_annex_iii - true, used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum - true, union_or_national_law_considers_the_separate_verification_disproportionate - true])).
+subject_profile(verification_purposes_without_law_view, overrides([system_listed_under_point_1_a_of_annex_iii - true, used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum - true])).
+subject_profile(annex_x_component_day_before_deadline, overrides([component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027 - true])).
+subject_profile(annex_x_component_on_deadline, overrides([component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027 - true])).
+subject_profile(existing_system_without_changes, overrides([placed_on_the_market_or_put_into_service_before_the_chapter_iii_date - true])).
+subject_profile(existing_system_with_changes, overrides([placed_on_the_market_or_put_into_service_before_the_chapter_iii_date - true, significant_changes_in_design_as_from_the_chapter_iii_date - true])).
+subject_profile(public_authority_system_day_before_deadline, overrides([placed_on_the_market_or_put_into_service_before_the_chapter_iii_date - true, intended_to_be_used_by_public_authorities - true])).
+subject_profile(public_authority_system_on_deadline, overrides([placed_on_the_market_or_put_into_service_before_the_chapter_iii_date - true, intended_to_be_used_by_public_authorities - true])).
+subject_profile(system_without_training_data, overrides([uses_techniques_involving_the_training_of_ai_models_with_data - false])).
+subject_profile(system_with_training_data, overrides([])).
+subject_profile(small_enterprise_provider_documentation, overrides([provider_is_an_sme_including_a_start_up_or_an_smc - true])).
+subject_profile(large_provider_documentation, overrides([])).
+subject_profile(component_photographs_not_a_component, overrides([system_is_a_component_of_products - false])).
+subject_profile(component_photographs_component, overrides([])).
+subject_profile(annex_i_section_a_information_unrelated, overrides([related_to_a_product_covered_by_annex_i_section_a - false])).
+subject_profile(annex_i_section_a_information_related, overrides([])).
+subject_profile(pre_determined_changes_absent, overrides([pre_determined_changes_to_the_system_and_its_performance - false])).
+subject_profile(pre_determined_changes_present, overrides([])).
+subject_profile(log_mechanisms_open_element, overrides([])).
+subject_profile(instructions_for_use_element, overrides([])).
+subject_profile(missing_annex_iii_classification, without(system_is_a_high_risk_ai_system_listed_in_annex_iii)).
+subject_profile(unsure_design_changes, overrides([placed_on_the_market_or_put_into_service_before_the_chapter_iii_date - true, significant_changes_in_design_as_from_the_chapter_iii_date - unsure])).
+subject_profile(malformed_classification_value, overrides([system_is_a_high_risk_ai_system_listed_in_annex_iii - unsure])).
+
+subject_question(annex_iii_on_application_date, requirement(risk_management_system, date(2027, 12, 2))).
+subject_question(annex_iii_day_before_application_date, requirement(risk_management_system, date(2027, 12, 1))).
+subject_question(annex_i_only_on_application_date, requirement(human_oversight, date(2028, 8, 2))).
+subject_question(annex_i_only_day_before_application_date, requirement(human_oversight, date(2028, 8, 1))).
+subject_question(dual_route_on_annex_iii_application_date, requirement(risk_management_system, date(2027, 12, 2))).
+subject_question(not_a_high_risk_system, requirement(human_oversight, date(2029, 1, 1))).
+subject_question(annex_i_system_after_application_date, requirement(human_oversight, date(2029, 1, 1))).
+subject_question(point_one_a_system_logging, requirement(minimum_logging_capabilities_for_point_1_a_systems, date(2028, 1, 1))).
+subject_question(other_annex_iii_system_logging, requirement(minimum_logging_capabilities_for_point_1_a_systems, date(2028, 1, 1))).
+subject_question(verification_exception_both_conditions, requirement(separate_verification_by_at_least_two_natural_persons, date(2028, 1, 1))).
+subject_question(verification_purposes_without_law_view, requirement(separate_verification_by_at_least_two_natural_persons, date(2028, 1, 1))).
+subject_question(annex_x_component_day_before_deadline, requirement(risk_management_system, date(2030, 12, 30))).
+subject_question(annex_x_component_on_deadline, requirement(risk_management_system, date(2030, 12, 31))).
+subject_question(existing_system_without_changes, requirement(record_keeping, date(2028, 1, 1))).
+subject_question(existing_system_with_changes, requirement(record_keeping, date(2028, 1, 1))).
+subject_question(public_authority_system_day_before_deadline, requirement(record_keeping, date(2030, 8, 1))).
+subject_question(public_authority_system_on_deadline, requirement(record_keeping, date(2030, 8, 2))).
+subject_question(system_without_training_data, requirement(data_and_data_governance, date(2028, 1, 1))).
+subject_question(system_with_training_data, requirement(data_and_data_governance, date(2028, 1, 1))).
+subject_question(small_enterprise_provider_documentation, requirement(technical_documentation, date(2028, 1, 1))).
+subject_question(large_provider_documentation, requirement(technical_documentation, date(2028, 1, 1))).
+subject_question(component_photographs_not_a_component, element(annex_iv_point_1_f)).
+subject_question(component_photographs_component, element(annex_iv_point_1_f)).
+subject_question(annex_i_section_a_information_unrelated, element(article_11_2_information_under_annex_i_section_a_legislation)).
+subject_question(annex_i_section_a_information_related, element(article_11_2_information_under_annex_i_section_a_legislation)).
+subject_question(pre_determined_changes_absent, element(annex_iv_point_2_f)).
+subject_question(pre_determined_changes_present, element(annex_iv_point_2_f)).
+subject_question(log_mechanisms_open_element, element(article_13_3_point_f)).
+subject_question(instructions_for_use_element, element(annex_iv_point_1_h)).
+subject_question(missing_annex_iii_classification, requirement(risk_management_system, date(2028, 1, 1))).
+subject_question(unsure_design_changes, requirement(risk_management_system, date(2028, 1, 1))).
+subject_question(malformed_classification_value, requirement(risk_management_system, date(2028, 1, 1))).
+
+high_risk_requirements_subject(Subject) :-
+    subject_question(Subject, _).
+
+high_risk_requirements_profile_for(Subject, Profile) :-
+    subject_profile(Subject, Specification),
+    specified_profile(Specification, Profile).
+
+specified_profile(overrides(Overrides), Profile) :-
+    base_attributes(Base),
+    maplist(overridden_attribute(Overrides), Base, Profile).
+specified_profile(without(Key), Profile) :-
+    base_attributes(Base),
+    exclude(attribute_named(Key), Base, Profile).
+
+overridden_attribute(Overrides, attribute(Key, Value), attribute(Key, Chosen)) :-
+    override_value(Overrides, Key, Value, Chosen).
+
+override_value([], _, Value, Value).
+override_value([Name - NewValue|_], Key, _, NewValue) :-
+    Name == Key.
+override_value([Name - _|Overrides], Key, Value, Chosen) :-
+    Name \== Key,
+    override_value(Overrides, Key, Value, Chosen).
+
+attribute_named(Key, attribute(Name, _)) :-
+    Name == Key.
+
+high_risk_requirements_assess(Subject, Verdict) :-
+    high_risk_requirements_profile_for(Subject, Profile),
+    subject_question(Subject, Question),
+    question_case(Question, Profile, Case),
+    decide_high_risk_requirements(Case, Verdict).
+
+question_case(requirement(Requirement, AssessmentDate), Profile, requirement_case(Profile, Requirement, AssessmentDate)).
+question_case(element(Element), Profile, element_case(Profile, Element)).

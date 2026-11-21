@@ -1,0 +1,264 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_ict_third_party_contract_provisions
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_ict_third_party_contract_provisions"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (dora_ict_third_party_contract_provisions_input_problems/2 is listed once, under queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_ict_third_party_contract_provisions.clausal --
+  - "decide_dora_ict_third_party_contract_provisions/2"
+  - "dora_ict_third_party_contract_provisions_status/2"
+  - "dora_ict_third_party_contract_provisions_checklist/2"
+  - "dora_ict_third_party_contract_provisions_decision_resolvable/1"
+  - "dora_ict_third_party_contract_provisions_status_values/1"
+  - "contract_provisions_required/3"
+  - "contract_provisions_sufficient/3"
+  - "contract_provisions_missing/3"
+  - "sufficient/0"
+  - "insufficient/0"
+  - "none_missing/0"
+  - "required/1"
+  - "missing/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "dora_ict_third_party_contract_provisions_profile_keys/1"
+  - "dora_ict_third_party_contract_provisions_input_problems/2"
+  - "dora_ict_third_party_contract_provisions_what_if/4"
+  # -- fixtures.clausal --
+  - "dora_ict_third_party_contract_provisions_subject/1"
+  - "dora_ict_third_party_contract_provisions_profile_for/2"
+  - "dora_ict_third_party_contract_provisions_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/query_combinators), which are not backbone packages.
+uses: []
+
+scope: "The contract side of the management of ICT third-party risk under Regulation (EU) 2022/2554 (DORA): for ONE contractual arrangement on the use of ICT services between a financial entity and an ICT third-party service provider, which elements the contract must contain (contract_provisions_required), whether it contains all of them (contract_provisions_sufficient) and which it lacks (contract_provisions_missing), under Art 28(7)(a) to (d) (termination circumstances), Art 30(1) (one written document), Art 30(2)(a) to (i) (elements of every arrangement) and Art 30(3)(a) to (f) (additional elements for ICT services supporting critical or important functions, point (e) split in two, with the microenterprise derogation from point (e) in the closing words of Art 30(3)). Every element, and whether the arrangement supports a critical or important function, is the caller's judgement (true, false or unsure); an unsure judgement that can change the answer is referred to a lawyer. Out of scope: whether the entity is a financial entity within scope and the arrangement one on the use of ICT services (presupposed, Articles 2 and 3), the general principles, strategy, register of information, pre-contract assessments, audit practice, exit strategies and plans, concentration risk, standard contractual clauses and technical standards (Art 28(1) to (6), (8) to (10), Article 29, Art 30(4) and (5)). The readings are the drafter's, not a lawyer's."
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (Digital Operational Resilience Act, DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554, original OJ text): Article 28(7) points (a) to (d); Article 30(1); Article 30(2) points (a) to (i); Article 30(3) points (a) to (f) with the closing words on microenterprises; Article 28(1) and (2) quoted for reading (5) only."
+
+query_interface:
+  2: "dora_ict_third_party_contract_provisions_status/2"      # eligibility/status verdict: sufficient | insufficient | status compound
+  7: "dora_ict_third_party_contract_provisions_checklist/2"   # justification: one item(Element, Status, cite(Key)) per element
+  13: "contract_provisions_sufficient/3"                      # compliance_check: does the contract contain every required element
+  16: "dora_ict_third_party_contract_provisions_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_028
+  - 32022R2554#art_029
+  - 32022R2554#art_030
+  reason: The headings of Articles 28, 29 and 30 carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: general_principles
+  units:
+  - 32022R2554#parag_028.001
+  - 32022R2554#point_028.001_a
+  - 32022R2554#point_028.001_b
+  - 32022R2554#point_028.001_b_i
+  - 32022R2554#point_028.001_b_ii
+  reason: Art 28(1) requires financial entities to manage ICT third-party risk within
+    their ICT risk management framework, to remain fully responsible for their obligations
+    (point (a)) and to apply the principle of proportionality (point (b)). It is quoted
+    for reading (5) (proportionality does not remove an element of Art 30); it states
+    principles with no condition and no output this order computes.
+  consequence: No answer turns on it; proportionality removes no element in this order
+    (open question (Q5)).
+  declaration: answered_with_caveat
+  debt: true
+  open: principles; not formalisable as a rule with an output in this order; the deferral
+    stands for this run.
+- what: strategy_on_ict_third_party_risk
+  units:
+  - 32022R2554#parag_028.002
+  reason: Art 28(2) requires a strategy on ICT third-party risk with a policy on ICT
+    services supporting critical or important functions, reviewed by the management
+    body; microenterprises and the entities of Article 16(1) are exempt. It is quoted
+    for reading (5) only (the microenterprise exemption is from the strategy, not
+    from Art 30). The policy content is specified by Delegated Regulation (EU) 2024/1773,
+    which is named and not formalised.
+  consequence: The order does not say whether the entity needs or has a strategy or
+    policy.
+  declaration: answered_with_caveat
+  debt: true
+  open: an entity-level duty, not a contract term; a later order may take it with
+    the delegated regulation pinned; the deferral stands for this run.
+- what: register_of_information
+  units:
+  - 32022R2554#parag_028.003
+  reason: Art 28(3) requires a register of information on all contractual arrangements
+    on the use of ICT services, yearly reporting, the register on request and timely
+    information on planned arrangements for critical or important functions. The templates
+    are in Implementing Regulation (EU) 2024/2956, which is named and not formalised.
+  consequence: The order does not check the register or the reporting.
+  declaration: answered_with_caveat
+  debt: true
+  open: an entity-level duty with its own technical standard; the deferral stands
+    for this run.
+- what: assessments_and_conditions_before_contracting
+  units:
+  - 32022R2554#parag_028.004
+  - 32022R2554#point_028.004_a
+  - 32022R2554#point_028.004_b
+  - 32022R2554#point_028.004_c
+  - 32022R2554#point_028.004_d
+  - 32022R2554#point_028.004_e
+  - 32022R2554#parag_028.005
+  reason: Art 28(4) lists the assessments before entering into an arrangement (whether
+    it supports a critical or important function, supervisory conditions, risks including
+    concentration risk, due diligence, conflicts of interest) and Art 28(5) allows
+    arrangements only with providers that comply with appropriate information security
+    standards. These are duties and conditions on the entity before contracting, not
+    contents of the contract; a later order may take them.
+  consequence: sufficient and none_missing say nothing about these duties (reading
+    (9)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a checklist of entity duties in a later order; the deferral
+    stands for this run.
+- what: exercise_of_audit_rights
+  units:
+  - 32022R2554#parag_028.006
+  reason: Art 28(6) governs how access, inspection and audit rights are exercised
+    (a risk-based frequency and areas, commonly accepted audit standards, auditor
+    skills for complex services). It is a duty in exercising rights, not a content
+    of the contract.
+  consequence: None for these answers.
+  declaration: answered_with_caveat
+  debt: true
+  open: an entity-level duty; the deferral stands for this run.
+- what: exit_strategies_and_plans
+  units:
+  - 32022R2554#parag_028.008
+  - 32022R2554#point_028.008_a
+  - 32022R2554#point_028.008_b
+  - 32022R2554#point_028.008_c
+  reason: Art 28(8) requires exit strategies for ICT services supporting critical
+    or important functions, the ability to exit without the harms of points (a) to
+    (c), tested and reviewed exit plans, transition plans and contingency measures.
+    These are duties on the entity; the matching contract element is Art 30(3)(f),
+    which this order formalises.
+  consequence: sufficient and none_missing say nothing about the exit strategy or
+    plans (reading (9)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as a checklist of entity duties in a later order; the deferral
+    stands for this run.
+- what: technical_standards_mandates
+  units:
+  - 32022R2554#parag_028.009
+  - 32022R2554#parag_028.010
+  - 32022R2554#parag_030.005
+  reason: Art 28(9) and (10) and Art 30(5) give the European Supervisory Authorities
+    mandates to draft technical standards and the Commission power to adopt them.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: ict_concentration_risk_and_subcontracting_considerations
+  units:
+  - 32022R2554#parag_029.001
+  - 32022R2554#point_029.001_a
+  - 32022R2554#point_029.001_b
+  - 32022R2554#parag_029.002
+  reason: Article 29 requires a preliminary assessment of ICT concentration risk for
+    arrangements on critical or important functions (providers not easily substitutable;
+    several arrangements with the same or closely connected providers) and considerations
+    on subcontracting, insolvency law, data recovery, third-country providers and
+    long subcontracting chains. These are duties to weigh and consider before contracting,
+    not contents of the contract.
+  consequence: sufficient and none_missing say nothing about these duties (reading
+    (9)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable with the pre-contract checklist in a later order; the deferral
+    stands for this run.
+- what: standard_contractual_clauses
+  units:
+  - 32022R2554#parag_030.004
+  reason: Art 30(4) asks the parties to consider standard contractual clauses developed
+    by public authorities when negotiating; it gives no output.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+
+excluded_set:
+- what: scope_and_definitions
+  instrument: Regulation (EU) 2022/2554 Article 2 and Article 3, points (19), (21),
+    (22) and (60)
+  cites:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: Not pinned in this domain. Whether the entity is a financial entity within
+    the scope of the Regulation and the arrangement one on the use of ICT services
+    is presupposed (reading (1)); critical or important function and microenterprise
+    are the caller's judgement and fact (readings (4), (7)).
+  consequence: The answers presuppose a financial entity within scope and an arrangement
+    on the use of ICT services (open question (Q1)).
+- what: proportionality_principle
+  instrument: Regulation (EU) 2022/2554 Article 4
+  cites:
+  - 32022R2554#art_004
+  reason: Not pinned in this domain. The general principle of proportionality is read
+    as not removing an element of Art 30 (reading (5)).
+  consequence: No element is removed for size (open question (Q5)).
+- what: date_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64
+  cites:
+  - 32022R2554#art_064
+  reason: Not pinned in this domain. The Regulation applies from 17 January 2025;
+    the order answers on the Regulation as it applies and reads no date (reading (10)).
+  consequence: No answer depends on a date (open question (Q7)).
+- what: provisions_named_in_the_elements
+  instrument: Regulation (EU) 2022/2554 Articles 13(6), 26 and 27
+  cites:
+  - 32022R2554#art_013
+  - 32022R2554#art_026
+  - 32022R2554#art_027
+  reason: Not pinned in this domain. Art 30(2)(i) names the awareness programmes and
+    training of Article 13(6) and Art 30(3)(d) the threat-led penetration testing
+    of Articles 26 and 27; whether the contract term meets the element is the caller's
+    judgement (reading (8)).
+  consequence: The order does not check the content of those programmes or tests.
+- what: subcontracting_technical_standard
+  instrument: Commission Delegated Regulation (EU) 2025/532 (the elements to determine
+    and assess when subcontracting ICT services supporting critical or important functions)
+  cites:
+  - 32025R0532#art_001
+  reason: Not pinned in this domain. It specifies further the elements of Art 30(2)(a)
+    for subcontracting; the order leaves them to the caller's judgement of that element
+    (reading (8)).
+  consequence: The order does not check the subcontracting conditions in detail.

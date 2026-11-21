@@ -4,83 +4,157 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_lists_extra, [last/2]).
-:- use_module(m__eu_nis2_domain_name_data_nis2_domain_name_data, [nis2_domain_name_data_status/2, nis2_domain_name_data_status_values/1, provider_duties/2, required_registration_data/2, publication_duty/3, access_duty/3, access_reply_timeliness/3]).
-:- use_module(m__eu_nis2_domain_name_data_fixtures, [nis2_domain_name_data_profile_for/2]).
+:- use_module(m__eu_nis2_domain_name_data_nis2_domain_name_data, [nis2_domain_name_data_status/2, provider_duties/2, required_registration_data/2, publication_duty/3, access_duty/3, access_reply_timeliness/3]).
+:- use_module(m__eu_nis2_domain_name_data_kernel, [nis2_domain_name_data_input_problems/2]).
+:- use_module(m__eu_nis2_domain_name_data_fixtures, [nis2_domain_name_data_profile_for/2, nis2_domain_name_data_hours_for/2]).
 
-test(the_near_miss_verdict_is_a_real_verdict_atom) :-
-    nis2_domain_name_data_status_values(StatusValues),
-    member(ineligible, StatusValues),
-    member(eligible, StatusValues).
-test(registry_is_eligible) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    nis2_domain_name_data_status(Profile, eligible).
-test(other_provider_is_ineligible) :-
-    nis2_domain_name_data_profile_for(other_provider, Profile),
-    nis2_domain_name_data_status(Profile, ineligible).
-test(registrar_is_eligible) :-
-    nis2_domain_name_data_profile_for(registrar_addressed, Profile),
-    nis2_domain_name_data_status(Profile, eligible).
-test(registry_has_a_duty) :-
-    provider_duties([attribute(provider_type, tld_name_registry)], [_|_]).
-test(telephone_difference_adds_the_telephone_field) :-
-    required_registration_data([attribute(point_of_contact_email_address_differs_from_registrant, false), attribute(point_of_contact_telephone_number_differs_from_registrant, true)], Fields),
-    last(Fields, field(point_of_contact_telephone_number, cite(eu_dir_2022_2555_art_28_2_d))),
-    length(Fields, 6).
+subject_reply(Subject, Result) :-
+    nis2_domain_name_data_profile_for(Subject, Profile),
+    nis2_domain_name_data_hours_for(Subject, HoursElapsed),
+    access_reply_timeliness(Profile, HoursElapsed, Result).
+
+test(a_registry_has_duties) :-
+    nis2_domain_name_data_profile_for(registry_full_profile, Profile),
+    provider_duties(Profile, [duty(collect_and_maintain_accurate_and_complete_registration_data, _)|_]).
+test(another_entity_has_the_empty_list) :-
+    nis2_domain_name_data_profile_for(other_entity, Profile),
+    provider_duties(Profile, []).
+test(an_absent_provider_type_is_indeterminate) :-
+    nis2_domain_name_data_profile_for(provider_type_absent, Profile),
+    provider_duties(Profile, indeterminate([provider_type])).
+test(a_differing_email_adds_the_email_field) :-
+    nis2_domain_name_data_profile_for(point_of_contact_email_differs_only, Profile),
+    required_registration_data(Profile, Fields),
+    member(field(point_of_contact_contact_email_address, cite(eu_dir_2022_2555_art_28_2_d)), Fields).
+test(a_differing_telephone_adds_the_telephone_field) :-
+    nis2_domain_name_data_profile_for(point_of_contact_telephone_differs_only, Profile),
+    required_registration_data(Profile, Fields),
+    member(field(point_of_contact_telephone_number, cite(eu_dir_2022_2555_art_28_2_d)), Fields).
+test(an_absent_telephone_key_is_indeterminate) :-
+    nis2_domain_name_data_profile_for(point_of_contact_telephone_absent, Profile),
+    required_registration_data(Profile, indeterminate([point_of_contact_telephone_number_differs_from_registrant])).
 test(non_personal_data_must_be_published) :-
-    publication_duty([attribute(registration_data_is_personal_data, false)], must_publish_without_undue_delay, _).
-test(personal_data_has_no_publication_duty) :-
-    publication_duty([attribute(registration_data_is_personal_data, true)], no_publication_duty, _).
-test(legitimate_and_lawful_must_give_access) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, true)], must_provide_access, _).
-test(not_legitimate_is_no_duty) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, false), attribute(request_is_lawful_and_duly_substantiated, true)], no_duty_to_provide_access, _).
-test(not_lawful_is_no_duty) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, false)], no_duty_to_provide_access, _).
-test(unsure_second_key_refers) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, unsure)], needs_legal_review(open_textured(request_is_lawful_and_duly_substantiated, cite(eu_dir_2022_2555_art_28_5)), _), []).
-test(seventy_two_hours_is_within_the_limit) :-
-    access_reply_timeliness([attribute(reply_without_undue_delay, true)], 72, on_time).
-test(seventy_three_hours_is_late) :-
-    access_reply_timeliness([attribute(reply_without_undue_delay, true)], 73, late(hour_limit)).
-test(undue_delay_inside_the_limit_is_late) :-
-    access_reply_timeliness([attribute(reply_without_undue_delay, false)], 72, late(without_undue_delay)).
+    nis2_domain_name_data_profile_for(non_personal_data, Profile),
+    publication_duty(Profile, must_publish_without_undue_delay, _).
+test(personal_data_carry_no_publication_duty) :-
+    nis2_domain_name_data_profile_for(personal_data, Profile),
+    publication_duty(Profile, no_publication_duty, _).
+test(an_unsure_personal_data_judgement_is_referred) :-
+    nis2_domain_name_data_profile_for(personal_data_unsure, Profile),
+    publication_duty(Profile, needs_legal_review(open_textured(registration_data_is_personal_data, _), _), []).
+test(an_absent_personal_data_judgement_is_indeterminate) :-
+    nis2_domain_name_data_profile_for(personal_data_absent, Profile),
+    publication_duty(Profile, indeterminate([registration_data_is_personal_data]), []).
+test(both_conditions_met_give_access) :-
+    nis2_domain_name_data_profile_for(access_both_true, Profile),
+    access_duty(Profile, must_provide_access, _).
+test(a_false_request_settles_no_duty) :-
+    nis2_domain_name_data_profile_for(access_lawful_false_seeker_unsure, Profile),
+    access_duty(Profile, no_duty_to_provide_access, _).
+test(an_absent_request_beside_an_unsure_seeker_is_indeterminate) :-
+    nis2_domain_name_data_profile_for(access_seeker_unsure_lawful_absent, Profile),
+    access_duty(Profile, indeterminate([request_is_lawful_and_duly_substantiated]), []).
+test(both_unsure_refer_the_seeker_key) :-
+    nis2_domain_name_data_profile_for(access_both_unsure, Profile),
+    access_duty(Profile, needs_legal_review(open_textured(requester_is_legitimate_access_seeker, cite(eu_dir_2022_2555_art_28_5)), _), []).
+test(seventy_three_hours_is_late_for_the_limit) :-
+    subject_reply(reply_73_hours_late, late(hour_limit)).
+test(seventy_two_hours_without_undue_delay_is_on_time) :-
+    subject_reply(reply_72_hours_on_time, on_time).
+test(undue_delay_within_the_limit_is_late) :-
+    subject_reply(reply_72_hours_undue_delay, late(without_undue_delay)).
+test(an_unsure_delay_within_the_limit_is_referred) :-
+    subject_reply(reply_72_hours_unsure, needs_legal_review(open_textured(reply_without_undue_delay, cite(eu_dir_2022_2555_art_28_5)), _)).
+test(an_absent_delay_judgement_within_the_limit_is_indeterminate) :-
+    subject_reply(reply_72_hours_judgement_absent, indeterminate([reply_without_undue_delay])).
+test(a_duplicate_key_is_an_input_problem) :-
+    nis2_domain_name_data_profile_for(duplicate_key_profile, Profile),
+    provider_duties(Profile, input_problems([duplicate_key(provider_type)])).
+test(an_unknown_key_is_an_input_problem) :-
+    nis2_domain_name_data_profile_for(unknown_key_profile, Profile),
+    access_duty(Profile, input_problems([unknown_key(colour)]), []).
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    nis2_domain_name_data_profile_for(wrong_type_profile, Profile),
+    required_registration_data(Profile, input_problems([wrong_type(point_of_contact_email_address_differs_from_registrant)])).
+test(a_crisp_key_given_true_is_well_formed) :-
+    nis2_domain_name_data_input_problems([attribute(point_of_contact_email_address_differs_from_registrant, true)], []).
+test(a_registry_is_an_addressed_provider) :-
+    nis2_domain_name_data_profile_for(registry_full_profile, Profile),
+    nis2_domain_name_data_status(Profile, addressed_provider).
+test(another_entity_is_not_addressed) :-
+    nis2_domain_name_data_profile_for(other_entity, Profile),
+    nis2_domain_name_data_status(Profile, not_addressed_provider).
 
-test(registry_is_not_ineligible, fail) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    nis2_domain_name_data_status(Profile, ineligible).
-test(other_provider_is_not_eligible, fail) :-
-    nis2_domain_name_data_profile_for(other_provider, Profile),
-    nis2_domain_name_data_status(Profile, eligible).
-test(other_has_no_duty, fail) :-
-    provider_duties([attribute(provider_type, other)], [_|_]).
-test(no_difference_has_no_point_of_contact_field, fail) :-
-    required_registration_data([attribute(point_of_contact_email_address_differs_from_registrant, false), attribute(point_of_contact_telephone_number_differs_from_registrant, false)], Fields),
+test(another_entity_has_no_duty_list, fail) :-
+    nis2_domain_name_data_profile_for(other_entity, Profile),
+    provider_duties(Profile, [duty(collect_and_maintain_accurate_and_complete_registration_data, _)|_]).
+test(a_registrar_entity_does_not_have_the_empty_list, fail) :-
+    nis2_domain_name_data_profile_for(registrar_entity_profile, Profile),
+    provider_duties(Profile, []).
+test(a_stated_provider_type_is_not_indeterminate, fail) :-
+    nis2_domain_name_data_profile_for(other_entity, Profile),
+    provider_duties(Profile, indeterminate(_)).
+test(the_same_email_adds_no_email_field, fail) :-
+    nis2_domain_name_data_profile_for(point_of_contact_same, Profile),
+    required_registration_data(Profile, Fields),
+    member(field(point_of_contact_contact_email_address, _), Fields).
+test(a_differing_email_alone_adds_no_telephone_field, fail) :-
+    nis2_domain_name_data_profile_for(point_of_contact_email_differs_only, Profile),
+    required_registration_data(Profile, Fields),
     member(field(point_of_contact_telephone_number, _), Fields).
-test(email_difference_adds_no_telephone_field, fail) :-
-    required_registration_data([attribute(point_of_contact_email_address_differs_from_registrant, true), attribute(point_of_contact_telephone_number_differs_from_registrant, false)], Fields),
-    member(field(point_of_contact_telephone_number, _), Fields).
-test(personal_data_is_not_to_be_published, fail) :-
-    publication_duty([attribute(registration_data_is_personal_data, true)], must_publish_without_undue_delay, _).
-test(non_personal_data_has_a_publication_duty, fail) :-
-    publication_duty([attribute(registration_data_is_personal_data, false)], no_publication_duty, _).
-test(not_legitimate_is_not_must_provide, fail) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, false), attribute(request_is_lawful_and_duly_substantiated, true)], must_provide_access, _).
-test(not_lawful_is_not_must_provide, fail) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, false)], must_provide_access, _).
-test(both_true_is_not_no_duty, fail) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, true)], no_duty_to_provide_access, _).
-test(unsure_second_key_refers_not_decides, fail) :-
-    access_duty([attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, unsure)], must_provide_access, _).
+test(a_stated_telephone_key_is_not_indeterminate, fail) :-
+    nis2_domain_name_data_profile_for(point_of_contact_email_differs_only, Profile),
+    required_registration_data(Profile, indeterminate(_)).
+test(personal_data_need_not_be_published, fail) :-
+    nis2_domain_name_data_profile_for(personal_data, Profile),
+    publication_duty(Profile, must_publish_without_undue_delay, _).
+test(non_personal_data_are_not_without_duty, fail) :-
+    nis2_domain_name_data_profile_for(non_personal_data, Profile),
+    publication_duty(Profile, no_publication_duty, _).
+test(a_settled_personal_data_judgement_is_not_referred, fail) :-
+    nis2_domain_name_data_profile_for(non_personal_data, Profile),
+    publication_duty(Profile, needs_legal_review(_, _), _).
+test(an_unsure_personal_data_judgement_is_not_indeterminate, fail) :-
+    nis2_domain_name_data_profile_for(personal_data_unsure, Profile),
+    publication_duty(Profile, indeterminate(_), _).
+test(a_false_seeker_gets_no_access, fail) :-
+    nis2_domain_name_data_profile_for(access_seeker_false_lawful_true, Profile),
+    access_duty(Profile, must_provide_access, _).
+test(an_absent_request_does_not_settle_no_duty, fail) :-
+    nis2_domain_name_data_profile_for(access_seeker_unsure_lawful_absent, Profile),
+    access_duty(Profile, no_duty_to_provide_access, _).
+test(an_absent_request_beside_an_unsure_seeker_is_never_referred, fail) :-
+    nis2_domain_name_data_profile_for(access_seeker_unsure_lawful_absent, Profile),
+    access_duty(Profile, needs_legal_review(_, _), _).
+test(a_true_seeker_does_not_refer_the_seeker_key, fail) :-
+    nis2_domain_name_data_profile_for(access_seeker_true_lawful_unsure, Profile),
+    access_duty(Profile, needs_legal_review(open_textured(requester_is_legitimate_access_seeker, _), _), _).
+test(seventy_two_hours_is_not_late_for_the_limit, fail) :-
+    subject_reply(reply_72_hours_on_time, late(hour_limit)).
 test(seventy_three_hours_is_not_on_time, fail) :-
-    access_reply_timeliness([attribute(reply_without_undue_delay, true)], 73, on_time).
-test(seventy_two_hours_is_not_late, fail) :-
-    access_reply_timeliness([attribute(reply_without_undue_delay, true)], 72, late(hour_limit)).
-test(undue_delay_inside_the_limit_is_not_on_time, fail) :-
-    access_reply_timeliness([attribute(reply_without_undue_delay, false)], 72, on_time).
+    subject_reply(reply_73_hours_late, on_time).
+test(no_undue_delay_is_not_late_for_delay, fail) :-
+    subject_reply(reply_72_hours_on_time, late(without_undue_delay)).
+test(an_unsure_delay_beyond_the_limit_is_not_referred, fail) :-
+    subject_reply(reply_73_hours_unsure, needs_legal_review(_, _)).
+test(an_absent_delay_judgement_beyond_the_limit_is_not_indeterminate, fail) :-
+    subject_reply(reply_73_hours_judgement_absent, indeterminate(_)).
+test(a_single_key_is_not_an_input_problem, fail) :-
+    provider_duties([attribute(provider_type, tld_name_registry)], Duties),
+    Duties = input_problems(_).
+test(a_contract_key_is_not_unknown, fail) :-
+    nis2_domain_name_data_input_problems([attribute(requester_is_legitimate_access_seeker, true)], [unknown_key(_)|_]).
+test(a_judgement_key_given_unsure_is_not_wrong_type, fail) :-
+    nis2_domain_name_data_input_problems([attribute(reply_without_undue_delay, unsure)], [wrong_type(_)|_]).
+test(another_entity_is_not_an_addressed_provider, fail) :-
+    nis2_domain_name_data_profile_for(other_entity, Profile),
+    nis2_domain_name_data_status(Profile, addressed_provider).
+test(a_registry_is_not_unaddressed, fail) :-
+    nis2_domain_name_data_profile_for(registry_full_profile, Profile),
+    nis2_domain_name_data_status(Profile, not_addressed_provider).
 
-cp_test_names([the_near_miss_verdict_is_a_real_verdict_atom, registry_is_eligible, other_provider_is_ineligible, registrar_is_eligible, registry_has_a_duty, telephone_difference_adds_the_telephone_field, non_personal_data_must_be_published, personal_data_has_no_publication_duty, legitimate_and_lawful_must_give_access, not_legitimate_is_no_duty, not_lawful_is_no_duty, unsure_second_key_refers, seventy_two_hours_is_within_the_limit, seventy_three_hours_is_late, undue_delay_inside_the_limit_is_late]).
-cp_test_fail_names([registry_is_not_ineligible, other_provider_is_not_eligible, other_has_no_duty, no_difference_has_no_point_of_contact_field, email_difference_adds_no_telephone_field, personal_data_is_not_to_be_published, non_personal_data_has_a_publication_duty, not_legitimate_is_not_must_provide, not_lawful_is_not_must_provide, both_true_is_not_no_duty, unsure_second_key_refers_not_decides, seventy_three_hours_is_not_on_time, seventy_two_hours_is_not_late, undue_delay_inside_the_limit_is_not_on_time]).
+cp_test_names([a_registry_has_duties, another_entity_has_the_empty_list, an_absent_provider_type_is_indeterminate, a_differing_email_adds_the_email_field, a_differing_telephone_adds_the_telephone_field, an_absent_telephone_key_is_indeterminate, non_personal_data_must_be_published, personal_data_carry_no_publication_duty, an_unsure_personal_data_judgement_is_referred, an_absent_personal_data_judgement_is_indeterminate, both_conditions_met_give_access, a_false_request_settles_no_duty, an_absent_request_beside_an_unsure_seeker_is_indeterminate, both_unsure_refer_the_seeker_key, seventy_three_hours_is_late_for_the_limit, seventy_two_hours_without_undue_delay_is_on_time, undue_delay_within_the_limit_is_late, an_unsure_delay_within_the_limit_is_referred, an_absent_delay_judgement_within_the_limit_is_indeterminate, a_duplicate_key_is_an_input_problem, an_unknown_key_is_an_input_problem, a_crisp_key_given_unsure_is_wrong_type, a_crisp_key_given_true_is_well_formed, a_registry_is_an_addressed_provider, another_entity_is_not_addressed]).
+cp_test_fail_names([another_entity_has_no_duty_list, a_registrar_entity_does_not_have_the_empty_list, a_stated_provider_type_is_not_indeterminate, the_same_email_adds_no_email_field, a_differing_email_alone_adds_no_telephone_field, a_stated_telephone_key_is_not_indeterminate, personal_data_need_not_be_published, non_personal_data_are_not_without_duty, a_settled_personal_data_judgement_is_not_referred, an_unsure_personal_data_judgement_is_not_indeterminate, a_false_seeker_gets_no_access, an_absent_request_does_not_settle_no_duty, an_absent_request_beside_an_unsure_seeker_is_never_referred, a_true_seeker_does_not_refer_the_seeker_key, seventy_two_hours_is_not_late_for_the_limit, seventy_three_hours_is_not_on_time, no_undue_delay_is_not_late_for_delay, an_unsure_delay_beyond_the_limit_is_not_referred, an_absent_delay_judgement_beyond_the_limit_is_not_indeterminate, a_single_key_is_not_an_input_problem, a_contract_key_is_not_unknown, a_judgement_key_given_unsure_is_not_wrong_type, another_entity_is_not_an_addressed_provider, a_registry_is_not_unaddressed]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

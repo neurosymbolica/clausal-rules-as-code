@@ -1,15 +1,16 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_properties.clausal -- structural PROPERTIES over the subject set.
-% Totality and determinism of both queries and of the input check; the
-% basis and citation shape of every answer; agreement of the two queries.
+% Totality and determinism of every public query on every fixture, plus
+% domain invariants of the answer shapes.
 % Run: python -m clausal.testing eu/data_protection/gdpr_art36_3_consultation_request/tests/test_properties.clausal
 % =====================================================================
 :- module(test_properties, []).
 :- use_module(eu/data_protection/gdpr_art36_3_consultation_request/gdpr_art36_3_consultation_request, [
     consultation_request_status/4,
     missing_consultation_request_items/4,
-    decide_gdpr_art36_3_consultation_request/2
+    decide_gdpr_art36_3_consultation_request/2,
+    gdpr_art36_3_consultation_request_checklist/2
 ]).
 :- use_module(eu/data_protection/gdpr_art36_3_consultation_request/kernel, [gdpr_art36_3_consultation_request_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_art36_3_consultation_request/fixtures, [
@@ -17,145 +18,88 @@
     gdpr_art36_3_consultation_request_profile_for/2
 ]).
 
-seven_citations([
-    cite(eu_reg_2016_679_art_36_3),
-    cite(eu_reg_2016_679_art_36_3_a),
-    cite(eu_reg_2016_679_art_36_3_b),
-    cite(eu_reg_2016_679_art_36_3_c),
-    cite(eu_reg_2016_679_art_36_3_d),
-    cite(eu_reg_2016_679_art_36_3_e),
-    cite(eu_reg_2016_679_art_36_3_f)
-]).
-
 subject_classifies(Subject) :-
     gdpr_art36_3_consultation_request_subject(Subject),
     gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
     decide_gdpr_art36_3_consultation_request(Profile, _Verdict).
 
-status_count(Subject, Count) :-
+status_answer_count(Subject, Count) :-
     gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
-    findall(Result-Basis-Citations, consultation_request_status(Profile, Result, Basis, Citations), Answers),
+    findall(Result, consultation_request_status(Profile, Result, _Basis, _Citations), Results),
+    length(Results, Count).
+
+items_answer_count(Subject, Count) :-
+    gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
+    findall(Items, missing_consultation_request_items(Profile, Items, _Basis, _Citations), Answers),
     length(Answers, Count).
 
-items_count(Subject, Count) :-
+input_check_count(Subject, Count) :-
     gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
-    findall(Items-Basis-Citations, missing_consultation_request_items(Profile, Items, Basis, Citations), Answers),
+    findall(Problems, gdpr_art36_3_consultation_request_input_problems(Profile, Problems), Answers),
     length(Answers, Count).
 
-problems_count(Term, Count) :-
-    findall(Problems, gdpr_art36_3_consultation_request_input_problems(Term, Problems), Answers),
+checklist_count(Subject, Count) :-
+    gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
+    findall(Items, gdpr_art36_3_consultation_request_checklist(Profile, Items), Answers),
     length(Answers, Count).
 
-% The shape rule of THE LIMBS, one clause per answer kind.
-status_shape(consultation_request_complete, Basis, Citations) :-
-    is_list(Basis),
-    seven_citations(Citations).
-status_shape(consultation_request_incomplete, Basis, Citations) :-
-    is_list(Basis),
-    seven_citations(Citations).
-status_shape(not_governed_by_article_36_3, [], [cite(eu_reg_2016_679_art_36_3)]).
-status_shape(indeterminate([_MissingKey]), [], []).
-status_shape(needs_legal_review(_Reason, _Context), [], []).
-status_shape(input_problems([_FirstProblem|_OtherProblems]), [], []).
-
-items_shape([], Basis, Citations) :-
-    is_list(Basis),
-    seven_citations(Citations).
-items_shape([_FirstItem|_OtherItems], Basis, Citations) :-
-    is_list(Basis),
-    seven_citations(Citations).
-items_shape(not_governed_by_article_36_3, [], [cite(eu_reg_2016_679_art_36_3)]).
-items_shape(indeterminate([_MissingKey]), [], []).
-items_shape(needs_legal_review(_Reason, _Context), [], []).
-items_shape(input_problems([_FirstProblem|_OtherProblems]), [], []).
-
-% Agreement: when the items query gives a list, the status is complete
-% exactly when that list is empty.
-items_status_agree([], consultation_request_complete).
-items_status_agree([_FirstItem|_OtherItems], consultation_request_incomplete).
-
-listed_subject(Subject) :-
-    gdpr_art36_3_consultation_request_subject(Subject),
-    gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
-    missing_consultation_request_items(Profile, Items, _, _),
-    is_list(Items).
-
-agreeing_subject(Subject) :-
-    listed_subject(Subject),
-    gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
-    missing_consultation_request_items(Profile, Items, _, _),
-    consultation_request_status(Profile, Status, _, _),
-    items_status_agree(Items, Status).
-
-odd_term(unbound_profile, _Unbound).
-odd_term(number_profile, 42).
-odd_term(atom_profile, profile).
-odd_term(partial_list, [attribute(consultation_under_article_36_1, true)|_Tail]).
-odd_term(unbound_element, [_Element]).
-odd_term(foreign_element, [attribute(consultation_under_article_36_1)]).
-odd_term(unbound_key, [attribute(_Key, true)]).
-odd_term(unbound_value, [attribute(purposes_and_means_provided, _Value)]).
-odd_term(empty_profile, []).
+all_subjects(Subjects) :-
+    findall(Subject, gdpr_art36_3_consultation_request_subject(Subject), Subjects).
 
 % sort/2 collapses a subject that classifies more than once.
 test(totality_every_subject_classifies) :-
-    findall(Subject, gdpr_art36_3_consultation_request_subject(Subject), Subjects),
+    all_subjects(Subjects),
     sort(Subjects, SubjectSet),
     findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
     sort(ClassifiedSubjects, SubjectSet).
-
-test(the_subject_set_is_not_vacuous) :-
-    findall(Subject, gdpr_art36_3_consultation_request_subject(Subject), Subjects),
-    length(Subjects, Count),
-    Count >= 20.
-
-test(determinism_status_exactly_one_answer_per_subject) :-
-    findall(Subject-Count, (gdpr_art36_3_consultation_request_subject(Subject), status_count(Subject, Count)), Pairs),
-    findall(Subject-1, gdpr_art36_3_consultation_request_subject(Subject), Expected),
-    Pairs == Expected.
-
-test(determinism_items_exactly_one_answer_per_subject) :-
-    findall(Subject-Count, (gdpr_art36_3_consultation_request_subject(Subject), items_count(Subject, Count)), Pairs),
-    findall(Subject-1, gdpr_art36_3_consultation_request_subject(Subject), Expected),
-    Pairs == Expected.
-
-test(input_check_exactly_one_answer_for_every_odd_term) :-
-    findall(Name-Count, (odd_term(Name, Term), problems_count(Term, Count)), Pairs),
-    findall(Name-1, odd_term(Name, _), Expected),
-    Pairs == Expected.
-
-test(input_check_exactly_one_answer_per_subject) :-
-    findall(Subject-Count, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), problems_count(Profile, Count)), Pairs),
-    findall(Subject-1, gdpr_art36_3_consultation_request_subject(Subject), Expected),
-    Pairs == Expected.
-
-test(every_status_answer_has_its_basis_and_citation_shape) :-
-    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), consultation_request_status(Profile, Result, Basis, Citations), status_shape(Result, Basis, Citations)), Shaped),
-    findall(Subject, gdpr_art36_3_consultation_request_subject(Subject), Subjects),
-    Shaped == Subjects.
-
-test(every_items_answer_has_its_basis_and_citation_shape) :-
-    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), missing_consultation_request_items(Profile, Items, Basis, Citations), items_shape(Items, Basis, Citations)), Shaped),
-    findall(Subject, gdpr_art36_3_consultation_request_subject(Subject), Subjects),
-    Shaped == Subjects.
-
-test(the_two_queries_agree_whenever_the_items_are_listed) :-
-    findall(Subject, listed_subject(Subject), Listed),
-    findall(Subject, agreeing_subject(Subject), Agreeing),
-    Agreeing == Listed,
-    length(Listed, Count),
-    Count >= 5.
-
-test(an_unread_key_does_not_change_the_answer) :-
-    gdpr_art36_3_consultation_request_profile_for(officer_designated_contact_given, Profile),
-    findall(Result-Basis-Citations, consultation_request_status(Profile, Result, Basis, Citations), Before),
-    findall(Result-Basis-Citations, consultation_request_status([attribute(requested_other_information_provided, false)|Profile], Result, Basis, Citations), After),
-    Before == After.
-
-test(an_unread_outside_fact_does_not_change_the_answer) :-
-    gdpr_art36_3_consultation_request_profile_for(officer_designated_contact_given, Profile),
-    findall(Result-Basis-Citations, consultation_request_status(Profile, Result, Basis, Citations), Before),
-    findall(Result-Basis-Citations, consultation_request_status([attribute(joint_controllers_or_processors_involved, attested(true, attestation(host_user, host_time, stated_by_caller, none)))|Profile], Result, Basis, Citations), After),
-    Before == After.
+test(determinism_every_subject_has_one_status) :-
+    all_subjects(Subjects),
+    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), status_answer_count(Subject, 1)), SingleSubjects),
+    SingleSubjects == Subjects.
+test(determinism_every_subject_has_one_items_answer) :-
+    all_subjects(Subjects),
+    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), items_answer_count(Subject, 1)), SingleSubjects),
+    SingleSubjects == Subjects.
+test(determinism_every_subject_has_one_input_check) :-
+    all_subjects(Subjects),
+    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), input_check_count(Subject, 1)), SingleSubjects),
+    SingleSubjects == Subjects.
+test(determinism_every_subject_has_one_checklist) :-
+    all_subjects(Subjects),
+    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), checklist_count(Subject, 1)), SingleSubjects),
+    SingleSubjects == Subjects.
+test(citations_are_none_one_or_seven) :-
+    findall(Count, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), consultation_request_status(Profile, _, _, Citations), length(Citations, Count)), Counts),
+    sort(Counts, DistinctCounts),
+    subtract(DistinctCounts, [0, 1, 7], OtherCounts),
+    OtherCounts == [].
+test(an_open_status_carries_no_basis_and_no_citation) :-
+    findall(Basis-Citations, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), consultation_request_status(Profile, indeterminate(_), Basis, Citations)), Shapes),
+    sort(Shapes, DistinctShapes),
+    DistinctShapes == [[]-[]].
+test(a_referral_carries_no_basis_and_no_citation) :-
+    findall(Basis-Citations, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), consultation_request_status(Profile, needs_legal_review(_, _), Basis, Citations)), Shapes),
+    sort(Shapes, DistinctShapes),
+    DistinctShapes == [[]-[]].
+test(an_input_problem_carries_no_basis_and_no_citation) :-
+    findall(Basis-Citations, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), missing_consultation_request_items(Profile, input_problems(_), Basis, Citations)), Shapes),
+    sort(Shapes, DistinctShapes),
+    DistinctShapes == [[]-[]].
+test(a_listed_missing_item_means_incomplete) :-
+    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), missing_consultation_request_items(Profile, [_|_], _, _)), ListedSubjects),
+    findall(Subject, (member(Subject, ListedSubjects), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), consultation_request_status(Profile, consultation_request_incomplete, _, _)), IncompleteSubjects),
+    ListedSubjects = [_|_],
+    IncompleteSubjects == ListedSubjects.
+test(an_empty_missing_list_means_complete) :-
+    findall(Subject, (gdpr_art36_3_consultation_request_subject(Subject), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), missing_consultation_request_items(Profile, [], _, _)), EmptySubjects),
+    findall(Subject, (member(Subject, EmptySubjects), gdpr_art36_3_consultation_request_profile_for(Subject, Profile), consultation_request_status(Profile, consultation_request_complete, _, _)), CompleteSubjects),
+    EmptySubjects = [_|_],
+    CompleteSubjects == EmptySubjects.
+test(an_unread_outside_fact_changes_no_answer) :-
+    gdpr_art36_3_consultation_request_profile_for(complete_joint_controllers, Profile),
+    select(attribute(joint_controllers_or_processors_involved, _), Profile, OtherAttributes),
+    findall(Result-Basis-Citations, consultation_request_status(Profile, Result, Basis, Citations), WithFact),
+    findall(Result-Basis-Citations, consultation_request_status(OtherAttributes, Result, Basis, Citations), WithoutFact),
+    WithFact == WithoutFact.
 
 :- end_module(test_properties).

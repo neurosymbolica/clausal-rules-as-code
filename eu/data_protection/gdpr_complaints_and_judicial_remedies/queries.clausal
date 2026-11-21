@@ -4,319 +4,93 @@
 % A TOP-LAYER consumer: it imports the determination slice's PUBLIC
 % predicates it calls, and nothing else.
 %
-% gdpr_complaints_and_judicial_remedies_profile_keys/1: the profile key schema, in the
-%     order of the typed input contract (= root_exports order).
-% gdpr_complaints_and_judicial_remedies_input_problems/2: the problems a profile has
-%     ([] = none); re-exported from the kernel as the scaffold wrote it.
-% gdpr_complaints_and_judicial_remedies_what_if/4 (#16 what-if): override one key of
-%     the attribute-list PROFILE, then re-evaluate the facade status.
-% gdpr_complaints_and_judicial_remedies_eligibility/4 (#2 eligibility): for one of the
-%     four RIGHT queries, the label eligible | ineligible |
-%     indeterminate_eligibility, with the query's citations (#7 justification:
-%     the per-item cited checklist is the slice's
-%     gdpr_complaints_and_judicial_remedies_checklist/2).
-%     The label indeterminate_eligibility is used so that the bare atom
-%     indeterminate never sits beside indeterminate/1 (atom-shadowing trap).
-%     controller_processor_forum/3 is a determination of courts, not an
-%     eligibility, so it has no label.
+% gdpr_complaints_and_judicial_remedies_what_if/4      (#16 what-if): override one key -> re-evaluate
+% gdpr_complaints_and_judicial_remedies_profile_keys/1: top-level profile key schema
+% gdpr_complaints_and_judicial_remedies_input_problems/2: the problems a profile has ([] = none)
 %
-% ROOT EXPORTS: the eleven profile key atoms and the judgement value unsure
-% are defined here as facts of arity 0. The result constructors of the
-% order (indeterminate/1, needs_legal_review/2, ...) are DATA terms; each
-% exported one either is declared a constructor below, or has a RECOGNISER
-% clause here that holds only for a well-formed term of its shape (never for
-% every input) -- a name/arity is one or the other, never both. They decide
-% nothing statutory and carry no provenance marker.
+% Query types of the order:
+%   #2 eligibility   -- decide_gdpr_complaints_and_judicial_remedies/2 and
+%                       gdpr_complaints_and_judicial_remedies_status/2 (slice):
+%                       *_exists is the eligible side, no_* the ineligible
+%                       side, indeterminate/1 and needs_legal_review/2 the
+%                       undetermined side; the five per-query predicates
+%                       complaint_right/3, authority_decision_remedy_right/3,
+%                       authority_inaction_remedy_right/4,
+%                       controller_processor_remedy_right/3 and
+%                       controller_processor_forum/3 answer one right each;
+%   #7 justification -- gdpr_complaints_and_judicial_remedies_checklist/2 (slice):
+%                       one item per query, each carrying cite(...).
+%   #16 what-if      -- below.
 %
-% The what-if override is written locally over the attribute list: the
-% profile of this order is an attribute list [attribute(KEY, VALUE), ...],
-% and an override must drop EVERY earlier occurrence of the key so the
-% hypothesis never manufactures a duplicate_key problem (the working notes (not published)).
+% Open-textured judgements ('legally binding', 'concerning them') are never
+% decided here: an unsure judgement is handed to the user as
+% needs_legal_review(open_textured(...), ...) by the slice.
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], not a dict,
+% so kit/query_combinators' override_key/4 (dict-shaped) does not apply: the
+% override below is local list plumbing over the attribute list (NOTES S5).
+% It replaces every attribute of the key by one attribute(Key, Value), or adds
+% it when the key is absent; the status is then re-read through the slice,
+% input check first. A profile that is not an attribute list has no override.
 % =====================================================================
 
 :- module(queries, [
     gdpr_complaints_and_judicial_remedies_profile_keys/1,
     gdpr_complaints_and_judicial_remedies_input_problems/2,
-    gdpr_complaints_and_judicial_remedies_what_if/4,
-    gdpr_complaints_and_judicial_remedies_eligibility/4,
-    is_data_subject/0,
-    data_subject_considers_processing_infringes_regulation/0,
-    decision_is_legally_binding/0,
-    decision_concerns_the_caller/0,
-    complaint_lodged_under_article_77/0,
-    authority_competent_under_articles_55_and_56/0,
-    authority_handled_the_complaint/0,
-    three_months_from_the_complaint_have_passed/0,
-    authority_informed_on_progress_or_outcome/0,
-    data_subject_considers_rights_infringed_by_processing/0,
-    defendant_is_member_state_public_authority_acting_in_public_powers/0,
-    unsure/0,
-    indeterminate/1,
-    needs_legal_review/2,
-    open_textured/2,
-    cross_reference_unresolved/2,
-    resolution/2,
-    inputs_relied_on/1,
-    provenance/2,
-    outside_fact/2,
-    attested/2,
-    attestation/4,
-    url/2,
-    document/2,
-    input_problems/1,
-    unknown_key/1,
-    wrong_type/1,
-    duplicate_key/1
+    gdpr_complaints_and_judicial_remedies_what_if/4
 ]).
 
 :- use_module(eu/data_protection/gdpr_complaints_and_judicial_remedies/kernel, [gdpr_complaints_and_judicial_remedies_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_complaints_and_judicial_remedies/gdpr_complaints_and_judicial_remedies, [
-    complaint_right/3,
-    authority_decision_remedy_right/3,
-    authority_inaction_remedy_right/4,
-    controller_processor_remedy_right/3,
-    gdpr_complaints_and_judicial_remedies_status/2
-]).
-:- use_module(formalize_lib, [not_member/2]).
-
-% ---- result constructors (exported, never called as queries) ----
-% Only the constructors that have no recogniser clause in this file are
-% declared here; the others are recognised by their clauses below.
-:- constructors([
-    open_textured(input, citation),
-    cross_reference_unresolved(citation, target),
-    resolution(target, resolution),
-    inputs_relied_on(pairs),
-    attestation(by, at, reason, evidence)
-]).
+:- use_module(eu/data_protection/gdpr_complaints_and_judicial_remedies/gdpr_complaints_and_judicial_remedies, [gdpr_complaints_and_judicial_remedies_status/2]).
 
 % schema of top-level profile keys: the keys of the order's typed input contract, in its order
 gdpr_complaints_and_judicial_remedies_profile_keys([is_data_subject, data_subject_considers_processing_infringes_regulation, decision_is_legally_binding, decision_concerns_the_caller, complaint_lodged_under_article_77, authority_competent_under_articles_55_and_56, authority_handled_the_complaint, three_months_from_the_complaint_have_passed, authority_informed_on_progress_or_outcome, data_subject_considers_rights_infringed_by_processing, defendant_is_member_state_public_authority_acting_in_public_powers]).
 
-% ---- root exports: the profile key atoms and the judgement value --------
-is_data_subject.
-data_subject_considers_processing_infringes_regulation.
-decision_is_legally_binding.
-decision_concerns_the_caller.
-complaint_lodged_under_article_77.
-authority_competent_under_articles_55_and_56.
-authority_handled_the_complaint.
-three_months_from_the_complaint_have_passed.
-authority_informed_on_progress_or_outcome.
-data_subject_considers_rights_infringed_by_processing.
-defendant_is_member_state_public_authority_acting_in_public_powers.
-unsure.
-
-% ---- recognisers of the result constructors -------------------------------
-% Each holds only for a well-formed term of its shape.
-
-% indeterminate(MissingKeys): MissingKeys names ONE contract key.
-indeterminate([MissingKey]) :-
-    gdpr_complaints_and_judicial_remedies_profile_keys(ContractKeys),
-    member(MissingKey, ContractKeys).
-
-% needs_legal_review(Reason, Context): a reason of the closed list, a non-empty context.
-needs_legal_review(Reason, [ContextItem|ContextItems]) :-
-    referral_reason(Reason),
-    nonvar(ContextItem),
-    is_list(ContextItems).
-
-referral_reason(open_textured(Input, cite(Citation))) :-
-    atom(Input),
-    atom(Citation).
-referral_reason(cross_reference_unresolved(cite(Citation), cite(Target))) :-
-    atom(Citation),
-    atom(Target).
-
-% provenance(Source, Detail): a named source and a given detail.
-provenance(Source, Detail) :-
-    atom(Source),
-    nonvar(Detail).
-
-% outside_fact(Key, Attested): the one outside fact of the order, attested.
-% It recognises a given term and never builds one.
-outside_fact(authority_competent_under_articles_55_and_56, Attested) :-
-    nonvar(Attested),
-    Attested = attested(Value, Attestation),
-    attested(Value, Attestation).
-
-% attested(Value, Attestation): Value true or false, a given attestation of
-% four arguments (never built here).
-attested(Value, Attestation) :-
-    member(Value, [true, false]),
-    nonvar(Attestation),
-    functor(Attestation, attestation, 4).
-
-% url(Location, RetrievedAt) and document(UploadIdentifier, Sha256Digest): evidence.
-url(Location, RetrievedAt) :-
-    atom(Location),
-    atom(RetrievedAt).
-
-document(UploadIdentifier, Sha256Digest) :-
-    atom(UploadIdentifier),
-    atom(Sha256Digest).
-
-% input_problems(Problems): a non-empty list of problem terms.
-input_problems([Problem|Problems]) :-
-    maplist(input_problem, [Problem|Problems]).
-
-input_problem(unknown_key(ProblemKey)) :-
-    unknown_key(ProblemKey).
-input_problem(wrong_type(ProblemKey)) :-
-    wrong_type(ProblemKey).
-input_problem(duplicate_key(ProblemKey)) :-
-    duplicate_key(ProblemKey).
-
-% unknown_key(Key): a key outside the eleven of the contract.
-unknown_key(ProblemKey) :-
-    gdpr_complaints_and_judicial_remedies_profile_keys(ContractKeys),
-    not_member(ProblemKey, ContractKeys).
-
-% wrong_type(Key): a contract key, or profile for the whole term.
-wrong_type(ProblemKey) :-
-    gdpr_complaints_and_judicial_remedies_profile_keys(ContractKeys),
-    member(ProblemKey, [profile|ContractKeys]).
-
-% duplicate_key(Key): a contract key.
-duplicate_key(ProblemKey) :-
-    gdpr_complaints_and_judicial_remedies_profile_keys(ContractKeys),
-    member(ProblemKey, ContractKeys).
-
-% ---- #16 what-if: re-evaluate with one key hypothetically overridden ----
+% #16 what-if: re-evaluate with one key hypothetically overridden; one
+% NewStatus = answer(Query, Result) per query, as the slice's status gives.
 gdpr_complaints_and_judicial_remedies_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    profile_with_value(Profile, OverriddenKey, NewValue, Hypothesis),
+    attribute_list_override(Profile, OverriddenKey, NewValue, Hypothesis),
     gdpr_complaints_and_judicial_remedies_status(Hypothesis, NewStatus).
 
-% profile_with_value(Profile, Key, Value, Hypothesis): list plumbing. Every
-% attribute(Key, _) is dropped and attribute(Key, Value) is added at the end.
-profile_with_value([], Key, Value, [attribute(Key, Value)]).
-profile_with_value([attribute(ElementKey, _)|Elements], Key, Value, Hypothesis) :-
-    ElementKey == Key,
-    profile_with_value(Elements, Key, Value, Hypothesis).
-profile_with_value([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+% ---- attribute-list plumbing (no statutory content, no marker) ----------
+attribute_list_override([], Key, Value, [attribute(Key, Value)]).
+attribute_list_override([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Overridden]) :-
     ElementKey \== Key,
-    profile_with_value(Elements, Key, Value, Hypothesis).
+    attribute_list_override(Elements, Key, Value, Overridden).
+attribute_list_override([attribute(ElementKey, _)|Elements], Key, Value, [attribute(Key, Value)|Remaining]) :-
+    ElementKey == Key,
+    attribute_list_without_key(Elements, Key, Remaining).
 
-% ---- #2 eligibility: one clause per right query ------------------------
-gdpr_complaints_and_judicial_remedies_eligibility(complaint_right, Profile, Label, Citations) :-
-    complaint_right(Profile, Result, Citations),
-    result_label(Result, complaint_right_exists, no_complaint_right, Label).
-gdpr_complaints_and_judicial_remedies_eligibility(authority_decision_remedy_right, Profile, Label, Citations) :-
-    authority_decision_remedy_right(Profile, Result, Citations),
-    result_label(Result, decision_remedy_right_exists, no_decision_remedy_right, Label).
-gdpr_complaints_and_judicial_remedies_eligibility(authority_inaction_remedy_right, Profile, Label, Citations) :-
-    authority_inaction_remedy_right(Profile, Result, _Basis, Citations),
-    result_label(Result, inaction_remedy_right_exists, no_inaction_remedy_right, Label).
-gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_remedy_right, Profile, Label, Citations) :-
-    controller_processor_remedy_right(Profile, Result, Citations),
-    result_label(Result, judicial_remedy_right_exists, no_judicial_remedy_right, Label).
+attribute_list_without_key([], _, []).
+attribute_list_without_key([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Remaining]) :-
+    ElementKey \== Key,
+    attribute_list_without_key(Elements, Key, Remaining).
+attribute_list_without_key([attribute(ElementKey, _)|Elements], Key, Remaining) :-
+    ElementKey == Key,
+    attribute_list_without_key(Elements, Key, Remaining).
 
-% result_label(Result, PositiveAtom, NegativeAtom, Label): one clause per result shape.
-result_label(Positive, Positive, _, eligible).
-result_label(Negative, _, Negative, ineligible).
-result_label(indeterminate(_), _, _, indeterminate_eligibility).
-result_label(needs_legal_review(_, _), _, _, indeterminate_eligibility).
-result_label(input_problems(_), _, _, indeterminate_eligibility).
-
-% =====================================================================
-% tests
-% =====================================================================
-test(the_profile_keys_are_the_eleven_contract_keys) :-
-    gdpr_complaints_and_judicial_remedies_profile_keys(Keys),
-    length(Keys, 11).
-test(the_root_atoms_are_defined) :-
-    is_data_subject,
-    defendant_is_member_state_public_authority_acting_in_public_powers,
-    unsure.
-test(supplying_the_consideration_makes_a_remedy_available) :-
-    gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, true)],
-                                                  data_subject_considers_processing_infringes_regulation,
-                                                  true,
-                                                  remedy_available).
-test(an_override_replaces_the_earlier_value) :-
-    gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, false)],
-                                                  data_subject_considers_processing_infringes_regulation,
-                                                  true,
-                                                  remedy_available).
-test(an_override_never_makes_a_duplicate, fail) :-
-    gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, false)],
-                                                  data_subject_considers_processing_infringes_regulation,
-                                                  true,
-                                                  input_problems(_)).
-test(a_complaint_right_is_eligible) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(complaint_right,
-                                                      [attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, true)],
-                                                      eligible,
-                                                      [cite(eu_reg_2016_679_art_77_1)]).
-test(a_non_data_subject_is_ineligible_for_the_judicial_remedy) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(controller_processor_remedy_right,
-                                                      [attribute(is_data_subject, false)],
-                                                      ineligible,
-                                                      [cite(eu_reg_2016_679_art_79_1)]).
-test(an_unsure_judgement_is_indeterminate_eligibility) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(authority_decision_remedy_right,
-                                                      [attribute(decision_is_legally_binding, unsure), attribute(decision_concerns_the_caller, true)],
-                                                      indeterminate_eligibility,
-                                                      []).
-test(an_unsure_judgement_is_not_eligible, fail) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(authority_decision_remedy_right,
-                                                      [attribute(decision_is_legally_binding, unsure), attribute(decision_concerns_the_caller, true)],
-                                                      eligible,
-                                                      _).
-test(an_absent_competence_statement_is_indeterminate_eligibility) :-
-    gdpr_complaints_and_judicial_remedies_eligibility(authority_inaction_remedy_right,
-                                                      [attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_handled_the_complaint, false)],
-                                                      indeterminate_eligibility,
-                                                      []).
-test(the_eligibility_has_one_answer) :-
-    findall(Label,
-            gdpr_complaints_and_judicial_remedies_eligibility(complaint_right, [attribute(is_data_subject, false), attribute(data_subject_considers_processing_infringes_regulation, false)], Label, _),
-            Labels),
-    Labels == [ineligible].
-
-% ---- the result constructor recognisers, called with ground input ----
-test(the_indeterminate_term_names_one_contract_key) :-
-    indeterminate([is_data_subject]).
-test(an_empty_indeterminate_term_is_not_well_formed, fail) :-
-    indeterminate([]).
-test(the_open_textured_referral_is_well_formed) :-
-    needs_legal_review(open_textured(decision_is_legally_binding, cite(eu_reg_2016_679_art_78_1)),
-                       [inputs_relied_on([decision_is_legally_binding-unsure, decision_concerns_the_caller-true])]).
-test(the_cross_reference_referral_is_well_formed) :-
-    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)),
-                       [resolution(cite(competence_statement), not_attempted),
-                        inputs_relied_on([authority_competent_under_articles_55_and_56-absent])]).
-test(a_referral_without_context_is_not_well_formed, fail) :-
-    needs_legal_review(open_textured(decision_is_legally_binding, cite(eu_reg_2016_679_art_78_1)), []).
-test(a_provenance_term_is_well_formed) :-
-    provenance(host_attestation_service, register_lookup).
-test(the_outside_fact_term_is_well_formed) :-
-    outside_fact(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none))).
-test(another_key_is_not_an_outside_fact, fail) :-
-    outside_fact(is_data_subject, attested(true, attestation(host, at, reason, none))).
-test(an_attested_false_is_well_formed) :-
-    attested(false, attestation(host, at, reason, none)).
-test(an_attested_unsure_is_not_well_formed, fail) :-
-    attested(unsure, attestation(host, at, reason, none)).
-test(a_url_evidence_is_well_formed) :-
-    url('https://example.org/competence', '2026-11-12').
-test(a_document_evidence_is_well_formed) :-
-    document(upload_0001, sha256_digest).
-test(an_input_problems_term_is_well_formed) :-
-    input_problems([duplicate_key(is_data_subject), wrong_type(decision_is_legally_binding), unknown_key(colour)]).
-test(an_empty_input_problems_term_is_not_well_formed, fail) :-
-    input_problems([]).
-test(an_unknown_key_is_outside_the_contract) :-
-    unknown_key(colour).
-test(a_contract_key_is_not_unknown, fail) :-
-    unknown_key(is_data_subject).
-test(the_whole_profile_can_be_wrong_type) :-
-    wrong_type(profile).
-test(a_contract_key_can_be_wrong_type) :-
-    wrong_type(authority_competent_under_articles_55_and_56).
-test(a_contract_key_can_be_duplicate) :-
-    duplicate_key(is_data_subject).
-test(an_unknown_key_is_never_a_duplicate_key, fail) :-
-    duplicate_key(colour).
+% ---- tests ---------------------------------------------------------------
+test(profile_keys_are_the_eleven_contract_keys) :-
+    gdpr_complaints_and_judicial_remedies_profile_keys(ProfileKeys),
+    length(ProfileKeys, 11).
+test(what_if_replaces_a_present_key) :-
+    gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, false), attribute(data_subject_considers_processing_infringes_regulation, true)], is_data_subject, true, answer(complaint_right, Result)),
+    Result == complaint_right_exists.
+test(what_if_adds_an_absent_key) :-
+    gdpr_complaints_and_judicial_remedies_what_if([], defendant_is_member_state_public_authority_acting_in_public_powers, true, answer(controller_processor_forum, Result)),
+    Result == forum_establishment_state_only.
+test(what_if_collapses_a_duplicate_key) :-
+    gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, true), attribute(is_data_subject, false)], is_data_subject, false, answer(complaint_right, Result)),
+    Result == no_complaint_right.
+test(what_if_gives_five_statuses) :-
+    findall(Status, gdpr_complaints_and_judicial_remedies_what_if([], is_data_subject, false, Status), Statuses),
+    length(Statuses, 5).
+test(what_if_replaced_key_is_not_the_old_answer, fail) :-
+    gdpr_complaints_and_judicial_remedies_what_if([attribute(is_data_subject, false), attribute(data_subject_considers_processing_infringes_regulation, true)], is_data_subject, true, answer(complaint_right, no_complaint_right)).
+test(what_if_on_a_non_list_has_no_answer, fail) :-
+    gdpr_complaints_and_judicial_remedies_what_if(not_a_profile, is_data_subject, true, _).
+test(input_problems_reexported) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
 
 :- end_module(queries).

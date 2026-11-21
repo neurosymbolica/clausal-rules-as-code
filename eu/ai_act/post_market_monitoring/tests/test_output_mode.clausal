@@ -1,0 +1,170 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE tests for decide_post_market_monitoring/2.
+% The result is read out: every fixture subject yields exactly ONE
+% Status-Citations answer, and each route boundary is checked on the day
+% before and on the day itself.
+% Run: python -m clausal.testing eu/ai_act/post_market_monitoring/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/ai_act/post_market_monitoring/post_market_monitoring, [
+    decide_post_market_monitoring/2,
+    post_market_monitoring_duty_status/4
+]).
+:- use_module(eu/ai_act/post_market_monitoring/fixtures, [post_market_monitoring_profile_for/2]).
+
+subject_answers(Subject, Answers) :-
+    post_market_monitoring_profile_for(Subject, Request),
+    findall(Status-Citations,
+            decide_post_market_monitoring(Request, post_market_monitoring_verdict(Status, Citations)),
+            Answers).
+
+% ---- the date gates (Art 113(c)) ---------------------------------------
+test(the_day_before_the_annex_iii_date) :-
+    subject_answers(before_the_annex_iii_date, Answers),
+    Answers == [not_applicable_on_date-[cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]].
+
+test(the_annex_iii_date_itself) :-
+    subject_answers(annex_iii_system_on_its_first_day, Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+test(the_day_before_the_annex_i_date) :-
+    subject_answers(annex_i_only_system_the_day_before, Answers),
+    Answers == [not_applicable_on_date-[cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]].
+
+test(the_annex_i_date_itself) :-
+    subject_answers(annex_i_only_system_on_its_first_day, Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+test(the_last_day_of_february_is_read_as_a_date) :-
+    subject_answers(input_last_day_of_february, Answers),
+    Answers == [not_applicable_on_date-[cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]].
+
+% ---- provider and classification ---------------------------------------
+test(an_actor_that_is_not_the_provider) :-
+    subject_answers(actor_not_a_provider, Answers),
+    Answers == [not_a_provider-[cite(eu_reg_2024_1689_art_72_1)]].
+
+test(a_system_that_is_not_high_risk) :-
+    subject_answers(system_not_high_risk, Answers),
+    Answers == [not_a_high_risk_ai_system-[cite(eu_reg_2024_1689_art_72_1)]].
+
+test(the_provider_of_an_annex_iii_system) :-
+    subject_answers(provider_of_an_annex_iii_system, Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+% ---- Art 111(1) --------------------------------------------------------
+test(an_annex_x_component_the_day_before_31_december_2030) :-
+    subject_answers(annex_x_component_the_day_before_the_deadline, Answers),
+    Answers == [compliance_required_by_31_december_2030-[cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+test(an_annex_x_component_on_31_december_2030) :-
+    subject_answers(annex_x_component_on_the_deadline, Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+test(an_annex_x_component_for_public_authorities_keeps_the_2030_year_end) :-
+    subject_answers(annex_x_component_for_public_authorities, Answers),
+    Answers == [compliance_required_by_31_december_2030-[cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+% ---- Art 111(2) --------------------------------------------------------
+test(an_existing_unchanged_system) :-
+    subject_answers(existing_system_without_changes, Answers),
+    Answers == [existing_system_without_significant_changes_not_covered-[cite(eu_reg_2024_1689_art_111_2)]].
+
+test(an_existing_significantly_changed_system) :-
+    subject_answers(existing_system_with_significant_changes, Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+test(a_public_authority_system_the_day_before_2_august_2030) :-
+    subject_answers(existing_public_authority_system_the_day_before_the_deadline, Answers),
+    Answers == [compliance_required_by_2_august_2030-[cite(eu_reg_2024_1689_art_111_2), cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+test(a_public_authority_system_on_2_august_2030) :-
+    subject_answers(existing_public_authority_system_on_the_deadline, Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+test(a_changed_public_authority_system) :-
+    subject_answers(existing_changed_public_authority_system, Answers),
+    Answers == [duty_applies-[cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]].
+
+% ---- the statuses ------------------------------------------------------
+test(a_missing_provider_is_asked_for) :-
+    subject_answers(missing_provider, Answers),
+    Answers == [indeterminate([provider_of_the_system])-[]].
+
+test(an_unsure_design_change_is_referred) :-
+    subject_answers(referral_on_significant_changes, Answers),
+    Answers == [needs_legal_review(open_textured(significant_changes_in_design_as_from_the_chapter_iii_date, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_as_from_the_chapter_iii_date-unsure, intended_to_be_used_by_public_authorities-false])])-[]].
+
+test(a_missing_fact_is_named_before_a_referral) :-
+    subject_answers(missing_fact_before_referral, Answers),
+    Answers == [indeterminate([intended_to_be_used_by_public_authorities])-[]].
+
+% ---- Art 72(4) ---------------------------------------------------------
+test(integration_through_annex_i_legislation) :-
+    subject_answers(integration_through_annex_i_legislation, Answers),
+    Answers == [integration_available-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_without_equivalent_protection) :-
+    subject_answers(integration_without_equivalent_protection, Answers),
+    Answers == [integration_not_available-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_for_a_covered_annex_iii_system) :-
+    subject_answers(integration_for_covered_annex_iii_system, Answers),
+    Answers == [integration_available-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_for_a_financial_institution) :-
+    subject_answers(integration_for_financial_institution, Answers),
+    Answers == [integration_available-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_for_a_financial_institution_without_a_plan) :-
+    subject_answers(integration_for_financial_institution_without_plan, Answers),
+    Answers == [integration_not_available-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_without_a_legislation_route) :-
+    subject_answers(integration_without_legislation_route, Answers),
+    Answers == [integration_not_available-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_for_an_actor_that_is_not_the_provider) :-
+    subject_answers(integration_actor_not_a_provider, Answers),
+    Answers == [not_a_provider-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_for_a_system_that_is_not_high_risk) :-
+    subject_answers(integration_system_not_high_risk, Answers),
+    Answers == [not_a_high_risk_ai_system-[cite(eu_reg_2024_1689_art_72_4)]].
+
+test(integration_with_an_unsure_equivalence) :-
+    subject_answers(integration_referral_on_equivalence, Answers),
+    Answers == [needs_legal_review(open_textured(integration_achieves_an_equivalent_level_of_protection, cite(eu_reg_2024_1689_art_72_4)), [inputs_relied_on([integration_achieves_an_equivalent_level_of_protection-unsure])])-[]].
+
+% ---- the input check ---------------------------------------------------
+test(a_duplicate_key) :-
+    subject_answers(input_duplicate_key, Answers),
+    Answers == [input_problems([duplicate_key(provider_of_the_system)])-[]].
+
+test(a_crisp_key_given_unsure) :-
+    subject_answers(input_crisp_key_given_unsure, Answers),
+    Answers == [input_problems([wrong_type(system_is_a_high_risk_ai_system_listed_in_annex_iii)])-[]].
+
+test(an_unknown_key_given_twice_is_named_once) :-
+    subject_answers(input_unknown_key_given_twice, Answers),
+    Answers == [input_problems([unknown_key(colour)])-[]].
+
+test(an_impossible_date) :-
+    subject_answers(input_impossible_date, Answers),
+    Answers == [input_problems([wrong_type(assessment_date)])-[]].
+
+test(profile_problems_come_before_the_date) :-
+    subject_answers(input_unknown_key_and_impossible_date, Answers),
+    Answers == [input_problems([unknown_key(colour), wrong_type(assessment_date)])-[]].
+
+test(a_list_that_is_not_an_attribute_list) :-
+    subject_answers(input_not_an_attribute_list, Answers),
+    Answers == [input_problems([wrong_type(profile)])-[]].
+
+% ---- the empty profile asks for the first key that matters -------------
+test(an_empty_profile_on_a_live_date_asks_for_the_provider) :-
+    findall(Result-Citations, post_market_monitoring_duty_status([], date(2029, 1, 1), Result, Citations), Answers),
+    Answers == [indeterminate([provider_of_the_system])-[]].
+
+:- end_module(test_output_mode).

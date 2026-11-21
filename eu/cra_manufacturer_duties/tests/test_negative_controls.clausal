@@ -1,0 +1,226 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed by one unit -> a different verdict), proving the
+% route is LOAD-BEARING. A negative states "no solution" as
+% `test(Name, fail) :- Goal.` Every near-miss atom is also proved to be one
+% of the slice's verdict names, so a misspelling cannot pass silently.
+% Run: python -m clausal.testing eu/cra_manufacturer_duties/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/cra_manufacturer_duties/cra_manufacturer_duties, [
+    requirements_applicability/4,
+    support_period_minimum/4,
+    retention_end_date/5,
+    cra_manufacturer_duties_status_values/1
+]).
+
+test(the_near_miss_atoms_are_verdict_names) :-
+    cra_manufacturer_duties_status_values(StatusValues),
+    member(not_yet_applicable, StatusValues),
+    member(article_14_only, StatusValues),
+    member(subject_to_requirements, StatusValues),
+    member(indeterminate, StatusValues),
+    member(needs_legal_review, StatusValues),
+    member(minimum_support_period, StatusValues),
+    member(keep_until, StatusValues),
+    member(not_applicable_outside_support_period, StatusValues),
+    member(input_problems, StatusValues).
+
+% ---- (A1) before 11 September 2026 ------------------------------------
+test(a1_positive_the_day_before_article_14) :-
+    requirements_applicability([], date(2026, 9, 10), not_yet_applicable, [cite(eu_reg_2024_2847_art_71_2)]).
+test(a1_near_miss_on_the_article_14_date, fail) :-
+    requirements_applicability([], date(2026, 9, 11), not_yet_applicable, _).
+
+% ---- (A2) the window ---------------------------------------------------
+test(a2_positive_the_last_day_of_the_window) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2028, 1, 10))],
+                               date(2027, 12, 10),
+                               article_14_only,
+                               [cite(eu_reg_2024_2847_art_71_2)]).
+test(a2_near_miss_on_the_application_date, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2028, 1, 10))],
+                               date(2027, 12, 11),
+                               article_14_only,
+                               _).
+
+% ---- (A3) the placing date is asked for --------------------------------
+test(a3_positive_placing_date_absent) :-
+    requirements_applicability([], date(2027, 12, 11), indeterminate([placing_on_market_date]), []).
+test(a3_near_miss_placing_date_present, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2027, 12, 11))],
+                               date(2027, 12, 11),
+                               indeterminate([placing_on_market_date]),
+                               _).
+
+% ---- (A4) placed on or after 11 December 2027 --------------------------
+test(a4_positive_placed_on_the_application_date) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2027, 12, 11)),
+                                attribute(substantially_modified_on_or_after_application_date, false)],
+                               date(2028, 3, 1),
+                               subject_to_requirements,
+                               [cite(eu_reg_2024_2847_art_71_2)]).
+test(a4_near_miss_placed_the_day_before, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2027, 12, 10)),
+                                attribute(substantially_modified_on_or_after_application_date, false)],
+                               date(2028, 3, 1),
+                               subject_to_requirements,
+                               _).
+
+% ---- (A5) placed before: modified, not modified, absent, unsure --------
+test(a5_positive_modified_is_subject) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                attribute(substantially_modified_on_or_after_application_date, true)],
+                               date(2028, 3, 1),
+                               subject_to_requirements,
+                               [cite(eu_reg_2024_2847_art_69_2)]).
+test(a5_near_miss_not_modified_is_not_subject, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                attribute(substantially_modified_on_or_after_application_date, false)],
+                               date(2028, 3, 1),
+                               subject_to_requirements,
+                               _).
+test(a5_positive_not_modified_is_article_14_only) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                attribute(substantially_modified_on_or_after_application_date, false)],
+                               date(2028, 3, 1),
+                               article_14_only,
+                               [cite(eu_reg_2024_2847_art_69_2), cite(eu_reg_2024_2847_art_69_3)]).
+test(a5_near_miss_modified_is_not_article_14_only, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                attribute(substantially_modified_on_or_after_application_date, true)],
+                               date(2028, 3, 1),
+                               article_14_only,
+                               _).
+test(a5_positive_absent_judgement_is_asked) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5))],
+                               date(2028, 3, 1),
+                               indeterminate([substantially_modified_on_or_after_application_date]),
+                               []).
+test(a5_near_miss_new_product_does_not_ask_the_judgement, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2027, 12, 11))],
+                               date(2028, 3, 1),
+                               indeterminate([substantially_modified_on_or_after_application_date]),
+                               _).
+test(a5_positive_unsure_goes_to_a_lawyer) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                attribute(substantially_modified_on_or_after_application_date, unsure)],
+                               date(2028, 3, 1),
+                               needs_legal_review(_, _),
+                               []).
+test(a5_near_miss_true_does_not_go_to_a_lawyer, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                attribute(substantially_modified_on_or_after_application_date, true)],
+                               date(2028, 3, 1),
+                               needs_legal_review(_, _),
+                               _).
+test(a5_near_miss_unsure_in_the_window_does_not_go_to_a_lawyer, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                attribute(substantially_modified_on_or_after_application_date, unsure)],
+                               date(2027, 12, 10),
+                               needs_legal_review(_, _),
+                               _).
+
+% ---- (A0) input problems -----------------------------------------------
+test(a0_positive_unknown_key_is_refused) :-
+    requirements_applicability([attribute(colour, red)], date(2028, 3, 1),
+                               input_problems([unknown_key(colour)]), []).
+test(a0_near_miss_a_contract_key_is_not_refused, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2028, 1, 1))], date(2028, 3, 1),
+                               input_problems(_), _).
+
+% ---- (B1) support floor before application -----------------------------
+test(b1_positive_the_day_before_application) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 72)], date(2027, 12, 10),
+                           not_yet_applicable, [cite(eu_reg_2024_2847_art_71_2)]).
+test(b1_near_miss_on_the_application_date, fail) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 72)], date(2027, 12, 11),
+                           not_yet_applicable, _).
+
+% ---- (B2) use time asked for -------------------------------------------
+test(b2_positive_use_time_absent) :-
+    support_period_minimum([], date(2028, 3, 1), indeterminate([expected_use_time_in_months]), []).
+test(b2_near_miss_use_time_present, fail) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 0)], date(2028, 3, 1),
+                           indeterminate(_), _).
+
+% ---- (B3) the floor -----------------------------------------------------
+test(b3_positive_sixty_months_at_the_floor) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 60)], date(2028, 3, 1),
+                           minimum_support_period(60), [cite(eu_reg_2024_2847_art_13_8)]).
+test(b3_near_miss_fifty_nine_is_not_sixty, fail) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 59)], date(2028, 3, 1),
+                           minimum_support_period(60), _).
+test(b3_positive_short_use_time_is_the_floor) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 59)], date(2028, 3, 1),
+                           minimum_support_period(59), [cite(eu_reg_2024_2847_art_13_8)]).
+test(b3_near_miss_long_use_time_is_not_itself, fail) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 61)], date(2028, 3, 1),
+                           minimum_support_period(61), _).
+
+% ---- (C1) retention before application ---------------------------------
+test(c1_positive_the_day_before_application) :-
+    retention_end_date([], date(2027, 12, 10), security_update,
+                       not_yet_applicable, [cite(eu_reg_2024_2847_art_71_2)]).
+test(c1_near_miss_on_the_application_date, fail) :-
+    retention_end_date([], date(2027, 12, 11), security_update, not_yet_applicable, _).
+
+% ---- (C2) the start key, then the support period end --------------------
+test(c2_positive_start_key_asked_first) :-
+    retention_end_date([], date(2028, 3, 1), security_update,
+                       indeterminate([security_update_issue_date]), []).
+test(c2_near_miss_the_placing_date_is_not_the_update_start, fail) :-
+    retention_end_date([attribute(placing_on_market_date, date(2028, 2, 1))], date(2028, 3, 1),
+                       security_update, indeterminate([support_period_end_date]), _).
+test(c2_positive_support_end_asked_next) :-
+    retention_end_date([attribute(placing_on_market_date, date(2028, 2, 1))], date(2028, 3, 1),
+                       information_and_instructions_to_the_user,
+                       indeterminate([support_period_end_date]), []).
+
+% ---- (C3) update outside the support period -----------------------------
+test(c3_positive_update_the_day_after) :-
+    retention_end_date([attribute(security_update_issue_date, date(2031, 1, 2)),
+                        attribute(support_period_end_date, date(2031, 1, 1))],
+                       date(2031, 2, 1), security_update,
+                       not_applicable_outside_support_period, [cite(eu_reg_2024_2847_art_13_9)]).
+test(c3_near_miss_update_on_the_last_day, fail) :-
+    retention_end_date([attribute(security_update_issue_date, date(2031, 1, 1)),
+                        attribute(support_period_end_date, date(2031, 1, 1))],
+                       date(2031, 2, 1), security_update,
+                       not_applicable_outside_support_period, _).
+
+% ---- (C4) the later of the two dates ------------------------------------
+test(c4_positive_support_end_one_day_longer_wins) :-
+    retention_end_date([attribute(placing_on_market_date, date(2028, 2, 1)),
+                        attribute(support_period_end_date, date(2038, 2, 2))],
+                       date(2028, 3, 1), technical_documentation_and_declaration_of_conformity,
+                       keep_until(date(2038, 2, 2)), [cite(eu_reg_2024_2847_art_13_13)]).
+test(c4_near_miss_support_end_one_day_shorter_does_not_win, fail) :-
+    retention_end_date([attribute(placing_on_market_date, date(2028, 2, 1)),
+                        attribute(support_period_end_date, date(2038, 1, 31))],
+                       date(2028, 3, 1), technical_documentation_and_declaration_of_conformity,
+                       keep_until(date(2038, 1, 31)), _).
+test(c4_positive_leap_day_moves_to_the_twenty_eighth) :-
+    retention_end_date([attribute(security_update_issue_date, date(2028, 2, 29)),
+                        attribute(support_period_end_date, date(2030, 1, 1))],
+                       date(2028, 3, 1), security_update,
+                       keep_until(date(2038, 2, 28)), [cite(eu_reg_2024_2847_art_13_9)]).
+test(c4_near_miss_leap_day_does_not_move_to_march, fail) :-
+    retention_end_date([attribute(security_update_issue_date, date(2028, 2, 29)),
+                        attribute(support_period_end_date, date(2030, 1, 1))],
+                       date(2028, 3, 1), security_update,
+                       keep_until(date(2038, 3, 1)), _).
+test(c4_positive_instructions_cite_article_13_18) :-
+    retention_end_date([attribute(placing_on_market_date, date(2028, 2, 1)),
+                        attribute(support_period_end_date, date(2033, 2, 1))],
+                       date(2028, 3, 1), information_and_instructions_to_the_user,
+                       keep_until(date(2038, 2, 1)), [cite(eu_reg_2024_2847_art_13_18)]).
+test(c4_near_miss_instructions_do_not_cite_article_13_13, fail) :-
+    retention_end_date([attribute(placing_on_market_date, date(2028, 2, 1)),
+                        attribute(support_period_end_date, date(2033, 2, 1))],
+                       date(2028, 3, 1), information_and_instructions_to_the_user,
+                       _, [cite(eu_reg_2024_2847_art_13_13)]).
+
+:- end_module(test_negative_controls).

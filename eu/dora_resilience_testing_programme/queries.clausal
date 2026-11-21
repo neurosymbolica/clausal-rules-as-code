@@ -1,0 +1,274 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_resilience_testing_programme.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2022/2554 (DORA), Articles 24 and 25, pinned
+% text 32022R2554 (original OJ text, OJ L 333, 27.12.2022, p. 1).
+%
+% dora_resilience_testing_programme_profile_keys/1:
+%     the fourteen profile keys of the typed input contract, in order;
+% dora_resilience_testing_programme_input_problems/2:
+%     the kernel's input check, re-exported as the scaffold wrote it;
+% dora_resilience_testing_programme_what_if/4 (what-if, query type #16):
+%     override one key of the ATTRIBUTE LIST, then re-decide
+%     resilience_testing_duties_complete. The kit's override_key/4 works on
+%     dicts only, and this order's profile is an attribute list, so the
+%     override is a local list rewrite (NOTES: an attribute-list override
+%     would belong in the kit).
+% dora_resilience_testing_programme_compliance_check/3 (query type #13):
+%     is omitting a duty allowed? Action is omit(DutyAtom). Omitting a
+%     duty that applies (it is in the list of
+%     resilience_testing_duties_required/3) is forbidden; omitting one that
+%     does not apply is permitted; a profile the required query cannot
+%     settle gives that query's status compound unchanged.
+%     Verdict: compliance_verdict(forbidden | permitted, Citations), or
+%     indeterminate([Key]), or input_problems(Problems).
+%
+% RESULT CONSTRUCTORS and ROOT ATOMS: the result constructors of the
+% order (required/1, outstanding/1, indeterminate/1, needs_legal_review/2,
+% open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1,
+% unknown_key/1, wrong_type/1, duplicate_key/1) are data: they are
+% exported and declared with constructors/1, and have no clauses. The
+% final result atoms (complete, incomplete, none_outstanding), the
+% fourteen profile key atoms, the eleven duty atoms, the two entity type
+% atoms the order reads and the judgement value unsure are declared here
+% once, so the package root serves each of them. They are never called as
+% queries and decide nothing.
+% =====================================================================
+
+:- module(queries, [
+    dora_resilience_testing_programme_profile_keys/1,
+    dora_resilience_testing_programme_input_problems/2,
+    dora_resilience_testing_programme_what_if/4,
+    dora_resilience_testing_programme_compliance_check/3,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    financial_entity_is_microenterprise/0,
+    dora_entity_type/0,
+    tests_undertaken_by_internal_tester/0,
+    resilience_testing_programme_established_maintained_and_reviewed/0,
+    programme_includes_range_of_assessments_and_tests/0,
+    programme_conducted_on_risk_based_approach/0,
+    tests_undertaken_by_independent_parties/0,
+    internal_tester_resourced_and_conflicts_of_interest_avoided/0,
+    procedures_to_prioritise_classify_and_remedy_issues_established/0,
+    internal_validation_methodologies_established/0,
+    critical_ict_systems_tested_at_least_yearly/0,
+    programme_provides_for_appropriate_tests/0,
+    vulnerability_assessments_performed_before_deployment/0,
+    microenterprise_tests_risk_based_and_planned/0,
+    resilience_testing_programme/0,
+    range_of_assessments_and_tests/0,
+    risk_based_testing_approach/0,
+    independent_testers/0,
+    internal_tester_resources_and_conflicts_of_interest/0,
+    issue_prioritisation_classification_and_remedy/0,
+    internal_validation_methodologies/0,
+    yearly_testing_of_critical_ict_systems/0,
+    execution_of_appropriate_tests/0,
+    vulnerability_assessments_before_deployment/0,
+    microenterprise_risk_based_planned_testing/0,
+    central_securities_depository/0,
+    central_counterparty/0,
+    unsure/0
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(eu/dora_resilience_testing_programme/kernel, [dora_resilience_testing_programme_input_problems/2]).
+:- use_module(eu/dora_resilience_testing_programme/citations, [implements/1]).
+:- use_module(eu/dora_resilience_testing_programme/dora_resilience_testing_programme, [
+    dora_resilience_testing_programme_status/2,
+    resilience_testing_duties_required/3
+]).
+
+% ---- result constructors (data: exported, no clauses) -----------------
+:- constructors([
+    required(duties),
+    outstanding(duties),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_resilience_testing_programme_profile_keys([financial_entity_is_microenterprise, dora_entity_type, tests_undertaken_by_internal_tester, resilience_testing_programme_established_maintained_and_reviewed, programme_includes_range_of_assessments_and_tests, programme_conducted_on_risk_based_approach, tests_undertaken_by_independent_parties, internal_tester_resourced_and_conflicts_of_interest_avoided, procedures_to_prioritise_classify_and_remedy_issues_established, internal_validation_methodologies_established, critical_ict_systems_tested_at_least_yearly, programme_provides_for_appropriate_tests, vulnerability_assessments_performed_before_deployment, microenterprise_tests_risk_based_and_planned]).
+
+% what-if: re-evaluate with one key hypothetically overridden.
+% (a) THE LOGIC WAS WRONG: override_key/4 raised type_error(dict) on the
+% order's attribute-list profile; the override now rewrites the list.
+dora_resilience_testing_programme_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    is_list(Profile),
+    replace_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_resilience_testing_programme_status(Hypothesis, NewStatus).
+
+% replace_attribute(Elements, Key, Value, Replaced): every attribute(Key, _)
+% dropped (identity ==), then attribute(Key, Value) added once at the end;
+% every other element kept as given. Complementary clauses.
+replace_attribute([], Key, Value, [attribute(Key, Value)]).
+replace_attribute([Element|Elements], Key, Value, Replaced) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == Key,
+    replace_attribute(Elements, Key, Value, Replaced).
+replace_attribute([Element|Elements], Key, Value, [Element|Replaced]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== Key,
+    replace_attribute(Elements, Key, Value, Replaced).
+replace_attribute([Element|Elements], Key, Value, [Element|Replaced]) :-
+    var(Element),
+    replace_attribute(Elements, Key, Value, Replaced).
+replace_attribute([Element|Elements], Key, Value, [Element|Replaced]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    replace_attribute(Elements, Key, Value, Replaced).
+
+% #13 compliance check: may the entity omit this duty? Exactly one
+% solution, because resilience_testing_duties_required/3 has one.
+dora_resilience_testing_programme_compliance_check(Profile, omit(Duty), Verdict) :-
+    resilience_testing_duties_required(Profile, Result, Citations),
+    omission_verdict(Result, Citations, Duty, Verdict).
+
+% A duty that applies is obligatory (Art 24(1) to (6), Art 25(1) to (3)):
+% omitting it is forbidden; a duty outside the list may be omitted.
+omission_verdict(required(Duties), Citations, Duty, Verdict) :-
+    implements(eu_reg_2022_2554_art_24_1),
+    memberd_t(Duty, Duties, Applies),
+    omission_modality(Applies, Citations, Verdict).
+omission_verdict(indeterminate(MissingKeys), _, _, indeterminate(MissingKeys)).
+omission_verdict(input_problems(Problems), _, _, input_problems(Problems)).
+% A referral is passed through unchanged (the required query never refers,
+% so this clause is the status-compound pass-through only).
+omission_verdict(needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)|Provenance]), _, _, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)|Provenance])).
+
+omission_modality(true, Citations, compliance_verdict(forbidden, Citations)).
+omission_modality(false, Citations, compliance_verdict(permitted, Citations)).
+
+% ---- root atoms: the final result atoms ------------------------------
+complete.
+incomplete.
+none_outstanding.
+
+% ---- root atoms: the fourteen profile keys ----------------------------
+financial_entity_is_microenterprise.
+dora_entity_type.
+tests_undertaken_by_internal_tester.
+resilience_testing_programme_established_maintained_and_reviewed.
+programme_includes_range_of_assessments_and_tests.
+programme_conducted_on_risk_based_approach.
+tests_undertaken_by_independent_parties.
+internal_tester_resourced_and_conflicts_of_interest_avoided.
+procedures_to_prioritise_classify_and_remedy_issues_established.
+internal_validation_methodologies_established.
+critical_ict_systems_tested_at_least_yearly.
+programme_provides_for_appropriate_tests.
+vulnerability_assessments_performed_before_deployment.
+microenterprise_tests_risk_based_and_planned.
+
+% ---- root atoms: the eleven duties, in duty order --------------------
+resilience_testing_programme.
+range_of_assessments_and_tests.
+risk_based_testing_approach.
+independent_testers.
+internal_tester_resources_and_conflicts_of_interest.
+issue_prioritisation_classification_and_remedy.
+internal_validation_methodologies.
+yearly_testing_of_critical_ict_systems.
+execution_of_appropriate_tests.
+vulnerability_assessments_before_deployment.
+microenterprise_risk_based_planned_testing.
+
+% ---- root atoms: the entity types read, the judgement value ----------
+central_securities_depository.
+central_counterparty.
+unsure.
+
+% ---- tests -----------------------------------------------------------
+test(omitting_the_microenterprise_duty_is_forbidden_for_a_microenterprise) :-
+    dora_resilience_testing_programme_compliance_check(
+        [attribute(financial_entity_is_microenterprise, true)],
+        omit(microenterprise_risk_based_planned_testing),
+        Verdict),
+    Verdict == compliance_verdict(forbidden, [cite(eu_reg_2022_2554_art_25_3)]).
+test(omitting_the_programme_is_permitted_for_a_microenterprise) :-
+    dora_resilience_testing_programme_compliance_check(
+        [attribute(financial_entity_is_microenterprise, true)],
+        omit(resilience_testing_programme),
+        compliance_verdict(permitted, _)).
+test(omitting_the_programme_is_not_forbidden_for_a_microenterprise, fail) :-
+    dora_resilience_testing_programme_compliance_check(
+        [attribute(financial_entity_is_microenterprise, true)],
+        omit(resilience_testing_programme),
+        compliance_verdict(forbidden, _)).
+test(omitting_vulnerability_assessments_is_forbidden_for_a_central_counterparty) :-
+    dora_resilience_testing_programme_compliance_check(
+        [attribute(financial_entity_is_microenterprise, false),
+         attribute(dora_entity_type, central_counterparty),
+         attribute(tests_undertaken_by_internal_tester, false)],
+        omit(vulnerability_assessments_before_deployment),
+        compliance_verdict(forbidden, _)).
+test(omitting_vulnerability_assessments_is_permitted_for_a_credit_institution) :-
+    dora_resilience_testing_programme_compliance_check(
+        [attribute(financial_entity_is_microenterprise, false),
+         attribute(dora_entity_type, credit_institution),
+         attribute(tests_undertaken_by_internal_tester, false)],
+        omit(vulnerability_assessments_before_deployment),
+        compliance_verdict(permitted, _)).
+test(an_unstated_size_leaves_the_compliance_check_indeterminate) :-
+    findall(Verdict,
+            dora_resilience_testing_programme_compliance_check([], omit(independent_testers), Verdict),
+            Verdicts),
+    Verdicts == [indeterminate([financial_entity_is_microenterprise])].
+test(a_badly_formed_profile_gives_its_input_problems_to_the_compliance_check) :-
+    dora_resilience_testing_programme_compliance_check(
+        [attribute(financial_entity_is_microenterprise, unsure)],
+        omit(independent_testers),
+        Verdict),
+    Verdict == input_problems([wrong_type(financial_entity_is_microenterprise)]).
+test(the_what_if_override_replaces_the_one_attribute) :-
+    replace_attribute([attribute(dora_entity_type, trading_venue),
+                       attribute(financial_entity_is_microenterprise, false)],
+                      dora_entity_type, central_counterparty, Replaced),
+    Replaced == [attribute(financial_entity_is_microenterprise, false),
+                 attribute(dora_entity_type, central_counterparty)].
+test(the_what_if_refers_an_unsure_microenterprise_judgement) :-
+    dora_resilience_testing_programme_what_if(
+        [attribute(financial_entity_is_microenterprise, true),
+         attribute(microenterprise_tests_risk_based_and_planned, true)],
+        microenterprise_tests_risk_based_and_planned, unsure, Status),
+    Status = needs_legal_review(open_textured(Key, _), [inputs_relied_on(_)|_]),
+    Key == microenterprise_tests_risk_based_and_planned.
+test(the_profile_keys_are_fourteen) :-
+    dora_resilience_testing_programme_profile_keys(ProfileKeys),
+    length(ProfileKeys, 14).
+test(the_root_atoms_are_defined) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    unsure.
+test(the_result_constructors_build_as_data) :-
+    Result = indeterminate([dora_entity_type]),
+    Result = indeterminate([Key]),
+    Key == dora_entity_type.
+
+:- end_module(queries).

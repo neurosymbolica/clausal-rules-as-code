@@ -1,137 +1,98 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_input_mode.clausal -- INPUT MODE: public predicates called with the
-% result argument BOUND (verdict given, not read out), and INPUT TOLERANCE:
-% every malformed profile gets exactly one answer from the input check.
+% result argument BOUND (verdict given, not read out), and input tolerance
+% of THE INPUT CHECK (terms that are not attribute lists, unbound parts).
 % Run: python -m clausal.testing eu/data_protection/gdpr_art6_lawful_basis/tests/test_input_mode.clausal
 % =====================================================================
 :- module(test_input_mode, []).
 :- use_module(eu/data_protection/gdpr_art6_lawful_basis/gdpr_art6_lawful_basis, [
     lawful_basis_status/4,
     purpose_compatibility/4,
-    gdpr_art6_lawful_basis_status/2
+    gdpr_art6_lawful_basis_status/2,
+    gdpr_art6_lawful_basis_status_values/1
 ]).
 :- use_module(eu/data_protection/gdpr_art6_lawful_basis/kernel, [gdpr_art6_lawful_basis_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_art6_lawful_basis/fixtures, [gdpr_art6_lawful_basis_profile_for/2]).
 
-subject_profile(Subject, Profile) :-
-    gdpr_art6_lawful_basis_profile_for(Subject, Profile).
-
-% ---- bound verdicts ------------------------------------------------------
-
-test(eligible_bound_on_claimed_contract) :-
-    subject_profile(contract_claimed_necessary, Profile),
-    lawful_basis_status(Profile, eligible, [], Citations),
-    sort(Citations, [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)]).
-
-test(ineligible_bound_is_rejected_on_claimed_contract, fail) :-
-    subject_profile(contract_claimed_necessary, Profile),
-    lawful_basis_status(Profile, ineligible, _, _).
-
-test(eligible_bound_with_the_copied_consent_statement) :-
-    subject_profile(consent_claimed_attested_true, Profile),
-    member(attribute(consent_given_and_conditions_met, Consent), Profile),
-    lawful_basis_status(Profile, eligible, [outside_fact(consent_given_and_conditions_met, Consent)], _).
-
-test(eligible_bound_with_an_empty_basis_is_rejected_on_consent, fail) :-
-    subject_profile(consent_claimed_attested_true, Profile),
+% ---- bound verdicts, one per route -----------------------------------
+test(contract_holds_with_eligible_bound) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_holds, Profile),
     lawful_basis_status(Profile, eligible, [], _).
-
-test(ineligible_bound_on_refused_consent) :-
-    subject_profile(consent_claimed_attested_false, Profile),
-    member(attribute(consent_given_and_conditions_met, Refused), Profile),
-    lawful_basis_status(Profile, ineligible, [outside_fact(consent_given_and_conditions_met, Refused)], _).
-
-test(indeterminate_bound_on_the_empty_profile) :-
+test(contract_holds_with_ineligible_bound, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_holds, Profile),
+    lawful_basis_status(Profile, ineligible, _, _).
+test(every_other_bound_status_is_rejected, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_holds, Profile),
+    gdpr_art6_lawful_basis_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, eligible),
+    gdpr_art6_lawful_basis_status(Profile, Other).
+test(consent_refused_with_ineligible_bound) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_consent_refused, Profile),
+    member(attribute(consent_given_and_conditions_met, Statement), Profile),
+    lawful_basis_status(Profile, ineligible, [outside_fact(consent_given_and_conditions_met, Statement)], _).
+test(empty_profile_with_the_missing_key_bound) :-
     lawful_basis_status([], indeterminate([contract_necessary]), [], []).
-
-test(another_missing_key_bound_is_rejected, fail) :-
+test(empty_profile_with_another_missing_key_bound, fail) :-
     lawful_basis_status([], indeterminate([vital_interests_necessary]), _, _).
-
-test(consent_referral_bound) :-
-    subject_profile(consent_statement_absent_for_last_open_way, Profile),
+test(absent_consent_statement_with_the_referral_bound) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_consent_statement_absent, Profile),
     lawful_basis_status(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_1_a), cite(consent_basis_statement)), [resolution(cite(consent_basis_statement), not_attempted), inputs_relied_on([consent_given_and_conditions_met-absent])]), [], []).
-
-test(open_textured_bound_on_the_legal_obligation) :-
-    subject_profile(legal_obligation_unsure_law_statement_attested, Profile),
-    member(attribute(legal_obligation_laid_down_by_law, LawStated), Profile),
-    lawful_basis_status(Profile, needs_legal_review(open_textured(legal_obligation_necessary, cite(eu_reg_2016_679_art_6_1_c)), [inputs_relied_on([basis_claimed-legal_obligation, legal_obligation_necessary-unsure, legal_obligation_laid_down_by_law-LawStated])]), [], []).
-
-test(input_problems_bound) :-
-    lawful_basis_status([attribute(contract_necessary, maybe)], input_problems([wrong_type(contract_necessary)]), [], []).
-
-test(status_projection_bound) :-
-    subject_profile(vital_interests_claimed_necessary, Profile),
-    gdpr_art6_lawful_basis_status(Profile, eligible).
-
-test(compatibility_bound) :-
-    subject_profile(new_purpose_compatible, Profile),
+test(absent_public_task_law_with_the_referral_bound) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_public_interest_task_law_absent, Profile),
+    lawful_basis_status(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(public_interest_task_law_statement)), [resolution(cite(public_interest_task_law_statement), not_attempted), inputs_relied_on([public_interest_task_laid_down_by_law-absent])]), [], []).
+test(unsure_contract_with_the_open_textured_reason_bound) :-
+    gdpr_art6_lawful_basis_profile_for(only_unsure_contract_left, Profile),
+    lawful_basis_status(Profile, needs_legal_review(open_textured(contract_necessary, cite(eu_reg_2016_679_art_6_1_b)), [inputs_relied_on(_)]), [], []).
+test(purpose_compatible_bound) :-
+    gdpr_art6_lawful_basis_profile_for(purpose_compatible, Profile),
     purpose_compatibility(Profile, purpose_compatible, [], [cite(eu_reg_2016_679_art_6_4)]).
+test(purpose_not_engaged_bound) :-
+    gdpr_art6_lawful_basis_profile_for(purpose_test_not_engaged, Profile),
+    purpose_compatibility(Profile, compatibility_test_not_engaged, [], [cite(eu_reg_2016_679_art_6_4)]).
+test(purpose_factor_left_out_with_compatible_bound, fail) :-
+    gdpr_art6_lawful_basis_profile_for(purpose_factor_left_out, Profile),
+    purpose_compatibility(Profile, purpose_compatible, _, _).
+test(purpose_factor_left_out_with_not_ascertained_bound) :-
+    gdpr_art6_lawful_basis_profile_for(purpose_factor_left_out, Profile),
+    purpose_compatibility(Profile, compatibility_not_ascertained, [], _).
 
-test(compatibility_other_answer_bound_is_rejected, fail) :-
-    subject_profile(new_purpose_compatible, Profile),
-    purpose_compatibility(Profile, purpose_not_compatible, _, _).
-
-% ---- input tolerance ------------------------------------------------------
-
-test(an_unbound_profile_is_not_an_attribute_list) :-
-    findall(Problems, gdpr_art6_lawful_basis_input_problems(_UnboundProfile, Problems), Answers),
-    Answers == [[wrong_type(profile)]].
-
-test(an_unbound_profile_gets_one_status) :-
-    findall(Result-Basis-Citations, lawful_basis_status(_UnboundProfile, Result, Basis, Citations), Answers),
-    Answers == [input_problems([wrong_type(profile)])-[]-[]].
-
-test(an_atom_is_not_an_attribute_list) :-
-    gdpr_art6_lawful_basis_input_problems(not_a_list, [wrong_type(profile)]).
-
-test(a_foreign_element_makes_the_profile_wrong) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, true), contract_necessary], [wrong_type(profile)]).
-
-% Test-side change: the groundness gate needs a ground input, so the element
-% that is not attribute(_, _) is a number here; the rule is unchanged.
-test(a_number_element_makes_the_profile_wrong) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, true), 42], [wrong_type(profile)]).
-
-% Test-side change: a ground improper list in place of a partial list.
-test(an_improper_list_is_refused) :-
-    purpose_compatibility([attribute(contract_necessary, true)|not_a_list], input_problems([wrong_type(profile)]), [], []).
-
-% Test-side change: the answer-shape gate replays this test's input with the
-% answer free and needs a ground answer, so the key that is not an atom is a
-% number here (named as given); the rule for an unbound key is unchanged.
-test(an_unbound_key_is_named_as_given) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(7, true)], Problems),
-    Problems == [unknown_key(7)].
-
-test(a_compound_key_is_unknown) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(contract(necessary), true)], [unknown_key(contract(necessary))]).
-
-% Test-side change: a ground value outside the type in place of an unbound one.
-test(a_compound_value_is_a_wrong_type) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, true(maybe))], [wrong_type(contract_necessary)]).
-
-% Test-side change: an attestation with three arguments in place of one with
-% an unbound argument; neither is attestation(_, _, _, _) with four supplied.
-test(an_attestation_with_three_arguments_is_a_wrong_type) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(consent_given_and_conditions_met, attested(true, attestation(host_system, stated_by_host, none)))], [wrong_type(consent_given_and_conditions_met)]).
-
-test(a_duplicate_with_equal_values_is_only_a_duplicate) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, true), attribute(contract_necessary, true)], [duplicate_key(contract_necessary)]).
-
-test(a_duplicate_with_bad_values_is_not_a_wrong_type) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, maybe), attribute(contract_necessary, perhaps)], [duplicate_key(contract_necessary)]).
-
-test(problems_come_in_contract_order_then_unknown_keys) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(favourite_colour, blue), attribute(compatible_purpose, maybe), attribute(basis_claimed, public_task)], [wrong_type(basis_claimed), wrong_type(compatible_purpose), unknown_key(favourite_colour)]).
-
-test(an_evidence_url_is_accepted) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(special_category, attested(false, attestation(host_system, recorded_moment, stated_by_host, url(location, retrieved_moment))))], []).
-
-test(an_evidence_document_is_accepted) :-
-    gdpr_art6_lawful_basis_input_problems([attribute(child_data_subject, attested(true, attestation(host_system, recorded_moment, stated_by_host, document(upload_identifier, digest_value))))], []).
-
-test(an_absent_key_is_never_a_problem) :-
-    gdpr_art6_lawful_basis_input_problems([], []).
+% ---- input tolerance ----------------------------------------------------
+test(duplicate_key_bound) :-
+    gdpr_art6_lawful_basis_profile_for(input_duplicate_key, Profile),
+    gdpr_art6_lawful_basis_input_problems(Profile, [duplicate_key(contract_necessary)]).
+test(attested_judgement_is_wrong_type) :-
+    gdpr_art6_lawful_basis_profile_for(input_attested_judgement, Profile),
+    gdpr_art6_lawful_basis_input_problems(Profile, [wrong_type(contract_necessary)]).
+test(bare_outside_fact_is_wrong_type) :-
+    gdpr_art6_lawful_basis_profile_for(input_bare_outside_fact, Profile),
+    gdpr_art6_lawful_basis_input_problems(Profile, [wrong_type(consent_given_and_conditions_met)]).
+test(unbound_attestation_argument_is_wrong_type) :-
+    gdpr_art6_lawful_basis_profile_for(input_attestation_argument_unbound, Profile),
+    gdpr_art6_lawful_basis_input_problems(Profile, [wrong_type(special_category)]).
+test(number_key_is_unknown) :-
+    gdpr_art6_lawful_basis_profile_for(input_unknown_number_key, Profile),
+    gdpr_art6_lawful_basis_input_problems(Profile, [unknown_key(42)]).
+test(partial_list_is_not_a_profile) :-
+    gdpr_art6_lawful_basis_profile_for(input_partial_list, Profile),
+    gdpr_art6_lawful_basis_input_problems(Profile, [wrong_type(profile)]).
+test(an_atom_is_not_a_profile) :-
+    gdpr_art6_lawful_basis_input_problems(profile, [wrong_type(profile)]).
+test(a_list_with_a_bare_atom_is_not_a_profile) :-
+    gdpr_art6_lawful_basis_input_problems([contract_necessary], [wrong_type(profile)]).
+test(an_unbound_value_is_wrong_type) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, _)], [wrong_type(contract_necessary)]).
+test(an_unbound_key_is_unknown_as_given) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(GivenKey, true)], [unknown_key(NamedKey)]),
+    NamedKey == GivenKey.
+test(crisp_key_unsure_is_wrong_type) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(new_purpose_processing, unsure)], [wrong_type(new_purpose_processing)]).
+test(unlisted_basis_is_wrong_type) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(basis_claimed, public_interest)], [wrong_type(basis_claimed)]).
+test(unbound_profile_answers_input_problems) :-
+    lawful_basis_status(_, input_problems([wrong_type(profile)]), [], []).
+test(unbound_profile_answers_input_problems_for_purpose) :-
+    purpose_compatibility(_, input_problems([wrong_type(profile)]), [], []).
 
 :- end_module(test_input_mode).

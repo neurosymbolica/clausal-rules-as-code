@@ -1,10 +1,12 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_processor_contract_kernel, [gdpr_processor_contract_input_problems/2]).
+:- module(m__eu_data_protection_gdpr_processor_contract_kernel, [gdpr_processor_contract_input_problems/2, gdpr_processor_contract_key_order/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
 :- use_module(library(reif), [memberd_t/3]).
+
+gdpr_processor_contract_key_order([contract_binding_on_processor, contract_governed_by_union_or_member_state_law, contract_in_writing, contract_sets_out_categories_of_data_subjects, contract_sets_out_controller_obligations_and_rights, contract_sets_out_duration, contract_sets_out_nature_of_processing, contract_sets_out_purpose_of_processing, contract_sets_out_subject_matter, contract_sets_out_type_of_personal_data, controller_given_opportunity_to_object, processing_on_behalf_of_controller, processor_determines_purposes_and_means, processor_informed_controller_of_intended_changes, processor_provides_sufficient_guarantees, standard_clauses_adopted, stipulates_assistance_with_articles_32_to_36_obligations, stipulates_assistance_with_data_subject_requests, stipulates_conditions_for_engaging_another_processor, stipulates_confidentiality_commitment, stipulates_deletion_or_return_of_personal_data, stipulates_information_and_audit_rights, stipulates_notice_of_infringing_instruction, stipulates_processing_only_on_documented_instructions, stipulates_security_measures, subprocessor_authorisation, subprocessor_authorisation_given_before_engagement, subprocessor_contract_governed_by_union_or_member_state_law, subprocessor_contract_in_writing, subprocessor_engaged, subprocessor_obligations_same, subprocessor_provides_sufficient_guarantees]).
 
 gdpr_processor_contract_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -17,7 +19,7 @@ profile_problems(true, Profile, Problems) :-
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 
 key_type(contract_binding_on_processor, judgement).
-key_type(contract_governed_by_union_or_member_state_law, boolean).
+key_type(contract_governed_by_union_or_member_state_law, judgement).
 key_type(contract_in_writing, boolean).
 key_type(contract_sets_out_categories_of_data_subjects, boolean).
 key_type(contract_sets_out_controller_obligations_and_rights, boolean).
@@ -43,7 +45,7 @@ key_type(stipulates_processing_only_on_documented_instructions, boolean).
 key_type(stipulates_security_measures, boolean).
 key_type(subprocessor_authorisation, enum([specific_written, general_written, none])).
 key_type(subprocessor_authorisation_given_before_engagement, boolean).
-key_type(subprocessor_contract_governed_by_union_or_member_state_law, boolean).
+key_type(subprocessor_contract_governed_by_union_or_member_state_law, judgement).
 key_type(subprocessor_contract_in_writing, boolean).
 key_type(subprocessor_engaged, boolean).
 key_type(subprocessor_obligations_same, judgement).
@@ -173,3 +175,25 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(key_order_has_thirty_two_keys) :-
+    gdpr_processor_contract_key_order(KeyOrder),
+    length(KeyOrder, 32).
+test(an_empty_profile_has_no_problem) :-
+    gdpr_processor_contract_input_problems([], []).
+test(a_non_list_profile_is_wrong_type) :-
+    gdpr_processor_contract_input_problems(profile_text, [wrong_type(profile)]).
+test(unsure_in_a_crisp_key_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, unsure)], [wrong_type(contract_in_writing)]).
+test(unsure_in_a_judgement_is_well_typed) :-
+    gdpr_processor_contract_input_problems([attribute(contract_binding_on_processor, unsure)], []).
+test(a_duplicate_key_is_not_also_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, unsure), attribute(contract_in_writing, true)], [duplicate_key(contract_in_writing)]).
+test(a_repeated_unknown_key_is_named_once) :-
+    gdpr_processor_contract_input_problems([attribute(stray_key, true), attribute(stray_key, false)], [unknown_key(stray_key)]).
+test(a_well_formed_attested_fact_is_well_typed) :-
+    gdpr_processor_contract_input_problems([attribute(standard_clauses_adopted, attested(true, attestation(host, moment, reason, none)))], []).
+test(a_bare_outside_fact_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(standard_clauses_adopted, true)], [wrong_type(standard_clauses_adopted)]).
+test(an_unknown_authorisation_kind_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(subprocessor_authorisation, oral)], [wrong_type(subprocessor_authorisation)]).

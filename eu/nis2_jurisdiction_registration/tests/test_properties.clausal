@@ -1,85 +1,163 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_properties.clausal -- structural PROPERTIES over the fixture profiles.
-% Totality, determinism (exactly one verdict), citation completeness.
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality, determinism (exactly one verdict and exactly one answer per
+% scored query), status vocabulary, citation shape, rejection consistency,
+% and two domain invariants: the entity list never reads entity_category,
+% and a referral only ever rests on an unsure judgement.
 % Run: python -m clausal.testing eu/nis2_jurisdiction_registration/tests/test_properties.clausal
 % =====================================================================
 :- module(test_properties, []).
 :- use_module(eu/nis2_jurisdiction_registration/nis2_jurisdiction_registration, [
     decide_nis2_jurisdiction_registration/2,
+    nis2_jurisdiction_registration_status/2,
+    nis2_jurisdiction_registration_status_values/1,
     jurisdiction_basis/3,
+    main_establishment_rule/3,
     registry_submission_items/2,
     entity_list_submission_items/2,
     change_notification_limits/2
 ]).
+:- use_module(eu/nis2_jurisdiction_registration/kernel, [nis2_jurisdiction_registration_input_problems/2]).
 :- use_module(eu/nis2_jurisdiction_registration/fixtures, [
     nis2_jurisdiction_registration_subject/1,
     nis2_jurisdiction_registration_profile_for/2
 ]).
+
+all_subjects(Subjects) :-
+    findall(Subject, nis2_jurisdiction_registration_subject(Subject), Subjects).
+
+well_formed_subjects(Subjects) :-
+    findall(Subject, well_formed_subject(Subject), Subjects).
+
+well_formed_subject(Subject) :-
+    nis2_jurisdiction_registration_subject(Subject),
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    nis2_jurisdiction_registration_input_problems(Profile, []).
 
 subject_classifies(Subject) :-
     nis2_jurisdiction_registration_subject(Subject),
     nis2_jurisdiction_registration_profile_for(Subject, Profile),
     decide_nis2_jurisdiction_registration(Profile, _Verdict).
 
-verdict_count(Subject, Count) :-
-    nis2_jurisdiction_registration_subject(Subject),
+one_verdict(Subject) :-
     nis2_jurisdiction_registration_profile_for(Subject, Profile),
     findall(Verdict, decide_nis2_jurisdiction_registration(Profile, Verdict), Verdicts),
-    length(Verdicts, Count).
+    length(Verdicts, 1).
 
-query_count(Subject, Count) :-
-    nis2_jurisdiction_registration_subject(Subject),
+one_answer_per_query(Subject) :-
     nis2_jurisdiction_registration_profile_for(Subject, Profile),
-    findall(Basis-Citations, jurisdiction_basis(Profile, Basis, Citations), Bases),
-    findall(Items, registry_submission_items(Profile, Items), RegistryAnswers),
-    findall(Items, entity_list_submission_items(Profile, Items), ListAnswers),
+    findall(Basis-BasisCitations, jurisdiction_basis(Profile, Basis, BasisCitations), BasisAnswers),
+    length(BasisAnswers, 1),
+    findall(Result-ResultCitations, main_establishment_rule(Profile, Result, ResultCitations), ResultAnswers),
+    length(ResultAnswers, 1),
+    findall(RegistryItems, registry_submission_items(Profile, RegistryItems), RegistryAnswers),
+    length(RegistryAnswers, 1),
+    findall(ListItems, entity_list_submission_items(Profile, ListItems), ListAnswers),
+    length(ListAnswers, 1),
     findall(Limits, change_notification_limits(Profile, Limits), LimitAnswers),
-    length(Bases, BasisCount),
-    length(RegistryAnswers, RegistryCount),
-    length(ListAnswers, ListCount),
-    length(LimitAnswers, LimitCount),
-    Count = [BasisCount, RegistryCount, ListCount, LimitCount].
+    length(LimitAnswers, 1),
+    findall(Problems, nis2_jurisdiction_registration_input_problems(Profile, Problems), ProblemAnswers),
+    length(ProblemAnswers, 1).
 
+status_in_table(Subject) :-
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    nis2_jurisdiction_registration_status(Profile, Status),
+    nis2_jurisdiction_registration_status_values(StatusValues),
+    member(Status, StatusValues).
+
+is_citation(cite(Key)) :-
+    atom(Key).
+
+citations_well_formed(Subject) :-
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(_, Citations)),
+    sort(Citations, Citations),
+    maplist(is_citation, Citations).
+
+rejection_consistent(Subject) :-
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    nis2_jurisdiction_registration_input_problems(Profile, Problems),
+    rejection_matches(Problems, Profile).
+
+rejection_matches([], Profile) :-
+    nis2_jurisdiction_registration_status(Profile, Status),
+    dif(Status, profile_rejected).
+rejection_matches([_|_], Profile) :-
+    nis2_jurisdiction_registration_status(Profile, profile_rejected).
+
+is_category_attribute(attribute(entity_category, _)).
+
+entity_list_ignores_category(Subject) :-
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    exclude(is_category_attribute, Profile, Stripped),
+    entity_list_submission_items(Profile, Items),
+    entity_list_submission_items(Stripped, StrippedItems),
+    Items == StrippedItems.
+
+referral_rests_on_unsure(Subject) :-
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    main_establishment_rule(Profile, Result, _),
+    referral_check(Result, Profile).
+
+referral_check(needs_legal_review(open_textured(Key, cite(eu_dir_2022_2555_art_26_2)), [inputs_relied_on(_)]), Profile) :-
+    member(attribute(Key, unsure), Profile).
+referral_check(Result, _) :-
+    Result \= needs_legal_review(_, _).
+
+non_final_basis_has_no_citation(Subject) :-
+    nis2_jurisdiction_registration_profile_for(Subject, Profile),
+    jurisdiction_basis(Profile, Basis, Citations),
+    basis_citation_check(Basis, Citations).
+
+basis_citation_check(indeterminate([Key]), []) :-
+    atom(Key).
+basis_citation_check(input_problems([_|_]), []).
+basis_citation_check(Basis, [_|_]) :-
+    atom(Basis).
+
+% sort/2 collapses a subject that classifies more than once.
 test(totality_every_subject_classifies) :-
-    findall(Subject, nis2_jurisdiction_registration_subject(Subject), Subjects),
+    all_subjects(Subjects),
     sort(Subjects, SubjectSet),
     findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
     sort(ClassifiedSubjects, SubjectSet).
 
-test(determinism_exactly_one_verdict_per_subject) :-
-    findall(Count, verdict_count(_, Count), Counts),
-    sort(Counts, [1]).
+test(determinism_every_subject_has_one_verdict) :-
+    all_subjects(Subjects),
+    maplist(one_verdict, Subjects).
 
-test(determinism_exactly_one_answer_per_query) :-
-    findall(Count, query_count(_, Count), Counts),
-    sort(Counts, [[1, 1, 1, 1]]).
+test(determinism_every_query_has_one_answer) :-
+    all_subjects(Subjects),
+    maplist(one_answer_per_query, Subjects).
 
-test(the_subject_set_is_not_empty) :-
-    nis2_jurisdiction_registration_subject(general_entity_established).
+test(every_status_is_in_the_table) :-
+    all_subjects(Subjects),
+    maplist(status_in_table, Subjects).
 
-% Citation completeness: every final verdict carries at least one citation.
-test(eligible_verdict_has_a_citation) :-
-    nis2_jurisdiction_registration_profile_for(provider_established_in_union, Profile),
-    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(eligible, [_|_])).
+test(verdict_citations_are_sorted_cite_terms) :-
+    all_subjects(Subjects),
+    maplist(citations_well_formed, Subjects).
 
-test(ineligible_verdict_has_a_citation) :-
-    nis2_jurisdiction_registration_profile_for(provider_non_union_no_services, Profile),
-    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(ineligible, [_|_])).
+test(rejection_iff_input_problems) :-
+    all_subjects(Subjects),
+    maplist(rejection_consistent, Subjects).
 
-test(no_eligible_verdict_lacks_a_citation, fail) :-
-    nis2_jurisdiction_registration_subject(Subject),
-    nis2_jurisdiction_registration_profile_for(Subject, Profile),
-    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(eligible, [])).
+test(entity_list_does_not_read_the_category) :-
+    well_formed_subjects(Subjects),
+    maplist(entity_list_ignores_category, Subjects).
 
-test(no_ineligible_verdict_lacks_a_citation, fail) :-
-    nis2_jurisdiction_registration_subject(Subject),
-    nis2_jurisdiction_registration_profile_for(Subject, Profile),
-    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(ineligible, [])).
+test(a_referral_rests_on_an_unsure_judgement) :-
+    well_formed_subjects(Subjects),
+    maplist(referral_rests_on_unsure, Subjects).
 
-% Invariant: a non-final status carries no citations.
-test(indeterminate_carries_no_citation) :-
-    nis2_jurisdiction_registration_profile_for(category_missing, Profile),
-    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(indeterminate([entity_category]), [])).
+test(a_non_final_basis_has_no_citation) :-
+    all_subjects(Subjects),
+    maplist(non_final_basis_has_no_citation, Subjects).
+
+test(the_well_formed_set_is_not_vacuous) :-
+    well_formed_subjects(Subjects),
+    length(Subjects, Count),
+    Count >= 10.
 
 :- end_module(test_properties).

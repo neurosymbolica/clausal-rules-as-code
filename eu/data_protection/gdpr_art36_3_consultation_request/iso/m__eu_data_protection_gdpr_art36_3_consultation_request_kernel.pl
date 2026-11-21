@@ -138,3 +138,31 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_art36_3_consultation_request_input_problems([], Problems),
+    Problems == [].
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(consultation_under_article_36_1, true), attribute(joint_controllers_or_processors_involved, attested(false, attestation(host, moment, reason, none))), attribute(purposes_and_means_provided, false)], Problems),
+    Problems == [].
+test(an_atom_is_not_a_profile) :-
+    gdpr_art36_3_consultation_request_input_problems(profile, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_not_a_profile) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(purposes_and_means_provided, true)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(an_attested_crisp_key_is_wrong_type) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(purposes_and_means_provided, attested(true, attestation(host, moment, reason, none)))], Problems),
+    Problems == [wrong_type(purposes_and_means_provided)].
+test(a_bare_true_outside_fact_is_wrong_type) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(joint_controllers_or_processors_involved, true)], Problems),
+    Problems == [wrong_type(joint_controllers_or_processors_involved)].
+test(an_unbound_attestation_argument_is_wrong_type) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(joint_controllers_or_processors_involved, attested(true, attestation(_, moment, reason, none)))], Problems),
+    Problems == [wrong_type(joint_controllers_or_processors_involved)].
+test(a_repeated_key_is_a_duplicate_only) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(impact_assessment_provided, true), attribute(impact_assessment_provided, unsure)], Problems),
+    Problems == [duplicate_key(impact_assessment_provided)].
+test(an_unknown_key_comes_after_contract_problems) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(colour, red), attribute(impact_assessment_provided, unsure), attribute(colour, blue)], Problems),
+    Problems == [wrong_type(impact_assessment_provided), unknown_key(colour)].

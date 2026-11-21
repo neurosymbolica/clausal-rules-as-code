@@ -1,257 +1,272 @@
 # SIGNATURE — eu/data_protection/gdpr_complaints_and_judicial_remedies
 
-## S0 Public query surface (one paragraph)
+## Public query surface
 
-The order exposes five query predicates: `complaint_right`, `authority_decision_remedy_right`, `authority_inaction_remedy_right`, `controller_processor_remedy_right` and `controller_processor_forum`. Each answers for one PROFILE.
+The facade answers one verdict per query, for each of the five queries, in this fixed order:
 
-The facade dispatches on a REQUEST term `request(QUERY, PROFILE)`, with QUERY one of the five query atoms. It answers as follows:
+`complaint_right`, `authority_decision_remedy_right`, `authority_inaction_remedy_right`, `controller_processor_remedy_right`, `controller_processor_forum`.
 
-- `decide_gdpr_complaints_and_judicial_remedies(request(QUERY, PROFILE), gdpr_complaints_and_judicial_remedies_verdict(STATUS, CITATIONS))`;
-- `gdpr_complaints_and_judicial_remedies_status(request(QUERY, PROFILE), STATUS)`.
+The verdict shape is:
 
-STATUS is exactly the RESULT of the query: a final result atom or one of the non-final compounds.
+`decide_gdpr_complaints_and_judicial_remedies(Profile, gdpr_complaints_and_judicial_remedies_verdict(answer(Query, Result), Citations))`
 
-**Totality and determinism.** For every ground REQUEST with a known QUERY, each query yields EXACTLY ONE solution. The steps are disjoint routes, folded into clause heads (C17), with no `!`, `->` or `*->`. `gdpr_complaints_and_judicial_remedies_input_problems/2` yields exactly one solution for EVERY term and never raises.
+Facade guarantees:
 
-**Imported figures.** No statutory figure is computed. The three months of Art 78(2) are a caller-stated boolean, so `parameters.clausal` declares no constant for them. A dead `constant_value` is avoided.
+- **Totality and determinism**: exactly five solutions for every term given as Profile, one per query.
+- **Input problems**: when the profile has input problems, each of the five solutions carries `input_problems(Problems)` and `[]`.
+- **Where the logic lives**: the per-query predicates (prefix `gdpr_complaints_and_judicial_remedies_`) are the authoritative limb logic. Each is total and deterministic: exactly one solution.
+- **Parameters**: none are imported or declared. There are no thresholds, amounts or dates, and the three months of Art 78(2) are stated by the caller, not counted.
 
-## S1 Status atoms (replace the scaffold placeholders required / permitted / not_applicable)
+## Verdict STATUS atoms (replace the placeholder `required / permitted / not_applicable`)
 
-Final RESULT atoms:
+STATUS is `answer(Query, Result)`. Result is one of the following.
 
-- `complaint_right_exists`, `no_complaint_right` (Art 77(1));
-- `decision_remedy_right_exists`, `no_decision_remedy_right` (Art 78(1));
-- `inaction_remedy_right_exists`, `no_inaction_remedy_right` (Art 78(2));
-- `judicial_remedy_right_exists`, `no_judicial_remedy_right` (Art 79(1));
-- `forum_establishment_state_only`, `forum_establishment_or_habitual_residence_state` (Art 79(2)).
+Final results, per query:
 
-Non-final RESULT compounds, exactly one of:
+- `complaint_right`: `complaint_right_exists` | `no_complaint_right`
+- `authority_decision_remedy_right`: `decision_remedy_right_exists` | `no_decision_remedy_right`
+- `authority_inaction_remedy_right`: `inaction_remedy_right_exists` | `no_inaction_remedy_right`
+- `controller_processor_remedy_right`: `judicial_remedy_right_exists` | `no_judicial_remedy_right`
+- `controller_processor_forum`: `forum_establishment_state_only` | `forum_establishment_or_habitual_residence_state`
 
-- `input_problems(PROBLEMS)`;
-- `indeterminate([KEY])`. The bare atom `indeterminate` is NEVER a RESULT;
-- `needs_legal_review(open_textured(KEY, cite(CITATION)), [inputs_relied_on(PAIRS)])`;
-- `needs_legal_review(cross_reference_unresolved(cite(CITATION), cite(TARGET)), [resolution(cite(TARGET), not_attempted), inputs_relied_on(PAIRS)])`.
+Non-final results:
 
-Eligibility labels (query type #2) for the four right queries: `labels(eligible, indeterminate_eligibility, ineligible)`. The mapping is:
+- `input_problems(Problems)`
+- `indeterminate([Key])`: one key, the first missing needed key.
+- `needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on(Pairs)])`
+- `needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), [resolution(cite(competence_statement), not_attempted), inputs_relied_on(Pairs)])`
 
-- a `*_exists` result maps to `eligible`;
-- a `no_*` result maps to `ineligible`;
-- every non-final result maps to `indeterminate_eligibility`.
+The bare atom `indeterminate` is NEVER written.
 
-The label atom `indeterminate_eligibility` is used so that the bare atom `indeterminate` never sits beside `indeterminate/1` (atom-shadowing trap). `controller_processor_forum` is a determination, not an eligibility, so it has no label.
+Eligibility reading (query type #2): `*_exists` is the eligible side, `no_*` is the ineligible side, and `indeterminate/1` and `needs_legal_review/2` are the undetermined side.
 
-Result constructors (exported, never called as queries): `indeterminate/1`, `needs_legal_review/2`, `open_textured/2`, `cross_reference_unresolved/2`, `input_problems/1`, `unknown_key/1`, `wrong_type/1`, `duplicate_key/1`, `resolution/2`, `inputs_relied_on/1`, `provenance/2`, `outside_fact/2`, `attested/2`, `attestation/4`, `url/2`, `document/2`.
+Checklist labels for `assess/6`:
 
-## S2 Profile keys (attribute list, read ONLY with profile_get/3; bare atoms; this order = root_exports = input_contract)
+- `labels(complaint_right_exists, complaint_right_undetermined, no_complaint_right)`
+- `labels(decision_remedy_right_exists, decision_remedy_right_undetermined, no_decision_remedy_right)`
+- `labels(inaction_remedy_right_exists, inaction_remedy_right_undetermined, no_inaction_remedy_right)`
+- `labels(judicial_remedy_right_exists, judicial_remedy_right_undetermined, no_judicial_remedy_right)`
 
-The profile holds eleven keys. Every value is an atom or an attested term: there are no numbers, no dates and no strings.
+Result constructors are exported and never called as queries:
+
+`indeterminate/1`, `needs_legal_review/2`, `open_textured/2`, `cross_reference_unresolved/2`, `input_problems/1`, `unknown_key/1`, `wrong_type/1`, `duplicate_key/1`, `resolution/2`, `inputs_relied_on/1`, `provenance/2`, `outside_fact/2`, `attested/2`, `attestation/4`, `url/2`, `document/2`, `answer/2`, `gdpr_complaints_and_judicial_remedies_verdict/2`.
+
+## Profile keys
+
+The profile is an attribute list `[attribute(Key, Value), ...]`. It is read only with `profile_get/3`, presence first. There are eleven keys, given here in root_exports and input_contract order. None is numeric and none is a date, so no unit suffix or `date(Y, M, D)` term occurs.
 
 | # | Key | Kind | Values |
 |---|---|---|---|
-| 1 | `is_data_subject` | crisp | true / false |
-| 2 | `data_subject_considers_processing_infringes_regulation` | crisp | true / false |
-| 3 | `decision_is_legally_binding` | judgement | true / false / unsure |
-| 4 | `decision_concerns_the_caller` | judgement | true / false / unsure |
-| 5 | `complaint_lodged_under_article_77` | crisp | true / false |
-| 6 | `authority_competent_under_articles_55_and_56` | outside fact | `attested(true or false, attestation(BY, AT, REASON, EVIDENCE))` |
-| 7 | `authority_handled_the_complaint` | crisp | true / false |
-| 8 | `three_months_from_the_complaint_have_passed` | crisp | true / false |
-| 9 | `authority_informed_on_progress_or_outcome` | crisp | true / false |
-| 10 | `data_subject_considers_rights_infringed_by_processing` | crisp | true / false |
-| 11 | `defendant_is_member_state_public_authority_acting_in_public_powers` | crisp | true / false |
+| 1 | `is_data_subject` | crisp | `true` / `false` |
+| 2 | `data_subject_considers_processing_infringes_regulation` | crisp | `true` / `false` |
+| 3 | `decision_is_legally_binding` | judgement | `true` / `false` / `unsure` |
+| 4 | `decision_concerns_the_caller` | judgement | `true` / `false` / `unsure` |
+| 5 | `complaint_lodged_under_article_77` | crisp | `true` / `false` |
+| 6 | `authority_competent_under_articles_55_and_56` | outside fact | `attested(true\|false, attestation(By, At, Reason, Evidence))` |
+| 7 | `authority_handled_the_complaint` | crisp | `true` / `false` |
+| 8 | `three_months_from_the_complaint_have_passed` | crisp | `true` / `false` |
+| 9 | `authority_informed_on_progress_or_outcome` | crisp | `true` / `false` |
+| 10 | `data_subject_considers_rights_infringed_by_processing` | crisp | `true` / `false` |
+| 11 | `defendant_is_member_state_public_authority_acting_in_public_powers` | crisp | `true` / `false` |
 
-In the outside-fact value of key 6, EVIDENCE is `url(URL, RETRIEVED_AT)`, `document(UPLOAD_ID, SHA256)` or the atom `none`. BY and AT are supplied by the host. The four arguments are copied, never read.
+The outside fact (key 6) behaves as follows:
 
-## S3 Citation-key atoms (canonical lexicon scheme, _lexicon/citations.yaml; citation_vocabulary)
+- Its fetcher is `none`; kinds in precedence order are `attested`, then `fetched`, and only `attested` is read today.
+- `By` and `At` are host-supplied.
+- `Evidence` is `url(Url, RetrievedAt)`, `document(UploadId, Sha256)` or `none`.
+- The four attestation arguments are never inspected beyond groundness.
+- The value is copied as `outside_fact(authority_competent_under_articles_55_and_56, Attested)` into Basis.
 
-- `eu_reg_2016_679_art_77_1`: GDPR Art 77(1), unit 02016R0679-20160504#parag_077.001;
-- `eu_reg_2016_679_art_78_1`: GDPR Art 78(1), parag_078.001;
-- `eu_reg_2016_679_art_78_2`: GDPR Art 78(2), parag_078.002;
-- `eu_reg_2016_679_art_79_1`: GDPR Art 79(1), parag_079.001;
-- `eu_reg_2016_679_art_79_2`: GDPR Art 79(2), parag_079.002;
-- `competence_statement`: the cross-reference TARGET of the outside fact. It is the entry `target:` of `outside_facts:` and points to GDPR Arts 55 and 56, which are not pinned.
+## Citation-key atoms (canonical, from `_lexicon/citations.yaml`; never shortened)
 
-Deferred units are listed in the manifest deferred set, never cited in a result:
+- `eu_reg_2016_679_art_77_1`: Art 77(1), the right to lodge a complaint.
+- `eu_reg_2016_679_art_78_1`: Art 78(1), the remedy against a legally binding decision.
+- `eu_reg_2016_679_art_78_2`: Art 78(2), the remedy for authority inaction.
+- `eu_reg_2016_679_art_79_1`: Art 79(1), the remedy against a controller or processor.
+- `eu_reg_2016_679_art_79_2`: Art 79(2), the forum.
+- `competence_statement`: the cross-reference TARGET only (the Arts 55 and 56 competence statement). It is never a final-answer citation.
 
-- parag_077.002;
-- parag_078.003 and parag_078.004;
-- art_077, art_078 and art_079.
+Art 77(2), Art 78(3) and Art 78(4) get NO atom (deferred).
 
-No shortened citation atom is ever invented. Each CITATIONS list is set-like, each atom written once.
+## Public predicates
 
-## S4 Public predicates
+- `gdpr_complaints_and_judicial_remedies_input_problems(Profile, Problems)`: the typed input check. It yields exactly one solution, never fails and never raises. Problems lists, in this order:
+  - per contract key in contract order, `duplicate_key(Key)`, else `wrong_type(Key)`;
+  - then `unknown_key(Key)` in first-occurrence order (deduplicated with `==`);
+  - a non-list, partial list, unbound term or non-`attribute/2` element gives `[wrong_type(profile)]` alone.
+  - Citation: input_contract (no provision).
+- `gdpr_complaints_and_judicial_remedies_complaint_right(Profile, Result, Citations)`: Art 77(1). Citation: `eu_reg_2016_679_art_77_1`.
+- `gdpr_complaints_and_judicial_remedies_authority_decision_remedy_right(Profile, Result, Citations)`: Art 78(1). Citation: `eu_reg_2016_679_art_78_1`.
+- `gdpr_complaints_and_judicial_remedies_authority_inaction_remedy_right(Profile, Result, Basis, Citations)`: Art 78(2). Citation: `eu_reg_2016_679_art_78_2`.
+- `gdpr_complaints_and_judicial_remedies_controller_processor_remedy_right(Profile, Result, Citations)`: Art 79(1). Citation: `eu_reg_2016_679_art_79_1`.
+- `gdpr_complaints_and_judicial_remedies_controller_processor_forum(Profile, Result, Citations)`: Art 79(2). Citation: `eu_reg_2016_679_art_79_2`.
+- `decide_gdpr_complaints_and_judicial_remedies(Profile, Verdict)`: the facade.
+  - Verdict is `gdpr_complaints_and_judicial_remedies_verdict(answer(Query, Result), Citations)`, one solution per query in fixed order.
+  - Basis is not carried; read it from the inaction query.
+  - Citations: the per-query citations above.
+- `gdpr_complaints_and_judicial_remedies_status(Profile, Status)`: Status is `answer(Query, Result)`, one solution per query. Citations: those of the five queries.
+- `gdpr_complaints_and_judicial_remedies_checklist(Profile, Assessment)`: query types #2 and #7.
+  - It yields `assessment(Query, Decision, Items)` from formalize_lib `assess/6`, for each of the four right queries (the forum query is not an eligibility and has no checklist).
+  - Each item is `item(RequirementId, Status, cite(CitationKey))`, met items included.
+  - If the profile has input problems, the checklist has no solution; read Status first.
+  - Citations: per item, Arts 77(1), 78(1), 78(2) and 79(1).
+- `gdpr_complaints_and_judicial_remedies_what_if(Profile, Key, Value, Verdicts)`: the counterfactual.
+  - It replaces or sets `attribute(Key, Value)` with `profile_set/3`, then gives Verdicts, the sorted list of facade verdicts on the edited profile.
+  - Citation: as the facade.
+- `gdpr_complaints_and_judicial_remedies_fixture(Name, Profile)`: the named example profiles (see Fixtures).
+- `gdpr_complaints_and_judicial_remedies_fixture_expected(Name, Query, Result)`: the expected result per fixture and query.
 
-- `gdpr_complaints_and_judicial_remedies_complaint_right(Profile, Result, Citations)`: Art 77(1). The steps are:
-  - 0: input problems;
-  - 1: `is_data_subject` false gives `no_complaint_right`;
-  - 2: considers false gives `no_complaint_right`;
-  - 3: `indeterminate([first absent of is_data_subject, data_subject_considers_processing_infringes_regulation])`;
-  - 4: both true gives `complaint_right_exists`.
-  - Final steps cite `eu_reg_2016_679_art_77_1`.
-- `gdpr_complaints_and_judicial_remedies_authority_decision_remedy_right(Profile, Result, Citations)`: Art 78(1). The steps are:
-  - 0: input problems;
-  - 1: either judgement false gives `no_decision_remedy_right`;
-  - 2: `indeterminate([first absent of decision_is_legally_binding, decision_concerns_the_caller])`;
-  - 3: the first unsure judgement gives `needs_legal_review(open_textured(KEY, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding-V1, decision_concerns_the_caller-V2])])`;
-  - 4: both true gives `decision_remedy_right_exists`.
-  - Final steps cite `eu_reg_2016_679_art_78_1`.
-- `gdpr_complaints_and_judicial_remedies_authority_inaction_remedy_right(Profile, Result, Basis, Citations)`: Art 78(2). The steps are 0 to 7 of S6.1. Final steps cite `eu_reg_2016_679_art_78_2`.
-- `gdpr_complaints_and_judicial_remedies_controller_processor_remedy_right(Profile, Result, Citations)`: Art 79(1). The steps are:
-  - 0: input problems;
-  - 1: `is_data_subject` false gives `no_judicial_remedy_right`;
-  - 2: considers false gives `no_judicial_remedy_right`;
-  - 3: `indeterminate([first absent of is_data_subject, data_subject_considers_rights_infringed_by_processing])`;
-  - 4: both true gives `judicial_remedy_right_exists`.
-  - Final steps cite `eu_reg_2016_679_art_79_1`.
-- `gdpr_complaints_and_judicial_remedies_controller_processor_forum(Profile, Result, Citations)`: Art 79(2). The steps are:
-  - 0: input problems;
-  - 1: key absent gives `indeterminate([defendant_is_member_state_public_authority_acting_in_public_powers])`;
-  - 2: true gives `forum_establishment_state_only`;
-  - 3: false gives `forum_establishment_or_habitual_residence_state`.
-  - Final steps cite `eu_reg_2016_679_art_79_2`.
-- `gdpr_complaints_and_judicial_remedies_input_problems(Profile, Problems)`: THE INPUT CHECK against the typed input_contract (S6.2). It has exactly one solution for every term and never raises. It cites no article; it is an interface check.
-- `decide_gdpr_complaints_and_judicial_remedies(Request, Verdict)`: the facade. Request is `request(Query, Profile)`, and Verdict is `gdpr_complaints_and_judicial_remedies_verdict(Status, Citations)`. One clause per query atom dispatches to that query. For the inaction query, BASIS is carried by `gdpr_complaints_and_judicial_remedies_basis/2`. Citations are those of the query.
-- `gdpr_complaints_and_judicial_remedies_status(Request, Status)`: the RESULT alone. Citations are those of the query.
-- `gdpr_complaints_and_judicial_remedies_basis(Request, Basis)`: BASIS for `authority_inaction_remedy_right` (`[outside_fact(authority_competent_under_articles_55_and_56, ATTESTED)]` or `[]`), and `[]` for the other queries. Cites `eu_reg_2016_679_art_78_2`.
-- `gdpr_complaints_and_judicial_remedies_eligibility(Request, Eligibility)`: query type #2, for the four right queries. It calls formalize_lib `assess/6` with the closure `gdpr_complaints_and_judicial_remedies_requirement` and `labels(eligible, indeterminate_eligibility, ineligible)`. It is cross-checked against the query RESULT by a consistency test. Citations come per requirement (S6.3).
-- `gdpr_complaints_and_judicial_remedies_checklist(Request, Checklist)`: query type #7. It gives `item(RequirementId, Status, cite(Citation))` for every requirement of the query's limb, met items included. It uses formalize_lib `eval_requirements/4`, and its citations are those of S6.3.
-- `gdpr_complaints_and_judicial_remedies_what_if(Request, Key, Value, Status)`: the status after overriding Key with Value in the PROFILE. It uses kit.query_combinators `what_if/5` with the closure `gdpr_complaints_and_judicial_remedies_status_of(Query)`. Citations are those of the query.
-- `gdpr_complaints_and_judicial_remedies_requirement(RequirementId, Profile, Status, Citation)`: the requirement/4 row for assess/6, with the id FIRST. It has three disjoint clauses per check (met / unmet / unknown) and is built on `check_true/4`, `check_tri/4` and a local attested reader. Citation per S6.3.
-- Fixtures: `gdpr_complaints_and_judicial_remedies_fixture(Name, Query, Profile, ExpectedResult)` and `gdpr_complaints_and_judicial_remedies_fixture_basis(Name, ExpectedBasis)` hold named situations. They cover every step of every query, every input-problem shape, and the precedence pairs of S6.4. Citations are those of the expected result.
+## Planned reuse (manifest `uses:`)
 
-## S5 Planned reuse (manifest `uses:`)
+- **formalize_lib**:
+  - `profile_get/3`, `profile_has/2`, `profile_lacks/2`, `profile_set/3`;
+  - `check_true/4` for crisp requirement items;
+  - `check_tri/4` for the two tri-state judgement items (`unsure` reads as unknown). If, at authoring, `check_tri/4` is found NOT to treat the atom `unsure` as unknown, stop and report it rather than clone it (lint C15);
+  - `assess/6`, `labels/3`, `assessment/3`, `item/3`, `unmet/1`, `unknown/1`, `attribute/2`.
+- **validate_props** (tests only): `run_props/1`, `prop_totality/3`, `prop_determinism/3`, `prop_citation_complete/3`, `prop_missing_key_coverage/3`, `bad_citation/1`.
+- **Considered and NOT used**, with the reason for each:
+  - `kit/deadline_lib`: the three months are not counted (Q4).
+  - `country`: the forum names a category of courts, not a State.
+  - `kit/compliance_lib`: the order states the existence of rights, not a compliance verdict over obligations.
+  - `library(datetime)`: no dates.
+  - `kit/query_combinators`: `what_if/5` expects a dict-shaped profile, so the attribute-list counterfactual uses `profile_set/3`.
+- **Family backbone `_common` (deontic)**: none needed beyond formalize_lib.
 
-- **formalize_lib**: `profile_get/3`, `profile_has/2`, `profile_lacks/2`, `profile_set/3`, `check_true/4`, `check_tri/4`, `assess/6`, `eval_requirements/4`, `labels/3`, `item/3`, `unmet/1`, `unknown/1`, `attribute/2`, `memberd/2`, `not_member/2`.
-  - check_tri is used for the two tri-state judgements, so C15 does not hand-roll it.
-  - There is no hand-rolled eval_requirements (R1 lint).
-- **kit.query_combinators**: `what_if/5`, `override_key/4`, `diff_checklists/3` (the what_if facade and the what-if delta tests).
-- **validate_props**: `run_props/1`, `prop_totality/3`, `prop_determinism/3`, `prop_consistency/4`, `prop_citation_complete/3`, `prop_missing_key_coverage/3`, `declare_vacuous/1`, `bad_citation/1`.
-  - `prop_boundary_coverage` is declared vacuous: there are no numeric boundaries.
-  - `prop_monotone` is declared vacuous: there is no numeric axis.
-- **Not used**: kit.deadline_lib (the three months are not counted, Q4), library(datetime), country, currency_vocab, vat_category, kit.compliance_lib, kit.rolling_window.
-- **Family backbone (_common, deontic)**: none needed beyond formalize_lib.
+## Module placement (layout unchanged)
 
-## S6 Determination slices
+- `kernel.clausal`: the shared floor. Nothing domain-specific is added, because there is only one determination slice and it shares no predicate with another slice.
+- `citations.clausal`: the citation facts for the six atoms above, with pinned units.
+- `parameters.clausal`: no statutory figures. The file stays a placeholder-free empty parameter module, with a comment saying why.
+- `gdpr_complaints_and_judicial_remedies.clausal`: the slice (below).
+- `queries.clausal`: re-exports the input check and the five queries.
+- `fixtures.clausal`: the fixtures.
+- The package facade holds `decide_`, `status`, `checklist` and `what_if`.
 
-The pipeline runs kernel, then citations, then parameters, then gdpr_complaints_and_judicial_remedies, then queries, then fixtures, then the package facade. There is only ONE slice. No predicate is shared with another slice, so `kernel.clausal` keeps only its scaffolded floor (module declaration and re-exports of the result constructors). Domain logic does not go there.
+## Slice: gdpr_complaints_and_judicial_remedies.clausal
 
-The other files hold the following:
+### Value facts owned
 
-- `citations.clausal`: the six citation facts of S3, each with its unit id.
-- `parameters.clausal`: no statutory figures, only a comment explaining why. It must not hold a three-months constant.
-- `queries.clausal`: the facade wrappers of S4.
+None are numeric.
 
-### S6.1 Slice `gdpr_complaints_and_judicial_remedies.clausal` — rights to a complaint and to judicial remedies (Arts 77(1), 78(1), 78(2), 79(1), 79(2))
+- The 'three months' of Art 78(2) is NOT a `constant_value`: it is never computed with, and the caller states whether it has run (Q4).
+- The slice owns the contract key list as a fact table: `gdpr_complaints_and_judicial_remedies_contract_key(Position, Key, Kind)`, with Kind one of `crisp`, `judgement` or `outside_fact`, in the eleven-key order.
 
-**VALUE facts owned here.** These live in this file, not in a shared constants file:
+### Input check
 
-- `contract_key(Position, Key, Kind)`: eleven rows, in the order of S2. Kind is `crisp`, `judgement` or `outside_fact`.
-- `outside_fact_entry(authority_competent_under_articles_55_and_56, eu_reg_2016_679_art_78_2, competence_statement)`: the key, its CITATION and its TARGET.
-- `outside_fact_kind_precedence([attested, fetched])` and `outside_fact_fetcher(none)`.
-- `needed_key_order(Query, Keys)` for the missing-key steps:
-  - `complaint_right`: [is_data_subject, data_subject_considers_processing_infringes_regulation];
-  - `authority_decision_remedy_right`: [decision_is_legally_binding, decision_concerns_the_caller];
-  - `controller_processor_remedy_right`: [is_data_subject, data_subject_considers_rights_infringed_by_processing];
-  - `controller_processor_forum`: [defendant_is_member_state_public_authority_acting_in_public_powers].
-- The inaction needed keys are conditional (below).
-- There are no thresholds, periods or tables: the three months are a caller-stated boolean.
+`gdpr_complaints_and_judicial_remedies_input_problems/2`:
 
-**Rules and requirements**, one clause per disjoint route. Ground results are folded in heads, and there is no cut or if-then-else.
+- Disjoint clauses on the shape of the profile: `var/1` gives `[wrong_type(profile)]`; not a proper list gives `[wrong_type(profile)]`; an element that is unbound or not `attribute(_, _)` gives `[wrong_type(profile)]`; a well-formed list gets the full check.
+- Duplicates are counted with `==`, and the values of a duplicated key are never read.
+- Value typing:
+  - crisp: `true` or `false`;
+  - judgement: `true`, `false` or `unsure`;
+  - outside fact: `attested(V, attestation(By, At, Reason, Evidence))` with V `true` or `false` and each of the four arguments ground.
+  - An unbound value gives `wrong_type(Key)`.
+- Unknown keys, non-atom and unbound keys included, are deduplicated with `==` in first-occurrence order.
+- There is no cut and no if-then-else, and the check yields exactly one solution.
 
-- **complaint_right** (Art 77(1)). See the steps in S4. Steps 1 and 2 overlap when both keys are false. The route split must make them disjoint while keeping a single answer: step 2 requires `is_data_subject` to be not false (true or absent).
-- **authority_decision_remedy_right** (Art 78(1)). Step 1 must give one answer when both judgements are false: split into 'binding false' and 'binding not false and concerns false'. The other routes are:
-  - step 2 when no judgement is false and the first key of the list is absent;
-  - step 3 when both are present, neither is false and at least one is unsure. KEY is the first unsure one in list order, and PAIRS holds both values;
-  - step 4 when both are true.
-- **authority_inaction_remedy_right** (Art 78(2)). Steps in order; the first that applies decides:
-  - 0: input problems give `input_problems(P)`, BASIS [] and CITATIONS [].
-  - 1: `is_data_subject` false gives `no_inaction_remedy_right`, BASIS [], cite art_78_2.
-  - 2: complaint_lodged false (and step 1 does not apply) gives `no_inaction_remedy_right`, BASIS [], cite art_78_2.
-  - 3: competence `attested(false, _)` (steps 1 and 2 do not apply) gives `no_inaction_remedy_right`, BASIS `[outside_fact(authority_competent_under_articles_55_and_56, ATTESTED)]`, cite art_78_2. This applies whatever the other keys are, absent included.
-  - 4: handled true AND (three_months false OR informed true) gives `no_inaction_remedy_right`, BASIS [], cite art_78_2. This applies whatever the competence fact is (absent, or attested true). To keep one answer, split into 'three_months false' and 'three_months true and informed true'.
-  - 5: the first absent NEEDED key gives `indeterminate([KEY])`, BASIS [] and CITATIONS []. The needed keys, in order, are:
-    - is_data_subject;
-    - complaint_lodged_under_article_77;
-    - authority_handled_the_complaint;
-    - three_months_from_the_complaint_have_passed, only if handled is true;
-    - authority_informed_on_progress_or_outcome, only if handled is true and three_months is true.
-  - 6: every needed key is present and competence is absent. This gives `needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), [resolution(cite(competence_statement), not_attempted), inputs_relied_on([authority_competent_under_articles_55_and_56-absent])])`, BASIS [] and CITATIONS [].
-  - 7: competence is `attested(true, _)` and the failure holds, meaning handled false OR (three_months true AND informed false). This gives `inaction_remedy_right_exists`, BASIS `[outside_fact(authority_competent_under_articles_55_and_56, ATTESTED)]`, cite art_78_2.
-  - Nothing remains after step 7. Totality is to be proved by the totality property over the full grid: each crisp key in {true, false, absent}, and competence in {attested true, attested false, absent}.
-  - The outside fact is never placed in MISSING_KEYS.
-- **controller_processor_remedy_right** (Art 79(1)). As complaint_right, with the Art 79(1) consideration key.
-- **controller_processor_forum** (Art 79(2)). Three routes, as in S4.
+### Rules / requirements (limbs; the first step that answers decides; one clause per disjoint route, ground result folded into the head)
 
-**Local helpers** (domain-specific, so local is fine):
+Step 0 is shared by every query. If Problems is non-empty, the Result is `input_problems(Problems)`, Citations is `[]`, and Basis is `[]` where the query has one.
 
-- `attested_competence(Profile, Value, Attested)`: reads `attested(Value, attestation(_, _, _, _))` through `profile_get/3` and copies the term verbatim.
-- `first_absent(Profile, Keys, Key)`: built with `profile_lacks/2` and a recursion that skips present keys. It does not hand-roll `missing_keys/3`. Note: if `missing_keys/3` returns keys in list order, use its head instead and drop this helper.
-- `judgement_pairs(Profile, Pairs)`.
+**complaint_right**
 
-### S6.2 The input check (owned by this slice)
+1. `is_data_subject` false: `no_complaint_right`, `[cite(eu_reg_2016_679_art_77_1)]`.
+2. `data_subject_considers_processing_infringes_regulation` false (with `is_data_subject` not false): `no_complaint_right`, `[cite(eu_reg_2016_679_art_77_1)]`.
+3. The first absent key of [`is_data_subject`, `data_subject_considers_processing_infringes_regulation`]: `indeterminate([Key])`, `[]`.
+4. Both true: `complaint_right_exists`, `[cite(eu_reg_2016_679_art_77_1)]`.
 
-`gdpr_complaints_and_judicial_remedies_input_problems(Profile, Problems)` builds PROBLEMS in three steps:
+**authority_decision_remedy_right**
 
-1. **Profile shape.** If Profile is not a proper attribute list, the result is `[wrong_type(profile)]` alone. This covers:
-   - an unbound variable;
-   - a partial list;
-   - a non-list;
-   - a list with an unbound element;
-   - a list with any element that is not `attribute(_, _)`.
-   - The walk is guarded with `var/1` and `nonvar/1` and uses no `=..` on unbound terms, so it never raises.
-2. **Contract keys.** For each contract key in S2 order:
-   - if it occurs more than once (counted by key alone, its values never read), the problem is `duplicate_key(KEY)` only;
-   - else, if it occurs once with a value outside its type, the problem is `wrong_type(KEY)`.
-   - The types are: a crisp key is true or false; a judgement is true, false or unsure; the outside fact is `attested(true|false, attestation(_, _, _, _))`, checked for arity only.
-   - An unbound VALUE is `wrong_type`.
-3. **Unknown keys.** `unknown_key(KEY)` is given once per non-contract key, in the order of first occurrence.
-   - A non-atom key (number, string, compound, unbound) is unknown_key, given as written.
-   - Key equality for de-duplication uses `==`, so unbound keys are never unified with each other.
+1. Either judgement false: `no_decision_remedy_right`, `[cite(eu_reg_2016_679_art_78_1)]`.
+2. The first absent key of [`decision_is_legally_binding`, `decision_concerns_the_caller`]: `indeterminate([Key])`, `[]`.
+3. Both present, neither false, the first unsure Key: `needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding-V1, decision_concerns_the_caller-V2])])`, `[]`.
+4. Both true: `decision_remedy_right_exists`, `[cite(eu_reg_2016_679_art_78_1)]`.
 
-An absent key is never a problem. The check uses no cut or if-then-else: it uses disjoint guarded clauses.
+**authority_inaction_remedy_right**
 
-### S6.3 Requirements (checklist and eligibility, query types #2 and #7)
+A local helper, `gdpr_complaints_and_judicial_remedies_authority_failure(Profile, FailureState)`, gives exactly one of three states, through disjoint clauses:
 
-These rows feed `gdpr_complaints_and_judicial_remedies_requirement/4`. Each row gives the requirement id, its check, and its citation.
+- `authority_failure_holds` when:
+  - three months true AND informed false (whatever handled is); OR
+  - handled false (and not the previous case).
+- `authority_failure_absent` when handled true AND (three months false OR informed true).
+- `authority_failure_missing(Key)` otherwise. Key is:
+  - `authority_handled_the_complaint` when handled is absent;
+  - `three_months_from_the_complaint_have_passed` when handled is true and three months is absent (and informed is not true);
+  - `authority_informed_on_progress_or_outcome` when handled is true, three months is true and informed is absent.
 
-- `complaint_right`:
-  - `complaint_claimant_is_data_subject`: is_data_subject true, cite art_77_1;
-  - `complaint_data_subject_considers_infringement`: data_subject_considers_processing_infringes_regulation true, cite art_77_1.
-- `authority_decision_remedy_right`:
-  - `decision_is_legally_binding_requirement`: check_tri on decision_is_legally_binding, cite art_78_1;
-  - `decision_concerns_the_caller_requirement`: check_tri on decision_concerns_the_caller, cite art_78_1.
-  - An unsure judgement maps to the unknown status.
-- `authority_inaction_remedy_right`, all citing art_78_2:
-  - `inaction_claimant_is_data_subject`;
-  - `inaction_complaint_lodged_under_article_77`;
-  - `inaction_authority_is_competent`, from the attested reader: absent maps to unknown;
-  - `inaction_authority_failed`: not handled, or the three months passed without informing. Its unknown status names the first needed key.
-- `controller_processor_remedy_right`:
-  - `judicial_remedy_claimant_is_data_subject`, cite art_79_1;
-  - `judicial_remedy_data_subject_considers_rights_infringed`, cite art_79_1.
-- `controller_processor_forum` has no eligibility rows. Its checklist is the single item `forum_public_powers_exception`, with Status `value(true|false)` or `unknown([...])`, cite art_79_2.
+The steps:
 
-**Consistency rule** (tested): the eligibility label must equal the label mapped from the query RESULT, for every fixture without input problems. Where the checklist cannot express precedence (for example the status rule), the query RESULT is authoritative, and the checklist is justification only.
+1. `is_data_subject` false: `no_inaction_remedy_right`, Basis `[]`, `[cite(eu_reg_2016_679_art_78_2)]`.
+2. `complaint_lodged_under_article_77` false: as step 1.
+3. Competence attested false: `no_inaction_remedy_right`, Basis `[outside_fact(authority_competent_under_articles_55_and_56, Attested)]`, `[cite(eu_reg_2016_679_art_78_2)]`, whatever the other keys are.
+4. FailureState is `authority_failure_absent` (competence absent or attested true): `no_inaction_remedy_right`, Basis `[]`, `[cite(eu_reg_2016_679_art_78_2)]`.
+5. The first absent needed key, in order `is_data_subject`, `complaint_lodged_under_article_77`, then the Key of `authority_failure_missing(Key)`: `indeterminate([Key])`, `[]`, `[]`. Competence is never named.
+6. All needed keys present, the failure holds, competence absent: `needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), [resolution(cite(competence_statement), not_attempted), inputs_relied_on([authority_competent_under_articles_55_and_56-absent])])`, `[]`, `[]`.
+7. The failure holds and competence is attested true: `inaction_remedy_right_exists`, Basis `[outside_fact(authority_competent_under_articles_55_and_56, Attested)]`, `[cite(eu_reg_2016_679_art_78_2)]`.
 
-### S6.4 Tests (seven modes; v2 manifest)
+**controller_processor_remedy_right**
 
-1. **load**: every module loads.
-2. **unit / per-rule**: every step of every query, with a positive test and its paired negative test.
-3. **fixtures**: every fixture result, and the BASIS of the inaction fixtures.
-4. **properties** (validate_props): totality, determinism, citation-complete, missing-key coverage and consistency. Boundary and monotone are declared vacuous.
-5. **input check**:
-   - each problem shape;
-   - duplicate with equal and with different values;
-   - an unbound value;
-   - a non-atom key;
-   - a partial list;
-   - an unbound profile;
-   - the ordering of PROBLEMS.
-6. **what-if**: flipping `authority_handled_the_complaint`, and supplying the competence attestation.
-7. **precedence**:
-   - false before missing;
-   - unsure with the other judgement missing gives indeterminate;
-   - one key named;
-   - inaction step 3 with is_data_subject absent;
-   - inaction step 4 with competence absent;
-   - three months not needed when the complaint was not handled.
+1. `is_data_subject` false: `no_judicial_remedy_right`, `[cite(eu_reg_2016_679_art_79_1)]`.
+2. `data_subject_considers_rights_infringed_by_processing` false: as step 1.
+3. The first absent key of [`is_data_subject`, `data_subject_considers_rights_infringed_by_processing`]: `indeterminate([Key])`, `[]`.
+4. Both true: `judicial_remedy_right_exists`, `[cite(eu_reg_2016_679_art_79_1)]`.
+
+**controller_processor_forum**
+
+1. The exception key is absent: `indeterminate([defendant_is_member_state_public_authority_acting_in_public_powers])`, `[]`.
+2. The key is true: `forum_establishment_state_only`, `[cite(eu_reg_2016_679_art_79_2)]`.
+3. The key is false: `forum_establishment_or_habitual_residence_state`, `[cite(eu_reg_2016_679_art_79_2)]`.
+
+### Checklist requirements
+
+The requirements are read by `gdpr_complaints_and_judicial_remedies_requirement(RequirementId, Profile, Status, Citation)`, RequirementId first. Each has exactly three disjoint clauses: met, `unmet(Reason)` and `unknown([Key])`.
+
+- **complaint_right** (cite `eu_reg_2016_679_art_77_1`):
+  - `complaint_data_subject`: `check_true` on `is_data_subject`.
+  - `complaint_infringement_considered`: `check_true` on `data_subject_considers_processing_infringes_regulation`.
+- **authority_decision_remedy_right** (cite `eu_reg_2016_679_art_78_1`):
+  - `decision_legally_binding`: `check_tri` on `decision_is_legally_binding`.
+  - `decision_concerns_caller`: `check_tri` on `decision_concerns_the_caller`.
+- **authority_inaction_remedy_right** (cite `eu_reg_2016_679_art_78_2`):
+  - `inaction_data_subject`: `check_true` on `is_data_subject`.
+  - `inaction_complaint_lodged`: `check_true` on `complaint_lodged_under_article_77`.
+  - `inaction_authority_competent`: attested true is met, attested false is unmet, absent is `unknown([authority_competent_under_articles_55_and_56])`. This is a justification item only; the RESULT never names the key.
+  - `inaction_authority_failure`: maps the three FailureStates to met, unmet and `unknown([Key])`.
+- **controller_processor_remedy_right** (cite `eu_reg_2016_679_art_79_1`):
+  - `remedy_data_subject`: `check_true` on `is_data_subject`.
+  - `remedy_rights_infringement_considered`: `check_true` on `data_subject_considers_rights_infringed_by_processing`.
+
+Consistency obligation, tested: for a well-formed profile, a final positive Result gives the Pos label, a final negative Result gives the Neg label, and a non-final Result gives the undetermined label.
+
+### Verdict atoms of this slice
+
+All the STATUS atoms listed above. The slice owns all five queries.
+
+### Shared with another slice (belongs in kernel.clausal)
+
+None. There is only one slice.
+
+## Fixtures (planned; `fixture/2` plus `fixture_expected/3`)
+
+- `full_positive`: every right exists. Competence is attested true; handled is false; the forum key is false.
+- `not_a_data_subject`: every data-subject right is absent. The decision remedy is unaffected.
+- `decision_unsure_binding`: an open_textured referral on `decision_is_legally_binding`.
+- `decision_unsure_and_missing`: `decision_is_legally_binding` is unsure and `decision_concerns_the_caller` is absent, giving `indeterminate([decision_concerns_the_caller])`.
+- `inaction_competence_absent`: the cross_reference_unresolved referral.
+- `inaction_competence_false`: `no_inaction_remedy_right` with Basis, even with `is_data_subject` absent.
+- `inaction_handled_and_informed`: `no_inaction_remedy_right` with competence absent.
+- `inaction_three_months_uninformed_handled_absent`: the failure holds without `authority_handled_the_complaint`.
+- `inaction_handled_three_months_absent`: `indeterminate([three_months_from_the_complaint_have_passed])`.
+- `forum_public_authority`: `forum_establishment_state_only`.
+- `empty_profile`: every query gives `indeterminate([FirstKey])`, and the forum query names its key.
+- `malformed_duplicate_and_unknown`: `input_problems([duplicate_key(is_data_subject), wrong_type(decision_concerns_the_caller), unknown_key(colour)])`.
+- `malformed_unbound_attestation`: `input_problems([wrong_type(authority_competent_under_articles_55_and_56)])`.
+
+## Tests (per-rule, across the seven test modes)
+
+- One positive and one paired negative test per limb route.
+- Input-check tests for every problem kind and shape: an unbound profile, a partial list, a non-attribute element, a non-atom key, an unbound value and an unbound attestation argument.
+- Facade tests use `findall` plus `sort` or `length`, never `once/1`.
+- validate_props properties: totality, determinism (exactly one Result per query), citation completeness (every final Result has a non-empty canonical Citations list and every non-final Result has `[]`), and missing-key coverage.

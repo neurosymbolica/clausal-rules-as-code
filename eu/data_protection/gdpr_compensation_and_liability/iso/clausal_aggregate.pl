@@ -3,8 +3,8 @@
 %
 % The native engine has aggregate_all/3 built in; Scryer has no
 % library(aggregate), and Trealla 2.92.3's does not load. Added 2026-11-13 for
-% a package using aggregate_all(count, ...), to the
-% native semantics measured that day and confirmed by the engine maintainers:
+% an AI Act serious incident package (aggregate_all(count, ...)), to the
+% native semantics measured that day:
 %   count, sum(E), max(E), min(E), bag(T), set(T); nothing else.
 %   The goal's solutions are collected with findall/3, in order.
 %   sum, max and min EVALUATE E (even a single solution); sum starts from the

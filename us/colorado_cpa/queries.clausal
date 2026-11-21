@@ -1,0 +1,179 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for us/colorado_cpa.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types served (the nine contract queries live in the slice
+% colorado_cpa.clausal and reach the caller through the package facade):
+%   #15 deadline            -- response_deadline/4, extended_response_deadline/4,
+%                              appeal_response_deadline/4,
+%                              extended_appeal_response_deadline/4,
+%                              cure_period_last_day/4,
+%                              universal_opt_out_recognition_date/4 (slice)
+%   #23 calculation         -- the computed dates of the same queries (slice)
+%   #3  status_determination -- applicability_status/3,
+%                              minors_duties_applicability/3,
+%                              attorney_general_action_status/5,
+%                              colorado_cpa_status/2 (slice)
+%   #7  justification       -- colorado_cpa_checklist/2 (slice): every item
+%                              carries its cite(...) provenance
+%   #6  threshold           -- colorado_cpa_consumer_threshold/3 (here): the
+%                              least consumer count at which limb (I)(B) of
+%                              [quotation omitted]) is met, FOUND by probing
+%                              applicability_status/3, so no figure of the
+%                              slice is copied here
+%   #16 what-if             -- colorado_cpa_what_if/4 (here)
+%
+% colorado_cpa_profile_keys/1: the top-level profile key schema
+% colorado_cpa_input_problems/2: the problems a profile has ([] = none),
+%   re-exported from the kernel as the scaffold wrote it
+%
+% ROOT EXPORTS: the fourteen profile key atoms, the four enumeration atoms
+% of entity_category and the judgement value unsure are read by the scorer
+% as package-root attributes; they are exported here as bare atoms.
+% =====================================================================
+
+:- module(queries, [
+    colorado_cpa_profile_keys/1,
+    colorado_cpa_input_problems/2,
+    colorado_cpa_what_if/4,
+    colorado_cpa_consumer_threshold/3,
+    entity_category/0,
+    colorado_link_for_general_duties/0,
+    consumer_count/0,
+    revenue_or_discount_from_sale/0,
+    processes_biometric_data/0,
+    colorado_link_for_minors_duties/0,
+    extension_reasonably_necessary/0,
+    extension_notice_given_within_initial_period/0,
+    appeal_extension_reasonably_necessary/0,
+    appeal_extension_notice_given_within_initial_period/0,
+    action_enforces_minors_duties/0,
+    cure_deemed_possible/0,
+    cured_within_cure_period/0,
+    processes_for_targeted_advertising_or_sale/0,
+    financial_institution_or_affiliate_subject_to_glba/0,
+    air_carrier/0,
+    national_securities_association/0,
+    none_of_the_exempt_categories/0,
+    unsure/0
+]).
+
+:- use_module(library(clpz)).
+:- use_module(us/colorado_cpa/kernel, [colorado_cpa_input_problems/2]).
+:- use_module(us/colorado_cpa/colorado_cpa, [colorado_cpa_status/2, applicability_status/3]).
+
+% ---- root exports: the profile key atoms, in root_exports order ------
+entity_category.
+colorado_link_for_general_duties.
+consumer_count.
+revenue_or_discount_from_sale.
+processes_biometric_data.
+colorado_link_for_minors_duties.
+extension_reasonably_necessary.
+extension_notice_given_within_initial_period.
+appeal_extension_reasonably_necessary.
+appeal_extension_notice_given_within_initial_period.
+action_enforces_minors_duties.
+cure_deemed_possible.
+cured_within_cure_period.
+processes_for_targeted_advertising_or_sale.
+
+% ---- root exports: the enumeration atoms and the judgement value -----
+financial_institution_or_affiliate_subject_to_glba.
+air_carrier.
+national_securities_association.
+none_of_the_exempt_categories.
+unsure.
+
+% ---- the date answer shape of the six date queries (INTERFACE - THE ANSWER SHAPES) ----
+% Internal record: the pinned description of the date answer each query gives.
+date_answer_shape(response_deadline, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)').
+date_answer_shape(extended_response_deadline, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)').
+date_answer_shape(appeal_response_deadline, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)').
+date_answer_shape(extended_appeal_response_deadline, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)').
+date_answer_shape(cure_period_last_day, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)').
+date_answer_shape(universal_opt_out_recognition_date, 'a date(Y, M, D) term of three bare integers (see INTERFACE - THE ANSWER SHAPES)').
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+colorado_cpa_profile_keys([entity_category, colorado_link_for_general_duties, consumer_count, revenue_or_discount_from_sale, processes_biometric_data, colorado_link_for_minors_duties, extension_reasonably_necessary, extension_notice_given_within_initial_period, appeal_extension_reasonably_necessary, appeal_extension_notice_given_within_initial_period, action_enforces_minors_duties, cure_deemed_possible, cured_within_cure_period, processes_for_targeted_advertising_or_sale]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% (a) THE LOGIC WAS WRONG: kit override_key/4 works on dicts, and the profile is an
+% attribute list, so the override is done on the attribute list here: every item of
+% the key is dropped and one attribute(Key, NewValue) is added at the end.
+colorado_cpa_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    colorado_cpa_status(Hypothesis, NewStatus).
+
+override_attribute(Profile, Key, Value, Hypothesis) :-
+    remove_attribute_key(Profile, Key, Remaining),
+    append(Remaining, [attribute(Key, Value)], Hypothesis).
+
+remove_attribute_key([], _, []).
+remove_attribute_key([attribute(Key, _)|Elements], Key, Remaining) :-
+    remove_attribute_key(Elements, Key, Remaining).
+remove_attribute_key([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Remaining]) :-
+    dif(ElementKey, Key),
+    remove_attribute_key(Elements, Key, Remaining).
+
+% ---- #6 threshold: the flip point of limb (I)(B) ---------------------
+% colorado_cpa_consumer_threshold(RevenueOrDiscountFromSale, MinimumConsumerCount,
+% Citations): the least consumer_count at which a linked, non-exempt controller
+% with no biometric data is in_scope, for the given value of
+% revenue_or_discount_from_sale. The boundary is inclusive: at
+% MinimumConsumerCount and above limb (I)(B) is met, one below it is not. It is
+% found by bisection over applicability_status/3, so it always agrees with the
+% rule that decides.
+threshold_search_lowest_count(0).
+threshold_search_highest_count(1000000).
+
+colorado_cpa_consumer_threshold(RevenueOrDiscountFromSale, MinimumConsumerCount, [cite(us_co_crs_6_1_1304_1_a_i_b)]) :-
+    member(RevenueOrDiscountFromSale, [true, false]),
+    threshold_search_lowest_count(LowestCount),
+    threshold_search_highest_count(HighestCount),
+    lowest_in_scope_count(RevenueOrDiscountFromSale, LowestCount, HighestCount, MinimumConsumerCount).
+
+% Invariant: the count Below is not in scope, the count Above is in scope.
+lowest_in_scope_count(_, Below, Above, Above) :-
+    Above #= Below + 1.
+lowest_in_scope_count(RevenueOrDiscountFromSale, Below, Above, Minimum) :-
+    Above #> Below + 1,
+    Middle #= (Below + Above) // 2,
+    count_in_scope_truth(RevenueOrDiscountFromSale, Middle, InScope),
+    narrow_search(InScope, RevenueOrDiscountFromSale, Below, Middle, Above, Minimum).
+
+narrow_search(true, RevenueOrDiscountFromSale, Below, Middle, _, Minimum) :-
+    lowest_in_scope_count(RevenueOrDiscountFromSale, Below, Middle, Minimum).
+narrow_search(false, RevenueOrDiscountFromSale, _, Middle, Above, Minimum) :-
+    lowest_in_scope_count(RevenueOrDiscountFromSale, Middle, Above, Minimum).
+
+count_in_scope_truth(RevenueOrDiscountFromSale, Count, InScope) :-
+    applicability_status([attribute(entity_category, none_of_the_exempt_categories), attribute(colorado_link_for_general_duties, true), attribute(consumer_count, Count), attribute(revenue_or_discount_from_sale, RevenueOrDiscountFromSale), attribute(processes_biometric_data, false)], Result, _Citations),
+    status_in_scope_truth(Result, InScope).
+
+status_in_scope_truth(in_scope, true).
+status_in_scope_truth(Result, false) :-
+    dif(Result, in_scope).
+
+test(the_sale_threshold_is_twenty_five_thousand) :-
+    colorado_cpa_consumer_threshold(true, 25000, [cite(us_co_crs_6_1_1304_1_a_i_b)]).
+test(the_general_threshold_is_one_hundred_thousand) :-
+    colorado_cpa_consumer_threshold(false, 100000, [cite(us_co_crs_6_1_1304_1_a_i_b)]).
+test(the_sale_threshold_is_not_one_more, fail) :-
+    colorado_cpa_consumer_threshold(true, 25001, _).
+test(each_revenue_value_has_one_threshold) :-
+    findall(Revenue-Minimum, colorado_cpa_consumer_threshold(Revenue, Minimum, _), Answers),
+    Answers == [true-25000, false-100000].
+test(the_key_schema_has_fourteen_keys) :-
+    colorado_cpa_profile_keys(Keys),
+    length(Keys, 14).
+test(an_override_replaces_the_key_once) :-
+    override_attribute([attribute(consumer_count, 5), attribute(entity_category, air_carrier)], consumer_count, 7, Hypothesis),
+    Hypothesis == [attribute(entity_category, air_carrier), attribute(consumer_count, 7)].
+test(every_date_query_has_its_answer_shape) :-
+    findall(Query, date_answer_shape(Query, _), Queries),
+    length(Queries, 6).
+
+:- end_module(queries).

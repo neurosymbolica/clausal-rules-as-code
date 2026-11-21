@@ -12,59 +12,55 @@
 test(profile_keys_are_the_contract_keys) :-
     gdpr_common_definitions_roles_and_establishments_profile_keys(ProfileKeys),
     ProfileKeys == [data_are_personal_data, party_determines_purposes_and_means, purposes_and_means_determined_by_law, party_provided_for_as_controller_by_law, party_processes_on_behalf_of_controller, data_relate_to_genetic_characteristics_giving_unique_information, data_result_from_technical_processing_allowing_unique_identification, data_relate_to_health_and_reveal_health_status, party_role, established_in_more_than_one_member_state, central_administration_in_union, decisions_taken_in_other_union_establishment, other_establishment_can_have_decisions_implemented, processor_subject_to_specific_obligations, entity_is_person_partnership_or_association, entity_engaged_in_economic_activity, controlling_undertaking_and_controlled_undertakings, party_established_in_authority_member_state, data_subjects_in_authority_member_state_substantially_affected, complaint_lodged_with_authority, processing_in_context_of_establishments_in_more_than_one_member_state, processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state, objection_to_draft_decision, objection_concerns_infringement_or_envisaged_action, objection_demonstrates_significance_of_risks].
-test(status_met) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    findall(Status, gdpr_common_definitions_roles_and_establishments_status(Profile, Status), Statuses),
-    Statuses == [met].
-test(status_indeterminate) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_nothing_stated, Profile),
-    gdpr_common_definitions_roles_and_establishments_status(Profile, indeterminate).
-test(status_needs_legal_review) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_unattested, Profile),
-    gdpr_common_definitions_roles_and_establishments_status(Profile, needs_legal_review).
-test(status_input_problems) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(unknown_key_profile, Profile),
-    gdpr_common_definitions_roles_and_establishments_status(Profile, input_problems).
-test(status_not_met) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_not_provided, Profile),
-    gdpr_common_definitions_roles_and_establishments_status(Profile, not_met).
-test(checklist_has_one_cited_item_per_relation) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    findall(Items, gdpr_common_definitions_roles_and_establishments_checklist(Profile, Items), Results),
-    Results == [[item(party_is_controller, met, cite(eu_reg_2016_679_art_4_7)), item(party_is_processor, indeterminate, cite(eu_reg_2016_679_art_4_8)), item(genetic_data, indeterminate, cite(eu_reg_2016_679_art_4_13)), item(biometric_data, indeterminate, cite(eu_reg_2016_679_art_4_14)), item(data_concerning_health, indeterminate, cite(eu_reg_2016_679_art_4_15)), item(main_establishment, indeterminate, cite(eu_reg_2016_679_art_4_16)), item(enterprise, indeterminate, cite(eu_reg_2016_679_art_4_18)), item(group_of_undertakings, indeterminate, cite(eu_reg_2016_679_art_4_19)), item(supervisory_authority_concerned, indeterminate, cite(eu_reg_2016_679_art_4_22)), item(cross_border_processing, indeterminate, cite(eu_reg_2016_679_art_4_23)), item(relevant_and_reasoned_objection, indeterminate, cite(eu_reg_2016_679_art_4_24))]].
-test(checklist_of_a_bad_profile_is_input_problems) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(not_an_attribute_list, Profile),
-    gdpr_common_definitions_roles_and_establishments_checklist(Profile, [item(party_is_controller, input_problems, cite(eu_reg_2016_679_art_4_7))|_]).
-test(what_if_adds_a_missing_key) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_nothing_stated, Profile),
-    findall(Status, gdpr_common_definitions_roles_and_establishments_what_if(Profile, party_determines_purposes_and_means, true, Status), Statuses),
-    Statuses == [met].
-test(what_if_replaces_a_present_key) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    findall(Status, gdpr_common_definitions_roles_and_establishments_what_if(Profile, party_determines_purposes_and_means, false, Status), Statuses),
-    Statuses == [indeterminate].
-test(what_if_attesting_the_law_fact_decides) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_unattested, Profile),
-    gdpr_common_definitions_roles_and_establishments_what_if(Profile, party_provided_for_as_controller_by_law, attested(true, attestation(host_layer, attested_2026_11_07, operator_ruling, none)), met).
-test(what_if_law_flag_false_is_not_met) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_law_unattested, Profile),
-    gdpr_common_definitions_roles_and_establishments_what_if(Profile, purposes_and_means_determined_by_law, false, not_met).
-test(what_if_with_an_ill_typed_value_is_input_problems) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    gdpr_common_definitions_roles_and_establishments_what_if(Profile, party_role, banker, input_problems).
-test(input_problems_empty_for_a_fixture) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(objection_met, Profile),
-    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, []).
+test(profile_keys_number_twenty_six) :-
+    gdpr_common_definitions_roles_and_establishments_profile_keys(ProfileKeys),
+    length(ProfileKeys, 26).
+test(the_input_check_is_reachable_through_the_query_layer) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(stray, 1)], [unknown_key(stray)]).
+test(status_determination_answers_every_definition) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(trading_partnership, Profile),
+    gdpr_common_definitions_roles_and_establishments_status(Profile, Statuses),
+    length(Statuses, 11),
+    member(defined_term(enterprise, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_18)])), Statuses).
+test(justification_checklist_carries_cite_provenance) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(complaint_only_authority, Profile),
+    gdpr_common_definitions_roles_and_establishments_checklist(Profile, Items),
+    member(item(supervisory_authority_concerned, met, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_c)]), Items).
+test(justification_checklist_of_a_referral_cites_its_citation) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_risks_unsure, Profile),
+    gdpr_common_definitions_roles_and_establishments_checklist(Profile, Items),
+    member(item(relevant_and_reasoned_objection, needs_legal_review(open_textured(objection_demonstrates_significance_of_risks, cite(eu_reg_2016_679_art_4_24)), _), [cite(eu_reg_2016_679_art_4_24)]), Items).
+test(what_if_baseline_is_not_met) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(partnership_without_economic_activity, Profile),
+    gdpr_common_definitions_roles_and_establishments_status(Profile, Statuses),
+    member(defined_term(enterprise, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_18)])), Statuses).
+test(what_if_flips_the_near_miss_back) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(partnership_without_economic_activity, Profile),
+    gdpr_common_definitions_roles_and_establishments_what_if(Profile, entity_engaged_in_economic_activity, true, Statuses),
+    member(defined_term(enterprise, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_18)])), Statuses).
+test(what_if_supplying_central_administration_refers_the_power_to_implement) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_power_to_implement_unsure, Profile),
+    findall(Statuses, gdpr_common_definitions_roles_and_establishments_what_if(Profile, central_administration_in_union, true, Statuses), Results),
+    Results = [OnlyStatuses],
+    member(defined_term(main_establishment, definition_answer(needs_legal_review(open_textured(other_establishment_can_have_decisions_implemented, cite(eu_reg_2016_679_art_4_16_a)), [inputs_relied_on([decisions_taken_in_other_union_establishment - true, other_establishment_can_have_decisions_implemented - unsure])]), none, [cite(eu_reg_2016_679_art_4_16_a)])), OnlyStatuses).
+test(what_if_repairs_a_duplicate_key) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(malformed_profile_duplicate_and_unknown, Profile),
+    gdpr_common_definitions_roles_and_establishments_what_if(Profile, party_role, processor, Statuses),
+    member(defined_term(enterprise, definition_answer(input_problems([unknown_key(stray)]), none, [])), Statuses).
+test(what_if_over_a_non_list_profile_reports_the_profile) :-
+    gdpr_common_definitions_roles_and_establishments_what_if(not_a_profile, party_role, controller, Statuses),
+    member(defined_term(party_is_processor, definition_answer(input_problems([wrong_type(profile)]), none, [])), Statuses).
+test(what_if_to_an_ill_typed_value_reports_it) :-
+    gdpr_common_definitions_roles_and_establishments_what_if([], party_role, other, Statuses),
+    member(defined_term(main_establishment, definition_answer(input_problems([wrong_type(party_role)]), none, [])), Statuses).
 
-test(checklist_item_is_not_a_wrong_status, fail) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    gdpr_common_definitions_roles_and_establishments_checklist(Profile, [item(party_is_controller, not_met, _)|_]).
-test(what_if_leaves_the_original_status, fail) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    gdpr_common_definitions_roles_and_establishments_what_if(Profile, party_determines_purposes_and_means, false, met).
+test(what_if_does_not_leave_the_baseline_answer, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(partnership_without_economic_activity, Profile),
+    gdpr_common_definitions_roles_and_establishments_what_if(Profile, entity_engaged_in_economic_activity, true, Statuses),
+    member(defined_term(enterprise, definition_answer(not_met, _, _)), Statuses).
 
-cp_test_names([profile_keys_are_the_contract_keys, status_met, status_indeterminate, status_needs_legal_review, status_input_problems, status_not_met, checklist_has_one_cited_item_per_relation, checklist_of_a_bad_profile_is_input_problems, what_if_adds_a_missing_key, what_if_replaces_a_present_key, what_if_attesting_the_law_fact_decides, what_if_law_flag_false_is_not_met, what_if_with_an_ill_typed_value_is_input_problems, input_problems_empty_for_a_fixture]).
-cp_test_fail_names([checklist_item_is_not_a_wrong_status, what_if_leaves_the_original_status]).
+cp_test_names([profile_keys_are_the_contract_keys, profile_keys_number_twenty_six, the_input_check_is_reachable_through_the_query_layer, status_determination_answers_every_definition, justification_checklist_carries_cite_provenance, justification_checklist_of_a_referral_cites_its_citation, what_if_baseline_is_not_met, what_if_flips_the_near_miss_back, what_if_supplying_central_administration_refers_the_power_to_implement, what_if_repairs_a_duplicate_key, what_if_over_a_non_list_profile_reports_the_profile, what_if_to_an_ill_typed_value_reports_it]).
+cp_test_fail_names([what_if_does_not_leave_the_baseline_answer]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

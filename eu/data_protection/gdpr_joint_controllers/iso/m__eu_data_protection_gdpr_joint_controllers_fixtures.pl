@@ -6,31 +6,38 @@
 :- use_module(library(dif)).
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_gdpr_joint_controllers, [decide_gdpr_joint_controllers/2]).
 
-gdpr_joint_controllers_subject(joint_processor_entitled_to_claim_back).
-gdpr_joint_controllers_subject(partial_payment_near_miss).
-gdpr_joint_controllers_subject(sole_responsible_party_near_miss).
-gdpr_joint_controllers_subject(not_responsible_near_miss).
-gdpr_joint_controllers_subject(payment_judgement_unsure).
-gdpr_joint_controllers_subject(payment_not_yet_stated).
-gdpr_joint_controllers_subject(other_parties_not_yet_known).
-gdpr_joint_controllers_subject(statement_absent_referred).
-gdpr_joint_controllers_subject(statement_absent_no_other_party).
-gdpr_joint_controllers_subject(malformed_bare_statement).
-gdpr_joint_controllers_subject(malformed_party_identifier).
-gdpr_joint_controllers_subject(malformed_duplicate_payment).
+gdpr_joint_controllers_subject(claim_back_after_full_payment).
+gdpr_joint_controllers_subject(claim_back_after_partial_payment).
+gdpr_joint_controllers_subject(claim_back_payment_unsure).
+gdpr_joint_controllers_subject(claim_back_payment_not_stated).
+gdpr_joint_controllers_subject(sole_responsible_party).
+gdpr_joint_controllers_subject(party_not_responsible).
+gdpr_joint_controllers_subject(responsibility_statement_absent).
+gdpr_joint_controllers_subject(other_parties_not_stated).
+gdpr_joint_controllers_subject(duplicate_payment_key).
+gdpr_joint_controllers_subject(arrangement_key_supplied).
 
-gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, url(statement_location, retrieved_moment)))), attribute(other_responsible_parties, [controller_b, processor_c]), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(partial_payment_near_miss, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, url(statement_location, retrieved_moment)))), attribute(other_responsible_parties, [controller_b, processor_c]), attribute(full_compensation_paid, false)]).
-gdpr_joint_controllers_profile_for(sole_responsible_party_near_miss, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, url(statement_location, retrieved_moment)))), attribute(other_responsible_parties, []), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(not_responsible_near_miss, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, attested(false, attestation(compensation_order_host, determination_moment, exempt_from_liability, document(statement_upload, statement_digest)))), attribute(other_responsible_parties, [controller_b, processor_c]), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(payment_judgement_unsure, [attribute(controllers_jointly_determine_purposes_and_means, unsure), attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))), attribute(other_responsible_parties, [controller_b]), attribute(full_compensation_paid, unsure)]).
-gdpr_joint_controllers_profile_for(payment_not_yet_stated, [attribute(controllers_jointly_determine_purposes_and_means, false), attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))), attribute(other_responsible_parties, [controller_b])]).
-gdpr_joint_controllers_profile_for(other_parties_not_yet_known, [attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(statement_absent_referred, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(other_responsible_parties, [controller_b]), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(statement_absent_no_other_party, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(other_responsible_parties, []), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(malformed_bare_statement, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, true), attribute(other_responsible_parties, [controller_b]), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(malformed_party_identifier, [attribute(responsible_under_article_82_2_and_3, attested(true, attestation(compensation_order_host, determination_moment, liable_for_damage, none))), attribute(other_responsible_parties, [controller_b, 42]), attribute(full_compensation_paid, true)]).
-gdpr_joint_controllers_profile_for(malformed_duplicate_payment, [attribute(full_compensation_paid, true), attribute(arrangement_names_contact_point, true), attribute(full_compensation_paid, false)]).
+stated_responsibility(true, attested(true, attestation(host_service, attested_moment, stated_reason, none))).
+stated_responsibility(false, attested(false, attestation(host_service, attested_moment, stated_reason, document(upload_identifier, content_hash)))).
+
+gdpr_joint_controllers_profile_for(claim_back_after_full_payment, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha]), attribute(full_compensation_paid, true)]) :-
+    stated_responsibility(true, Attested).
+gdpr_joint_controllers_profile_for(claim_back_after_partial_payment, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha]), attribute(full_compensation_paid, false)]) :-
+    stated_responsibility(true, Attested).
+gdpr_joint_controllers_profile_for(claim_back_payment_unsure, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha]), attribute(full_compensation_paid, unsure)]) :-
+    stated_responsibility(true, Attested).
+gdpr_joint_controllers_profile_for(claim_back_payment_not_stated, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha])]) :-
+    stated_responsibility(true, Attested).
+gdpr_joint_controllers_profile_for(sole_responsible_party, [attribute(controllers_jointly_determine_purposes_and_means, false), attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, []), attribute(full_compensation_paid, true)]) :-
+    stated_responsibility(true, Attested).
+gdpr_joint_controllers_profile_for(party_not_responsible, [attribute(controllers_jointly_determine_purposes_and_means, unsure), attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha]), attribute(full_compensation_paid, true)]) :-
+    stated_responsibility(false, Attested).
+gdpr_joint_controllers_profile_for(responsibility_statement_absent, [attribute(other_responsible_parties, [processor_beta, controller_alpha]), attribute(full_compensation_paid, true)]).
+gdpr_joint_controllers_profile_for(other_parties_not_stated, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(responsible_under_article_82_2_and_3, Attested), attribute(full_compensation_paid, true)]) :-
+    stated_responsibility(true, Attested).
+gdpr_joint_controllers_profile_for(duplicate_payment_key, [attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta]), attribute(full_compensation_paid, true), attribute(full_compensation_paid, true)]) :-
+    stated_responsibility(true, Attested).
+gdpr_joint_controllers_profile_for(arrangement_key_supplied, [attribute(controllers_jointly_determine_purposes_and_means, true), attribute(arrangement_terms, allocated)]).
 
 gdpr_joint_controllers_assess(Subject, Result) :-
     gdpr_joint_controllers_profile_for(Subject, Profile),

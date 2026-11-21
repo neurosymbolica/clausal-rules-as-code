@@ -4,150 +4,113 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_lists_extra, [subtract/3, is_list/1]).
+:- use_module(clausal_lists_extra, [subtract/3]).
 :- use_module(m__eu_cra_art14_manufacturer_reporting_cra_art14_manufacturer_reporting, [decide_cra_art14_manufacturer_reporting/2, severe_incident_status/3, manufacturer_reporting_steps/4, manufacturer_reporting_step_timeliness/5]).
+:- use_module(m__eu_cra_art14_manufacturer_reporting_kernel, [cra_art14_manufacturer_reporting_input_problems/2]).
 :- use_module(m__eu_cra_art14_manufacturer_reporting_fixtures, [cra_art14_manufacturer_reporting_subject/1, cra_art14_manufacturer_reporting_profile_for/2]).
-
-subject_profile(Profile) :-
-    cra_art14_manufacturer_reporting_subject(Subject),
-    cra_art14_manufacturer_reporting_profile_for(Subject, Profile).
 
 event_atom(actively_exploited_vulnerability).
 event_atom(incident_impacting_product_security).
 
+probe_date(date(2025, 12, 31)).
+probe_date(date(2026, 9, 10)).
+probe_date(date(2026, 9, 11)).
+probe_date(date(2030, 1, 1)).
+
 step_atom(early_warning).
 step_atom(notification).
 
-boundary_hours(Hours) :-
-    member(Hours, [0, 24, 25, 72, 73]).
+probe_hours(0).
+probe_hours(24).
+probe_hours(25).
+probe_hours(72).
+probe_hours(73).
 
-verdict_count(Profile, Count) :-
+subject_profile(Subject, Profile) :-
+    cra_art14_manufacturer_reporting_subject(Subject),
+    cra_art14_manufacturer_reporting_profile_for(Subject, Profile).
+
+well_formed_subject_profile(Subject, Profile) :-
+    subject_profile(Subject, Profile),
+    cra_art14_manufacturer_reporting_input_problems(Profile, []).
+
+non_final_status(indeterminate(_MissingKeys)).
+non_final_status(needs_legal_review(_Reason, _Context)).
+non_final_status(input_problems(_Problems)).
+
+step_name(step_due(StepName, _Limit, _Citation), StepName).
+
+subject_classifies(Subject) :-
+    subject_profile(Subject, Profile),
+    decide_cra_art14_manufacturer_reporting(Profile, _Verdict).
+
+subject_verdict_count(Subject, Count) :-
+    subject_profile(Subject, Profile),
     findall(Verdict, decide_cra_art14_manufacturer_reporting(Profile, Verdict), Verdicts),
     length(Verdicts, Count).
 
-severity_count(Profile, Count) :-
-    findall(Status - Citations, severe_incident_status(Profile, Status, Citations), Answers),
-    length(Answers, Count).
+steps_solution_count(Subject, Event, AwarenessDate, Count) :-
+    subject_profile(Subject, Profile),
+    event_atom(Event),
+    probe_date(AwarenessDate),
+    findall(Steps, manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps), Solutions),
+    length(Solutions, Count).
 
-steps_count(Profile, Event, Count) :-
-    findall(Steps, manufacturer_reporting_steps(Profile, Event, date(2027, 6, 1), Steps), Answers),
-    length(Answers, Count).
+timeliness_solution_count(Subject, Event, ReportingStep, Hours, Count) :-
+    subject_profile(Subject, Profile),
+    event_atom(Event),
+    step_atom(ReportingStep),
+    probe_hours(Hours),
+    findall(Result, manufacturer_reporting_step_timeliness(Profile, Event, ReportingStep, Hours, Result), Solutions),
+    length(Solutions, Count).
 
-timeliness_count(Profile, Event, Step, Hours, Count) :-
-    findall(Result, manufacturer_reporting_step_timeliness(Profile, Event, Step, Hours, Result), Results),
-    length(Results, Count).
-
-test(totality_and_determinism_of_the_facade_verdict) :-
-    findall(Count, (subject_profile(Profile), verdict_count(Profile, Count)), Counts),
-    Counts = [_|_],
-    maplist(=(1), Counts).
-test(totality_and_determinism_of_the_severity) :-
-    findall(Count, (subject_profile(Profile), severity_count(Profile, Count)), Counts),
-    Counts = [_|_],
-    maplist(=(1), Counts).
+test(totality_every_subject_classifies) :-
+    findall(Subject, cra_art14_manufacturer_reporting_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_subject_has_exactly_one_verdict) :-
+    findall(Count, subject_verdict_count(_Subject, Count), Counts),
+    sort(Counts, [1]).
 test(totality_and_determinism_of_the_steps) :-
-    findall(Count, (subject_profile(Profile), event_atom(Event), steps_count(Profile, Event, Count)), Counts),
-    Counts = [_|_],
-    maplist(=(1), Counts).
+    findall(Count, steps_solution_count(_Subject, _Event, _AwarenessDate, Count), Counts),
+    sort(Counts, [1]).
 test(totality_and_determinism_of_the_timeliness) :-
-    findall(Count, (subject_profile(Profile), event_atom(Event), step_atom(Step), boundary_hours(Hours), timeliness_count(Profile, Event, Step, Hours, Count)), Counts),
-    Counts = [_|_],
-    maplist(=(1), Counts).
-test(every_severity_answer_is_well_shaped) :-
-    findall(Status - Citations, (subject_profile(Profile), severe_incident_status(Profile, Status, Citations)), Answers),
-    Answers = [_|_],
-    maplist(well_shaped_severity_answer, Answers).
-test(incident_steps_follow_the_severity_for_every_subject) :-
-    findall(Subject, cra_art14_manufacturer_reporting_subject(Subject), Subjects),
-    maplist(incident_steps_follow_severity, Subjects).
-test(vulnerability_steps_read_no_key_for_every_subject) :-
-    findall(Subject, cra_art14_manufacturer_reporting_subject(Subject), Subjects),
-    maplist(vulnerability_steps_read_no_key, Subjects).
-test(every_hour_up_to_24_is_on_time_and_every_later_one_late) :-
-    numlist(0, 24, WithinHours),
-    numlist(25, 80, LateHours),
-    maplist(early_warning_on_time, WithinHours),
-    maplist(early_warning_late, LateHours).
-test(every_hour_up_to_72_is_on_time_and_every_later_one_late) :-
-    numlist(0, 72, WithinHours),
-    numlist(73, 140, LateHours),
-    maplist(notification_on_time, WithinHours),
-    maplist(notification_late, LateHours).
-test(every_citation_is_in_the_vocabulary) :-
-    findall(Key, answer_citation_key(Key), Keys),
-    sort(Keys, KeySet),
-    KeySet = [_|_],
-    subtract(KeySet, [eu_reg_2024_2847_art_14_5, eu_reg_2024_2847_art_14_5_a, eu_reg_2024_2847_art_14_5_b, eu_reg_2024_2847_art_14_2_a, eu_reg_2024_2847_art_14_2_b, eu_reg_2024_2847_art_14_2_c, eu_reg_2024_2847_art_14_4_a, eu_reg_2024_2847_art_14_4_b, eu_reg_2024_2847_art_14_4_c, eu_reg_2024_2847_art_14_6], Outside),
-    Outside == [].
+    findall(Count, timeliness_solution_count(_Subject, _Event, _ReportingStep, _Hours, Count), Counts),
+    sort(Counts, [1]).
+test(severity_citations_come_from_the_vocabulary) :-
+    findall(CitationKey, (subject_profile(_Subject, Profile), severe_incident_status(Profile, _Status, Citations), member(cite(CitationKey), Citations)), CitationKeys),
+    sort(CitationKeys, UsedKeys),
+    subtract(UsedKeys, [eu_reg_2024_2847_art_14_5, eu_reg_2024_2847_art_14_5_a, eu_reg_2024_2847_art_14_5_b], ForeignKeys),
+    ForeignKeys == [].
+test(every_non_final_severity_status_has_no_citation) :-
+    findall(Citations, (subject_profile(_Subject, Profile), severe_incident_status(Profile, Status, Citations), non_final_status(Status)), CitationLists),
+    sort(CitationLists, DistinctLists),
+    DistinctLists == [[]].
+test(every_severe_answer_cites_paragraph_5_itself) :-
+    findall(Citations, (subject_profile(_Subject, Profile), severe_incident_status(Profile, severe, Citations)), CitationLists),
+    sort(CitationLists, DistinctLists),
+    DistinctLists == [[cite(eu_reg_2024_2847_art_14_5)]].
+test(step_citations_come_from_the_vocabulary) :-
+    findall(CitationKey, (subject_profile(_Subject, Profile), event_atom(Event), probe_date(AwarenessDate), manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps), Steps = [_|_], member(step_due(_StepName, _Limit, cite(CitationKey)), Steps)), CitationKeys),
+    sort(CitationKeys, UsedKeys),
+    subtract(UsedKeys, [eu_reg_2024_2847_art_14_2_a, eu_reg_2024_2847_art_14_2_b, eu_reg_2024_2847_art_14_2_c, eu_reg_2024_2847_art_14_4_a, eu_reg_2024_2847_art_14_4_b, eu_reg_2024_2847_art_14_4_c, eu_reg_2024_2847_art_14_6], ForeignKeys),
+    ForeignKeys == [],
+    UsedKeys = [_|_].
+test(vulnerability_steps_read_no_key) :-
+    findall(Steps, (well_formed_subject_profile(_Subject, Profile), manufacturer_reporting_steps(Profile, actively_exploited_vulnerability, date(2027, 6, 1), Steps)), StepLists),
+    sort(StepLists, DistinctLists),
+    DistinctLists = [[_|_]].
+test(every_step_list_keeps_the_fixed_order) :-
+    findall(StepNames, (subject_profile(_Subject, Profile), event_atom(Event), probe_date(AwarenessDate), manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps), Steps = [_|_], maplist(step_name, Steps, StepNames)), NameLists),
+    sort(NameLists, DistinctLists),
+    DistinctLists == [[early_warning, notification, final_report, intermediate_report]].
+test(before_application_no_step_whatever_the_profile) :-
+    findall(Steps, (well_formed_subject_profile(_Subject, Profile), event_atom(Event), manufacturer_reporting_steps(Profile, Event, date(2026, 9, 10), Steps)), StepLists),
+    sort(StepLists, DistinctLists),
+    DistinctLists == [[]].
 
-well_shaped_severity_answer(severe - [cite(eu_reg_2024_2847_art_14_5)]).
-well_shaped_severity_answer(not_severe - [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]).
-well_shaped_severity_answer(indeterminate([_Key]) - []).
-well_shaped_severity_answer(needs_legal_review(open_textured(_Input, cite(_CitationKey)), [inputs_relied_on([_ProtectionPair, _MaliciousCodePair])]) - []).
-well_shaped_severity_answer(input_problems([_Problem|_Problems]) - []).
-
-steps_for_status(severe, [step_due(early_warning, _, _), step_due(notification, _, _), step_due(final_report, _, _), step_due(intermediate_report, _, _)]).
-steps_for_status(not_severe, []).
-steps_for_status(indeterminate(Keys), indeterminate(Keys)).
-steps_for_status(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
-steps_for_status(input_problems(Problems), input_problems(Problems)).
-
-incident_steps_follow_severity(Subject) :-
-    cra_art14_manufacturer_reporting_profile_for(Subject, Profile),
-    severe_incident_status(Profile, Status, _Citations),
-    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 6, 1), Steps),
-    steps_for_status(Status, Steps).
-
-four_vulnerability_steps([step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)), step_due(notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_2_b)), step_due(final_report, days_after_measure_available(14), cite(eu_reg_2024_2847_art_14_2_c)), step_due(intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6))]).
-
-vulnerability_steps_for(input_problems(Problems), input_problems(Problems)).
-vulnerability_steps_for(severe, Steps) :-
-    four_vulnerability_steps(Steps).
-vulnerability_steps_for(not_severe, Steps) :-
-    four_vulnerability_steps(Steps).
-vulnerability_steps_for(indeterminate(_Keys), Steps) :-
-    four_vulnerability_steps(Steps).
-vulnerability_steps_for(needs_legal_review(_Reason, _Context), Steps) :-
-    four_vulnerability_steps(Steps).
-
-vulnerability_steps_read_no_key(Subject) :-
-    cra_art14_manufacturer_reporting_profile_for(Subject, Profile),
-    severe_incident_status(Profile, Status, _Citations),
-    manufacturer_reporting_steps(Profile, actively_exploited_vulnerability, date(2027, 6, 1), Steps),
-    vulnerability_steps_for(Status, Steps).
-
-early_warning_late(Hours) :-
-    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], incident_impacting_product_security, early_warning, Hours, late(hour_limit)).
-
-early_warning_on_time(Hours) :-
-    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], incident_impacting_product_security, early_warning, Hours, on_time).
-
-notification_late(Hours) :-
-    manufacturer_reporting_step_timeliness([attribute(notification_without_undue_delay, true)], actively_exploited_vulnerability, notification, Hours, late(hour_limit)).
-
-notification_on_time(Hours) :-
-    manufacturer_reporting_step_timeliness([attribute(notification_without_undue_delay, true)], actively_exploited_vulnerability, notification, Hours, on_time).
-
-answer_citation_key(Key) :-
-    subject_profile(Profile),
-    severe_incident_status(Profile, _Status, Citations),
-    member(cite(Key), Citations).
-answer_citation_key(Key) :-
-    subject_profile(Profile),
-    severe_incident_status(Profile, needs_legal_review(open_textured(_Input, cite(Key)), _Context), _Citations).
-answer_citation_key(Key) :-
-    subject_profile(Profile),
-    event_atom(Event),
-    manufacturer_reporting_steps(Profile, Event, date(2027, 6, 1), Steps),
-    is_list(Steps),
-    member(step_due(_Step, _Limit, cite(Key)), Steps).
-answer_citation_key(Key) :-
-    subject_profile(Profile),
-    event_atom(Event),
-    step_atom(Step),
-    manufacturer_reporting_step_timeliness(Profile, Event, Step, 10, needs_legal_review(open_textured(_Input, cite(Key)), _Context)).
-
-cp_test_names([totality_and_determinism_of_the_facade_verdict, totality_and_determinism_of_the_severity, totality_and_determinism_of_the_steps, totality_and_determinism_of_the_timeliness, every_severity_answer_is_well_shaped, incident_steps_follow_the_severity_for_every_subject, vulnerability_steps_read_no_key_for_every_subject, every_hour_up_to_24_is_on_time_and_every_later_one_late, every_hour_up_to_72_is_on_time_and_every_later_one_late, every_citation_is_in_the_vocabulary]).
+cp_test_names([totality_every_subject_classifies, determinism_every_subject_has_exactly_one_verdict, totality_and_determinism_of_the_steps, totality_and_determinism_of_the_timeliness, severity_citations_come_from_the_vocabulary, every_non_final_severity_status_has_no_citation, every_severe_answer_cites_paragraph_5_itself, step_citations_come_from_the_vocabulary, vulnerability_steps_read_no_key, every_step_list_keeps_the_fixed_order, before_application_no_step_whatever_the_profile]).
 cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.

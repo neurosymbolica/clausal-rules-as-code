@@ -1,67 +1,67 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_art36_3_consultation_request (deontic family).
-% Source: Regulation (EU) 2016/679 (General Data Protection Regulation),
-% Article 36(3), points (a) to (f), consolidated text 02016R0679-20160504
-% (units parag_036.003 and point_036.003_a to point_036.003_f): what the
-% controller provides to the supervisory authority when it consults under
-% Article 36(1). Article 36(1) and 36(5) are read only to say which
-% consultation the key consultation_under_article_36_1 names.
+% DAG root of the determination-slices layout:
+%   kernel -> citations -> parameters -> gdpr_art36_3_consultation_request
+%          -> queries -> fixtures -> package facade.
 %
-% DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. This domain has ONE determination
-% slice (gdpr_art36_3_consultation_request.clausal), so no domain predicate
-% is shared and nothing of the slice lives here.
-% Exception: the scaffold writes the order's input check
-% gdpr_art36_3_consultation_request_input_problems/2 here, exported, for the
-% slice and queries.clausal to import by full path:
-%   :- use_module(eu/data_protection/gdpr_art36_3_consultation_request/kernel, [gdpr_art36_3_consultation_request_input_problems/2]).
-% The input check renders no provision: it checks the PROFILE against the
-% typed input contract only, so its clauses carry no implements/1 marker.
+% Source: Regulation (EU) 2016/679 (GDPR), Article 36(3), opening words and
+% points (a) to (f), consolidated text 02016R0679-20160504 (4 May 2016),
+% units parag_036.003 and point_036.003_a to point_036.003_f; Article 36(1)
+% (parag_036.001) and Article 36(5) (parag_036.005) are read only to fix
+% which consultation Article 36(3) governs (reading (1)).
 %
-% Atoms and data terms need NO declaration and NO import. The comment block
-% below only RECORDS the result terms so every file spells them alike.
+% WHAT LIVES HERE. Only the predicates that two or more files call. This
+% order has ONE determination slice (gdpr_art36_3_consultation_request.clausal),
+% so the only shared predicate is the order's typed input check,
+% gdpr_art36_3_consultation_request_input_problems/2, which the scaffold writes
+% here from the order's typed input contract and which the slice imports
+% and queries.clausal re-exports. The item states, the JB basis, the absent
+% referral term and the citation sets are single-caller and live in the
+% slice file.
+%
+% Atoms and data terms need NO declaration and NO import; the block below
+% only RECORDS the result terms so every file spells them alike.
 %
 % RESULT TERMS (spelled exactly as the order pins them):
 %
-%   gdpr_art36_3_consultation_request_verdict(Result, Citations)
-%     the slice's facade verdict. Result is the RESULT of
-%     consultation_request_status/4; Citations its CITATIONS list.
+%   gdpr_art36_3_consultation_request_verdict(Status, Citations)
+%     The slice's verdict term (facade decide_/2). Status is the RESULT of
+%     consultation_request_status/4; Citations its list of cite(Key) terms.
 %
 %   consultation_request_status(Profile, Result, Basis, Citations)
-%     Result: consultation_request_complete | consultation_request_incomplete
-%       | not_governed_by_article_36_3 | a status compound (below).
+%     Result: one of the final atoms
+%       consultation_request_complete | consultation_request_incomplete |
+%       not_governed_by_article_36_3
+%     or exactly one status compound (the bare atom indeterminate is NEVER
+%     written):
+%       indeterminate([Key])   one bare crisp profile key, never the outside fact;
+%       needs_legal_review(
+%           cross_reference_unresolved(cite(eu_reg_2016_679_art_36_3_a),
+%                                      cite(controller_and_processor_roles_statement)),
+%           [resolution(cite(controller_and_processor_roles_statement), not_attempted),
+%            inputs_relied_on([joint_controllers_or_processors_involved-absent])])
+%                              THE ABSENT REFERRAL;
+%       input_problems(Problems)  Problems from the input check below.
+%     Basis: [outside_fact(joint_controllers_or_processors_involved, Attested)]
+%       (Attested the attested(...) term exactly as supplied) when that key is
+%       present and respective_responsibilities_provided is not true, else [];
+%       always [] for indeterminate, needs_legal_review, input_problems and
+%       not_governed_by_article_36_3.
+%     Citations: [] for the three status compounds;
+%       [cite(eu_reg_2016_679_art_36_3)] for not_governed_by_article_36_3;
+%       the seven cite terms of Art 36(3) and points (a) to (f) otherwise.
+%
 %   missing_consultation_request_items(Profile, Items, Basis, Citations)
-%     Items: a list of item atoms in the order (a) to (f), each at most once,
-%       possibly []: respective_responsibilities (a), purposes_and_means (b),
-%       measures_and_safeguards (c), data_protection_officer_contact_details (d),
-%       data_protection_impact_assessment (e), other_requested_information (f);
-%       or the atom not_governed_by_article_36_3; or a status compound.
-%   Basis: [] or [outside_fact(joint_controllers_or_processors_involved, Attested)],
-%     Attested the attested(Value, attestation(By, At, Reason, Evidence)) term
-%     exactly as supplied, copied only when item (a) reads it
-%     (respective_responsibilities_provided not true).
-%   Citations: a set-like list of cite(Key) terms:
-%     every final answer other than not_governed_by_article_36_3 gives the seven
-%       cite(eu_reg_2016_679_art_36_3), cite(eu_reg_2016_679_art_36_3_a) ... _f;
-%     not_governed_by_article_36_3 gives [cite(eu_reg_2016_679_art_36_3)];
-%     every status compound gives [].
+%     Items: a list of item atoms, each once, in the order
+%       respective_responsibilities, purposes_and_means, measures_and_safeguards,
+%       data_protection_officer_contact_details, data_protection_impact_assessment,
+%       other_requested_information
+%     possibly [], or the atom not_governed_by_article_36_3, or one of the
+%     three status compounds above. Basis and Citations as for the status.
 %
-%   Status compounds (never written as bare atoms), in precedence order:
-%     input_problems(Problems)  Problems from duplicate_key(Key),
-%                               wrong_type(Key), unknown_key(Key), or
-%                               [wrong_type(profile)] alone.
-%     indeterminate([Key])      one bare crisp key atom; an outside
-%                               fact is never named.
-%     needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_36_3_a),
-%                                                   cite(controller_and_processor_roles_statement)),
-%                        [resolution(cite(controller_and_processor_roles_statement), not_attempted),
-%                         inputs_relied_on([joint_controllers_or_processors_involved-absent])])
-%                               THE ABSENT REFERRAL, the only referral.
-%
-%   Checklist row (facade, justification): item(ItemAtom, Status, cite(PointKey)),
-%     Status met | unmet(not_provided(ContentKey)) | unknown([Key])
-%     | unknown(referred(joint_controllers_or_processors_involved)).
+%   Input problems (items of Problems):
+%     duplicate_key(Key) | wrong_type(Key) | wrong_type(profile) | unknown_key(Key)
 % =====================================================================
 
 :- module(kernel, [gdpr_art36_3_consultation_request_input_problems/2]).
@@ -240,5 +240,33 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_art36_3_consultation_request_input_problems([], Problems),
+    Problems == [].
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(consultation_under_article_36_1, true), attribute(joint_controllers_or_processors_involved, attested(false, attestation(host, moment, reason, none))), attribute(purposes_and_means_provided, false)], Problems),
+    Problems == [].
+test(an_atom_is_not_a_profile) :-
+    gdpr_art36_3_consultation_request_input_problems(profile, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_not_a_profile) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(purposes_and_means_provided, true)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(an_attested_crisp_key_is_wrong_type) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(purposes_and_means_provided, attested(true, attestation(host, moment, reason, none)))], Problems),
+    Problems == [wrong_type(purposes_and_means_provided)].
+test(a_bare_true_outside_fact_is_wrong_type) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(joint_controllers_or_processors_involved, true)], Problems),
+    Problems == [wrong_type(joint_controllers_or_processors_involved)].
+test(an_unbound_attestation_argument_is_wrong_type) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(joint_controllers_or_processors_involved, attested(true, attestation(_, moment, reason, none)))], Problems),
+    Problems == [wrong_type(joint_controllers_or_processors_involved)].
+test(a_repeated_key_is_a_duplicate_only) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(impact_assessment_provided, true), attribute(impact_assessment_provided, unsure)], Problems),
+    Problems == [duplicate_key(impact_assessment_provided)].
+test(an_unknown_key_comes_after_contract_problems) :-
+    gdpr_art36_3_consultation_request_input_problems([attribute(colour, red), attribute(impact_assessment_provided, unsure), attribute(colour, blue)], Problems),
+    Problems == [wrong_type(impact_assessment_provided), unknown_key(colour)].
 
 :- end_module(kernel).

@@ -1,0 +1,22 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_third_party_contract_provisions_queries, [dora_ict_third_party_contract_provisions_profile_keys/1, dora_ict_third_party_contract_provisions_what_if/4]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_hof, [exclude/3]).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_kernel, [dora_ict_third_party_contract_provisions_input_problems/2]).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_dora_ict_third_party_contract_provisions, [dora_ict_third_party_contract_provisions_status/2]).
+
+dora_ict_third_party_contract_provisions_profile_keys([contract_provides_termination_for_significant_breach, contract_provides_termination_for_circumstances_altering_performance, contract_provides_termination_for_risk_management_weaknesses, contract_provides_termination_where_supervision_impeded, contract_is_single_written_document, contract_provides_description_of_functions_services_and_subcontracting, contract_provides_service_and_data_locations, contract_provides_data_protection_provisions, contract_provides_data_access_recovery_and_return, contract_provides_service_level_descriptions, contract_provides_incident_assistance, contract_provides_cooperation_with_authorities, contract_provides_termination_rights_and_notice_periods, contract_provides_security_awareness_and_training_participation, supports_critical_or_important_function, contract_provides_full_service_levels_with_performance_targets, contract_provides_notice_periods_and_reporting_obligations, contract_provides_contingency_plans_and_security_measures, contract_provides_threat_led_penetration_testing_participation, contract_provides_monitoring_rights_of_the_authorities, contract_provides_exit_strategy_and_transition_period, contract_provides_monitoring_rights_of_the_financial_entity, financial_entity_is_microenterprise, contract_provides_delegated_access_inspection_and_audit]).
+
+dora_ict_third_party_contract_provisions_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_ict_third_party_contract_provisions_status(Hypothesis, NewStatus).
+
+override_attribute(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_of_key(OverriddenKey), Profile, KeptAttributes),
+    append(KeptAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attribute_of_key(OverriddenKey, attribute(AttributeKey, _)) :-
+    AttributeKey == OverriddenKey.

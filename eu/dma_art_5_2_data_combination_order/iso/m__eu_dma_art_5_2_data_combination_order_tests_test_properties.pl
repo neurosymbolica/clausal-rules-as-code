@@ -1,0 +1,113 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dma_art_5_2_data_combination_order_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_dma_art_5_2_data_combination_order, [article_5_application_status/4, personal_data_practice_status/4, consent_request_repetition_status/6, decide_dma_art_5_2_data_combination_order/2]).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_fixtures, [dma_art_5_2_data_combination_order_subject/1, dma_art_5_2_data_combination_order_profile_for/2]).
+
+stated(Truth, attested(Truth, attestation(host_operator, attested_on_2026_11_19, caller_statement, none))).
+
+subject_classifies(Subject) :-
+    dma_art_5_2_data_combination_order_subject(Subject),
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    decide_dma_art_5_2_data_combination_order(Profile, _Verdict).
+
+all_subjects(Subjects) :-
+    findall(Subject, dma_art_5_2_data_combination_order_subject(Subject), Subjects).
+
+one_practice_answer(Subject) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    findall(Result, personal_data_practice_status(Profile, Result, _, _), Results),
+    length(Results, 1).
+
+one_application_answer(Subject) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    findall(Result, article_5_application_status(Profile, Result, _, _), Results),
+    length(Results, 1).
+
+one_repetition_answer_each_day(Subject) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    maplist(one_repetition_answer(Profile), [date(2025, 3, 9), date(2025, 3, 10), date(2026, 3, 9), date(2026, 3, 10)]).
+
+one_repetition_answer(Profile, RequestDate) :-
+    findall(Result, consent_request_repetition_status(Profile, date(2025, 3, 10), RequestDate, Result, _, _), Results),
+    length(Results, 1).
+
+final_atom(article_5_obligations_apply).
+final_atom(article_5_obligations_do_not_apply).
+final_atom(practice_allowed_with_consent).
+final_atom(practice_allowed_on_other_legal_basis).
+final_atom(practice_prohibited).
+final_atom(practice_outside_article_5_2).
+
+result_shape(Result, [outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(_, _))|_], [_|_]) :-
+    final_atom(Result).
+result_shape(indeterminate([MissingKey]), [], []) :-
+    atom(MissingKey).
+result_shape(needs_legal_review(_, _), [], []).
+result_shape(input_problems([_|_]), [], []).
+
+practice_shape_holds(Subject) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    personal_data_practice_status(Profile, Result, Basis, Citations),
+    result_shape(Result, Basis, Citations).
+
+canonical_citation(cite(eu_reg_2022_1925_art_5_1)).
+canonical_citation(cite(eu_reg_2022_1925_art_5_2)).
+canonical_citation(cite(eu_reg_2022_1925_art_5_2_a)).
+canonical_citation(cite(eu_reg_2022_1925_art_5_2_b)).
+canonical_citation(cite(eu_reg_2022_1925_art_5_2_c)).
+canonical_citation(cite(eu_reg_2022_1925_art_5_2_d)).
+canonical_citation(cite(eu_reg_2022_1925_art_2_32)).
+
+citations_are_canonical(Subject) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    personal_data_practice_status(Profile, _, _, Citations),
+    maplist(canonical_citation, Citations),
+    sort(Citations, Distinct),
+    same_length(Citations, Distinct).
+
+test(totality_every_subject_classifies) :-
+    all_subjects(Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_one_practice_answer_per_subject) :-
+    all_subjects(Subjects),
+    maplist(one_practice_answer, Subjects).
+test(determinism_one_application_answer_per_subject) :-
+    all_subjects(Subjects),
+    maplist(one_application_answer, Subjects).
+test(determinism_one_repetition_answer_per_subject_and_day) :-
+    all_subjects(Subjects),
+    maplist(one_repetition_answer_each_day, Subjects).
+test(every_answer_has_its_shape) :-
+    all_subjects(Subjects),
+    maplist(practice_shape_holds, Subjects).
+test(every_citation_is_canonical_and_written_once) :-
+    all_subjects(Subjects),
+    maplist(citations_are_canonical, Subjects).
+test(supplying_an_absent_statement_keeps_the_basis) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_cross_use_no_choice_legal_obligation, Profile),
+    stated(false, Consent),
+    append(Profile, [attribute(end_user_consent_given, Consent)], FullerProfile),
+    personal_data_practice_status(Profile, Result, Basis, Citations),
+    personal_data_practice_status(FullerProfile, FullerResult, FullerBasis, FullerCitations),
+    Result == FullerResult,
+    Basis == FullerBasis,
+    Citations == FullerCitations.
+test(the_attestation_is_copied_verbatim) :-
+    Designation = attested(true, attestation(host_operator, at_noon, decision_text, url(designation_page, retrieved_today))),
+    article_5_application_status([attribute(designated_as_gatekeeper_for_core_platform_service, Designation)], article_5_obligations_apply, Basis, _),
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)].
+
+cp_test_names([totality_every_subject_classifies, determinism_one_practice_answer_per_subject, determinism_one_application_answer_per_subject, determinism_one_repetition_answer_per_subject_and_day, every_answer_has_its_shape, every_citation_is_canonical_and_written_once, supplying_an_absent_statement_keeps_the_basis, the_attestation_is_copied_verbatim]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

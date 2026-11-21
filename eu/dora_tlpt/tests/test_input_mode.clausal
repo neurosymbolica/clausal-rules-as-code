@@ -1,0 +1,132 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: the public predicates called with
+% the result argument BOUND (verdict given, not read out), and the input
+% tolerance of THE INPUT CHECK: every shape of PROFILE the order names.
+% Run: python -m clausal.testing eu/dora_tlpt/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/dora_tlpt/queries, [
+    tlpt_identification_basis/3,
+    tlpt_duty/3,
+    dora_tlpt_input_problems/2
+]).
+:- use_module(eu/dora_tlpt/dora_tlpt, [dora_tlpt_status/2]).
+:- use_module(eu/dora_tlpt/fixtures, [dora_tlpt_profile_for/2]).
+
+% ---- bound verdicts ------------------------------------------------------
+test(a_bound_listed_answer_holds) :-
+    dora_tlpt_profile_for(payment_institution_above_threshold_both_years, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(point_b), [cite(eu_reg_2025_1190_art_2_2), cite(eu_reg_2025_1190_art_2_2_b)]).
+test(a_bound_wrong_point_is_rejected, fail) :-
+    dora_tlpt_profile_for(payment_institution_above_threshold_both_years, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(point_c), _).
+test(a_bound_exclusion_holds) :-
+    dora_tlpt_profile_for(article_16_1_entity_identified, Profile),
+    tlpt_identification_basis(Profile, excluded_from_tlpt(article_16_1_entity), [cite(eu_reg_2022_2554_art_26_1)]).
+test(a_bound_wrong_exclusion_ground_is_rejected, fail) :-
+    dora_tlpt_profile_for(article_16_1_entity_identified, Profile),
+    tlpt_identification_basis(Profile, excluded_from_tlpt(microenterprise), _).
+test(a_bound_not_listed_answer_holds) :-
+    dora_tlpt_profile_for(trade_repository_identified, Profile),
+    tlpt_identification_basis(Profile, not_listed_for_tlpt, Citations),
+    msort(Citations, SortedCitations),
+    SortedCitations == [cite(eu_reg_2022_2554_art_26_8), cite(eu_reg_2025_1190_art_2_1), cite(eu_reg_2025_1190_art_2_2)].
+test(a_bound_indeterminate_holds) :-
+    dora_tlpt_profile_for(entity_type_missing_not_identified, Profile),
+    tlpt_identification_basis(Profile, indeterminate([dora_entity_type]), []).
+test(a_bound_indeterminate_on_another_key_is_rejected, fail) :-
+    dora_tlpt_profile_for(entity_type_missing_not_identified, Profile),
+    tlpt_identification_basis(Profile, indeterminate([identified_by_tlpt_authority_as_required_to_perform_tlpt]), _).
+test(a_bound_required_duty_holds) :-
+    dora_tlpt_profile_for(central_securities_depository_identified_standard_frequency, Profile),
+    tlpt_duty(Profile, tlpt_required(at_least_every_three_years), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]).
+test(a_bound_wrong_frequency_is_rejected, fail) :-
+    dora_tlpt_profile_for(central_securities_depository_identified_standard_frequency, Profile),
+    tlpt_duty(Profile, tlpt_required(frequency_set_by_competent_authority), _).
+test(a_bound_status_holds) :-
+    dora_tlpt_profile_for(central_counterparty_not_identified, Profile),
+    dora_tlpt_status(Profile, no_tlpt_duty(not_identified)).
+test(a_bound_required_status_is_rejected_when_not_identified, fail) :-
+    dora_tlpt_profile_for(central_counterparty_not_identified, Profile),
+    dora_tlpt_status(Profile, tlpt_required(_)).
+test(a_bound_status_compound_carries_no_citation, fail) :-
+    dora_tlpt_profile_for(central_securities_depository_frequency_missing, Profile),
+    tlpt_duty(Profile, indeterminate(_), [_|_]).
+
+% ---- profile shapes ------------------------------------------------------
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    dora_tlpt_input_problems(_, [wrong_type(profile)]).
+test(a_partial_list_is_not_an_attribute_list) :-
+    dora_tlpt_input_problems([attribute(dora_entity_type, trading_venue)|_], [wrong_type(profile)]).
+test(a_list_with_a_foreign_element_is_not_an_attribute_list) :-
+    dora_tlpt_input_problems([attribute(dora_entity_type, trading_venue), trading_venue], [wrong_type(profile)]).
+test(a_list_with_an_unbound_element_is_not_an_attribute_list) :-
+    dora_tlpt_input_problems([attribute(dora_entity_type, trading_venue), _], [wrong_type(profile)]).
+test(an_atom_is_not_an_attribute_list) :-
+    dora_tlpt_input_problems(central_counterparty, [wrong_type(profile)]).
+test(an_empty_profile_has_no_problem) :-
+    dora_tlpt_input_problems([], []).
+test(an_unbound_profile_answers_both_queries_with_the_problem) :-
+    tlpt_identification_basis(_, input_problems([wrong_type(profile)]), []),
+    tlpt_duty(_, input_problems([wrong_type(profile)]), []).
+
+% ---- keys ----------------------------------------------------------------
+test(an_unbound_key_is_reported_as_that_variable) :-
+    dora_tlpt_input_problems([attribute(UnboundKey, true)], Problems),
+    Problems = [unknown_key(ReportedKey)],
+    ReportedKey == UnboundKey.
+test(two_unbound_keys_are_two_unknown_keys) :-
+    dora_tlpt_input_problems([attribute(FirstKey, true), attribute(SecondKey, true)], Problems),
+    Problems = [unknown_key(FirstReported), unknown_key(SecondReported)],
+    FirstReported == FirstKey,
+    SecondReported == SecondKey.
+test(one_unbound_key_twice_is_one_unknown_key) :-
+    dora_tlpt_input_problems([attribute(RepeatedKey, true), attribute(RepeatedKey, false)], Problems),
+    Problems = [unknown_key(ReportedKey)],
+    ReportedKey == RepeatedKey.
+test(an_integer_and_a_float_key_are_two_keys) :-
+    dora_tlpt_input_problems([attribute(7, true), attribute(7.0, true)], Problems),
+    Problems == [unknown_key(7), unknown_key(7.0)].
+test(a_compound_key_is_unknown) :-
+    dora_tlpt_input_problems([attribute(key(dora_entity_type), central_counterparty)], [unknown_key(key(dora_entity_type))]).
+test(an_unknown_key_repeated_is_named_once) :-
+    dora_tlpt_input_problems([attribute(colour_of_logo, blue), attribute(colour_of_logo, red)], [unknown_key(colour_of_logo)]).
+test(a_duplicate_contract_key_is_never_also_wrong_type) :-
+    dora_tlpt_input_problems([attribute(dora_entity_type, trading_venue), attribute(dora_entity_type, 7)], [duplicate_key(dora_entity_type)]).
+test(a_duplicate_with_equal_values_is_still_a_duplicate) :-
+    dora_tlpt_input_problems([attribute(financial_entity_is_microenterprise, false), attribute(financial_entity_is_microenterprise, false)], [duplicate_key(financial_entity_is_microenterprise)]).
+test(the_problems_come_in_contract_order_then_first_occurrence) :-
+    dora_tlpt_input_problems([attribute(colour_of_logo, 1), attribute(tlpt_frequency_changed_by_competent_authority, maybe), attribute(size_of_office, 2), attribute(financial_entity_is_article_16_1_entity, unsure), attribute(colour_of_logo, 3), attribute(dora_entity_type, bank), attribute(dora_entity_type, bank)], Problems),
+    Problems == [wrong_type(financial_entity_is_article_16_1_entity), duplicate_key(dora_entity_type), wrong_type(tlpt_frequency_changed_by_competent_authority), unknown_key(colour_of_logo), unknown_key(size_of_office)].
+
+% ---- values --------------------------------------------------------------
+test(an_unbound_value_is_wrong_type) :-
+    dora_tlpt_input_problems([attribute(financial_entity_is_microenterprise, _)], [wrong_type(financial_entity_is_microenterprise)]).
+test(unsure_is_no_value_of_a_crisp_key) :-
+    dora_tlpt_input_problems([attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, unsure)], [wrong_type(identified_by_tlpt_authority_as_required_to_perform_tlpt)]).
+test(a_float_figure_is_wrong_type) :-
+    dora_tlpt_input_problems([attribute(gross_written_premium_eur, 1500000000.0)], [wrong_type(gross_written_premium_eur)]).
+test(a_negative_figure_is_wrong_type) :-
+    dora_tlpt_input_problems([attribute(technical_provisions_eur, -1)], [wrong_type(technical_provisions_eur)]).
+test(an_atom_figure_is_wrong_type) :-
+    dora_tlpt_input_problems([attribute(payment_transactions_total_value_eur_first_preceding_calendar_year, large)], [wrong_type(payment_transactions_total_value_eur_first_preceding_calendar_year)]).
+test(zero_is_a_figure) :-
+    dora_tlpt_input_problems([attribute(gross_written_premium_eur, 0)], []).
+test(a_share_above_ten_thousand_basis_points_is_no_problem) :-
+    dora_tlpt_input_problems([attribute(total_assets_share_of_member_state_insurance_sector_basis_points, 20000)], []).
+test(an_unknown_type_atom_is_wrong_type) :-
+    dora_tlpt_input_problems([attribute(dora_entity_type, bank)], [wrong_type(dora_entity_type)]).
+test(an_unknown_activities_atom_is_wrong_type) :-
+    dora_tlpt_input_problems([attribute(insurance_undertaking_activities, health_only)], [wrong_type(insurance_undertaking_activities)]).
+test(a_key_of_another_point_is_no_problem) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, central_counterparty), attribute(gross_written_premium_eur, 5)], listed_for_tlpt(point_e), [cite(eu_reg_2025_1190_art_2_2), cite(eu_reg_2025_1190_art_2_2_e)]).
+test(a_carve_out_beside_an_identification_is_no_problem) :-
+    dora_tlpt_input_problems([attribute(financial_entity_is_article_16_1_entity, true), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, true)], []).
+test(the_input_check_comes_before_a_carve_out) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, true), attribute(colour_of_logo, blue)], input_problems([unknown_key(colour_of_logo)]), []).
+test(the_input_check_yields_one_solution) :-
+    findall(Problems, dora_tlpt_input_problems([attribute(colour_of_logo, blue), attribute(dora_entity_type, bank)], Problems), AllProblems),
+    AllProblems == [[wrong_type(dora_entity_type), unknown_key(colour_of_logo)]].
+
+:- end_module(test_input_mode).

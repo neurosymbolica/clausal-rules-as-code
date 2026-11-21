@@ -1,0 +1,62 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_representation_and_suspension___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_representation_and_suspension_kernel, [gdpr_representation_and_suspension_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_representation_and_suspension_citations, [citation/2, implements/1]).
+:- use_module(m__eu_data_protection_gdpr_representation_and_suspension_gdpr_representation_and_suspension, [court_contact_duty/3, court_declining_jurisdiction_option/4, court_suspension_option/3, decide_gdpr_representation_and_suspension/2, gdpr_representation_and_suspension_checklist/2, gdpr_representation_and_suspension_decision_resolvable/1, gdpr_representation_and_suspension_status/2, gdpr_representation_and_suspension_status_values/1, mandated_representation/5, representation_without_mandate/5]).
+:- use_module(m__eu_data_protection_gdpr_representation_and_suspension_queries, [contact_duty_applies/0, contact_duty_does_not_apply/0, declining_jurisdiction_not_available/0, gdpr_representation_and_suspension_profile_keys/1, gdpr_representation_and_suspension_what_if/4, may_act_on_mandate/0, may_act_without_mandate/0, may_decline_jurisdiction/0, may_not_act_on_mandate/0, may_not_act_without_mandate/0, may_suspend_proceedings/0, suspension_not_available/0]).
+:- use_module(m__eu_data_protection_gdpr_representation_and_suspension_fixtures, [gdpr_representation_and_suspension_assess/2, gdpr_representation_and_suspension_profile_for/2, gdpr_representation_and_suspension_subject/1]).
+
+root_export(absent).
+root_export(attestation).
+root_export(attested).
+root_export(body_active_in_protection_of_data_subjects_rights_and_freedoms).
+root_export(body_considers_data_subject_rights_infringed_by_processing).
+root_export(body_is_not_for_profit).
+root_export(body_properly_constituted_under_member_state_law).
+root_export(body_statutory_objectives_in_public_interest).
+root_export(contact_duty_applies).
+root_export(contact_duty_does_not_apply).
+root_export(court_first_seized_has_jurisdiction_over_the_actions).
+root_export(court_has_information_on_proceedings_pending_in_another_member_state).
+root_export(court_is_competent_court).
+root_export(court_is_court_first_seized).
+root_export(cross_reference_unresolved).
+root_export(data_subject_mandated_the_body).
+root_export(declining_jurisdiction_not_available).
+root_export(document).
+root_export(duplicate_key).
+root_export(exercise_right_under_article_79).
+root_export(exercise_rights_under_article_78).
+root_export(indeterminate).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(law_of_court_first_seized_permits_consolidation).
+root_export(lodge_complaint_under_article_77).
+root_export(may_act_on_mandate).
+root_export(may_act_without_mandate).
+root_export(may_decline_jurisdiction).
+root_export(may_not_act_on_mandate).
+root_export(may_not_act_without_mandate).
+root_export(may_suspend_proceedings).
+root_export(member_state_law_provides_for_mandated_compensation_claims).
+root_export(member_state_law_provides_for_the_action_without_mandate).
+root_export(needs_legal_review).
+root_export(not_attempted).
+root_export(open_textured).
+root_export(other_proceedings_concern_same_controller_or_processor).
+root_export(other_proceedings_concern_same_subject_matter).
+root_export(other_proceedings_pending_at_first_instance).
+root_export(other_proceedings_pending_in_court_of_another_member_state).
+root_export(outside_fact).
+root_export(party_applied_for_court_to_decline_jurisdiction).
+root_export(receive_compensation_under_article_82).
+root_export(resolution).
+root_export(suspension_not_available).
+root_export(unknown_key).
+root_export(unsure).
+root_export(url).
+root_export(wrong_type).

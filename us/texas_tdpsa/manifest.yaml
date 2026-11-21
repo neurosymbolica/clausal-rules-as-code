@@ -1,0 +1,576 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: us/texas_tdpsa
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "texas_tdpsa"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (texas_tdpsa_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- texas_tdpsa.clausal --
+  - "applicability_status/4"
+  - "response_deadline/4"
+  - "extended_response_deadline/4"
+  - "appeal_response_deadline/4"
+  - "cure_period_last_day/4"
+  - "attorney_general_action_status/5"
+  - "civil_penalty_maximum/3"
+  - "decide_texas_tdpsa/2"
+  - "texas_tdpsa_status/2"
+  - "texas_tdpsa_checklist/2"
+  - "texas_tdpsa_decision_resolvable/1"
+  - "texas_tdpsa_status_values/1"
+  # -- queries.clausal --
+  - "texas_tdpsa_profile_keys/1"
+  - "texas_tdpsa_input_problems/2"
+  - "texas_tdpsa_what_if/4"
+  - "in_scope/0"
+  - "out_of_scope/0"
+  - "no_extension_available/0"
+  - "cure_period_running/0"
+  - "action_may_be_brought/0"
+  - "no_action_for_cured_violation/0"
+  - "no_civil_penalty/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "texas_tdpsa_subject/1"
+  - "texas_tdpsa_profile_for/2"
+  - "texas_tdpsa_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/deadline_lib) and library(datetime); no shared backbone package.
+uses: []
+
+scope: >-
+  Tex. Bus. & Com. Code ch. 541 (Texas Data Privacy and Security Act): for one
+  person or controller the caller describes, whether the chapter applies
+  (Sec. 541.002(a), (b); the SBA small-business determination is an attested
+  outside fact, never computed); the last day to respond to a consumer request
+  or to tell the consumer the controller declines to act (Sec. 541.052(b), (c));
+  the last day of the once-extended response period or that no extension is
+  available (Sec. 541.052(b)); the last day to answer an appeal in writing
+  (Sec. 541.053(c)); the last day of the 30-day cure period after the attorney
+  general's written notice (Sec. 541.154); on a reference day, whether the cure
+  period is running, the attorney general may bring an action, or no action may
+  be brought for a cured violation (Secs. 541.154, 541.155(a)); and the maximum
+  civil penalty in whole US dollars (Sec. 541.155(a)). Periods are calendar days
+  from the event, the event day not counted, never moved for weekends or
+  holidays (Tex. Gov't Code 311.014 not pinned). Out of scope (handed to the
+  caller or a lawyer): whether conducting business in Texas or the necessity of
+  an extension holds (open-textured judgements), the SBA size standards, the
+  consumer rights themselves, fees, authentication, exempt data (Sec. 541.003),
+  the Subchapter C duties, the small-business rule of Sec. 541.107, injunctions,
+  fees and expenses, and the meaning of the Sec. 541.001 definitions.
+
+sources:
+  - "Tex. Bus. & Com. Code ch. 541 (Texas Data Privacy and Security Act), Secs. 541.002(a), (a)(1)-(3), (b), (b)(1)-(6); 541.052(b), (c); 541.053(c); 541.154, 541.154(1), (2), (2)(A)-(D); 541.155([quotation omitted]. Pinned text: document tx-bc-ch541-2026-11-16-pdf-save, the current chapter saved to PDF from the Texas statutes website on 2026-11-16 and extracted as text (a secondary copy, not the official printed code; no 'current through' line was read)."
+
+query_interface:
+  2: "texas_tdpsa_status/2"                # status projection of applicability
+  3: "applicability_status/4"              # status_determination (Sec. 541.002)
+  7: "texas_tdpsa_checklist/2"             # justification: cite(...) per item
+  15: "response_deadline/4"                # deadline (Sec. 541.052(b), (c))
+  16: "texas_tdpsa_what_if/4"              # what_if: re-evaluate under an overridden key
+  23: "civil_penalty_maximum/3"            # calculation (Sec. 541.155(a))
+
+deferred_set:
+- what: section_headings_and_history_notes
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_002
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_002_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_004_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_005_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_053
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_053_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_054_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_103_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_107
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_107_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_151_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_152_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_153
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_153_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_154_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_156_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_203
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_203_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204_history
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_205_history
+  reason: These units hold only a section number and heading (the text is in the sub-units
+    the limbs cite or the other deferred rows list) or a section's printed history
+    ('[quotation omitted]
+    [quotation omitted]', and for Sec. 541.104 the 2025 amendment by H.B. 149); some history units
+    end with the printed heading of the next subchapter as extracted. None states
+    a rule; the histories are read only for reading (1) on the version of the text.
+  consequence: 'None for a caller: no rule is in these units.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: definitions_the_keys_use
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_7
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_8
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_9
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_16
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_16_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_16_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_18
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_18_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_18_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_18_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_18_D
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_18_D_i
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_18_D_ii
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_19
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_22
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28_D
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28_D_i
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28_D_ii
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_28_E
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_30
+  reason: Sec. 541.001 defines 'business associate', 'consumer', 'controller', 'covered
+    entity', 'institution of higher education', 'nonprofit organization', 'personal
+    data', 'process', 'sale of personal data' and 'state agency'. They give the meaning
+    of processes_or_sells_personal_data, of atoms of entity_category and of the premise
+    that the caller is a controller; the caller applies them when it states the keys
+    (reading (11), Q13).
+  consequence: The caller classifies the person and its processing under these definitions;
+    the answers do not check that it did.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: other_definitions
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_1_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_1_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_1_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_5
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_6
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_6_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_6_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_6_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_10
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_11
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_11_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_11_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_11_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_11_D
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_11_E
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_11_F
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_12
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_13
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_14
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_14_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_14_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_15
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_17
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_20
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_20_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_20_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_21
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_23
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_24
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_25
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_26
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_27
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_29
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_29_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_29_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_29_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_29_D
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_31
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_31_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_31_A_i
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_31_A_ii
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_31_A_iii
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_31_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_32
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_33
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_33_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_001_33_B
+  reason: The lead-in of Sec. 541.001 and its other definitions (affiliate, authenticate,
+    biometric data, child, consent, dark pattern, deidentified data, sensitive data,
+    targeted advertising, third party, trade secret and the rest) are used by duties
+    this order does not formalise.
+  consequence: No answer reads these definitions.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: quoted_units_formalised_in_part
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_002_b_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_a
+  reason: Sec. 541.002(b)(2) also excludes 'data subject to Title V' of the Gramm-Leach-Bliley
+    Act, a data exclusion not formalised (Q12); Sec. 541.052(b) and (c) also require
+    a response 'without undue delay' and give the content of a notice declining to
+    act, of which only the latest day is formalised (Q18); Sec. 541.155(a) also makes
+    the penalty follow a breach of the written statement, read by attorney_general_action_status
+    and civil_penalty_maximum through their keys, while a violation of Sec. 541.107
+    is not formalised.
+  consequence: The answers never say which data are excluded, whether a response was
+    given without undue delay or what a declining notice must say (reading (5), reading
+    (11)).
+  declaration: answered_with_caveat
+  partial: true
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: exempt_information_inapplicability_and_coppa
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_4_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_4_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_4_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_5
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_6
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_7
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_8
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_9
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_10
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_11
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_12
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_13
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_14
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_15
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_16
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_003_17
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_004
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_005
+  reason: Sec. 541.003 lists information exempt from the chapter; Sec. 541.004 makes
+    the chapter inapplicable to certain processing; Sec. 541.005 treats compliance
+    with the parental consent requirements of the federal children's online privacy
+    law as compliance with the chapter's parental consent duties.
+  consequence: in_scope does not say that the chapter reaches every piece of data
+    or processing of the person (reading (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: rights_request_conditions_fees_authentication_and_appeal_process
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_5
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_5_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_5_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_051_b_5_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_e
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_f
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_f_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_052_f_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_053_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_053_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_053_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_054
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_a_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_e
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_e_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_e_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_e_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_e_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_f
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_f_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_f_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_055_f_3
+  reason: Sec. 541.051 grants the consumer rights and says how they are invoked; Sec.
+    541.052(a), (d), (e) and (f) set the duty to comply 'except as otherwise provided',
+    the free responses twice a year, fees and refusals for manifestly unfounded, excessive
+    or repetitive requests, authentication, and deletion of data obtained from others;
+    Sec. 541.053(a), (b) and (d) set the appeal process, its period 'within a reasonable
+    period of time', and the complaint mechanism after a denied appeal; Sec. 541.054
+    voids waivers; Sec. 541.055 sets the methods for submitting requests.
+  consequence: The deadline answers never say whether the right exists, whether a
+    fee may be charged or the request refused, whether authentication failed, or whether
+    an appeal was brought in time (reading (7), reading (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: controller_processor_assessment_and_deidentified_data_duties
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_b_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_b_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_b_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_b_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_101_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_a_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_a_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_a_5
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_a_6
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_102_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_103
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_a_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_5
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_6
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_6_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_6_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_6_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_6_D
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_b_6_E
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_104_e
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_3_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_3_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_3_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_3_D
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_a_5
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_b_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_b_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_b_2_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_b_2_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_b_2_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_b_2_D
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_e
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_105_f
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_a_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_b_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_b_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_b_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_b_3_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_b_3_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_b_3_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_106_d
+  reason: Secs. 541.101 to 541.106 (controller duties and transparency, privacy notice,
+    sale of data and targeted advertising, duties of a processor as amended by H.B.
+    149 eff. January 1, 2026, data protection assessments, deidentified and pseudonymous
+    data) set duties without a dated period this order reads.
+  consequence: The answers never say whether a controller or processor met these duties
+    (reading (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: small_business_sensitive_data_rule
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_107_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_107_b
+  reason: Sec. 541.107 forbids a small business under Sec. 541.002(a)(3) to sell sensitive
+    personal data without the consumer's prior consent and subjects a violation to
+    the penalty of Sec. 541.155 (Q20).
+  consequence: applicability_status answers out_of_scope for a small business although
+    Sec. 541.107 binds it; no answer speaks of that rule (reading (3)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: enforcement_authority_website_investigation_injunction_fees_and_no_private_action
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_151
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_152
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_152_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_152_1_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_152_1_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_152_1_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_152_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_153_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_153_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_b_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_b_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_b_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_155_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_156
+  reason: Sec. 541.151 gives the attorney general exclusive authority to enforce;
+    Sec. 541.152 sets its website and complaint mechanism; Sec. 541.153 its civil
+    investigative demands; Sec. 541.155(b) to (d) the action to recover the penalty
+    or an injunction, the recovery of fees and expenses and the deposit of the penalty;
+    Sec. 541.156 excludes a private right of action.
+  consequence: The answers speak only of the cure period, whether the action may be
+    brought, and the maximum penalty; never of injunctions, fees, investigations or
+    a private action (reading (9), reading (10)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: construction_permitted_purposes_and_preemption
+  units:
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_5
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_6
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_7
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_8
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_8_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_8_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_8_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_a_9
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_201_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a_3
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a_4
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a_4_A
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a_4_B
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_a_4_C
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_202_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_203_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_203_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204_a
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204_a_1
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204_a_2
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204_b
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204_c
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_204_d
+  - tx-bc-ch541-2026-11-16-pdf-save#s541_205
+  reason: Secs. 541.201 to 541.205 say how the chapter is construed, the purposes
+    for which data may still be collected, used or retained, disclosures to third
+    parties, certain processing, and preemption of local rules.
+  consequence: The answers never say whether a permitted purpose excuses a duty (reading
+    (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: computing_periods_rule_not_pinned
+  units: []
+  instrument: Tex. Gov't Code § 311.014 (computing periods; not pinned)
+  reason: The general Texas rule on computing periods is not pinned. This order counts
+    calendar days from the event, the day of the event not counted, and moves no last
+    day for a Saturday, Sunday or legal holiday (reading (4); Q1). If that rule applies
+    to the periods of Secs. 541.052, 541.053 and 541.154, a last day may move to a
+    later day.
+  consequence: A date this order gives that falls on a Saturday, Sunday or legal holiday
+    is given unmoved; the caller or a lawyer checks whether a later day applies.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: small_business_size_standards_not_pinned
+  units: []
+  instrument: United States Small Business Administration definition of a small business
+    (size standards; not pinned)
+  reason: Sec. 541.002(a)(3) refers to the Administration's definition, which this
+    order does not pin or formalise; the determination is the attested outside fact
+    small_business_as_defined_by_sba (Q10).
+  consequence: The caller attests whether the person is a small business; absent,
+    the answer is referred.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.

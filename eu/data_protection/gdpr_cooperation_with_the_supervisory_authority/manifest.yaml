@@ -15,23 +15,20 @@ modules:
   - "gdpr_cooperation_with_the_supervisory_authority"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
-# in sync with the :- module(...) export lists re-exported via the package
-# facade __init__.clausal. The 0-arity entries are the result constructors and
-# the root atoms the scorer reads as package-root attributes.
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
-  - "gdpr_cooperation_with_the_supervisory_authority_input_problems/2"
   # -- citations.clausal --
   - "citation/2"
   # -- gdpr_cooperation_with_the_supervisory_authority.clausal --
-  - "cooperation_duty/4"
-  - "gdpr_cooperation_with_the_supervisory_authority_cooperation_duty/4"
   - "decide_gdpr_cooperation_with_the_supervisory_authority/2"
   - "gdpr_cooperation_with_the_supervisory_authority_status/2"
   - "gdpr_cooperation_with_the_supervisory_authority_checklist/2"
   - "gdpr_cooperation_with_the_supervisory_authority_decision_resolvable/1"
   - "gdpr_cooperation_with_the_supervisory_authority_status_values/1"
+  - "cooperation_duty/4"
   - "cooperation_not_required/0"
   - "cooperation_met/0"
   - "cooperation_not_met/0"
@@ -53,6 +50,7 @@ public_interface:
   - "duplicate_key/1"
   # -- queries.clausal --
   - "gdpr_cooperation_with_the_supervisory_authority_profile_keys/1"
+  - "gdpr_cooperation_with_the_supervisory_authority_input_problems/2"
   - "gdpr_cooperation_with_the_supervisory_authority_what_if/4"
   - "acts_as_controller/0"
   - "acts_as_processor/0"
@@ -70,32 +68,32 @@ public_interface:
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
-# Reuse-declaration lever: shared backbone packages this domain imports.
-# Only the kit (formalize_lib, library(reif)) is used; no shared domain package.
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. Only kit modules (formalize_lib, library(reif)) are used.
 uses: []
 
 scope: >-
-  Regulation (EU) 2016/679 (GDPR) Art 31 (the whole article, one paragraph):
-  whether, on the caller's statement of its role, of the supervisory
-  authority's request and of its own judgement that the request is made in the
-  performance of the authority's tasks, the caller is bound to cooperate on
-  that one request, and whether an attested statement says it cooperated
-  (cooperation_not_required, cooperation_met, cooperation_not_met). Decided
-  here: who is bound (controller, processor, representative where applicable),
-  the 'on request' condition, and the hand-off of 'in the performance of its
-  tasks' as a tri-state judgement. Out of scope: who is a controller, processor
-  or representative (Art 4, Art 27, sibling orders), the authority's tasks
+  Regulation (EU) 2016/679 (GDPR) Art 31, one request at a time: whether a
+  caller that states it acts as a controller, a processor or the
+  representative of one is under the duty to cooperate, on request, with the
+  supervisory authority in the performance of its tasks, and whether an
+  attested statement says it cooperated with that request. Answers are
+  cooperation_not_required (no request, a request the caller judges not in
+  the performance of the authority's tasks, or not bound), cooperation_met or
+  cooperation_not_met (copying the attested statement), or a non-final status
+  (input_problems, indeterminate naming the first missing key, or
+  needs_legal_review for an absent cooperation statement or an unsure
+  judgement on the authority's tasks). Out of scope: who is a controller,
+  processor or representative (Arts 4(7), 4(8), 27), the authority's tasks
   (Art 57), its powers and corrective measures (Art 58), fines (Art 83), and
-  whether the cooperation given was enough, timely or complete (the attested
-  statement is copied, never judged). An unsure judgement or an absent
-  cooperation statement goes to a lawyer.
+  whether the cooperation was sufficient, timely or complete.
 
 sources:
-  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, Art 31 (Cooperation with the supervisory authority); pinned unit 02016R0679-20160504#art_031, consolidated text of 2016-05-04, fetched 2026-11-12"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, Art 31 (cooperation with the supervisory authority); pinned unit 02016R0679-20160504#art_031, citation key eu_reg_2016_679_art_31"
 
 query_interface:
-  2: "gdpr_cooperation_with_the_supervisory_authority_status/2"      # eligibility: the Art 31 duty verdict
-  7: "gdpr_cooperation_with_the_supervisory_authority_checklist/2"   # justification: cited checklist, cite(...) per item
+  2: "gdpr_cooperation_with_the_supervisory_authority_status/2"      # eligibility/status verdict
+  7: "gdpr_cooperation_with_the_supervisory_authority_checklist/2"   # justification: cited checklist
   16: "gdpr_cooperation_with_the_supervisory_authority_what_if/4"    # what_if: re-evaluate under an overridden key
 
 excluded_set:

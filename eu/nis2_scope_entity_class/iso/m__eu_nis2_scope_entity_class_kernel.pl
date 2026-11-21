@@ -1,10 +1,12 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_nis2_scope_entity_class_kernel, [nis2_scope_entity_class_input_problems/2]).
+:- module(m__eu_nis2_scope_entity_class_kernel, [nis2_scope_entity_class_input_problems/2, nis2_scope_entity_class_profile_key_order/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
 :- use_module(library(reif), [memberd_t/3]).
+
+nis2_scope_entity_class_profile_key_order([annex_i_type, annex_ii_type, services_or_activities_in_union, staff_headcount, annual_turnover_eur, annual_balance_sheet_total_eur, public_electronic_communications_provider, trust_service_provider_status, tld_name_registry, dns_service_provider, sole_provider_of_an_essential_service_in_a_member_state, disruption_could_significantly_impact_public_safety_security_or_health, disruption_could_induce_a_significant_systemic_risk, critical_by_specific_national_or_regional_importance, public_administration_kind, public_administration_in_national_security_defence_or_law_enforcement, critical_entity_under_directive_2022_2557, domain_name_registration_service_entity, exempted_from_dora_scope_by_member_state, identified_by_member_state_as_essential_entity, former_operator_of_essential_services_kept_essential_by_member_state]).
 
 nis2_scope_entity_class_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -12,7 +14,7 @@ nis2_scope_entity_class_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    Keys = [annex_i_type, annex_ii_type, services_or_activities_in_union, staff_headcount, annual_turnover_eur, annual_balance_sheet_total_eur, public_electronic_communications_provider, trust_service_provider_status, tld_name_registry, dns_service_provider, sole_provider_of_an_essential_service_in_a_member_state, disruption_could_significantly_impact_public_safety_security_or_health, disruption_could_induce_a_significant_systemic_risk, critical_by_specific_national_or_regional_importance, public_administration_kind, public_administration_in_national_security_defence_or_law_enforcement, critical_entity_under_directive_2022_2557, domain_name_registration_service_entity, exempted_from_dora_scope_by_member_state, identified_by_member_state_as_essential_entity, former_operator_of_essential_services_kept_essential_by_member_state],
+    nis2_scope_entity_class_profile_key_order(Keys),
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 
@@ -165,3 +167,22 @@ not_below_zero_t(true, Value, true) :-
     Value >= 0.
 not_below_zero_t(true, Value, false) :-
     Value < 0.
+
+test(the_key_order_holds_twenty_one_keys) :-
+    nis2_scope_entity_class_profile_key_order(Keys),
+    length(Keys, 21).
+test(a_well_formed_profile_has_no_problem) :-
+    nis2_scope_entity_class_input_problems([attribute(annex_i_type, unsure), attribute(staff_headcount, 12), attribute(public_administration_kind, central_government)], []).
+test(an_empty_profile_has_no_problem) :-
+    nis2_scope_entity_class_input_problems([], []).
+test(a_repeated_key_is_a_duplicate_only) :-
+    nis2_scope_entity_class_input_problems([attribute(tld_name_registry, true), attribute(tld_name_registry, maybe)], [duplicate_key(tld_name_registry)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    nis2_scope_entity_class_input_problems([attribute(colour, red), attribute(staff_headcount, -1), attribute(annex_i_type, yes), attribute(colour, blue)], [wrong_type(annex_i_type), wrong_type(staff_headcount), unknown_key(colour)]).
+test(a_crisp_key_given_unsure_is_a_wrong_type) :-
+    nis2_scope_entity_class_input_problems([attribute(dns_service_provider, unsure)], [wrong_type(dns_service_provider)]).
+test(a_list_with_a_foreign_element_is_not_a_profile) :-
+    nis2_scope_entity_class_input_problems([attribute(annex_i_type, true), foo], [wrong_type(profile)]).
+
+test(a_well_formed_profile_is_not_refused, fail) :-
+    nis2_scope_entity_class_input_problems([attribute(annex_i_type, true)], [wrong_type(profile)]).

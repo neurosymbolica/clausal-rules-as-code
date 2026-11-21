@@ -1,0 +1,79 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_risk_governance_and_framework_fixtures, [dora_ict_risk_governance_and_framework_subject/1, dora_ict_risk_governance_and_framework_profile_for/2, dora_ict_risk_governance_and_framework_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_risk_governance_and_framework_dora_ict_risk_governance_and_framework, [decide_dora_ict_risk_governance_and_framework/2]).
+
+dora_ict_risk_governance_and_framework_subject(Subject) :-
+    subject_specification(Subject, _, _).
+
+subject_specification(large_entity_all_performed, false, []).
+subject_specification(large_entity_data_security_unperformed, false, [set(management_body_put_in_place_data_security_policies, false)]).
+subject_specification(microenterprise_all_performed, true, []).
+subject_specification(microenterprise_periodic_review_unperformed, true, [set(framework_reviewed_periodically, false)]).
+subject_specification(microenterprise_annual_review_unperformed, true, [set(framework_reviewed_at_least_yearly, false)]).
+subject_specification(large_entity_annual_review_unperformed, false, [set(framework_reviewed_at_least_yearly, false)]).
+subject_specification(large_entity_every_trigger, false, [set(authority_requested_ict_risk_information, true), set(authority_requested_framework_review_report, true), set(major_change_occurred, true), set(entity_operates_legacy_ict_systems, true)]).
+subject_specification(large_entity_major_change_unassessed, false, [set(major_change_occurred, true), set(risk_assessed_upon_major_change, false)]).
+subject_specification(large_entity_no_major_change_unassessed, false, [set(risk_assessed_upon_major_change, false)]).
+subject_specification(large_entity_major_change_unanswered, false, [drop(major_change_occurred)]).
+subject_specification(microenterprise_major_change_unanswered, true, [drop(major_change_occurred)]).
+subject_specification(large_entity_legacy_systems_unassessed, false, [set(entity_operates_legacy_ict_systems, true), set(legacy_systems_risk_assessed, false)]).
+subject_specification(large_entity_no_legacy_systems_unassessed, false, [set(legacy_systems_risk_assessed, false)]).
+subject_specification(large_entity_legacy_and_data_security_unperformed, false, [set(entity_operates_legacy_ict_systems, true), set(legacy_systems_risk_assessed, false), set(management_body_put_in_place_data_security_policies, false)]).
+subject_specification(large_entity_information_request_unanswered, false, [set(authority_requested_ict_risk_information, true), set(provided_ict_risk_information_on_request, false)]).
+subject_specification(large_entity_no_information_request, false, [set(provided_ict_risk_information_on_request, false)]).
+subject_specification(large_entity_review_report_request_unanswered, false, [set(authority_requested_framework_review_report, true), set(review_report_submitted_on_request, false)]).
+subject_specification(large_entity_no_review_report_request, false, [set(review_report_submitted_on_request, false)]).
+subject_specification(large_entity_control_function_unsure, false, [set(independent_ict_risk_control_function_assigned, unsure)]).
+subject_specification(microenterprise_control_function_unsure, true, [set(independent_ict_risk_control_function_assigned, unsure)]).
+subject_specification(large_entity_control_function_unsure_and_data_security_unperformed, false, [set(independent_ict_risk_control_function_assigned, unsure), set(management_body_put_in_place_data_security_policies, false)]).
+subject_specification(article_16_1_entity, false, [set(financial_entity_is_article_16_1_entity, true)]).
+subject_specification(article_16_1_entity_with_unperformed_duty, false, [set(financial_entity_is_article_16_1_entity, true), set(management_body_put_in_place_data_security_policies, false)]).
+subject_specification(article_16_1_answer_absent, false, [drop(financial_entity_is_article_16_1_entity)]).
+subject_specification(large_entity_governance_framework_unanswered, false, [drop(has_internal_governance_and_control_framework)]).
+subject_specification(size_unanswered_all_performed, false, [drop(financial_entity_is_microenterprise)]).
+subject_specification(size_unanswered_annual_review_unperformed, false, [drop(financial_entity_is_microenterprise), set(framework_reviewed_at_least_yearly, false)]).
+subject_specification(size_unanswered_both_reviews_unperformed, false, [drop(financial_entity_is_microenterprise), set(framework_reviewed_at_least_yearly, false), set(framework_reviewed_periodically, false)]).
+subject_specification(microenterprise_answered_unsure, false, [set(financial_entity_is_microenterprise, unsure)]).
+subject_specification(large_entity_unknown_key, false, [add(entity_holds_a_banking_licence, true)]).
+subject_specification(large_entity_duplicate_size_answer, false, [add(financial_entity_is_microenterprise, false)]).
+
+dora_ict_risk_governance_and_framework_profile_for(Subject, Profile) :-
+    subject_specification(Subject, Microenterprise, Edits),
+    base_profile(Microenterprise, BaseProfile),
+    foldl(apply_edit, Edits, BaseProfile, Profile).
+
+base_profile(Microenterprise, [attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, Microenterprise), attribute(authority_requested_ict_risk_information, false), attribute(authority_requested_framework_review_report, false), attribute(major_change_occurred, false), attribute(entity_operates_legacy_ict_systems, false)|DutyAttributes]) :-
+    duty_keys(DutyKeys),
+    maplist(performed_attribute, DutyKeys, DutyAttributes).
+
+duty_keys([has_internal_governance_and_control_framework, management_body_defines_approves_and_oversees_framework, management_body_bears_ultimate_ict_risk_responsibility, management_body_put_in_place_data_security_policies, ict_roles_and_governance_arrangements_set, management_body_approved_strategy_and_risk_tolerance, management_body_oversees_continuity_policy_and_plans, management_body_approves_ict_audit_plans, management_body_allocates_resilience_budget, management_body_approves_third_party_policy, reporting_channels_to_management_body_in_place, third_party_monitoring_role_established, management_body_keeps_ict_knowledge_up_to_date, has_sound_documented_ict_risk_management_framework, framework_protects_information_and_ict_assets, minimises_ict_risk_impact, provided_ict_risk_information_on_request, independent_ict_risk_control_function_assigned, risk_control_and_audit_functions_segregated, framework_reviewed_at_least_yearly, framework_reviewed_periodically, framework_reviewed_upon_events_and_improved, review_report_submitted_on_request, framework_internally_audited, formal_audit_follow_up_process_established, resilience_strategy_in_framework, uses_updated_appropriate_ict_systems, functions_and_assets_identified_and_classified, ict_risk_sources_identified_and_assessed, risk_assessed_upon_major_change, assets_identified_and_mapped, third_party_dependencies_identified, inventories_maintained_and_updated, legacy_systems_risk_assessed]).
+
+performed_attribute(Key, attribute(Key, true)).
+
+apply_edit(set(Key, Value), ProfileBefore, ProfileAfter) :-
+    maplist(set_attribute(Key, Value), ProfileBefore, ProfileAfter).
+apply_edit(drop(Key), ProfileBefore, ProfileAfter) :-
+    without_key(ProfileBefore, Key, ProfileAfter).
+apply_edit(add(Key, Value), ProfileBefore, ProfileAfter) :-
+    append(ProfileBefore, [attribute(Key, Value)], ProfileAfter).
+
+set_attribute(Key, Value, attribute(ElementKey, _), attribute(Key, Value)) :-
+    ElementKey == Key.
+set_attribute(Key, _, attribute(ElementKey, ElementValue), attribute(ElementKey, ElementValue)) :-
+    dif(ElementKey, Key).
+
+without_key([], _, []).
+without_key([attribute(ElementKey, _)|Elements], Key, Remaining) :-
+    ElementKey == Key,
+    without_key(Elements, Key, Remaining).
+without_key([attribute(ElementKey, Value)|Elements], Key, [attribute(ElementKey, Value)|Remaining]) :-
+    dif(ElementKey, Key),
+    without_key(Elements, Key, Remaining).
+
+dora_ict_risk_governance_and_framework_assess(Subject, Result) :-
+    dora_ict_risk_governance_and_framework_profile_for(Subject, Profile),
+    decide_dora_ict_risk_governance_and_framework(Profile, Result).

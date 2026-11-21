@@ -1,0 +1,416 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade (what an external caller sees).
+% Each fixture subject resolves to its EXPECTED answer for the paragraph it is
+% about (the concrete RESULT, BASIS and CITATIONS), its expected roll-up label,
+% and a non-empty cited checklist; every near-miss control gets the opposite
+% answer, and every negative test is paired with a positive one on the same case.
+% Run: python -m clausal.testing eu/dsa_art_14_terms_and_conditions_order/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/dsa_art_14_terms_and_conditions_order, [
+    art_14_1_terms_and_conditions_content_status/4,
+    art_14_2_significant_change_information_status/4,
+    art_14_3_minors_explanation_status/4,
+    art_14_4_restriction_enforcement_status/4,
+    art_14_5_terms_and_conditions_summary_status/4,
+    art_14_6_official_languages_status/4,
+    dsa_art_14_terms_and_conditions_order_input_problems/2,
+    decide_dsa_art_14_terms_and_conditions_order/2,
+    dsa_art_14_terms_and_conditions_order_status/2,
+    dsa_art_14_terms_and_conditions_order_checklist/2,
+    dsa_art_14_terms_and_conditions_order_decision_resolvable/1,
+    dsa_art_14_terms_and_conditions_order_status_values/1,
+    dsa_art_14_terms_and_conditions_order_what_if/4,
+    dsa_art_14_terms_and_conditions_order_subject/1,
+    dsa_art_14_terms_and_conditions_order_profile_for/2,
+    dsa_art_14_terms_and_conditions_order_assess/2
+]).
+
+% ---- helpers ------------------------------------------------------------
+
+designated_statement(attested(true, attestation(host_service, attestation_time, commission_designation_decision, none))).
+not_designated_statement(attested(false, attestation(host_service, attestation_time, commission_designation_list, none))).
+
+contract_queries([
+    art_14_1_terms_and_conditions_content_status,
+    art_14_2_significant_change_information_status,
+    art_14_3_minors_explanation_status,
+    art_14_4_restriction_enforcement_status,
+    art_14_5_terms_and_conditions_summary_status,
+    art_14_6_official_languages_status
+]).
+
+% answers(Query, Subject, Answers): EVERY solution of Query on the subject's profile.
+answers(Query, Subject, Answers) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(Subject, Profile),
+    findall(Result-Basis-Citations,
+            call(Query, Profile, Result, Basis, Citations),
+            Answers).
+
+roll_ups(Subject, Statuses) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(Subject, Profile),
+    findall(Status, dsa_art_14_terms_and_conditions_order_status(Profile, Status), Statuses).
+
+expected_roll_up(fully_compliant_very_large_platform, dsa_art_14_terms_and_conditions_order_compliant).
+expected_roll_up(todo_baseline_subject, dsa_art_14_terms_and_conditions_order_compliant).
+expected_roll_up(very_large_platform_without_summary, dsa_art_14_terms_and_conditions_order_not_compliant).
+expected_roll_up(small_hosting_service_no_complaint_system, dsa_art_14_terms_and_conditions_order_compliant).
+expected_roll_up(complaint_system_without_rules, dsa_art_14_terms_and_conditions_order_not_compliant).
+expected_roll_up(missing_content_moderation_information, dsa_art_14_terms_and_conditions_order_not_compliant).
+expected_roll_up(significant_change_not_notified, dsa_art_14_terms_and_conditions_order_not_compliant).
+expected_roll_up(insignificant_change_not_notified, dsa_art_14_terms_and_conditions_order_compliant).
+expected_roll_up(minors_service_unclear_explanation, dsa_art_14_terms_and_conditions_order_not_compliant).
+expected_roll_up(service_not_for_minors, dsa_art_14_terms_and_conditions_order_compliant).
+expected_roll_up(disproportionate_enforcement, dsa_art_14_terms_and_conditions_order_not_compliant).
+expected_roll_up(no_restriction_enforced, dsa_art_14_terms_and_conditions_order_compliant).
+expected_roll_up(designation_absent_summary_unsure, dsa_art_14_terms_and_conditions_order_indeterminate).
+expected_roll_up(designated_summary_unsure, dsa_art_14_terms_and_conditions_order_indeterminate).
+expected_roll_up(designation_attested_false, dsa_art_14_terms_and_conditions_order_compliant).
+expected_roll_up(designation_attested_true, dsa_art_14_terms_and_conditions_order_not_compliant).
+expected_roll_up(unsure_language_judgement, dsa_art_14_terms_and_conditions_order_indeterminate).
+expected_roll_up(malformed_duplicate_and_unknown_keys, dsa_art_14_terms_and_conditions_order_indeterminate).
+expected_roll_up(well_formed_change_only, dsa_art_14_terms_and_conditions_order_indeterminate).
+expected_roll_up(unbound_key, dsa_art_14_terms_and_conditions_order_indeterminate).
+expected_roll_up(empty_profile, dsa_art_14_terms_and_conditions_order_indeterminate).
+
+roll_up_matches(Subject-ExpectedStatus) :-
+    roll_ups(Subject, Statuses),
+    Statuses == [ExpectedStatus].
+
+one_answer_per_query(Subject) :-
+    contract_queries(Queries),
+    maplist(one_answer(Subject), Queries).
+
+one_answer(Subject, Query) :-
+    answers(Query, Subject, Answers),
+    length(Answers, 1).
+
+cited_six_item_checklist(Subject) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(Subject, Profile),
+    dsa_art_14_terms_and_conditions_order_checklist(Profile, Items),
+    length(Items, 6),
+    maplist(cited_item, Items).
+
+cited_item(item(_, _, cite(_))).
+
+% ---- registry and roll-up ------------------------------------------------
+
+test(every_subject_has_an_expected_roll_up) :-
+    findall(Subject, dsa_art_14_terms_and_conditions_order_subject(Subject), Subjects),
+    findall(Subject, expected_roll_up(Subject, _), ExpectedSubjects),
+    msort(Subjects, SortedSubjects),
+    msort(ExpectedSubjects, SortedExpected),
+    SortedSubjects == SortedExpected.
+
+test(every_subject_resolves_to_its_expected_roll_up) :-
+    findall(Subject-Status, expected_roll_up(Subject, Status), Expectations),
+    maplist(roll_up_matches, Expectations).
+
+test(every_query_gives_exactly_one_answer_on_every_subject) :-
+    findall(Subject, dsa_art_14_terms_and_conditions_order_subject(Subject), Subjects),
+    maplist(one_answer_per_query, Subjects).
+
+test(every_subject_has_a_six_item_checklist_cited_per_item) :-
+    findall(Subject, dsa_art_14_terms_and_conditions_order_subject(Subject), Subjects),
+    maplist(cited_six_item_checklist, Subjects).
+
+test(the_roll_up_label_is_in_the_status_vocabulary) :-
+    dsa_art_14_terms_and_conditions_order_assess(fully_compliant_very_large_platform,
+        dsa_art_14_terms_and_conditions_order_verdict(Status, _)),
+    dsa_art_14_terms_and_conditions_order_status_values(StatusValues),
+    member(Status, StatusValues).
+
+test(the_verdict_cites_the_six_paragraphs) :-
+    findall(Verdict,
+            dsa_art_14_terms_and_conditions_order_assess(fully_compliant_very_large_platform, Verdict),
+            Verdicts),
+    Verdicts == [dsa_art_14_terms_and_conditions_order_verdict(dsa_art_14_terms_and_conditions_order_compliant,
+                     [cite(eu_reg_2022_2065_art_14_1),
+                      cite(eu_reg_2022_2065_art_14_2),
+                      cite(eu_reg_2022_2065_art_14_3),
+                      cite(eu_reg_2022_2065_art_14_4),
+                      cite(eu_reg_2022_2065_art_14_5),
+                      cite(eu_reg_2022_2065_art_14_6)])].
+
+test(the_decision_resolves_on_a_malformed_profile) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(malformed_duplicate_and_unknown_keys, Profile),
+    dsa_art_14_terms_and_conditions_order_decision_resolvable(Profile).
+
+test(the_checklist_names_the_breach_with_its_citation) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(very_large_platform_without_summary, Profile),
+    dsa_art_14_terms_and_conditions_order_checklist(Profile, Items),
+    member(item(art_14_5, unmet(art_14_5_summary_not_compliant), cite(eu_reg_2022_2065_art_14_5)), Items).
+
+% ---- fully compliant very large platform / without summary ----------------
+
+test(fully_compliant_very_large_platform_meets_all_six_duties) :-
+    designated_statement(Statement),
+    answers(art_14_1_terms_and_conditions_content_status, fully_compliant_very_large_platform, FirstAnswers),
+    FirstAnswers == [art_14_1_terms_and_conditions_compliant-[]-[cite(eu_reg_2022_2065_art_14_1)]],
+    answers(art_14_2_significant_change_information_status, fully_compliant_very_large_platform, SecondAnswers),
+    SecondAnswers == [art_14_2_change_information_compliant-[]-[cite(eu_reg_2022_2065_art_14_2)]],
+    answers(art_14_3_minors_explanation_status, fully_compliant_very_large_platform, ThirdAnswers),
+    ThirdAnswers == [art_14_3_minors_explanation_compliant-[]-[cite(eu_reg_2022_2065_art_14_3)]],
+    answers(art_14_4_restriction_enforcement_status, fully_compliant_very_large_platform, FourthAnswers),
+    FourthAnswers == [art_14_4_restriction_enforcement_compliant-[]-[cite(eu_reg_2022_2065_art_14_4)]],
+    answers(art_14_5_terms_and_conditions_summary_status, fully_compliant_very_large_platform, FifthAnswers),
+    FifthAnswers == [art_14_5_summary_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_5)]],
+    answers(art_14_6_official_languages_status, fully_compliant_very_large_platform, SixthAnswers),
+    SixthAnswers == [art_14_6_official_languages_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_6)]].
+
+test(very_large_platform_without_summary_is_not_compliant_with_the_statement_as_basis) :-
+    designated_statement(Statement),
+    answers(art_14_5_terms_and_conditions_summary_status, very_large_platform_without_summary, Answers),
+    Answers == [art_14_5_summary_not_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_5)]].
+
+test(very_large_platform_without_summary_is_not_summary_compliant, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(very_large_platform_without_summary, Profile),
+    art_14_5_terms_and_conditions_summary_status(Profile, art_14_5_summary_compliant, _, _).
+
+% ---- small hosting service / complaint rules / content moderation ----------
+
+test(small_hosting_service_complies_with_14_1_and_owes_nothing_else) :-
+    not_designated_statement(Statement),
+    answers(art_14_1_terms_and_conditions_content_status, small_hosting_service_no_complaint_system, FirstAnswers),
+    FirstAnswers == [art_14_1_terms_and_conditions_compliant-[]-[cite(eu_reg_2022_2065_art_14_1)]],
+    answers(art_14_2_significant_change_information_status, small_hosting_service_no_complaint_system, SecondAnswers),
+    SecondAnswers == [art_14_2_change_information_not_required-[]-[cite(eu_reg_2022_2065_art_14_2)]],
+    answers(art_14_3_minors_explanation_status, small_hosting_service_no_complaint_system, ThirdAnswers),
+    ThirdAnswers == [art_14_3_minors_explanation_not_required-[]-[cite(eu_reg_2022_2065_art_14_3)]],
+    answers(art_14_4_restriction_enforcement_status, small_hosting_service_no_complaint_system, FourthAnswers),
+    FourthAnswers == [art_14_4_restriction_enforcement_not_required-[]-[cite(eu_reg_2022_2065_art_14_4)]],
+    answers(art_14_5_terms_and_conditions_summary_status, small_hosting_service_no_complaint_system, FifthAnswers),
+    FifthAnswers == [art_14_5_summary_not_required-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_5)]],
+    answers(art_14_6_official_languages_status, small_hosting_service_no_complaint_system, SixthAnswers),
+    SixthAnswers == [art_14_6_official_languages_not_required-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_6)]].
+
+test(complaint_system_without_rules_is_not_compliant) :-
+    answers(art_14_1_terms_and_conditions_content_status, complaint_system_without_rules, Answers),
+    Answers == [art_14_1_terms_and_conditions_not_compliant-[]-[cite(eu_reg_2022_2065_art_14_1)]].
+
+test(complaint_system_without_rules_is_not_compliant_not_compliant, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(complaint_system_without_rules, Profile),
+    art_14_1_terms_and_conditions_content_status(Profile, art_14_1_terms_and_conditions_compliant, _, _).
+
+test(missing_content_moderation_information_is_not_compliant) :-
+    answers(art_14_1_terms_and_conditions_content_status, missing_content_moderation_information, Answers),
+    Answers == [art_14_1_terms_and_conditions_not_compliant-[]-[cite(eu_reg_2022_2065_art_14_1)]].
+
+% ---- Art 14(2) ---------------------------------------------------------
+
+test(significant_change_not_notified_is_not_compliant) :-
+    answers(art_14_2_significant_change_information_status, significant_change_not_notified, Answers),
+    Answers == [art_14_2_change_information_not_compliant-[]-[cite(eu_reg_2022_2065_art_14_2)]].
+
+test(significant_change_not_notified_is_not_change_compliant, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(significant_change_not_notified, Profile),
+    art_14_2_significant_change_information_status(Profile, art_14_2_change_information_compliant, _, _).
+
+test(insignificant_change_not_notified_is_not_required) :-
+    answers(art_14_2_significant_change_information_status, insignificant_change_not_notified, Answers),
+    Answers == [art_14_2_change_information_not_required-[]-[cite(eu_reg_2022_2065_art_14_2)]].
+
+% ---- Art 14(3) ---------------------------------------------------------
+
+test(minors_service_unclear_explanation_is_not_compliant) :-
+    answers(art_14_3_minors_explanation_status, minors_service_unclear_explanation, Answers),
+    Answers == [art_14_3_minors_explanation_not_compliant-[]-[cite(eu_reg_2022_2065_art_14_3)]].
+
+test(minors_service_unclear_explanation_is_not_minors_compliant, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(minors_service_unclear_explanation, Profile),
+    art_14_3_minors_explanation_status(Profile, art_14_3_minors_explanation_compliant, _, _).
+
+test(service_not_for_minors_is_not_required) :-
+    answers(art_14_3_minors_explanation_status, service_not_for_minors, Answers),
+    Answers == [art_14_3_minors_explanation_not_required-[]-[cite(eu_reg_2022_2065_art_14_3)]].
+
+% ---- Art 14(4) ---------------------------------------------------------
+
+test(disproportionate_enforcement_is_not_compliant) :-
+    answers(art_14_4_restriction_enforcement_status, disproportionate_enforcement, Answers),
+    Answers == [art_14_4_restriction_enforcement_not_compliant-[]-[cite(eu_reg_2022_2065_art_14_4)]].
+
+test(disproportionate_enforcement_is_not_enforcement_compliant, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(disproportionate_enforcement, Profile),
+    art_14_4_restriction_enforcement_status(Profile, art_14_4_restriction_enforcement_compliant, _, _).
+
+test(no_restriction_enforced_is_not_required) :-
+    answers(art_14_4_restriction_enforcement_status, no_restriction_enforced, Answers),
+    Answers == [art_14_4_restriction_enforcement_not_required-[]-[cite(eu_reg_2022_2065_art_14_4)]].
+
+% ---- the designation: Art 14(5) and 14(6) --------------------------------
+
+test(designation_absent_summary_unsure_is_referred_on_for_the_summary) :-
+    answers(art_14_5_terms_and_conditions_summary_status, designation_absent_summary_unsure, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_2065_art_14_5), cite(commission_vlop_or_vlose_designation_decision)),
+                                   [resolution(cite(commission_vlop_or_vlose_designation_decision), not_attempted),
+                                    inputs_relied_on([concise_clear_machine_readable_summary_of_terms_and_conditions_provided-unsure,
+                                                      designated_as_very_large_online_platform_or_search_engine-absent])])-[]-[]].
+
+test(designation_absent_summary_unsure_is_referred_on_for_the_languages) :-
+    answers(art_14_6_official_languages_status, designation_absent_summary_unsure, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_2065_art_14_6), cite(commission_vlop_or_vlose_designation_decision)),
+                                   [resolution(cite(commission_vlop_or_vlose_designation_decision), not_attempted),
+                                    inputs_relied_on([designated_as_very_large_online_platform_or_search_engine-absent])])-[]-[]].
+
+test(designated_summary_unsure_goes_to_a_lawyer) :-
+    answers(art_14_5_terms_and_conditions_summary_status, designated_summary_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(concise_clear_machine_readable_summary_of_terms_and_conditions_provided, cite(eu_reg_2022_2065_art_14_5)),
+                                   [inputs_relied_on([concise_clear_machine_readable_summary_of_terms_and_conditions_provided-unsure])])-[]-[]].
+
+test(designated_summary_unsure_publishes_in_every_language) :-
+    designated_statement(Statement),
+    answers(art_14_6_official_languages_status, designated_summary_unsure, Answers),
+    Answers == [art_14_6_official_languages_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_6)]].
+
+test(designation_attested_false_is_not_required_for_both) :-
+    not_designated_statement(Statement),
+    answers(art_14_5_terms_and_conditions_summary_status, designation_attested_false, SummaryAnswers),
+    SummaryAnswers == [art_14_5_summary_not_required-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_5)]],
+    answers(art_14_6_official_languages_status, designation_attested_false, LanguageAnswers),
+    LanguageAnswers == [art_14_6_official_languages_not_required-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_6)]].
+
+test(designation_attested_true_is_not_compliant_for_both) :-
+    designated_statement(Statement),
+    answers(art_14_5_terms_and_conditions_summary_status, designation_attested_true, SummaryAnswers),
+    SummaryAnswers == [art_14_5_summary_not_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_5)]],
+    answers(art_14_6_official_languages_status, designation_attested_true, LanguageAnswers),
+    LanguageAnswers == [art_14_6_official_languages_not_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_6)]].
+
+test(designation_attested_true_is_not_summary_not_required, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(designation_attested_true, Profile),
+    art_14_5_terms_and_conditions_summary_status(Profile, art_14_5_summary_not_required, _, _).
+
+test(what_if_the_designation_is_stated_false_the_breaches_lift) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(designation_attested_true, Profile),
+    not_designated_statement(Statement),
+    findall(NewStatus,
+            dsa_art_14_terms_and_conditions_order_what_if(Profile, designated_as_very_large_online_platform_or_search_engine, Statement, NewStatus),
+            Statuses),
+    Statuses == [dsa_art_14_terms_and_conditions_order_compliant].
+
+test(what_if_the_summary_is_withdrawn_the_platform_breaches) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(fully_compliant_very_large_platform, Profile),
+    dsa_art_14_terms_and_conditions_order_what_if(Profile, concise_clear_machine_readable_summary_of_terms_and_conditions_provided, false,
+        dsa_art_14_terms_and_conditions_order_not_compliant).
+
+% ---- the evidence and reason constructors: url/2, document/2, provenance/2 ----
+% The attestation's four arguments are copied into BASIS exactly as supplied and
+% never read; an argument holding an unbound variable is wrong_type.
+
+test(url_evidence_is_copied_into_the_basis) :-
+    Statement = attested(true, attestation(host_service, attestation_time, commission_designation_decision,
+                                           url(designation_list_address, retrieval_time))),
+    Profile = [attribute(terms_and_conditions_published_in_official_languages_of_all_member_states_of_service, true),
+               attribute(designated_as_very_large_online_platform_or_search_engine, Statement)],
+    findall(Result-Basis-Citations,
+            art_14_6_official_languages_status(Profile, Result, Basis, Citations),
+            Answers),
+    Answers == [art_14_6_official_languages_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_6)]].
+
+test(url_evidence_with_an_unbound_part_is_wrong_type) :-
+    Profile = [attribute(designated_as_very_large_online_platform_or_search_engine,
+                         attested(true, attestation(host_service, attestation_time, commission_designation_decision,
+                                                    url(_UnboundAddress, retrieval_time))))],
+    dsa_art_14_terms_and_conditions_order_input_problems(Profile, Problems),
+    Problems == [wrong_type(designated_as_very_large_online_platform_or_search_engine)].
+
+test(document_evidence_is_copied_into_the_basis) :-
+    Statement = attested(false, attestation(host_service, attestation_time, commission_designation_list,
+                                            document(upload_identifier, document_digest))),
+    Profile = [attribute(designated_as_very_large_online_platform_or_search_engine, Statement)],
+    findall(Result-Basis-Citations,
+            art_14_5_terms_and_conditions_summary_status(Profile, Result, Basis, Citations),
+            Answers),
+    Answers == [art_14_5_summary_not_required-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_5)]].
+
+test(document_evidence_with_an_unbound_part_is_wrong_type) :-
+    Profile = [attribute(designated_as_very_large_online_platform_or_search_engine,
+                         attested(false, attestation(host_service, attestation_time, commission_designation_list,
+                                                     document(upload_identifier, _UnboundDigest))))],
+    dsa_art_14_terms_and_conditions_order_input_problems(Profile, Problems),
+    Problems == [wrong_type(designated_as_very_large_online_platform_or_search_engine)].
+
+test(provenance_reason_is_accepted_and_copied_into_the_basis) :-
+    Statement = attested(true, attestation(host_service, attestation_time,
+                                           provenance(commission_designation_decision, designation_list),
+                                           none)),
+    Profile = [attribute(concise_clear_machine_readable_summary_of_terms_and_conditions_provided, true),
+               attribute(designated_as_very_large_online_platform_or_search_engine, Statement)],
+    dsa_art_14_terms_and_conditions_order_input_problems(Profile, Problems),
+    Problems == [],
+    findall(Result-Basis-Citations,
+            art_14_5_terms_and_conditions_summary_status(Profile, Result, Basis, Citations),
+            Answers),
+    Answers == [art_14_5_summary_compliant-[outside_fact(designated_as_very_large_online_platform_or_search_engine, Statement)]-[cite(eu_reg_2022_2065_art_14_5)]].
+
+test(provenance_reason_with_an_unbound_part_is_wrong_type) :-
+    Profile = [attribute(designated_as_very_large_online_platform_or_search_engine,
+                         attested(true, attestation(host_service, attestation_time,
+                                                    provenance(commission_designation_decision, _UnboundSource),
+                                                    none)))],
+    dsa_art_14_terms_and_conditions_order_input_problems(Profile, Problems),
+    Problems == [wrong_type(designated_as_very_large_online_platform_or_search_engine)].
+
+% ---- unsure judgement ----------------------------------------------------
+
+test(unsure_language_judgement_goes_to_a_lawyer) :-
+    answers(art_14_1_terms_and_conditions_content_status, unsure_language_judgement, Answers),
+    Answers == [needs_legal_review(open_textured(terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language, cite(eu_reg_2022_2065_art_14_1)),
+                                   [inputs_relied_on([terms_and_conditions_include_information_on_restrictions_on_recipient_information-true,
+                                                      terms_and_conditions_include_information_on_content_moderation-true,
+                                                      terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language-unsure,
+                                                      terms_and_conditions_publicly_available_in_easily_accessible_and_machine_readable_format-true])])-[]-[]].
+
+test(unsure_language_judgement_is_not_compliant_yet, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(unsure_language_judgement, Profile),
+    art_14_1_terms_and_conditions_content_status(Profile, art_14_1_terms_and_conditions_compliant, _, _).
+
+% ---- input check and missing keys ----------------------------------------
+
+test(malformed_profile_lists_its_problems_in_order) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(malformed_duplicate_and_unknown_keys, Profile),
+    findall(Problems, dsa_art_14_terms_and_conditions_order_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(terms_and_conditions_changed), unknown_key(stray_key)]].
+
+test(malformed_profile_gives_input_problems_to_every_query) :-
+    contract_queries(Queries),
+    maplist(input_problems_answer(malformed_duplicate_and_unknown_keys), Queries).
+
+input_problems_answer(Subject, Query) :-
+    answers(Query, Subject, Answers),
+    Answers == [input_problems([duplicate_key(terms_and_conditions_changed), unknown_key(stray_key)])-[]-[]].
+
+test(well_formed_change_only_has_no_problem_and_names_significance) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(well_formed_change_only, Profile),
+    dsa_art_14_terms_and_conditions_order_input_problems(Profile, Problems),
+    Problems == [],
+    answers(art_14_2_significant_change_information_status, well_formed_change_only, Answers),
+    Answers == [indeterminate([change_to_terms_and_conditions_is_significant])-[]-[]].
+
+test(unbound_key_is_reported_as_given) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(unbound_key, Profile),
+    Profile = [attribute(GivenKey, _)],
+    art_14_2_significant_change_information_status(Profile, Result, Basis, Citations),
+    Result = input_problems([unknown_key(NamedKey)]),
+    NamedKey == GivenKey,
+    Basis == [],
+    Citations == [].
+
+test(empty_profile_names_one_missing_key_per_query) :-
+    answers(art_14_1_terms_and_conditions_content_status, empty_profile, FirstAnswers),
+    FirstAnswers == [indeterminate([terms_and_conditions_include_information_on_restrictions_on_recipient_information])-[]-[]],
+    answers(art_14_2_significant_change_information_status, empty_profile, SecondAnswers),
+    SecondAnswers == [indeterminate([terms_and_conditions_changed])-[]-[]],
+    answers(art_14_3_minors_explanation_status, empty_profile, ThirdAnswers),
+    ThirdAnswers == [indeterminate([service_primarily_directed_at_minors])-[]-[]],
+    answers(art_14_4_restriction_enforcement_status, empty_profile, FourthAnswers),
+    FourthAnswers == [indeterminate([provider_applies_or_enforces_restriction])-[]-[]],
+    answers(art_14_5_terms_and_conditions_summary_status, empty_profile, FifthAnswers),
+    FifthAnswers == [indeterminate([concise_clear_machine_readable_summary_of_terms_and_conditions_provided])-[]-[]],
+    answers(art_14_6_official_languages_status, empty_profile, SixthAnswers),
+    SixthAnswers == [indeterminate([terms_and_conditions_published_in_official_languages_of_all_member_states_of_service])-[]-[]].
+
+:- end_module(test_public_interface).

@@ -1,107 +1,86 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_queries.clausal -- PROPERTY tests for the query layer.
+% test_queries.clausal -- PROPERTY tests for the query layer: one test per
+% query predicate of queries.clausal and per query type registered in
+% manifest.yaml query_interface (#2, #7, #15, #16).
 % Run: python -m clausal.testing eu/nis2_domain_name_data/tests/test_queries.clausal
 % =====================================================================
 :- module(test_queries, []).
 :- use_module(library(datetime), [datetime/7]).
 :- use_module(eu/nis2_domain_name_data/queries, [
     nis2_domain_name_data_profile_keys/1,
+    nis2_domain_name_data_input_problems/2,
     nis2_domain_name_data_what_if/4,
-    access_reply_deadline/2,
-    access_reply_hours_elapsed/3,
-    access_reply_outcome/4
+    nis2_domain_name_data_reply_deadline/2,
+    nis2_domain_name_data_hours_elapsed/3
 ]).
 :- use_module(eu/nis2_domain_name_data/nis2_domain_name_data, [
-    nis2_domain_name_data_status/2,
-    nis2_domain_name_data_checklist/2
+    decide_nis2_domain_name_data/2,
+    nis2_domain_name_data_checklist/2,
+    access_reply_timeliness/3
 ]).
-:- use_module(eu/nis2_domain_name_data/fixtures, [nis2_domain_name_data_profile_for/2]).
 
 test(profile_keys_are_the_contract_keys) :-
     nis2_domain_name_data_profile_keys(ProfileKeys),
     ProfileKeys == [provider_type, point_of_contact_email_address_differs_from_registrant, point_of_contact_telephone_number_differs_from_registrant, registration_data_is_personal_data, requester_is_legitimate_access_seeker, request_is_lawful_and_duly_substantiated, reply_without_undue_delay].
 
-% #2 eligibility and #7 justification
-test(eligibility_status_for_registry) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    nis2_domain_name_data_status(Profile, eligible).
+test(the_reexported_input_check_answers_once) :-
+    findall(Problems, nis2_domain_name_data_input_problems([attribute(provider_type, other)], Problems), Answers),
+    Answers == [[]].
 
-test(justification_checklist_carries_cite) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    nis2_domain_name_data_checklist(Profile, [item(_, _, cite(_))]).
+test(the_reexported_input_check_names_an_unknown_key) :-
+    nis2_domain_name_data_input_problems([attribute(colour, blue)], [unknown_key(colour)]).
 
-% #16 what-if
-test(what_if_provider_type_other_makes_it_ineligible) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    nis2_domain_name_data_what_if(Profile, provider_type, other, ineligible).
+% #16 what-if: making another entity a registry makes it addressed.
+test(what_if_another_entity_were_a_registry) :-
+    findall(NewStatus, nis2_domain_name_data_what_if([attribute(provider_type, other)], provider_type, tld_name_registry, NewStatus), Answers),
+    Answers == [addressed_provider].
 
-test(what_if_provider_type_other_is_not_eligible, fail) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    nis2_domain_name_data_what_if(Profile, provider_type, other, eligible).
+test(what_if_a_registry_were_another_entity) :-
+    nis2_domain_name_data_what_if([attribute(provider_type, tld_name_registry)], provider_type, other, not_addressed_provider).
 
-test(what_if_yields_exactly_one_solution) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    findall(Status, nis2_domain_name_data_what_if(Profile, provider_type, other, Status), Statuses),
-    Statuses == [ineligible].
+% #2 eligibility verdict with citations.
+test(the_eligibility_verdict_is_cited) :-
+    decide_nis2_domain_name_data([attribute(provider_type, domain_name_registration_service_entity)], nis2_domain_name_data_verdict(addressed_provider, [cite(eu_dir_2022_2555_art_28_1)|_])).
 
-test(what_if_restores_eligibility_from_other) :-
-    nis2_domain_name_data_profile_for(other_provider, Profile),
-    nis2_domain_name_data_what_if(Profile, provider_type, domain_name_registration_service_entity, eligible).
+% #7 justification: every checklist row carries cite(...).
+test(every_checklist_row_is_cited) :-
+    nis2_domain_name_data_checklist([attribute(provider_type, tld_name_registry)], Items),
+    length(Items, ItemCount),
+    findall(Key, member(item(_, _, cite(Key)), Items), CitedKeys),
+    length(CitedKeys, ItemCount).
 
-test(what_if_adds_an_absent_key) :-
-    nis2_domain_name_data_what_if([], provider_type, tld_name_registry, eligible).
+% #15 deadline: the latest reply moment is receipt plus 72 hours.
+test(the_reply_deadline_is_seventy_two_hours_after_receipt) :-
+    datetime(2026, 3, 2, 9, 0, 0, ReceiptDatetime),
+    findall(DeadlineDatetime, nis2_domain_name_data_reply_deadline(ReceiptDatetime, DeadlineDatetime), [DeadlineDatetime]),
+    nis2_domain_name_data_hours_elapsed(ReceiptDatetime, DeadlineDatetime, 72).
 
-test(what_if_invalid_value_is_an_input_problem) :-
-    nis2_domain_name_data_profile_for(registry_addressed, Profile),
-    nis2_domain_name_data_what_if(Profile, provider_type, bogus, input_problems([wrong_type(provider_type)])).
+test(a_reply_at_the_deadline_is_on_time) :-
+    datetime(2026, 3, 2, 9, 0, 0, ReceiptDatetime),
+    nis2_domain_name_data_reply_deadline(ReceiptDatetime, DeadlineDatetime),
+    nis2_domain_name_data_hours_elapsed(ReceiptDatetime, DeadlineDatetime, HoursElapsed),
+    access_reply_timeliness([attribute(reply_without_undue_delay, true)], HoursElapsed, on_time).
 
-% #15 deadline
-test(deadline_is_seventy_two_hours_after_receipt) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 4, 10, 0, 0, Expected),
-    access_reply_deadline(Receipt, Deadline),
-    Deadline == Expected.
+test(a_part_of_an_hour_counts_as_a_whole_hour) :-
+    datetime(2026, 3, 2, 9, 0, 0, ReceiptDatetime),
+    datetime(2026, 3, 5, 9, 30, 0, ReplyDatetime),
+    nis2_domain_name_data_hours_elapsed(ReceiptDatetime, ReplyDatetime, 73).
 
-test(deadline_is_not_forty_eight_hours_after_receipt, fail) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 3, 10, 0, 0, Wrong),
-    access_reply_deadline(Receipt, Wrong).
+test(seventy_two_hours_thirty_minutes_is_late) :-
+    datetime(2026, 3, 2, 9, 0, 0, ReceiptDatetime),
+    datetime(2026, 3, 5, 9, 30, 0, ReplyDatetime),
+    nis2_domain_name_data_hours_elapsed(ReceiptDatetime, ReplyDatetime, HoursElapsed),
+    access_reply_timeliness([attribute(reply_without_undue_delay, true)], HoursElapsed, late(hour_limit)).
 
-test(hours_elapsed_exact_is_seventy_two) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 4, 10, 0, 0, Reply),
-    access_reply_hours_elapsed(Receipt, Reply, 72).
+test(a_reply_one_second_after_receipt_counts_one_hour) :-
+    datetime(2026, 3, 2, 9, 0, 0, ReceiptDatetime),
+    datetime(2026, 3, 2, 9, 0, 1, ReplyDatetime),
+    nis2_domain_name_data_hours_elapsed(ReceiptDatetime, ReplyDatetime, 1).
 
-test(hours_elapsed_rounds_a_partial_hour_up) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 4, 10, 30, 0, Reply),
-    access_reply_hours_elapsed(Receipt, Reply, 73).
-
-test(hours_elapsed_partial_hour_is_not_seventy_two, fail) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 4, 10, 30, 0, Reply),
-    access_reply_hours_elapsed(Receipt, Reply, 72).
-
-test(outcome_on_time_at_the_limit) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 4, 10, 0, 0, Reply),
-    access_reply_outcome([attribute(reply_without_undue_delay, true)], Receipt, Reply, on_time).
-
-test(outcome_late_one_partial_hour_after_the_limit) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 4, 10, 30, 0, Reply),
-    access_reply_outcome([attribute(reply_without_undue_delay, true)], Receipt, Reply, late(hour_limit)).
-
-test(outcome_late_is_not_on_time, fail) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 4, 10, 30, 0, Reply),
-    access_reply_outcome([attribute(reply_without_undue_delay, true)], Receipt, Reply, on_time).
-
-test(outcome_yields_one_solution) :-
-    datetime(2026, 1, 1, 10, 0, 0, Receipt),
-    datetime(2026, 1, 2, 10, 0, 0, Reply),
-    findall(Result, access_reply_outcome([attribute(reply_without_undue_delay, true)], Receipt, Reply, Result), Results),
-    Results == [on_time].
+test(a_reply_before_receipt_counts_no_hours, fail) :-
+    datetime(2026, 3, 2, 9, 0, 0, ReceiptDatetime),
+    datetime(2026, 3, 1, 9, 0, 0, ReplyDatetime),
+    nis2_domain_name_data_hours_elapsed(ReceiptDatetime, ReplyDatetime, _).
 
 :- end_module(test_queries).

@@ -1,0 +1,103 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_risk_governance_and_framework_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_risk_governance_and_framework_kernel, [dora_ict_risk_governance_and_framework_input_problems/2]).
+:- use_module(m__eu_dora_ict_risk_governance_and_framework_citations, [citation/2, implements/1]).
+
+test(an_empty_profile_has_no_problem) :-
+    dora_ict_risk_governance_and_framework_input_problems([], Problems),
+    Problems == [].
+test(a_well_formed_profile_has_no_problem) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, true), attribute(has_internal_governance_and_control_framework, unsure), attribute(framework_reviewed_at_least_yearly, true)], Problems),
+    Problems == [].
+test(the_input_check_answers_once) :-
+    findall(Problems, dora_ict_risk_governance_and_framework_input_problems([attribute(major_change_occurred, true)], Problems), Answers),
+    Answers == [[]].
+test(a_term_that_is_not_a_list_is_not_a_profile) :-
+    dora_ict_risk_governance_and_framework_input_problems(not_a_profile, Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_profile_is_not_a_profile) :-
+    dora_ict_risk_governance_and_framework_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(an_element_that_is_not_an_attribute_is_not_a_profile) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(major_change_occurred, true), major_change_occurred], Problems),
+    Problems == [wrong_type(profile)].
+test(unsure_is_wrong_type_for_a_crisp_key) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(framework_reviewed_at_least_yearly, unsure)], Problems),
+    Problems == [wrong_type(framework_reviewed_at_least_yearly)].
+test(unsure_is_in_type_for_a_judgement_key) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(framework_reviewed_periodically, unsure)], Problems),
+    Problems == [].
+test(a_number_is_wrong_type) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(major_change_occurred, 7)], Problems),
+    Problems == [wrong_type(major_change_occurred)].
+test(a_repeated_key_is_a_duplicate_and_not_wrong_type) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(major_change_occurred, true), attribute(major_change_occurred, unsure)], Problems),
+    Problems == [duplicate_key(major_change_occurred)].
+test(a_key_outside_the_contract_is_unknown_once) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(entity_colour, blue), attribute(entity_colour, red)], Problems),
+    Problems == [unknown_key(entity_colour)].
+test(contract_problems_come_before_unknown_keys) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(entity_colour, blue), attribute(legacy_systems_risk_assessed, maybe), attribute(financial_entity_is_microenterprise, unsure)], Problems),
+    Problems == [wrong_type(financial_entity_is_microenterprise), wrong_type(legacy_systems_risk_assessed), unknown_key(entity_colour)].
+test(the_required_term_carries_its_duties) :-
+    Result = required([internal_governance_and_control_framework, management_body_framework_responsibility]),
+    Result = required(Duties),
+    Duties == [internal_governance_and_control_framework, management_body_framework_responsibility].
+test(the_outstanding_term_carries_its_duties) :-
+    Result = outstanding([legacy_systems_risk_assessment]),
+    Result = outstanding(Duties),
+    Duties == [legacy_systems_risk_assessment].
+test(the_indeterminate_term_carries_one_key) :-
+    Result = indeterminate([financial_entity_is_article_16_1_entity]),
+    Result = indeterminate([Key]),
+    Key == financial_entity_is_article_16_1_entity.
+test(the_referral_term_carries_its_reason_and_context) :-
+    Result = needs_legal_review(open_textured(has_internal_governance_and_control_framework, cite(eu_reg_2022_2554_art_5_1)), [inputs_relied_on([financial_entity_is_article_16_1_entity - false, has_internal_governance_and_control_framework - unsure])]),
+    Result = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == has_internal_governance_and_control_framework,
+    CitationKey == eu_reg_2022_2554_art_5_1,
+    Pairs == [financial_entity_is_article_16_1_entity - false, has_internal_governance_and_control_framework - unsure].
+test(the_input_problems_term_carries_its_problems) :-
+    Result = input_problems([wrong_type(profile)]),
+    Result = input_problems(Problems),
+    Problems == [wrong_type(profile)].
+test(complete_and_incomplete_are_distinct) :-
+    dif(complete, incomplete).
+test(none_outstanding_and_simplified_framework_entity_are_distinct) :-
+    dif(none_outstanding, simplified_framework_entity).
+test(complete_and_simplified_framework_entity_are_distinct) :-
+    dif(complete, simplified_framework_entity).
+test(unsure_is_neither_true_nor_false) :-
+    dif(unsure, true),
+    dif(unsure, false).
+test(the_annual_and_periodic_reviews_are_distinct) :-
+    dif(annual_framework_review, periodic_framework_review).
+test(the_article_5_1_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_5_1, Record),
+    Record = [label - _, ref - _, verbatim - _].
+test(the_article_16_1_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_16_1, _).
+test(the_article_8_7_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_8_7, _).
+test(the_microenterprise_definition_is_a_marker) :-
+    implements(eu_reg_2022_2554_art_3_60).
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2022_2554_art_6_5).
+
+test(unsure_is_not_wrong_type_for_a_judgement_key, fail) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(framework_reviewed_periodically, unsure)], [wrong_type(framework_reviewed_periodically)]).
+test(an_unrecorded_key_is_not_recorded, fail) :-
+    citation(eu_reg_2022_2554_art_99, _).
+
+cp_test_names([an_empty_profile_has_no_problem, a_well_formed_profile_has_no_problem, the_input_check_answers_once, a_term_that_is_not_a_list_is_not_a_profile, an_unbound_profile_is_not_a_profile, an_element_that_is_not_an_attribute_is_not_a_profile, unsure_is_wrong_type_for_a_crisp_key, unsure_is_in_type_for_a_judgement_key, a_number_is_wrong_type, a_repeated_key_is_a_duplicate_and_not_wrong_type, a_key_outside_the_contract_is_unknown_once, contract_problems_come_before_unknown_keys, the_required_term_carries_its_duties, the_outstanding_term_carries_its_duties, the_indeterminate_term_carries_one_key, the_referral_term_carries_its_reason_and_context, the_input_problems_term_carries_its_problems, complete_and_incomplete_are_distinct, none_outstanding_and_simplified_framework_entity_are_distinct, complete_and_simplified_framework_entity_are_distinct, unsure_is_neither_true_nor_false, the_annual_and_periodic_reviews_are_distinct, the_article_5_1_citation_is_recorded, the_article_16_1_citation_is_recorded, the_article_8_7_citation_is_recorded, the_microenterprise_definition_is_a_marker, a_recorded_key_is_implemented]).
+cp_test_fail_names([unsure_is_not_wrong_type_for_a_judgement_key, an_unrecorded_key_is_not_recorded]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

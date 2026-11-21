@@ -1,0 +1,347 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/cra_administrative_fines
+shape_family: numeric
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "cra_administrative_fines"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The result constructors and the root-export atoms
+# (profile keys, provision atoms, unsure) are defined in queries.clausal as
+# constructor facts and listed here by name/arity.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- cra_administrative_fines.clausal --
+  - "administrative_fine_maximum/4"
+  - "decide_cra_administrative_fines/2"
+  - "cra_administrative_fines_status/2"
+  - "cra_administrative_fines_checklist/2"
+  - "cra_administrative_fines_decision_resolvable/1"
+  - "cra_administrative_fines_status_values/1"
+  # -- queries.clausal --
+  - "cra_administrative_fines_profile_keys/1"
+  - "cra_administrative_fines_input_problems/2"
+  - "cra_administrative_fines_what_if/4"
+  - "not_yet_applicable/0"
+  - "not_listed_in_article_64/0"
+  - "date/3"
+  - "fine_maximum/3"
+  - "fine_excluded/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "infringed_provision/0"
+  - "offender_is_open_source_software_steward/0"
+  - "offender_is_undertaking/0"
+  - "total_worldwide_annual_turnover_in_euros/0"
+  - "annex_i_essential_cybersecurity_requirements/0"
+  - "article_13/0"
+  - "article_14/0"
+  - "article_18/0"
+  - "article_19/0"
+  - "article_20/0"
+  - "article_21/0"
+  - "article_22/0"
+  - "article_23/0"
+  - "article_28/0"
+  - "article_30_paragraphs_1_to_4/0"
+  - "article_31_paragraphs_1_to_4/0"
+  - "article_32_paragraphs_1_to_3/0"
+  - "article_33_paragraph_5/0"
+  - "article_39/0"
+  - "article_41/0"
+  - "article_47/0"
+  - "article_49/0"
+  - "article_53/0"
+  - "incorrect_incomplete_or_misleading_information_in_reply_to_request/0"
+  - "other_provision/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "cra_administrative_fines_subject/1"
+  - "cra_administrative_fines_profile_for/2"
+  - "cra_administrative_fines_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports none (only the kit: formalize_lib, kit/deadline_lib,
+# library(reif), library(clpz)).
+uses: []
+
+scope: >-
+  The maximum administrative fines of Article 64 of Regulation (EU) 2024/2847
+  (the Cyber Resilience Act), with the date from which Article 64 applies
+  (Article 71(2)) and the open-source software steward derogation of
+  Art 64(10)(b). One query, administrative_fine_maximum/4, answers for one
+  infringement, named by the provision infringed, at the date of the
+  infringement: which tier of Art 64(2), (3) or (4) applies and the maximum
+  fine in euro cents (the higher of the fixed amount and, for an undertaking,
+  the percentage of its total worldwide annual turnover; the fixed amount at a
+  tie; the half cent of 2,5 percent dropped); or that Article 64 does not yet
+  apply (before 11 December 2027), does not list the provision, or does not
+  apply to an open-source software steward (middle and lowest tiers only, on
+  the printed reading of 'paragraphs 3 to 9'). Undertaking and steward status
+  are the caller's tri-state judgements (unsure refers to a lawyer). Out of
+  scope: the fine itself (Art 64(5)), whether the offender is within the
+  Regulation's scope or bound by the provision, whether the provision was
+  infringed, national application (Art 64(6) to (9)), and the relation to
+  other fining regimes. Every reading is the drafter's, not a lawyer's; open
+  questions Q1 (reach of Art 64(10)) and Q2 (fining conduct before
+  11 December 2027) are named for a lawyer.
+
+sources:
+  - "Regulation (EU) 2024/2847 of the European Parliament and of the Council of 23 October 2024 on horizontal cybersecurity requirements for products with digital elements (Cyber Resilience Act), OJ L, 2024/2847, 20.11.2024 (CELEX 32024R2847, original OJ text as published, raw sha256 fe0cca4a0caec50e7cf5a91432b94a19b211f86be8584fdba56372bdcea571ed): Art 64(1), (2), (3), (4), (10) lead words and points (a) and (b)"
+  - "Regulation (EU) 2024/2847, Art 3(14) (open-source software steward) and Art 3(48) (free and open-source software), read as the caller's judgement"
+  - "Regulation (EU) 2024/2847, Art 71(2) (date of application: 11 December 2027)"
+
+query_interface:
+  2: "cra_administrative_fines_status/2"      # status verdict of a request
+  7: "cra_administrative_fines_checklist/2"   # justification: one item per ground with cite(...) list
+  16: "cra_administrative_fines_what_if/4"    # what_if: re-evaluate under an overridden key or date
+  23: "administrative_fine_maximum/4"         # calculation: the cap in euro cents
+
+deferred_set:
+- what: headings_and_lead_words
+  units:
+  - 32024R2847#art_003
+  - 32024R2847#art_064
+  - 32024R2847#art_071
+  reason: 'The headings of Articles 3, 64 and 71 and the lead words of Article 3 carry
+    no rule of their own: they introduce the definitions and paragraphs, which are
+    formalised, or deferred, one by one.'
+  consequence: 'None for a caller: the answers come from the paragraphs.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: amount_of_the_fine_in_each_case
+  units:
+  - 32024R2847#parag_064.005
+  - 32024R2847#point_064.005_a
+  - 32024R2847#point_064.005_b
+  - 32024R2847#point_064.005_c
+  reason: Art 64(5) lists what is taken into account when the amount of a fine is
+    decided in each individual case (nature, gravity and duration; earlier fines for
+    a similar infringement; size and market share). The order gives the maximum only
+    (reading (1)); the amount within it is the authority's weighing of all relevant
+    circumstances, with no rule this order could compute.
+  consequence: No answer gives a fine; every final answer is a maximum.
+  declaration: answered_with_caveat
+  debt: true
+  open: not formalisable as a computation; the deferral stands for this run.
+- what: communication_between_authorities
+  units:
+  - 32024R2847#parag_064.006
+  reason: Art 64(6) requires market surveillance authorities that apply fines to communicate
+    them to those of other Member States through the system of Article 34 of Regulation
+    (EU) 2019/1020; it is a duty of the authorities with no bearing on the maximum.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: fines_on_public_bodies
+  units:
+  - 32024R2847#parag_064.007
+  reason: Art 64(7) leaves to each Member State whether and to what extent fines may
+    be imposed on public authorities and public bodies (reading (11), open question
+    (Q8)).
+  consequence: The order gives the Union maximum even for a public body; whether any
+    fine applies to it is for national rules.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: imposition_by_courts_or_other_bodies
+  units:
+  - 32024R2847#parag_064.008
+  reason: Art 64(8) lets Member States have the fines imposed by competent national
+    courts or other bodies, with equivalent effect; it says who imposes the fine,
+    not its maximum (reading (11)).
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: fines_in_addition_to_other_measures
+  units:
+  - 32024R2847#parag_064.009
+  reason: Art 64(9) allows fines in addition to other corrective or restrictive measures
+    for the same infringement; it gives no output for a maximum (reading (12)).
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+- what: derogation_lead_words
+  units:
+  - 32024R2847#parag_064.010
+  reason: 'The lead words of Art 64(10) (''By way of derogation from paragraphs 3
+    to 9, the administrative fines referred to in those paragraphs shall not apply
+    to the following:'') are read in reading (7): they limit point (b) to the middle
+    and lowest tiers, which THE LIMBS formalise through step (F4); no citation key
+    names this unit. Whether ''paragraphs 3 to 9'' is a slip for ''paragraphs 2 to
+    9'' is open question (Q1).'
+  consequence: For a provision of the highest tier the steward judgement is not read
+    and no derogation applies.
+  declaration: answered_with_caveat
+  debt: true
+  open: a lawyer's question (Q1); to be revisited in a later change to the orders,
+    not in this order's rules; the deferral stands for this run.
+- what: micro_and_small_enterprise_early_warning_derogation
+  units:
+  - 32024R2847#point_064.010_a
+  reason: Art 64(10)(a) exempts manufacturers that qualify as microenterprises or
+    small enterprises with regard to a failure to meet the deadline of Article 14(2),
+    point (a), or Article 14(4), point (a). On the literal reading of the lead words
+    (reading (7)) it decides no answer, because those deadlines are obligations of
+    Article 14, fined under paragraph 2, which the derogation does not name; the order
+    has no key for it.
+  consequence: A micro or small manufacturer that missed the 24-hour early-warning
+    deadline gets the highest-tier maximum, not an exemption, on this reading (open
+    question (Q1)).
+  declaration: answered_with_caveat
+  debt: true
+  open: a lawyer's question (Q1); formalisable with two more keys if the reading changes;
+    the deferral stands for this run.
+- what: steward_definitions_read_as_the_callers_judgement
+  units:
+  - 32024R2847#point_003_14
+  - 32024R2847#point_003_48
+  reason: Art 3(14) defines open-source software steward and Art 3(48) free and open-source
+    software. They are quoted for reading (8); whether the offender is a steward is
+    the caller's judgement offender_is_open_source_software_steward, true, false or
+    unsure.
+  consequence: The order does not test the definition; the caller states the judgement.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable only as a judgement; the deferral stands for this run.
+- what: definitions_this_order_does_not_read
+  units:
+  - 32024R2847#point_003_1
+  - 32024R2847#point_003_2
+  - 32024R2847#point_003_3
+  - 32024R2847#point_003_4
+  - 32024R2847#point_003_5
+  - 32024R2847#point_003_6
+  - 32024R2847#point_003_7
+  - 32024R2847#point_003_8
+  - 32024R2847#point_003_9
+  - 32024R2847#point_003_10
+  - 32024R2847#point_003_11
+  - 32024R2847#point_003_12
+  - 32024R2847#point_003_13
+  - 32024R2847#point_003_15
+  - 32024R2847#point_003_16
+  - 32024R2847#point_003_17
+  - 32024R2847#point_003_18
+  - 32024R2847#point_003_19
+  - 32024R2847#point_003_20
+  - 32024R2847#point_003_21
+  - 32024R2847#point_003_22
+  - 32024R2847#point_003_23
+  - 32024R2847#point_003_24
+  - 32024R2847#point_003_25
+  - 32024R2847#point_003_26
+  - 32024R2847#point_003_27
+  - 32024R2847#point_003_28
+  - 32024R2847#point_003_29
+  - 32024R2847#point_003_30
+  - 32024R2847#point_003_31
+  - 32024R2847#point_003_32
+  - 32024R2847#point_003_33
+  - 32024R2847#point_003_34
+  - 32024R2847#point_003_35
+  - 32024R2847#point_003_36
+  - 32024R2847#point_003_37
+  - 32024R2847#point_003_38
+  - 32024R2847#point_003_39
+  - 32024R2847#point_003_40
+  - 32024R2847#point_003_41
+  - 32024R2847#point_003_42
+  - 32024R2847#point_003_43
+  - 32024R2847#point_003_44
+  - 32024R2847#point_003_45
+  - 32024R2847#point_003_46
+  - 32024R2847#point_003_47
+  - 32024R2847#point_003_49
+  - 32024R2847#point_003_50
+  - 32024R2847#point_003_51
+  reason: The other points of Article 3 define words that no limb of this order reads
+    (for example product with digital elements, manufacturer, microenterprises and
+    small enterprises, placing on the market, market surveillance authority, notified
+    body).
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: entry_into_force
+  units:
+  - 32024R2847#parag_071.001
+  reason: Art 71(1) fixes the entry into force of the Regulation; the date from which
+    Article 64 applies is the one Art 71(2) gives, which the order reads.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+
+excluded_set:
+- what: obligations_named_in_the_tiers
+  instrument: Regulation (EU) 2024/2847 Annex I and Articles 13, 14, 18 to 23, 28,
+    30 to 33, 39, 41, 47, 49 and 53
+  cites:
+  - 32024R2847#anx_I
+  - 32024R2847#art_013
+  - 32024R2847#art_014
+  - 32024R2847#art_018
+  - 32024R2847#art_019
+  - 32024R2847#art_020
+  - 32024R2847#art_021
+  - 32024R2847#art_022
+  - 32024R2847#art_023
+  - 32024R2847#art_028
+  - 32024R2847#art_030
+  - 32024R2847#art_031
+  - 32024R2847#art_032
+  - 32024R2847#art_033
+  - 32024R2847#art_039
+  - 32024R2847#art_041
+  - 32024R2847#art_047
+  - 32024R2847#art_049
+  - 32024R2847#art_053
+  reason: Not pinned in this domain. Art 64(2) and (3) name these provisions; whether
+    one of them was infringed is the caller's classification, given as the atom of
+    infringed_provision (reading (2)).
+  consequence: The answers presuppose that the provision named was infringed; the
+    order does not check it (open question (Q9)).
+- what: product_scope_and_exclusions
+  instrument: Regulation (EU) 2024/2847 Art 2
+  cites:
+  - 32024R2847#art_002
+  reason: Not pinned in this domain. Whether the product and the offender are within
+    the scope of the Regulation is the caller's fact (reading (9)).
+  consequence: The answers presuppose an infringement within the scope of the Regulation
+    (open question (Q9)).
+- what: transitional_provisions
+  instrument: Regulation (EU) 2024/2847 Art 69
+  cites:
+  - 32024R2847#art_069
+  reason: Not pinned in this domain. The transitional provisions for products placed
+    on the market before the Regulation applies are not read (open question (Q2)).
+  consequence: The caller checks the transitional provisions first.
+- what: information_and_communication_system
+  instrument: Regulation (EU) 2019/1020 Art 34
+  cites:
+  - 32019R1020#art_034
+  reason: Not pinned in this domain. Art 64(6) names the system of Article 34 of Regulation
+    (EU) 2019/1020 for communicating fines; the order does not read it.
+  consequence: None for these answers.

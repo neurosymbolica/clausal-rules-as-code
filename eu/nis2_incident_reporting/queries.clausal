@@ -1,4 +1,39 @@
 % SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/nis2_incident_reporting.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive) Art 23(3) and (4);
+% pinned unit text of 32022L2555 (OJ L 333, 27.12.2022).
+%
+% The declared query types are served by the slice itself:
+%   #2 eligibility: incident_significance/3 (significant / not_significant /
+%      a status compound), with the facade verdict
+%      decide_nis2_incident_reporting/2 and its cited checklist
+%      nis2_incident_reporting_checklist/2;
+%   #15 deadline: reporting_step_timeliness/4 (the consequence of missing a
+%      limit: late(hour_limit) or late(without_undue_delay), never excused)
+%      and incident_reporting_steps/2 (which steps are due and the limit of
+%      each). The hour limits are integer hour counts the caller supplies
+%      (reading (4)); the one-month limits are listed, never computed
+%      (excluded set: calendar_month_period), so no date arithmetic is done.
+% This layer adds only:
+%   nis2_incident_reporting_what_if/4 (#16 what-if): override one key in
+%      the ATTRIBUTE LIST and re-evaluate the significance status. The kit's
+%      override_key/4 works on dicts; this order's profile is an attribute
+%      list [attribute(Key, Value), ...], so the override is a local list
+%      plumbing step (every occurrence of the key is replaced by one).
+%   nis2_incident_reporting_profile_keys/1: top-level profile key schema
+%   nis2_incident_reporting_input_problems/2: re-exported as the kernel wrote it
+%   the ROOT EXPORTS (the six profile key atoms, the two STEP atoms and the
+%      judgement value unsure), each served as a plain fact so the package
+%      root carries it as an attribute, and the RESULT CONSTRUCTORS, which
+%      are data: exported, declared below, with no clauses.
+% No clause here decides a statutory condition, so none carries a
+% provenance marker: every answer comes from the slice.
+% =====================================================================
+
 :- module(queries, [
     nis2_incident_reporting_profile_keys/1,
     nis2_incident_reporting_input_problems/2,
@@ -11,13 +46,66 @@
     incident_notification_without_undue_delay/0,
     early_warning/0,
     incident_notification/0,
-    unsure/0
+    unsure/0,
+    significant/0,
+    not_significant/0,
+    on_time/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    step_due/3,
+    hours_after_awareness/1,
+    months_after_notification/1,
+    months_after_handling/1,
+    late/1
 ]).
 
 :- use_module(eu/nis2_incident_reporting/kernel, [nis2_incident_reporting_input_problems/2]).
 :- use_module(eu/nis2_incident_reporting/nis2_incident_reporting, [nis2_incident_reporting_status/2]).
 
-% Root atoms: the six profile keys, the two step atoms and the judgement value unsure.
+% ---- result constructors (data: never called as queries, no clauses) ----
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    step_due(step, limit, cite),
+    hours_after_awareness(hours),
+    months_after_notification(months),
+    months_after_handling(months),
+    late(requirement)
+]).
+
+% Schema of top-level profile keys: the keys of the order's typed input
+% contract, in its order (also the root_exports order).
+nis2_incident_reporting_profile_keys([severe_operational_disruption_or_financial_loss, considerable_damage_to_other_persons, trust_service_provider_incident_affects_trust_services, incident_ongoing_at_final_report_due, early_warning_without_undue_delay, incident_notification_without_undue_delay]).
+
+% #16 what-if: re-evaluate the significance status with one key
+% hypothetically set (added when absent, replacing every occurrence when
+% present).
+nis2_incident_reporting_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    nis2_incident_reporting_status(Hypothesis, NewStatus).
+
+override_attribute(Profile, Key, Value, Hypothesis) :-
+    exclude(attribute_for_key(Key), Profile, OtherAttributes),
+    append(OtherAttributes, [attribute(Key, Value)], Hypothesis).
+
+attribute_for_key(Key, attribute(AttributeKey, _Value)) :-
+    AttributeKey == Key.
+
+% ---- root exports: profile key atoms, STEP atoms, judgement value -------
 severe_operational_disruption_or_financial_loss.
 considerable_damage_to_other_persons.
 trust_service_provider_incident_affects_trust_services.
@@ -28,21 +116,9 @@ early_warning.
 incident_notification.
 unsure.
 
-% schema of top-level profile keys, in the order of the typed input contract
-nis2_incident_reporting_profile_keys([severe_operational_disruption_or_financial_loss, considerable_damage_to_other_persons, trust_service_provider_incident_affects_trust_services, incident_ongoing_at_final_report_due, early_warning_without_undue_delay, incident_notification_without_undue_delay]).
-
-% what-if: re-evaluate the significance status with one key hypothetically overridden.
-nis2_incident_reporting_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    override_attributes(Profile, OverriddenKey, NewValue, Hypothesis),
-    nis2_incident_reporting_status(Hypothesis, NewStatus).
-
-% override_attributes(Attributes, Key, Value, NewAttributes): every attribute for Key is
-% dropped and one attribute(Key, Value) is added at the end.
-override_attributes([], Key, Value, [attribute(Key, Value)]).
-override_attributes([attribute(Key, _)|Rest], Key, Value, NewAttributes) :-
-    override_attributes(Rest, Key, Value, NewAttributes).
-override_attributes([attribute(OtherKey, OtherValue)|Rest], Key, Value, [attribute(OtherKey, OtherValue)|NewRest]) :-
-    dif(OtherKey, Key),
-    override_attributes(Rest, Key, Value, NewRest).
+% ---- verdict atoms ------------------------------------------------------
+significant.
+not_significant.
+on_time.
 
 :- end_module(queries).

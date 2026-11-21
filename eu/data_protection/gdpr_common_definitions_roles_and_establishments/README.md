@@ -4,7 +4,7 @@
 
 ## Scope
 
-Regulation (EU) 2016/679 (GDPR) Art 4 definitions of the roles, the special data kinds, the establishments and the authority notions: points 4(7) controller, 4(8) processor, 4(13) genetic data, 4(14) biometric data, 4(15) data concerning health, 4(16) main establishment, 4(18) enterprise, 4(19) group of undertakings, 4(22) supervisory authority concerned, 4(23) cross-border processing and 4(24) relevant and reasoned objection. Personal data (4(1)) is carried as one judgement key. Decided here: whether each defined term is met on a profile of facts, so that every data-protection order reads it the same way. Out of scope: any obligation that applies, which supervisory authority leads, and points 4(17), 4(20), 4(21) (deferred) and the other Art 4 points (sibling order gdpr-common-definitions-data-and-processing).
+Regulation (EU) 2016/679 (GDPR) Art 4, points (7), (8), (13), (14), (15), (16), (18), (19), (22), (23) and (24): given one profile of facts about one situation, whether each defined term is met (controller, processor, genetic data, biometric data, data concerning health, main establishment, enterprise, group of undertakings, supervisory authority concerned, cross-border processing, relevant and reasoned objection), with personal data (Art 4(1)) carried as one judgement and the one outside fact of Art 4(7) (law providing for the controller) read as an attested value. Open-textured judgements are the user's; an unsure judgement or an absent outside fact that decides is referred for legal review. Out of scope: whether any obligation applies or which supervisory authority leads; points 4(17), 4(20) and 4(21) (deferred; 4(20) in the sibling order gdpr-binding-corporate-rules) and the other points of Art 4 (sibling order gdpr-common-definitions-data-and-processing).
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Regulation (EU) 2016/679 (GDPR) Art 4 definitions of the roles, the special data
 
 ## What was checked
 
-- 209 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 213 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

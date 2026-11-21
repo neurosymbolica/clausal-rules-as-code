@@ -1,0 +1,162 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/ai_act/post_market_monitoring.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% post_market_monitoring_what_if/4      (#16 what-if): override one profile key
+%                                       of a request, then re-evaluate it
+% post_market_monitoring_profile_keys/1: top-level profile key schema
+% post_market_monitoring_input_problems/2: the problems a profile has ([] = none),
+%                                       re-exported from the kernel unchanged
+%
+% QUERY-TYPE COVERAGE (each served by the slice's public contract):
+%   #14 obligation surfacing: post_market_monitoring_duty_status/4 answers
+%       duty_applies when the provider must establish and document a
+%       post-market monitoring system based on a plan in the technical
+%       documentation (Art 72(1), 72(3)).
+%   #15 deadline: post_market_monitoring_duty_status/4 answers
+%       compliance_required_by_31_december_2030 (Art 111(1)) and
+%       compliance_required_by_2_august_2030 (Art 111(2)) before the day;
+%       the consequence of the day passing is duty_applies from that day.
+%   #13 compliance check: post_market_monitoring_integration_status/3 says
+%       whether integrating into an existing system and plan is open
+%       (Art 72(4)).
+%   #7 justification: post_market_monitoring_checklist/2 carries cite(...)
+%       per item.
+%
+% RESULT ATOMS: the order requires each to be served by the package; they
+% are defined here as plain facts (never called as queries; they decide
+% nothing). RESULT CONSTRUCTORS are data: they are exported and declared
+% with constructors/1, and have no clauses. The eleven profile key atoms
+% and the judgement value unsure are bare atoms: they need no export, and
+% the manifest lists them under root_exports for the package root.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override is
+% written here over the list (the kit override_key/4 works on dicts only).
+% Plumbing only: no clause here decides a statutory condition.
+% =====================================================================
+
+:- module(queries, [
+    post_market_monitoring_profile_keys/1,
+    post_market_monitoring_input_problems/2,
+    post_market_monitoring_what_if/4,
+    not_applicable_on_date/0,
+    not_a_provider/0,
+    not_a_high_risk_ai_system/0,
+    compliance_required_by_31_december_2030/0,
+    existing_system_without_significant_changes_not_covered/0,
+    compliance_required_by_2_august_2030/0,
+    duty_applies/0,
+    integration_not_available/0,
+    integration_available/0,
+    date/3,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/ai_act/post_market_monitoring/kernel, [post_market_monitoring_input_problems/2]).
+:- use_module(eu/ai_act/post_market_monitoring/post_market_monitoring, [post_market_monitoring_status/2]).
+
+% ---- result constructors (exported data, no clauses) ------------------
+:- constructors([
+    date(year, month, day),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+post_market_monitoring_profile_keys([provider_of_the_system, system_is_a_high_risk_ai_system_listed_in_annex_iii, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, significant_changes_in_design_as_from_the_chapter_iii_date, intended_to_be_used_by_public_authorities, covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, point_5_annex_iii_system_of_a_financial_institution_under_union_financial_services_law, post_market_monitoring_system_and_plan_already_established_under_that_legislation, integration_achieves_an_equivalent_level_of_protection]).
+
+% ---- result atoms of the called contract (served, never decided here) ----
+not_applicable_on_date.
+not_a_provider.
+not_a_high_risk_ai_system.
+compliance_required_by_31_december_2030.
+existing_system_without_significant_changes_not_covered.
+compliance_required_by_2_august_2030.
+duty_applies.
+integration_not_available.
+integration_available.
+
+% #16 what-if: re-evaluate a request with one key hypothetically overridden.
+% A request is duty(Profile, AssessmentDate), integration(Profile) or a bare
+% profile (answered as the integration query by the facade).
+post_market_monitoring_what_if(Request, OverriddenKey, NewValue, NewStatus) :-
+    request_with_override(Request, OverriddenKey, NewValue, Hypothesis),
+    post_market_monitoring_status(Hypothesis, NewStatus).
+
+request_with_override(Request, _, _, Request) :-
+    var(Request).
+request_with_override(Request, OverriddenKey, NewValue, duty(NewProfile, AssessmentDate)) :-
+    nonvar(Request),
+    Request = duty(Profile, AssessmentDate),
+    profile_with_override(Profile, OverriddenKey, NewValue, NewProfile).
+request_with_override(Request, OverriddenKey, NewValue, integration(NewProfile)) :-
+    nonvar(Request),
+    Request = integration(Profile),
+    profile_with_override(Profile, OverriddenKey, NewValue, NewProfile).
+request_with_override(Request, OverriddenKey, NewValue, NewProfile) :-
+    nonvar(Request),
+    Request \= duty(_, _),
+    Request \= integration(_),
+    profile_with_override(Request, OverriddenKey, NewValue, NewProfile).
+
+% A proper list gets every item of the key replaced by one new item; any
+% other term is left as it is (the input check then answers for it).
+profile_with_override(Profile, OverriddenKey, NewValue, NewProfile) :-
+    proper_list_t(Profile, IsList),
+    override_when_list(IsList, Profile, OverriddenKey, NewValue, NewProfile).
+
+override_when_list(false, Profile, _, _, Profile).
+override_when_list(true, Profile, OverriddenKey, NewValue, NewProfile) :-
+    without_key(Profile, OverriddenKey, Remaining),
+    append(Remaining, [attribute(OverriddenKey, NewValue)], NewProfile).
+
+proper_list_t(Term, false) :-
+    var(Term).
+proper_list_t(Term, true) :-
+    Term == [].
+proper_list_t(Term, Truth) :-
+    nonvar(Term),
+    Term = [_|Tail],
+    proper_list_t(Tail, Truth).
+proper_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+without_key([], _, []).
+without_key([Element|Elements], OverriddenKey, Remaining) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey,
+    without_key(Elements, OverriddenKey, Remaining).
+without_key([Element|Elements], OverriddenKey, [Element|Remaining]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== OverriddenKey,
+    without_key(Elements, OverriddenKey, Remaining).
+without_key([Element|Elements], OverriddenKey, [Element|Remaining]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    without_key(Elements, OverriddenKey, Remaining).
+without_key([Element|Elements], OverriddenKey, [Element|Remaining]) :-
+    var(Element),
+    without_key(Elements, OverriddenKey, Remaining).
+
+:- end_module(queries).

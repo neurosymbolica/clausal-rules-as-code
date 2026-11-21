@@ -1,0 +1,195 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_ict_risk_protection_and_detection.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2022/2554 (DORA), Articles 9 and 10, and
+% Article 16(1), first subparagraph. Every reading is the drafter's reading,
+% not a lawyer's.
+%
+% The declared query types are served as follows:
+%   #13 compliance_check: ict_risk_protection_and_detection_duties_complete/3
+%       (the slice), whether every duty that applies is performed;
+%   #2  eligibility: decide_dora_ict_risk_protection_and_detection/2 (the
+%       slice), complete as the positive verdict, a status compound as the
+%       indeterminate verdict, incomplete as the negative verdict;
+%   #7  justification: dora_ict_risk_protection_and_detection_checklist/2
+%       (the slice), one cited item per duty.
+% This layer adds:
+%   dora_ict_risk_protection_and_detection_what_if/4 (#16 what-if): override
+%       one key, then re-evaluate the completeness status;
+%   dora_ict_risk_protection_and_detection_profile_keys/1: the profile key
+%       schema, in root_exports order;
+%   dora_ict_risk_protection_and_detection_input_problems/2: the input check,
+%       re-exported as the scaffold wrote it in the kernel;
+%   the result atoms, profile key atoms, duty atoms, the entity type atom
+%       data_reporting_service_provider and the judgement value unsure, each
+%       a zero-arity fact so that the package root exports it (root_exports).
+%       They decide nothing.
+%   the result constructors: exported, declared with constructors/1, and
+%       given NO clauses (a constructor is data, never called as a query).
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], not a dict,
+% so the override is a local list edit: every entry for the key is removed
+% (keys compared by ==) and attribute(Key, Value) is put in front. The order
+% reads keys by name, never by position, so the position changes no answer.
+% (NOTES S5: an attribute-list override_key is a candidate for the kit.)
+% =====================================================================
+
+:- module(queries, [
+    dora_ict_risk_protection_and_detection_profile_keys/1,
+    dora_ict_risk_protection_and_detection_input_problems/2,
+    dora_ict_risk_protection_and_detection_what_if/4,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    unsure/0,
+    data_reporting_service_provider/0,
+    financial_entity_is_article_16_1_entity/0,
+    dora_entity_type/0,
+    monitors_and_controls_security_and_functioning_of_ict_systems/0,
+    deploys_ict_security_tools_policies_and_procedures/0,
+    ict_security_policies_procedures_protocols_and_tools_implemented/0,
+    uses_appropriate_ict_solutions_and_processes/0,
+    ict_solutions_ensure_security_of_data_transfer/0,
+    ict_solutions_minimise_data_corruption_loss_unauthorised_access_and_flaws/0,
+    ict_solutions_prevent_unavailability_impairment_breaches_and_data_loss/0,
+    ict_solutions_protect_data_from_data_management_risks/0,
+    information_security_policy_developed_and_documented/0,
+    network_and_infrastructure_management_structure_established/0,
+    access_limiting_policies_and_access_rights_controls_implemented/0,
+    strong_authentication_and_cryptographic_key_protection_implemented/0,
+    ict_change_management_policies_procedures_and_controls_implemented/0,
+    patch_and_update_policies_documented/0,
+    network_connection_infrastructure_can_be_severed_or_segmented/0,
+    ict_change_management_process_approved_with_specific_protocols/0,
+    anomaly_detection_mechanisms_in_place/0,
+    mechanisms_to_identify_single_points_of_failure_in_place/0,
+    detection_mechanisms_regularly_tested/0,
+    detection_mechanisms_enable_control_layers_alert_thresholds_and_automatic_alerts/0,
+    sufficient_resources_devoted_to_monitoring_user_activity_anomalies_and_incidents/0,
+    trade_report_checking_systems_in_place/0,
+    monitoring_and_control_of_ict_systems/0,
+    ict_security_tools_policies_and_procedures/0,
+    ict_security_policies_procedures_protocols_and_tools/0,
+    appropriate_ict_solutions_and_processes/0,
+    security_of_data_transfer/0,
+    minimised_data_corruption_loss_and_unauthorised_access/0,
+    prevention_of_unavailability_impairment_breaches_and_loss/0,
+    protection_from_data_management_risks/0,
+    information_security_policy/0,
+    network_and_infrastructure_management/0,
+    access_control_policies/0,
+    strong_authentication_and_cryptographic_key_protection/0,
+    ict_change_management/0,
+    patch_and_update_policies/0,
+    severable_network_connection_infrastructure/0,
+    approved_ict_change_management_process/0,
+    anomaly_detection_mechanisms/0,
+    single_point_of_failure_identification/0,
+    regular_testing_of_detection_mechanisms/0,
+    detection_control_layers_alert_thresholds_and_automatic_alerts/0,
+    resources_to_monitor_user_activity_anomalies_and_incidents/0,
+    trade_report_checking_systems/0
+]).
+
+:- use_module(eu/dora_ict_risk_protection_and_detection/kernel, [dora_ict_risk_protection_and_detection_input_problems/2]).
+:- use_module(eu/dora_ict_risk_protection_and_detection/dora_ict_risk_protection_and_detection, [dora_ict_risk_protection_and_detection_status/2]).
+
+% ---- result constructors (data terms; no clauses, never called as queries) ----
+:- constructors([required(duties), outstanding(duties), indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(key, citation), inputs_relied_on(pairs), provenance(clause, citations), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_ict_risk_protection_and_detection_profile_keys([financial_entity_is_article_16_1_entity, dora_entity_type, monitors_and_controls_security_and_functioning_of_ict_systems, deploys_ict_security_tools_policies_and_procedures, ict_security_policies_procedures_protocols_and_tools_implemented, uses_appropriate_ict_solutions_and_processes, ict_solutions_ensure_security_of_data_transfer, ict_solutions_minimise_data_corruption_loss_unauthorised_access_and_flaws, ict_solutions_prevent_unavailability_impairment_breaches_and_data_loss, ict_solutions_protect_data_from_data_management_risks, information_security_policy_developed_and_documented, network_and_infrastructure_management_structure_established, access_limiting_policies_and_access_rights_controls_implemented, strong_authentication_and_cryptographic_key_protection_implemented, ict_change_management_policies_procedures_and_controls_implemented, patch_and_update_policies_documented, network_connection_infrastructure_can_be_severed_or_segmented, ict_change_management_process_approved_with_specific_protocols, anomaly_detection_mechanisms_in_place, mechanisms_to_identify_single_points_of_failure_in_place, detection_mechanisms_regularly_tested, detection_mechanisms_enable_control_layers_alert_thresholds_and_automatic_alerts, sufficient_resources_devoted_to_monitoring_user_activity_anomalies_and_incidents, trade_report_checking_systems_in_place]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden
+dora_ict_risk_protection_and_detection_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_ict_risk_protection_and_detection_status(Hypothesis, NewStatus).
+
+% ---- plumbing: the attribute-list override (decides nothing statutory) ----
+override_attribute(Profile, Key, Value, [attribute(Key, Value)|Kept]) :-
+    drop_attributes(Profile, Key, Kept).
+
+drop_attributes([], _, []).
+drop_attributes([attribute(ElementKey, _)|Elements], Key, Kept) :-
+    ElementKey == Key,
+    drop_attributes(Elements, Key, Kept).
+drop_attributes([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Kept]) :-
+    ElementKey \== Key,
+    drop_attributes(Elements, Key, Kept).
+
+% ---- result atoms (final answers), exported for the package root ----
+complete.
+incomplete.
+none_outstanding.
+simplified_framework_entity.
+
+% ---- the judgement value and the entity type atom the order reads ----
+unsure.
+data_reporting_service_provider.
+
+% ---- the twenty-four profile key atoms, in root_exports order ----
+financial_entity_is_article_16_1_entity.
+dora_entity_type.
+monitors_and_controls_security_and_functioning_of_ict_systems.
+deploys_ict_security_tools_policies_and_procedures.
+ict_security_policies_procedures_protocols_and_tools_implemented.
+uses_appropriate_ict_solutions_and_processes.
+ict_solutions_ensure_security_of_data_transfer.
+ict_solutions_minimise_data_corruption_loss_unauthorised_access_and_flaws.
+ict_solutions_prevent_unavailability_impairment_breaches_and_data_loss.
+ict_solutions_protect_data_from_data_management_risks.
+information_security_policy_developed_and_documented.
+network_and_infrastructure_management_structure_established.
+access_limiting_policies_and_access_rights_controls_implemented.
+strong_authentication_and_cryptographic_key_protection_implemented.
+ict_change_management_policies_procedures_and_controls_implemented.
+patch_and_update_policies_documented.
+network_connection_infrastructure_can_be_severed_or_segmented.
+ict_change_management_process_approved_with_specific_protocols.
+anomaly_detection_mechanisms_in_place.
+mechanisms_to_identify_single_points_of_failure_in_place.
+detection_mechanisms_regularly_tested.
+detection_mechanisms_enable_control_layers_alert_thresholds_and_automatic_alerts.
+sufficient_resources_devoted_to_monitoring_user_activity_anomalies_and_incidents.
+trade_report_checking_systems_in_place.
+
+% ---- the twenty-two duty atoms, in duty order ----
+monitoring_and_control_of_ict_systems.
+ict_security_tools_policies_and_procedures.
+ict_security_policies_procedures_protocols_and_tools.
+appropriate_ict_solutions_and_processes.
+security_of_data_transfer.
+minimised_data_corruption_loss_and_unauthorised_access.
+prevention_of_unavailability_impairment_breaches_and_loss.
+protection_from_data_management_risks.
+information_security_policy.
+network_and_infrastructure_management.
+access_control_policies.
+strong_authentication_and_cryptographic_key_protection.
+ict_change_management.
+patch_and_update_policies.
+severable_network_connection_infrastructure.
+approved_ict_change_management_process.
+anomaly_detection_mechanisms.
+single_point_of_failure_identification.
+regular_testing_of_detection_mechanisms.
+detection_control_layers_alert_thresholds_and_automatic_alerts.
+resources_to_monitor_user_activity_anomalies_and_incidents.
+trade_report_checking_systems.
+
+:- end_module(queries).

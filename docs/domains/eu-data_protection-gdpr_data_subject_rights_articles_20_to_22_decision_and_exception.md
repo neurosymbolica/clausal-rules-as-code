@@ -1,4 +1,4 @@
-# Whether a controller must comply with one data subject request of type portability (GDPR Art 20), objection (Art 21) or automated decision (Art 22), under Regulation ...
+# Regulation (EU) 2016/679 (GDPR), Arts 20 to 22 with the Art 12(2) second sentence, 12(5), 12(6) and the Art 23(1) restriction: for ONE data subject request whose ...
 
 `eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 153/153 | none (no provision-tracking ledger) | pass | pass | pass |
+| 251/251 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Whether a controller must comply with one data subject request of type portability (GDPR Art 20), objection (Art 21) or automated decision (Art 22), under Regulation (EU) 2016/679 Arts 12(2)-(6), 20(1),(3),(4), 21(1),(2),(3),(6), 22(1)-(4) and 23(1) opening words. Decided: engagement of the right, the first relieving exception (Art 12(5), Art 12(2), Art 23 and the specific ones), and the Art 12(6) identity suspension. Out of scope and handed to the lawyer or a sibling order: access, rectification, erasure and restriction requests, the response period, Art 20(2), Arts 21(4)-(5), the grounds and content rules of Art 23, and the lawfulness of the processing under Arts 6 and 9.
+Regulation (EU) 2016/679 (GDPR), Arts 20 to 22 with the Art 12(2) second sentence, 12(5), 12(6) and the Art 23(1) restriction: for ONE data subject request whose request_type is portability (Art 20), objection (Art 21, claim-driven by objection_ground_claimed: art21_1, art21_2 or art21_6) or automated_decision (Art 22), decides whether the controller must comply (must_comply / need_not_comply, or the non-final statuses indeterminate, needs_legal_review, suspended under Art 12(6), input_problems) and which exception relieves it (Art 20(3) second sentence, Art 20(4), Art 21(1) compelling grounds and legal claims, Art 21(6) public-interest task, Art 22(2)(a)-(c) subject to the Art 22(4) bar, Art 12(5), Art 12(2), Art 23). Out of scope: access, rectification, erasure and restriction (sibling order), the response period and the Art 19 communication, Art 12(3) and 12(4) response duties, the Art 23(1)(a)-(j) grounds and Art 23(2) content (attested outside fact), Art 20(2), Art 21(4)-(5), the adequacy of the Art 22(3) safeguards, and every open-textured judgement, which is handed to the user or a lawyer.
 
 ## Pinned sources
 
@@ -70,27 +70,9 @@ Whether a controller must comply with one data subject request of type portabili
 
     **Consequence for a user:** Whether the processing meets the Art 89(1) safeguards is folded into the archiving, research or statistics judgements: the caller assesses Art 89(1) itself before answering those judgements true.
 
-??? info "art20_1_engagement_conditions_as_profile_facts"
+??? info "art22_exceptions_and_bar_without_an_order_citation_key"
 
-    **Why:** The conditions of Art 20(1) (data provided by the data subject, processing based on consent or contract, processing by automated means) are read from three profile flags; the technical format and the transmission without hindrance are not scored.
+    **Why:** The Art 22(2)(b) and (c) exceptions and the Art 22(4) bar ARE decided in request_exception.clausal (exception rows art22_2_b and art22_2_c, special_category_bar), under the package citation keys eu_reg_2016_679_art_22_2_b, eu_reg_2016_679_art_22_2_c and eu_reg_2016_679_art_22_4; the order's citation table names no key for these units (point (a) has one), so the provision ledger cannot count them as formalized. Recorded here for ledger accounting only (reading 15, Q8 RULED).
 
-    **Consequence for a user:** The answer takes the three Art 20(1) conditions as facts stated in the profile and does not check the structured, commonly used and machine-readable format or that the transmission to another controller is without hindrance: the caller checks those.
-
-??? info "art21_2_and_21_3_direct_marketing_as_profile_fact"
-
-    **Why:** The right to object to direct marketing and its consequence (no further processing for such purposes) are read from the single flag processing_for_direct_marketing, with no balancing; the extent of profiling related to direct marketing and what ceasing the processing consists of are not modelled.
-
-    **Consequence for a user:** The answer takes whether the processing is for direct marketing as a fact stated in the profile and says only that the controller must comply; the caller checks that profiling related to such marketing also stops and that the data are no longer processed for those purposes (Art 21(2), 21(3)).
-
-??? info "art22_2_exceptions_as_profile_facts"
-
-    **Why:** The three exceptions of Art 22(2) are read from a contract-necessity judgement, the attested outside fact on authorisation by law and the explicit-consent flag; whether the law also lays down suitable measures is folded into that outside fact.
-
-    **Consequence for a user:** The answer takes the three Art 22(2) exceptions as facts stated or attested in the profile: the caller checks that the contract necessity is real, that the authorising law lays down suitable measures to safeguard the data subject, and that the consent is explicit.
-
-??? info "art22_4_special_categories_bar"
-
-    **Why:** The bar on decisions based on special categories is read from two profile flags (decision_based_on_special_categories and special_category_condition_and_safeguards_met_for_decision); whether point (a) or (g) of Art 9(2) really applies is not checked.
-
-    **Consequence for a user:** The answer takes whether a special-category condition under Art 9(2)(a) or (g) and suitable safeguards are in place as a fact stated in the profile: the caller checks that under Art 9 before relying on the answer.
+    **Consequence for a user:** None in the answers: an authorising law (attested outside fact) or explicit consent relieves the controller unless the Art 22(4) bar applies, as reading 15 states; the caller relies on that reading, not on a ledger key.
 

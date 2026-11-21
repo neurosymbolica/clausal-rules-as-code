@@ -20,11 +20,16 @@ modules:
 # via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
-  # (gdpr_complaints_and_judicial_remedies_input_problems/2 is re-exported by queries.clausal)
+  # (gdpr_complaints_and_judicial_remedies_input_problems/2 is defined here and
+  #  re-exported by queries.clausal; listed once below)
   # -- citations.clausal --
   - "citation/2"
-  - "implements/1"
   # -- gdpr_complaints_and_judicial_remedies.clausal --
+  - "decide_gdpr_complaints_and_judicial_remedies/2"
+  - "gdpr_complaints_and_judicial_remedies_status/2"
+  - "gdpr_complaints_and_judicial_remedies_checklist/2"
+  - "gdpr_complaints_and_judicial_remedies_decision_resolvable/1"
+  - "gdpr_complaints_and_judicial_remedies_status_values/1"
   - "complaint_right/3"
   - "authority_decision_remedy_right/3"
   - "authority_inaction_remedy_right/4"
@@ -40,28 +45,6 @@ public_interface:
   - "no_judicial_remedy_right/0"
   - "forum_establishment_state_only/0"
   - "forum_establishment_or_habitual_residence_state/0"
-  - "decide_gdpr_complaints_and_judicial_remedies/2"
-  - "gdpr_complaints_and_judicial_remedies_status/2"
-  - "gdpr_complaints_and_judicial_remedies_checklist/2"
-  - "gdpr_complaints_and_judicial_remedies_decision_resolvable/1"
-  - "gdpr_complaints_and_judicial_remedies_status_values/1"
-  # -- queries.clausal --
-  - "gdpr_complaints_and_judicial_remedies_profile_keys/1"
-  - "gdpr_complaints_and_judicial_remedies_input_problems/2"
-  - "gdpr_complaints_and_judicial_remedies_what_if/4"
-  - "gdpr_complaints_and_judicial_remedies_eligibility/4"
-  - "is_data_subject/0"
-  - "data_subject_considers_processing_infringes_regulation/0"
-  - "decision_is_legally_binding/0"
-  - "decision_concerns_the_caller/0"
-  - "complaint_lodged_under_article_77/0"
-  - "authority_competent_under_articles_55_and_56/0"
-  - "authority_handled_the_complaint/0"
-  - "three_months_from_the_complaint_have_passed/0"
-  - "authority_informed_on_progress_or_outcome/0"
-  - "data_subject_considers_rights_infringed_by_processing/0"
-  - "defendant_is_member_state_public_authority_acting_in_public_powers/0"
-  - "unsure/0"
   - "indeterminate/1"
   - "needs_legal_review/2"
   - "open_textured/2"
@@ -78,6 +61,10 @@ public_interface:
   - "unknown_key/1"
   - "wrong_type/1"
   - "duplicate_key/1"
+  # -- queries.clausal --
+  - "gdpr_complaints_and_judicial_remedies_profile_keys/1"
+  - "gdpr_complaints_and_judicial_remedies_input_problems/2"
+  - "gdpr_complaints_and_judicial_remedies_what_if/4"
   # -- fixtures.clausal --
   - "gdpr_complaints_and_judicial_remedies_subject/1"
   - "gdpr_complaints_and_judicial_remedies_profile_for/2"
@@ -88,18 +75,40 @@ public_interface:
 independence: no_external_scorer
 
 # Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. This package imports only the kit (formalize_lib), no backbone.
+# domain imports. This order imports only the kit's formalize_lib (a kit
+# module, not a shared backbone package), so none is declared.
 uses: []
 
-scope: "Regulation (EU) 2016/679 (GDPR) Arts 77(1), 78(1), 78(2), 79(1) and 79(2): for the facts a caller states about one situation, whether the right to lodge a complaint with a supervisory authority exists, whether the judicial remedy against a legally binding decision of a supervisory authority concerning the caller exists, whether the judicial remedy against a competent authority that does not handle a complaint or does not inform within three months exists, whether the judicial remedy against a controller or processor exists, and which courts Art 79(2) names. Each right is stated independently. Out of scope (handed to the caller, a lawyer or a sibling order): whether a complaint or claim would succeed, whether processing infringes the Regulation, whether the data subject's view is right, which authority to choose, the competence of the authority under Arts 55 and 56 (an attested outside fact), the counting of the three months, the legal characterisations legally binding and concerning them (tri-state judgements; unsure refers), Art 77(2), Art 78(3) and (4), Arts 80 and 82 and the definition of data subject in Art 4(1)."
+scope: "For the facts a caller states in one profile, whether the data subject (or,
+  for Art 78(1), any natural or legal person) has each of the rights of Regulation
+  (EU) 2016/679 Arts 77(1), 78(1), 78(2) and 79(1), and which courts Art 79(2) names
+  for proceedings against a controller or processor. Decided here: the right to lodge
+  a complaint with a supervisory authority (Art 77(1)); the judicial remedy against a
+  legally binding decision of a supervisory authority concerning the caller (Art 78(1),
+  'legally binding' and 'concerning them' handed to the caller as tri-state judgements);
+  the judicial remedy where the competent authority does not handle a complaint or does
+  not inform within three months (Art 78(2), competence under Arts 55 and 56 an attested
+  outside fact, the three months stated by the caller); the judicial remedy against a
+  controller or processor (Art 79(1)); and the courts of Art 79(2). Out of scope: whether
+  a complaint or claim would succeed, whether the processing infringes the Regulation,
+  which remedy comes first (each right is stated independently), the authority's duty
+  to inform (Art 77(2)), the courts and the forwarding of Art 78(3) and (4), competence
+  (Arts 55 and 56), compensation (Art 82), representation (Art 80) and the definition
+  of data subject (Art 4(1))."
 
 sources:
-  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504, Art 77(1) (parag_077.001), Art 77(2) (parag_077.002, quoted, deferred), Art 78(1) (parag_078.001), Art 78(2) (parag_078.002), Art 78(3) and (4) (parag_078.003, parag_078.004, deferred), Art 79(1) (parag_079.001), Art 79(2) (parag_079.002); pinned by tools/pin_statute.py, fetched 2026-11-12"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
+    2016 on the protection of natural persons with regard to the processing of personal
+    data and on the free movement of such data (General Data Protection Regulation),
+    OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504, Art 77(1)
+    (parag_077.001), Art 78(1) (parag_078.001), Art 78(2) (parag_078.002), Art 79(1)
+    (parag_079.001), Art 79(2) (parag_079.002); Art 77(2), Art 78(3) and (4) pinned and
+    deferred."
 
 query_interface:
-  2: "gdpr_complaints_and_judicial_remedies_eligibility/4"     # eligibility: eligible | ineligible | indeterminate_eligibility per right query
-  7: "gdpr_complaints_and_judicial_remedies_checklist/2"       # justification: one cited item(...) per right
-  16: "gdpr_complaints_and_judicial_remedies_what_if/4"        # what_if: re-evaluate under an overridden key
+  2: "gdpr_complaints_and_judicial_remedies_status/2"      # eligibility: the right exists / does not / indeterminate or referral, per query
+  7: "gdpr_complaints_and_judicial_remedies_checklist/2"   # justification: one cited item per query
+  16: "gdpr_complaints_and_judicial_remedies_what_if/4"    # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings

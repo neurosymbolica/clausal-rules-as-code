@@ -4,74 +4,94 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_gdpr_complaints_and_judicial_remedies, [authority_inaction_remedy_right/4, decide_gdpr_complaints_and_judicial_remedies/2, gdpr_complaints_and_judicial_remedies_checklist/2]).
-:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_fixtures, [gdpr_complaints_and_judicial_remedies_subject/1, gdpr_complaints_and_judicial_remedies_profile_for/2, gdpr_complaints_and_judicial_remedies_assess/2]).
+:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_gdpr_complaints_and_judicial_remedies, [decide_gdpr_complaints_and_judicial_remedies/2, gdpr_complaints_and_judicial_remedies_checklist/2, complaint_right/3, authority_decision_remedy_right/3, authority_inaction_remedy_right/4, controller_processor_remedy_right/3, controller_processor_forum/3]).
+:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_fixtures, [gdpr_complaints_and_judicial_remedies_profile_for/2]).
 
-expected(complaint_data_subject_who_considers, complaint_right_exists).
-expected(complaint_data_subject_who_does_not_consider, no_complaint_right).
-expected(complaint_not_a_data_subject, no_complaint_right).
-expected(complaint_consideration_not_stated, indeterminate([data_subject_considers_processing_infringes_regulation])).
-expected(complaint_settled_false_before_missing, no_complaint_right).
-expected(decision_binding_and_concerning, decision_remedy_right_exists).
-expected(decision_not_binding, no_decision_remedy_right).
-expected(decision_not_concerning, no_decision_remedy_right).
-expected(decision_binding_unsure, needs_legal_review(open_textured(decision_is_legally_binding, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding - unsure, decision_concerns_the_caller - true])])).
-expected(decision_concerns_unsure, needs_legal_review(open_textured(decision_concerns_the_caller, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding - true, decision_concerns_the_caller - unsure])])).
-expected(decision_unsure_with_concern_missing, indeterminate([decision_concerns_the_caller])).
-expected(inaction_unhandled_competent, inaction_remedy_right_exists).
-expected(inaction_handled_and_informed, no_inaction_remedy_right).
-expected(inaction_uninformed_after_three_months, inaction_remedy_right_exists).
-expected(inaction_handled_within_three_months, no_inaction_remedy_right).
-expected(inaction_authority_not_competent, no_inaction_remedy_right).
-expected(inaction_competence_not_stated, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), [resolution(cite(competence_statement), not_attempted), inputs_relied_on([authority_competent_under_articles_55_and_56 - absent])])).
-expected(inaction_no_complaint_lodged, no_inaction_remedy_right).
-expected(inaction_handling_not_stated, indeterminate([authority_handled_the_complaint])).
-expected(judicial_data_subject_who_considers, judicial_remedy_right_exists).
-expected(judicial_data_subject_who_does_not_consider, no_judicial_remedy_right).
-expected(judicial_not_a_data_subject, no_judicial_remedy_right).
-expected(forum_public_authority_defendant, forum_establishment_state_only).
-expected(forum_private_defendant, forum_establishment_or_habitual_residence_state).
-expected(forum_exception_not_stated, indeterminate([defendant_is_member_state_public_authority_acting_in_public_powers])).
-expected(input_unknown_key, input_problems([unknown_key(colour)])).
-expected(input_crisp_key_unsure, input_problems([wrong_type(is_data_subject)])).
-expected(input_duplicate_key, input_problems([duplicate_key(is_data_subject)])).
-expected(input_not_a_profile, input_problems([wrong_type(profile)])).
-expected(input_mixed_problems, input_problems([duplicate_key(is_data_subject), unknown_key(colour)])).
+query_answer(complaint_right, Profile, Result, Citations) :-
+    complaint_right(Profile, Result, Citations).
+query_answer(authority_decision_remedy_right, Profile, Result, Citations) :-
+    authority_decision_remedy_right(Profile, Result, Citations).
+query_answer(authority_inaction_remedy_right, Profile, Result, Citations) :-
+    authority_inaction_remedy_right(Profile, Result, _Basis, Citations).
+query_answer(controller_processor_remedy_right, Profile, Result, Citations) :-
+    controller_processor_remedy_right(Profile, Result, Citations).
+query_answer(controller_processor_forum, Profile, Result, Citations) :-
+    controller_processor_forum(Profile, Result, Citations).
 
-expected_results_hold([]).
-expected_results_hold([Subject - Result|Rest]) :-
-    findall(Found, gdpr_complaints_and_judicial_remedies_assess(Subject, gdpr_complaints_and_judicial_remedies_verdict(Found, _)), Founds),
-    Founds == [Result],
-    expected_results_hold(Rest).
+expected_result(full_positive, complaint_right, complaint_right_exists).
+expected_result(full_positive, authority_decision_remedy_right, decision_remedy_right_exists).
+expected_result(full_positive, authority_inaction_remedy_right, inaction_remedy_right_exists).
+expected_result(full_positive, controller_processor_remedy_right, judicial_remedy_right_exists).
+expected_result(full_positive, controller_processor_forum, forum_establishment_or_habitual_residence_state).
+expected_result(not_a_data_subject, complaint_right, no_complaint_right).
+expected_result(not_a_data_subject, authority_decision_remedy_right, decision_remedy_right_exists).
+expected_result(not_a_data_subject, authority_inaction_remedy_right, no_inaction_remedy_right).
+expected_result(not_a_data_subject, controller_processor_remedy_right, no_judicial_remedy_right).
+expected_result(complaint_no_consideration, complaint_right, no_complaint_right).
+expected_result(decision_not_binding, authority_decision_remedy_right, no_decision_remedy_right).
+expected_result(decision_unsure_binding, authority_decision_remedy_right, needs_legal_review(open_textured(decision_is_legally_binding, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding - unsure, decision_concerns_the_caller - true])])).
+expected_result(decision_unsure_and_missing, authority_decision_remedy_right, indeterminate([decision_concerns_the_caller])).
+expected_result(inaction_competence_absent, authority_inaction_remedy_right, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), [resolution(cite(competence_statement), not_attempted), inputs_relied_on([authority_competent_under_articles_55_and_56 - absent])])).
+expected_result(inaction_competence_false, authority_inaction_remedy_right, no_inaction_remedy_right).
+expected_result(inaction_handled_and_informed, authority_inaction_remedy_right, no_inaction_remedy_right).
+expected_result(inaction_three_months_uninformed_handled_absent, authority_inaction_remedy_right, inaction_remedy_right_exists).
+expected_result(inaction_three_months_informed_handled_absent, authority_inaction_remedy_right, indeterminate([authority_handled_the_complaint])).
+expected_result(inaction_handled_three_months_absent, authority_inaction_remedy_right, indeterminate([three_months_from_the_complaint_have_passed])).
+expected_result(remedy_no_consideration, controller_processor_remedy_right, no_judicial_remedy_right).
+expected_result(forum_public_authority, controller_processor_forum, forum_establishment_state_only).
+expected_result(empty_profile, complaint_right, indeterminate([is_data_subject])).
+expected_result(empty_profile, authority_decision_remedy_right, indeterminate([decision_is_legally_binding])).
+expected_result(empty_profile, authority_inaction_remedy_right, indeterminate([is_data_subject])).
+expected_result(empty_profile, controller_processor_remedy_right, indeterminate([is_data_subject])).
+expected_result(empty_profile, controller_processor_forum, indeterminate([defendant_is_member_state_public_authority_acting_in_public_powers])).
+expected_result(malformed_duplicate_and_unknown, complaint_right, input_problems([duplicate_key(is_data_subject), wrong_type(decision_concerns_the_caller), unknown_key(colour)])).
+expected_result(malformed_unbound_attestation, authority_inaction_remedy_right, input_problems([wrong_type(authority_competent_under_articles_55_and_56)])).
 
-test(every_subject_has_an_expected_result) :-
-    findall(Subject, gdpr_complaints_and_judicial_remedies_subject(Subject), Subjects),
-    sort(Subjects, SubjectSet),
-    findall(Subject, expected(Subject, _), ExpectedSubjects),
-    sort(ExpectedSubjects, SubjectSet).
-test(every_subject_reads_out_exactly_its_expected_result) :-
-    findall(Subject - Result, expected(Subject, Result), Pairs),
-    expected_results_hold(Pairs).
-test(the_inaction_basis_copies_the_attested_term) :-
-    gdpr_complaints_and_judicial_remedies_profile_for(inaction_uninformed_after_three_months, Profile),
+computed_result(Subject, Query, Result) :-
+    expected_result(Subject, Query, _),
+    gdpr_complaints_and_judicial_remedies_profile_for(Subject, Profile),
+    query_answer(Query, Profile, Result, _Citations).
+
+non_empty_list([_|_]).
+
+cited_checklist_item(item(_, _, cite(_))).
+
+test(every_expected_result_is_computed_and_no_other) :-
+    findall(Subject - Query - Result, expected_result(Subject, Query, Result), ExpectedTable),
+    findall(Subject - Query - Result, computed_result(Subject, Query, Result), ComputedTable),
+    ComputedTable == ExpectedTable.
+test(the_full_positive_verdicts_all_carry_a_citation) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    findall(Citations, decide_gdpr_complaints_and_judicial_remedies(Profile, gdpr_complaints_and_judicial_remedies_verdict(_, Citations)), CitationLists),
+    length(CitationLists, 5),
+    maplist(non_empty_list, CitationLists).
+test(the_basis_copies_the_attestation_exactly) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
     member(attribute(authority_competent_under_articles_55_and_56, Attested), Profile),
-    findall(Result - Basis - Citations, authority_inaction_remedy_right(Profile, Result, Basis, Citations), Answers),
-    Answers == [inaction_remedy_right_exists - [outside_fact(authority_competent_under_articles_55_and_56, Attested)] - [cite(eu_reg_2016_679_art_78_2)]].
-test(a_referral_reads_out_an_empty_basis_and_no_citation) :-
-    gdpr_complaints_and_judicial_remedies_profile_for(inaction_competence_not_stated, Profile),
-    findall(Basis - Citations, authority_inaction_remedy_right(Profile, _, Basis, Citations), Answers),
-    Answers == [[] - []].
-test(the_verdict_carries_a_citation) :-
-    gdpr_complaints_and_judicial_remedies_profile_for(complaint_data_subject_who_considers, Profile),
-    decide_gdpr_complaints_and_judicial_remedies(Profile, gdpr_complaints_and_judicial_remedies_verdict(remedy_available, [cite(eu_reg_2016_679_art_77_1)])).
-test(the_checklist_reads_out_one_cited_item_per_right) :-
-    gdpr_complaints_and_judicial_remedies_profile_for(judicial_data_subject_who_considers, Profile),
-    gdpr_complaints_and_judicial_remedies_checklist(Profile, Items),
-    findall(Id - Citation, member(item(Id, _, Citation), Items), Rows),
-    Rows == [complaint_right - cite(eu_reg_2016_679_art_77_1), authority_decision_remedy_right - cite(eu_reg_2016_679_art_78_1), authority_inaction_remedy_right - cite(eu_reg_2016_679_art_78_2), controller_processor_remedy_right - cite(eu_reg_2016_679_art_79_1)],
-    member(item(controller_processor_remedy_right, met, _), Items).
+    authority_inaction_remedy_right(Profile, _, Basis, _),
+    Basis == [outside_fact(authority_competent_under_articles_55_and_56, Attested)].
+test(the_not_competent_basis_copies_the_attestation_exactly) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_competence_false, Profile),
+    member(attribute(authority_competent_under_articles_55_and_56, Attested), Profile),
+    authority_inaction_remedy_right(Profile, Result, Basis, _),
+    Result == no_inaction_remedy_right,
+    Basis == [outside_fact(authority_competent_under_articles_55_and_56, Attested)].
+test(the_checklist_has_one_cited_item_per_query) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    gdpr_complaints_and_judicial_remedies_checklist(Profile, ChecklistItems),
+    length(ChecklistItems, 5),
+    maplist(cited_checklist_item, ChecklistItems).
+test(the_checklist_reads_out_every_result) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(forum_public_authority, Profile),
+    gdpr_complaints_and_judicial_remedies_checklist(Profile, ChecklistItems),
+    member(item(controller_processor_forum, ForumResult, cite(eu_reg_2016_679_art_79_2)), ChecklistItems),
+    ForumResult == forum_establishment_state_only.
+test(final_results_are_atoms_not_strings) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    complaint_right(Profile, Result, _),
+    atom(Result).
 
-cp_test_names([every_subject_has_an_expected_result, every_subject_reads_out_exactly_its_expected_result, the_inaction_basis_copies_the_attested_term, a_referral_reads_out_an_empty_basis_and_no_citation, the_verdict_carries_a_citation, the_checklist_reads_out_one_cited_item_per_right]).
+cp_test_names([every_expected_result_is_computed_and_no_other, the_full_positive_verdicts_all_carry_a_citation, the_basis_copies_the_attestation_exactly, the_not_competent_basis_copies_the_attestation_exactly, the_checklist_has_one_cited_item_per_query, the_checklist_reads_out_every_result, final_results_are_atoms_not_strings]).
 cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.

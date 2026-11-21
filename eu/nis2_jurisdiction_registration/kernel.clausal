@@ -1,36 +1,64 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/nis2_jurisdiction_registration (classification family).
-% Source: Directive (EU) 2022/2555 (NIS 2), Art 26(1)-(3), Art 27(2)-(3), Art 3(3)-(4).
-%
-% It holds ONLY the predicates that two or more files call. The determination
-% slice (nis2_jurisdiction_registration.clausal) is self-contained for its legal
-% concept, so the only shared predicate is the input check
-% nis2_jurisdiction_registration_input_problems/2, which the scaffold wrote from the
-% order's typed input contract and exports here for every slice to import:
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This domain has ONE
+% determination slice (nis2_jurisdiction_registration.clausal), so no
+% rule predicate is shared. The one exception is the order's input check,
+% nis2_jurisdiction_registration_input_problems/2, which the scaffold
+% writes here from the order's typed input contract and exports for the
+% slice and queries.clausal to import:
 %   :- use_module(eu/nis2_jurisdiction_registration/kernel, [nis2_jurisdiction_registration_input_problems/2]).
 %
-% Atoms and data terms need NO declaration and NO import. Nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive), original OJ text
+% (OJ L 333, 27.12.2022), Art 26(1), (2), (3) (jurisdiction and main
+% establishment), Art 27(1), (2), (3) (ENISA registry information and
+% changes) and Art 3(3), (4) (the Member States' list of entities). The
+% input check below implements no article: it checks the PROFILE against
+% the order's typed input contract (INTERFACE - THE INPUT CHECK).
+%
+% Atoms and data terms need NO declaration and NO import: nothing
+% vocabulary-shaped lives here. The comment block below only RECORDS the
 % result terms so every file spells them alike.
 %
-% Result terms (spelled exactly as the order pins them):
+% ---- Result terms ----------------------------------------------------
+% The facade verdict of the slice:
 %   nis2_jurisdiction_registration_verdict(Status, Citations)
-%       Status    eligible | ineligible | indeterminate(MissingKeys)
-%                 | needs_legal_review(open_textured(Key, cite(eu_dir_2022_2555_art_26_2)), [inputs_relied_on(Pairs)])
-%                 | input_problems(Problems)
-%       Citations a list of cite(Key) terms ([] for a non-final status)
-%   indeterminate(MissingKeys)   MissingKeys: non-empty list of bare key atoms in root_exports order
-%   needs_legal_review(Reason, Context)
-%                                Reason  open_textured(Key, cite(KEY)); Context [inputs_relied_on(Pairs)]
-%   inputs_relied_on(Pairs)      Pairs: Key-Value of the judgement keys the query reads and that are present
-%   provenance(Clause, Citations) optional, unscored marker of the deciding clause
-%   input_problems(Problems)     Problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key) terms
-%   item(Name, cite(Key))        one submission item (registry list or entity list)
-%   limit(Regime, Period, cite(Key))
-%                                Regime registry_information | entity_list_information;
-%                                Period months_after_change(3) | weeks_after_change(2)
-% Shared across the slices: the checklist row id `overall` (an atom -- nothing to export).
+%     Status    one of registration_position_settled (every checklist
+%               item met), registration_position_open (some item is
+%               unknown([Key]): an absent key, or an unsure judgement
+%               handed to the user), no_single_member_state_jurisdiction
+%               (the basis is no_rule_in_article_26 or
+%               any_member_state_where_services_are_provided_may_take_legal_action),
+%               profile_rejected (the input check found problems).
+%     Citations a sorted, de-duplicated list of cite(Key) terms; [] for
+%               profile_rejected.
+% The scored queries (THE RESULT FORM of the order):
+%   jurisdiction_basis(Profile, Basis, Citations)
+%     Basis: state_of_establishment | state_where_services_are_provided |
+%     state_of_main_establishment | state_that_established_the_entity |
+%     state_of_representative |
+%     any_member_state_where_services_are_provided_may_take_legal_action |
+%     no_rule_in_article_26, or a status compound; Citations [] when not final.
+%   main_establishment_rule(Profile, Result, Citations)
+%     Result: state_where_cybersecurity_risk_management_decisions_are_taken |
+%     state_where_cybersecurity_operations_are_carried_out |
+%     state_of_establishment_with_most_employees_in_the_union, or a status
+%     compound; Citations [] when not final.
+%   registry_submission_items(Profile, Items) and
+%   entity_list_submission_items(Profile, Items)
+%     Items: one ordered list of item(Name, cite(Key)), or a status
+%     compound alone (never inside a list).
+%   change_notification_limits(Profile, Limits)
+%     Limits: one ordered list of limit(Regime, Period, cite(Key)),
+%     Regime registry_information | entity_list_information, Period
+%     months_after_change(3) | weeks_after_change(2); or a status compound.
+% The status compounds (the bare atom indeterminate is NEVER written):
+%   indeterminate([Key])            exactly one missing key atom
+%   needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)])
+%   input_problems(Problems)        Problems from the input check below
+% The input problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key),
+% and [wrong_type(profile)] alone for a PROFILE that is not an attribute list.
 % =====================================================================
 
 :- module(kernel, [nis2_jurisdiction_registration_input_problems/2]).

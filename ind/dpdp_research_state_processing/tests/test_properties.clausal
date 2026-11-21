@@ -1,0 +1,154 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality: every registered subject classifies. Determinism: every
+% subject yields exactly one verdict, and each query exactly one answer.
+% Citation completeness: every cite(Key) returned is recorded in the
+% citations module, written once. Shape: a final RESULT carries citations,
+% a status compound carries []. Invariants: a key a query does not read
+% never changes its answer; within one query a final RESULT has the same
+% citations however it is reached.
+% Run: python -m clausal.testing ind/dpdp_research_state_processing/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(ind/dpdp_research_state_processing/dpdp_research_state_processing, [
+    decide_dpdp_research_state_processing/2,
+    research_exemption/3,
+    state_processing_standards/3,
+    state_processing_disapplied_provisions/3,
+    dpdp_research_state_processing_checklist/2
+]).
+:- use_module(ind/dpdp_research_state_processing/kernel, [dpdp_research_state_processing_input_problems/2]).
+:- use_module(ind/dpdp_research_state_processing/citations, [citation/2]).
+:- use_module(ind/dpdp_research_state_processing/fixtures, [
+    dpdp_research_state_processing_subject/1,
+    dpdp_research_state_processing_profile_for/2
+]).
+
+subject_classifies(Subject) :-
+    dpdp_research_state_processing_subject(Subject),
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    decide_dpdp_research_state_processing(Profile, _Verdict).
+
+all_subjects(Subjects) :-
+    findall(Subject, dpdp_research_state_processing_subject(Subject), Subjects).
+
+% sort/2 collapses a subject that classifies more than once.
+test(totality_every_subject_classifies) :-
+    all_subjects(Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+
+% ---- determinism ------------------------------------------------------
+one_verdict_each([]).
+one_verdict_each([Subject|Subjects]) :-
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    findall(Verdict, decide_dpdp_research_state_processing(Profile, Verdict), [_]),
+    one_verdict_each(Subjects).
+
+test(determinism_every_subject_yields_exactly_one_verdict) :-
+    all_subjects(Subjects),
+    one_verdict_each(Subjects).
+
+one_answer_per_query([]).
+one_answer_per_query([Subject|Subjects]) :-
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    findall(Result-Citations, research_exemption(Profile, Result, Citations), [_]),
+    findall(Result-Citations, state_processing_standards(Profile, Result, Citations), [_]),
+    findall(Result-Citations, state_processing_disapplied_provisions(Profile, Result, Citations), [_]),
+    findall(Problems, dpdp_research_state_processing_input_problems(Profile, Problems), [_]),
+    one_answer_per_query(Subjects).
+
+test(determinism_every_query_and_the_input_check_yield_one_answer) :-
+    all_subjects(Subjects),
+    one_answer_per_query(Subjects).
+
+% ---- citation completeness and result shape ---------------------------
+all_recorded([]).
+all_recorded([cite(Key)|Citations]) :-
+    citation(Key, _),
+    all_recorded(Citations).
+
+written_once(Citations) :-
+    msort(Citations, Ordered),
+    sort(Citations, Set),
+    Ordered == Set.
+
+row_shape(item(_, Result, Citations)) :-
+    atom(Result),
+    Citations = [_|_],
+    all_recorded(Citations),
+    written_once(Citations).
+row_shape(item(_, Result, [])) :-
+    compound(Result).
+
+rows_shape([]).
+rows_shape([Row|Rows]) :-
+    row_shape(Row),
+    rows_shape(Rows).
+
+checklists_shape([]).
+checklists_shape([Subject|Subjects]) :-
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    dpdp_research_state_processing_checklist(Profile, Rows),
+    rows_shape(Rows),
+    checklists_shape(Subjects).
+
+test(every_final_result_carries_recorded_citations_and_every_status_none) :-
+    all_subjects(Subjects),
+    checklists_shape(Subjects).
+
+% ---- invariants --------------------------------------------------------
+query_answer(research, Subject, Result-Citations) :-
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    research_exemption(Profile, Result, Citations).
+query_answer(standards, Subject, Result-Citations) :-
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    state_processing_standards(Profile, Result, Citations).
+query_answer(disapplied, Subject, Result-Citations) :-
+    dpdp_research_state_processing_profile_for(Subject, Profile),
+    state_processing_disapplied_provisions(Profile, Result, Citations).
+
+test(research_exemption_does_not_read_the_intimation) :-
+    query_answer(research, complete_processing, Answer),
+    query_answer(research, intimation_not_given, Answer).
+
+test(research_exemption_does_not_read_the_state_use) :-
+    query_answer(research, complete_processing, Answer),
+    query_answer(research, not_section_seven_b_use, Answer).
+
+test(state_standards_do_not_read_the_research_purpose) :-
+    query_answer(standards, complete_processing, Answer),
+    query_answer(standards, not_research_purpose, Answer).
+
+test(state_standards_do_not_read_section_seventeen) :-
+    query_answer(standards, complete_processing, Answer),
+    query_answer(standards, section_seventeen_not_in_force, Answer).
+
+test(disapplied_provisions_do_not_read_the_standards) :-
+    query_answer(disapplied, complete_processing, Answer),
+    query_answer(disapplied, lawful_manner_not_observed, Answer).
+
+test(disapplied_provisions_do_not_read_the_reference_day) :-
+    query_answer(disapplied, complete_processing, Answer),
+    query_answer(disapplied, reference_day_before_commencement, Answer).
+
+test(research_not_in_force_has_the_same_citations_by_either_route) :-
+    query_answer(research, section_seventeen_not_in_force, not_in_force-Citations),
+    query_answer(research, reference_day_before_commencement, not_in_force-Citations).
+
+test(standards_not_in_force_has_the_same_citations_by_either_route) :-
+    query_answer(standards, section_seven_not_in_force, not_in_force-Citations),
+    query_answer(standards, reference_day_before_commencement, not_in_force-Citations).
+
+test(research_not_exempt_has_the_same_citations_by_every_route) :-
+    query_answer(research, not_research_purpose, not_exempt-Citations),
+    query_answer(research, decision_specific_to_data_principal, not_exempt-Citations),
+    query_answer(research, lawful_manner_not_observed, not_exempt-Citations).
+
+test(standards_does_not_follow_has_the_same_citations_for_any_standard) :-
+    query_answer(standards, intimation_not_given, does_not_follow_second_schedule-Citations),
+    query_answer(standards, lawful_manner_not_observed, does_not_follow_second_schedule-Citations).
+
+:- end_module(test_properties).

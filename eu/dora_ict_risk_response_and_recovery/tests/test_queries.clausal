@@ -1,0 +1,87 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer: one test per
+% query-taxonomy predicate registered in manifest.yaml query_interface,
+% plus the profile-key schema, the re-exported input check and the result
+% constructors.
+% Run: python -m clausal.testing eu/dora_ict_risk_response_and_recovery/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_ict_risk_response_and_recovery/queries, [
+    dora_ict_risk_response_and_recovery_profile_keys/1,
+    dora_ict_risk_response_and_recovery_input_problems/2,
+    dora_ict_risk_response_and_recovery_what_if/4,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0
+]).
+:- use_module(eu/dora_ict_risk_response_and_recovery/dora_ict_risk_response_and_recovery, [
+    ict_risk_response_and_recovery_duties_complete/3,
+    dora_ict_risk_response_and_recovery_status/2,
+    dora_ict_risk_response_and_recovery_checklist/2
+]).
+:- use_module(eu/dora_ict_risk_response_and_recovery/fixtures, [dora_ict_risk_response_and_recovery_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_ict_risk_response_and_recovery_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_is_article_16_1_entity, financial_entity_is_microenterprise, dora_entity_type, business_continuity_or_response_and_recovery_plans_activated, authority_requested_estimate_of_annual_ict_incident_costs_and_losses, backup_data_restored_using_own_systems, recovered_from_ict_related_incident, data_reconstructed_from_external_stakeholders, has_ict_business_continuity_policy, continuity_policy_implemented_through_documented_arrangements, arrangements_ensure_continuity_of_critical_or_important_functions, arrangements_respond_to_and_resolve_ict_related_incidents, arrangements_activate_containment_plans_without_delay, arrangements_estimate_preliminary_impacts_damages_and_losses, arrangements_set_out_communication_and_crisis_management_actions, ict_response_and_recovery_plans_implemented, response_and_recovery_plans_subject_to_independent_internal_audit_reviews, ict_business_continuity_plans_in_place_maintained_and_periodically_tested, business_impact_analysis_conducted, ict_assets_and_services_aligned_with_business_impact_analysis, plans_tested_at_least_yearly_and_on_substantive_changes, crisis_communication_plans_tested, testing_plans_include_cyber_attack_and_switchover_scenarios, continuity_policy_and_plans_regularly_reviewed, has_crisis_management_function, records_of_activities_during_disruption_events_kept, continuity_test_results_provided_to_competent_authorities, estimate_of_aggregated_annual_costs_and_losses_reported, backup_policies_and_procedures_developed_and_documented, restoration_and_recovery_procedures_and_methods_developed_and_documented, backup_systems_that_can_be_activated_set_up, backup_activation_does_not_jeopardise_security, backup_and_restoration_procedures_periodically_tested, restoration_uses_segregated_and_protected_ict_systems, recovery_plans_enable_recovery_of_all_transactions, adequate_resources_and_backup_and_restoration_facilities_maintained, redundant_ict_capacities_maintained, need_for_redundant_ict_capacities_assessed, secondary_processing_site_maintained, secondary_site_located_at_geographical_distance, secondary_site_can_ensure_continuity_of_critical_or_important_functions, secondary_site_immediately_accessible_to_staff, recovery_time_and_point_objectives_take_criticality_and_market_impact_into_account, data_integrity_checks_performed_when_recovering, data_consistency_checks_performed_when_reconstructing_data].
+
+% #16 what-if: one judgement flipped to false flips complete to incomplete.
+test(what_if_a_duty_is_not_performed) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    dora_ict_risk_response_and_recovery_what_if(Profile, has_ict_business_continuity_policy, false, incomplete).
+test(what_if_the_duty_stays_performed) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    dora_ict_risk_response_and_recovery_what_if(Profile, has_ict_business_continuity_policy, true, complete).
+test(what_if_a_duty_is_not_performed_is_not_complete, fail) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    dora_ict_risk_response_and_recovery_what_if(Profile, has_ict_business_continuity_policy, false, complete).
+test(what_if_the_entity_is_an_article_16_1_entity) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_policy_not_performed, Profile),
+    dora_ict_risk_response_and_recovery_what_if(Profile, financial_entity_is_article_16_1_entity, true, simplified_framework_entity).
+test(what_if_a_microenterprise_needs_no_audit_review) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_without_audit_review, Profile),
+    dora_ict_risk_response_and_recovery_what_if(Profile, financial_entity_is_microenterprise, true, complete).
+test(what_if_answers_once) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    findall(Status, dora_ict_risk_response_and_recovery_what_if(Profile, dora_entity_type, central_securities_depository, Status), Statuses),
+    Statuses == [complete].
+test(what_if_on_a_term_that_is_not_a_list_is_refused) :-
+    dora_ict_risk_response_and_recovery_what_if(not_a_list, has_ict_business_continuity_policy, true, Status),
+    Status == input_problems([wrong_type(profile)]).
+
+% #13 compliance_check: the duties_complete query.
+test(compliance_check_reads_complete) :-
+    dora_ict_risk_response_and_recovery_profile_for(central_securities_depository_all_performed, Profile),
+    ict_risk_response_and_recovery_duties_complete(Profile, complete, _).
+
+% #2 eligibility: the status projection.
+test(eligibility_reads_the_status) :-
+    dora_ict_risk_response_and_recovery_profile_for(central_securities_depository_without_secondary_site, Profile),
+    dora_ict_risk_response_and_recovery_status(Profile, incomplete).
+
+% #7 justification: every checklist row is cited.
+test(justification_every_row_is_cited) :-
+    dora_ict_risk_response_and_recovery_profile_for(central_securities_depository_without_secondary_site, Profile),
+    dora_ict_risk_response_and_recovery_checklist(Profile, Items),
+    findall(Atom, member(item(Atom, _, cite(_)), Items), CitedAtoms),
+    length(CitedAtoms, 37),
+    member(item(secondary_processing_site, unmet(duty_not_performed), cite(eu_reg_2022_2554_art_12_5)), Items).
+
+test(the_re_exported_input_check_answers) :-
+    dora_ict_risk_response_and_recovery_profile_for(large_credit_institution_all_performed, Profile),
+    dora_ict_risk_response_and_recovery_input_problems(Profile, []).
+
+test(the_result_constructors_are_defined) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    simplified_framework_entity.
+
+test(the_compound_constructors_build_as_data) :-
+    Result = outstanding([ict_business_continuity_policy]),
+    Result = outstanding(Duties),
+    Duties == [ict_business_continuity_policy].
+
+:- end_module(test_queries).

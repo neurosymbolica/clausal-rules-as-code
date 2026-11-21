@@ -1,67 +1,71 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_compensation_and_liability (deontic family).
-% DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. This domain has ONE
-% determination slice (gdpr_compensation_and_liability.clausal), so no
-% domain predicate is shared and none is defined here.
-% Exception: the scaffold writes the order's input check
-% gdpr_compensation_and_liability_input_problems/2 here, exported, for the
-% slice (and the queries facade) to import. It is kept as the scaffold
-% wrote it.
-% deontic family: STATUS is a liability vocabulary (the duty to compensate
-% under Art 82 GDPR), not a modality lattice.
+% Source: Regulation (EU) 2016/679 (GDPR), Article 82(1) to (3)
+% (pinned consolidated text 02016R0679-20160504, units parag_082.001 to
+% parag_082.003); Article 82(4) to (6) are quoted in citations.clausal for
+% the deferral and have no limb.
 %
-% Source: Regulation (EU) 2016/679 (GDPR) Article 82(1) to (3), consolidated
-% text 02016R0679-20160504, units parag_082.001 to parag_082.003 (pinned by
-% tools/pin_statute.py, fetched 2026-11-12). Art 82(4) to (6) are deferred
-% (quoted in citations.clausal, no limb).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. The one shared predicate is the
+% order's input check gdpr_compensation_and_liability_input_problems/2,
+% written by the scaffold from the order's typed input contract and called
+% first by the slice, the queries and the facade:
+%   :- use_module(eu/data_protection/gdpr_compensation_and_liability/kernel, [gdpr_compensation_and_liability_input_problems/2]).
+% The input check decides no statutory condition (it is profile plumbing
+% against the input contract), so its clauses carry no implements/1 marker.
+%
+% deontic family: a liable_for_damage answer reads as the obligation of the
+% caller (the bearer) to compensate the person who suffered the damage; the
+% other final answers say that the obligation does not arise under
+% Art 82(1) to (3) on the facts given.
 %
 % Atoms and data terms need NO declaration and NO import. The comment block
 % below only RECORDS the result terms so every file spells them alike.
 %
-% ---- THE QUERY AND ITS RESULT TERMS ---------------------------------
-% compensation_liability(PROFILE, RESULT, BASIS, CITATIONS)
-%   PROFILE   [attribute(KEY, VALUE), ...] over the eight keys, in order:
-%             party_role, involved_in_the_processing,
-%             processor_breached_obligations_directed_to_processors,
-%             processor_acted_outside_or_contrary_to_lawful_instructions,
-%             damage_suffered, infringement_of_the_regulation_occurred,
-%             damage_resulted_from_the_infringement,
-%             not_in_any_way_responsible_for_the_event.
-%   RESULT    one of the FINAL atoms (written unquoted, never strings):
-%               right_not_established   a condition of Art 82(1) is false
-%               not_liable_for_damage   Art 82(2) leaves the caller out
-%               exempt_from_liability   Art 82(3) statement attested true
-%               liable_for_damage       Art 82(1) to (3), attested false
-%             or one NON-FINAL compound (the bare atom indeterminate is
-%             NEVER written):
-%               indeterminate([KEY])    the FIRST missing needed key
-%               needs_legal_review(REASON, CONTEXT) with REASON
-%                 open_textured(KEY, cite(eu_reg_2016_679_art_82_1)) and
-%                 CONTEXT [inputs_relied_on(PAIRS)], or
-%                 cross_reference_unresolved(cite(eu_reg_2016_679_art_82_3),
-%                   cite(non_responsibility_statement)) and CONTEXT
-%                 [resolution(cite(non_responsibility_statement), not_attempted),
-%                  inputs_relied_on(PAIRS)]
-%               input_problems(PROBLEMS) PROBLEMS a non-empty list of
-%                 duplicate_key(KEY), wrong_type(KEY), unknown_key(KEY)
-%   BASIS     [] or [outside_fact(not_in_any_way_responsible_for_the_event,
-%             ATTESTED)], ATTESTED = attested(true or false,
-%             attestation(BY, AT, REASON, EVIDENCE)) copied exactly as given
-%             (steps 10 and 11 only).
-%   CITATIONS a set-like list of cite(KEY), KEY among
-%             eu_reg_2016_679_art_82_1, eu_reg_2016_679_art_82_2,
-%             eu_reg_2016_679_art_82_3; [] for every non-final RESULT.
-%   PAIRS     KEY-VALUE pairs of the three judgement keys in root_exports
-%             order, plus not_in_any_way_responsible_for_the_event-absent last
-%             for a cross_reference_unresolved referral.
+% RESULT TERMS
 %
-% Facade result term of the slice. `status` is the RESULT above,
-% `citations` the CITATIONS list:
-%   gdpr_compensation_and_liability_verdict(status, citations)
-% Profile value atoms: controller, processor (party_role); true, false;
-% unsure (judgement); markers absent (PAIRS) and not_attempted (resolution).
+% The step ladder (INTERFACE - THE LIMBS, steps 0 to 11):
+%   compensation_liability(Profile, Result, Basis, Citations)
+%     Profile   -- attribute list [attribute(Key, Value), ...], read only
+%                  with profile_get/3;
+%     Result    -- a FINAL atom: right_not_established | not_liable_for_damage
+%                  | exempt_from_liability | liable_for_damage;
+%                  or a NON-FINAL compound (never written bare):
+%                    input_problems(Problems)  Problems a non-empty list of
+%                      duplicate_key(Key), wrong_type(Key), unknown_key(Key),
+%                      or [wrong_type(profile)];
+%                    indeterminate([Key])      the FIRST missing needed key
+%                      (operator's the ruling);
+%                    needs_legal_review(Reason, Context) with Reason
+%                      open_textured(Key, cite(eu_reg_2016_679_art_82_1)) and
+%                      Context [inputs_relied_on(Pairs)], or Reason
+%                      cross_reference_unresolved(cite(eu_reg_2016_679_art_82_3),
+%                      cite(non_responsibility_statement)) and Context
+%                      [resolution(cite(non_responsibility_statement), not_attempted),
+%                       inputs_relied_on(Pairs)];
+%     Basis     -- [] or [outside_fact(not_in_any_way_responsible_for_the_event,
+%                  attested(true|false, attestation(By, At, Reason, Evidence)))],
+%                  the attested term copied exactly as supplied;
+%     Citations -- a set-like list of cite(Key) terms, Key one of
+%                  eu_reg_2016_679_art_82_1 | eu_reg_2016_679_art_82_2 |
+%                  eu_reg_2016_679_art_82_3 (empty for a non-final Result).
+%   Pairs are Key-Value pairs of the three judgement keys in contract order,
+%   plus not_in_any_way_responsible_for_the_event-absent last for a
+%   cross_reference_unresolved referral (THE PAIRS RULE).
+%
+% The slice verdict (one per determination slice):
+%   gdpr_compensation_and_liability_verdict(Status, Citations)
+%     Status    -- the Result term of the ladder above;
+%     Citations -- the cite(Key) list of the ladder above.
+%
+% The justification checklist rows (query type #7):
+%   item(RequirementId, Status, cite(Key)), Status met | unmet(Reason) |
+%   unknown([Key]).
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
 % =====================================================================
 
 :- module(kernel, [gdpr_compensation_and_liability_input_problems/2]).
@@ -75,9 +79,13 @@
 % Each public query calls this check first: it gives its normal answer only when
 % Problems = [], and when Problems is not [] it gives the answer the order states for
 % a profile with input problems.
-% It gives exactly one answer for every Profile, and the answer is ground:
-% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
-%   Key in every item gives [wrong_type(profile)];
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
 % - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
 %   the key occurs more than once in Profile (whatever its values: none of them is read,
 %   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
@@ -106,7 +114,7 @@ key_type(damage_resulted_from_the_infringement, judgement).
 key_type(not_in_any_way_responsible_for_the_event, outside_fact).
 
 % attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
-% items, each Key ground; false for anything else, an unbound Term included.
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
 attribute_list_t(Term, false) :-
     var(Term).
 attribute_list_t(Term, true) :-
@@ -124,23 +132,27 @@ attribute_list_t(Term, false) :-
 
 attribute_t(Element, false) :-
     var(Element).
-attribute_t(Element, T) :-
+attribute_t(Element, true) :-
     nonvar(Element),
-    Element = attribute(Key, _),
-    term_variables(Key, Variables),
-    no_variables_t(Variables, T).
+    Element = attribute(_, _).
 attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
-no_variables_t([], true).
-no_variables_t([_|_], false).
-
-% Unknown keys, in profile order, each once: Known grows by each key named.
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    known_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
     unknown_keys(Elements, Known, Problems).
@@ -252,5 +264,24 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_compensation_and_liability_input_problems([attribute(party_role, controller), attribute(damage_suffered, unsure)], []).
+test(an_empty_profile_has_no_problem) :-
+    gdpr_compensation_and_liability_input_problems([], []).
+test(a_term_that_is_not_a_list_is_not_a_profile) :-
+    gdpr_compensation_and_liability_input_problems(profile, [wrong_type(profile)]).
+test(a_repeated_key_is_a_duplicate_only) :-
+    gdpr_compensation_and_liability_input_problems([attribute(damage_suffered, true), attribute(damage_suffered, maybe)], [duplicate_key(damage_suffered)]).
+test(an_unsure_crisp_key_is_a_wrong_type) :-
+    gdpr_compensation_and_liability_input_problems([attribute(involved_in_the_processing, unsure)], [wrong_type(involved_in_the_processing)]).
+test(a_key_outside_the_contract_is_unknown) :-
+    gdpr_compensation_and_liability_input_problems([attribute(colour, blue)], [unknown_key(colour)]).
+test(an_attested_statement_is_well_formed) :-
+    gdpr_compensation_and_liability_input_problems([attribute(not_in_any_way_responsible_for_the_event, attested(true, attestation(host, today, proved, none)))], []).
+test(an_attestation_holding_a_variable_is_a_wrong_type) :-
+    gdpr_compensation_and_liability_input_problems([attribute(not_in_any_way_responsible_for_the_event, attested(true, attestation(host, today, proved, _)))], [wrong_type(not_in_any_way_responsible_for_the_event)]).
+test(a_well_formed_profile_is_not_refused, fail) :-
+    gdpr_compensation_and_liability_input_problems([attribute(party_role, processor)], [_|_]).
 
 :- end_module(kernel).

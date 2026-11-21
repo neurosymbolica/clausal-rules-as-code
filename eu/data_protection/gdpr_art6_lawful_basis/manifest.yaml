@@ -17,10 +17,9 @@ modules:
   - "fixtures"
 # public_interface: name/arity PREDICATES only (atoms need no export), grouped
 # per submodule -- keep in sync with the :- module(...) export lists re-exported
-# via the package facade __init__.clausal.
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
-  # (gdpr_art6_lawful_basis_input_problems/2 is re-exported by queries.clausal)
   # -- citations.clausal --
   - "citation/2"
   # -- gdpr_art6_lawful_basis.clausal --
@@ -40,6 +39,7 @@ public_interface:
   - "purpose_compatible/0"
   - "purpose_not_compatible/0"
   - "compatibility_test_not_engaged/0"
+  - "compatibility_not_ascertained/0"
   - "indeterminate/1"
   - "needs_legal_review/2"
   - "open_textured/2"
@@ -67,36 +67,38 @@ public_interface:
 independence: no_external_scorer
 
 # Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. formalize_lib is the kit, not a backbone package.
+# domain imports. It imports none (only the kit's formalize_lib and library(reif)).
 uses: []
 
 scope: >-
-  Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no
-  date argument. ONE question: whether a processing, described by one profile,
-  has a lawful basis under Art 6(1) and which of points (a) to (f) holds
-  (lawful_basis_status/4), with Art 6(3) first sentence read as two attested
-  outside facts for points (c) and (e) and the last subparagraph of Art 6(1)
-  barring point (f) for public authorities in their tasks; and the Art 6(4)
-  compatibility test for processing for a new purpose (purpose_compatibility/4).
-  'Necessary', the balance of point (f) and compatibility are judgements the
-  caller states (true, false or unsure); unsure goes to a lawyer. Point (a) rests
-  on the host's attested statement of the consent package (Art 7 decided by the
-  order gdpr-consent-conditions). Out of scope: compliance with the Regulation as
-  a whole, Art 5(1)(a), Art 9 (special categories only flagged), Art 10, Arts 12
-  to 14; Art 6(2), the rest of Art 6(3), Art 6(4)(a) to (e), Art 4(11) and Art 8
-  are deferred.
+  Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, no date
+  argument. Two bounded questions. (1) lawful_basis_status/4: whether one processing,
+  described by one attribute-list profile, has a lawful basis under Art 6(1), and
+  which of points (a) to (f) holds: point (a) read as the host's attested statement
+  that consent was given with its conditions met (Art 7 is decided by the order
+  gdpr-consent-conditions); points (b) to (e) as caller judgements of necessity;
+  points (c) and (e) also need the attested statement that the basis is laid down by
+  Union or Member State law (Art 6(3) first sentence); point (f) needs the caller's
+  judgement of the legitimate interest and of the balance, and is barred for a public
+  authority in its tasks (Art 6(1) last subparagraph). basis_claimed restricts the
+  question to one point. (2) purpose_compatibility/4: the Art 6(4) compatibility test
+  for processing for a new purpose, with the five factors of points (a) to (e) as
+  optional crisp keys and the weighing left to the caller's judgement. Open-textured
+  judgements are stated by the caller and an unsure one goes to a lawyer
+  (needs_legal_review). Out of scope: compliance with the Regulation as a whole,
+  Art 5(1)(a), Art 9 (special categories only flagged), Art 10, Arts 12 to 14, Art 8
+  (a child only flagged in the balance of point (f)), Art 6(2), the rest of Art 6(3)
+  and Art 23(1).
 
 sources:
-  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504: Art 6(1) first words, points (a) to (f) and last subparagraph"
-  - "Regulation (EU) 2016/679, Art 6(3) first sentence and points (a) and (b) (read only as the outside facts legal_obligation_laid_down_by_law and public_interest_task_laid_down_by_law)"
-  - "Regulation (EU) 2016/679, Art 6(4) first words (compatibility of processing for another purpose)"
-  - "Regulation (EU) 2016/679, Art 9(1) (outside fact special_category, flagged only)"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated English Formex text 02016R0679-20160504: Art 6(1) first words, points (a) to (f) and last subparagraph; Art 6(3) first sentence; Art 6(4) first words and points (a) to (e)"
+  - "Regulation (EU) 2016/679, consolidated text 02016R0679-20160504: Art 9(1) (flagged only); Art 4(11), Art 6(2), Art 6(3)(a) and (b), Art 7(1) to (4), Art 8(1) to (3) and Art 9 (pinned and deferred)"
 
 query_interface:
-  2: "lawful_basis_status/4"                  # eligibility: eligible / ineligible / not-final status
-  3: "purpose_compatibility/4"                # status determination: the Art 6(4) classification
-  7: "gdpr_art6_lawful_basis_checklist/2"     # justification: one cited item per way of Art 6(1)
-  16: "gdpr_art6_lawful_basis_what_if/4"      # what_if: re-evaluate under an overridden key
+  2: "lawful_basis_status/4"                 # eligibility: eligible | ineligible | status compound, cited
+  3: "purpose_compatibility/4"               # status determination: Art 6(4) compatibility status
+  7: "gdpr_art6_lawful_basis_checklist/2"    # justification: one cited item per considered way
+  16: "gdpr_art6_lawful_basis_what_if/4"     # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings
@@ -205,21 +207,21 @@ deferred_set:
   declaration: answered_with_caveat
   open: formalisable as a split of the two outside facts; the deferral stands for
     this run.
-- what: art_6_4_factors
+- what: art_6_4_first_words_route_keys
   units:
-  - 02016R0679-20160504#point_006.004_a
-  - 02016R0679-20160504#point_006.004_b
-  - 02016R0679-20160504#point_006.004_c
-  - 02016R0679-20160504#point_006.004_d
-  - 02016R0679-20160504#point_006.004_e
+  - 02016R0679-20160504#parag_006.004
+  partial: true
   debt: true
-  reason: The five factors of Art 6(4)(a) to (e) are what the caller takes into account
-    when it states the judgement compatible_purpose; they are not formalised and change
-    no answer (reading (10), Q14).
-  consequence: purpose_compatibility/4 does not check how the caller weighed the factors.
+  reason: 'Art 6(4) first words: the two routes (based on the data subject''s consent;
+    based on a Union or Member State law which constitutes a necessary and proportionate
+    measure to safeguard the objectives of Art 23(1)) have no keys of their own; new_purpose_processing
+    carries them (Q13, Q18). The route keys can change an answer, so absent cannot
+    read as today; a later amendment.'
+  consequence: The caller states the routes only through new_purpose_processing; no
+    answer reads a route separately.
   declaration: answered_with_caveat
-  open: formalisable as non-binding items reported beside the answer; the deferral
-    stands for this run.
+  open: formalisable as two route keys once a ruling says how an absent one reads;
+    the deferral stands for this run.
 - what: art_7_conditions_for_consent
   units:
   - 02016R0679-20160504#parag_007.001

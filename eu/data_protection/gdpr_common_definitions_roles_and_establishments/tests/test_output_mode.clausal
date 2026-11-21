@@ -1,175 +1,79 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_output_mode.clausal -- OUTPUT MODE: the full answer list of every
-% definition relation on the fixture profiles (exactly one answer each).
+% test_output_mode.clausal -- OUTPUT MODE: the answer argument UNBOUND and
+% read out, each relation enumerated with findall/3 so a duplicate answer
+% shows up. Covers the order of MISSING_KEYS, the status precedence
+% (missing keys, then an absent outside fact, then an unsure judgement),
+% the descent into an OR, the verdict, the checklist and the outside facts.
 % Run: python -m clausal.testing eu/data_protection/gdpr_common_definitions_roles_and_establishments/tests/test_output_mode.clausal
 % =====================================================================
 :- module(test_output_mode, []).
 :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/gdpr_common_definitions_roles_and_establishments, [
+    decide_gdpr_common_definitions_roles_and_establishments/2,
+    gdpr_common_definitions_roles_and_establishments_status/2,
+    gdpr_common_definitions_roles_and_establishments_checklist/2,
     party_is_controller/2,
-    party_is_processor/2,
-    genetic_data/2,
-    biometric_data/2,
-    data_concerning_health/2,
     main_establishment/2,
-    enterprise/2,
-    group_of_undertakings/2,
     supervisory_authority_concerned/2,
     cross_border_processing/2,
     relevant_and_reasoned_objection/2,
-    decide_gdpr_common_definitions_roles_and_establishments/2
+    roles_and_establishments_outside_facts/2
 ]).
 :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/fixtures, [gdpr_common_definitions_roles_and_establishments_profile_for/2]).
 
-answers_of(Relation, Subject, Answers) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(Subject, Profile),
-    findall(Answer, call(Relation, Profile, Answer), Answers).
-
-% ---- 4(7) controller ----
-test(controller_determines) :-
-    answers_of(party_is_controller, controller_determines, Answers),
-    Answers == [definition_answer(met, determines_purposes_and_means, [cite(eu_reg_2016_679_art_4_7)])].
-test(controller_by_law) :-
-    answers_of(party_is_controller, controller_by_law, Answers),
-    Answers == [definition_answer(met, provided_for_by_law, [cite(eu_reg_2016_679_art_4_7)])].
-test(controller_law_not_provided) :-
-    answers_of(party_is_controller, controller_law_not_provided, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_7)])].
-test(controller_law_unattested_refers) :-
-    answers_of(party_is_controller, controller_law_unattested, Answers),
-    Answers == [definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)), [resolution(cite(union_or_member_state_law_providing_for_controller), not_attempted), inputs_relied_on([party_determines_purposes_and_means-false, purposes_and_means_determined_by_law-true])]), none, [cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)])].
-test(controller_judgement_unsure) :-
-    answers_of(party_is_controller, controller_judgement_unsure, Answers),
-    Answers == [definition_answer(needs_legal_review(open_textured(party_determines_purposes_and_means, cite(eu_reg_2016_679_art_4_7)), [inputs_relied_on([party_determines_purposes_and_means-unsure, purposes_and_means_determined_by_law-false])]), none, [cite(eu_reg_2016_679_art_4_7)])].
-test(controller_nothing_stated) :-
-    answers_of(party_is_controller, controller_nothing_stated, Answers),
-    Answers == [definition_answer(indeterminate([party_determines_purposes_and_means, purposes_and_means_determined_by_law]), none, [cite(eu_reg_2016_679_art_4_7)])].
-
-% ---- 4(8) processor ----
-test(processor_on_behalf) :-
-    answers_of(party_is_processor, processor_on_behalf, Answers),
-    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_8)])].
-test(processor_not_on_behalf) :-
-    answers_of(party_is_processor, processor_not_on_behalf, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_8)])].
-
-% ---- 4(13), 4(14), 4(15) ----
-test(genetic_data_met) :-
-    answers_of(genetic_data, genetic_data_met, Answers),
-    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_13)])].
-test(genetic_data_not_genetic) :-
-    answers_of(genetic_data, genetic_data_not_genetic, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_13)])].
-test(genetic_personal_data_unsure_refers_to_4_1) :-
-    answers_of(genetic_data, genetic_personal_data_unsure, Answers),
-    Answers == [definition_answer(needs_legal_review(open_textured(data_are_personal_data, cite(eu_reg_2016_679_art_4_1)), [inputs_relied_on([data_are_personal_data-unsure])]), none, [cite(eu_reg_2016_679_art_4_1)])].
-test(biometric_data_met) :-
-    answers_of(biometric_data, biometric_data_met, Answers),
-    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_14)])].
-test(biometric_not_personal_data) :-
-    answers_of(biometric_data, biometric_not_personal_data, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_14)])].
-test(health_data_met) :-
-    answers_of(data_concerning_health, health_data_met, Answers),
-    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_15)])].
-test(health_data_not_health) :-
-    answers_of(data_concerning_health, health_data_not_health, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_15)])].
-
-% ---- 4(16) main establishment ----
-test(main_decisions_elsewhere) :-
-    answers_of(main_establishment, main_decisions_elsewhere, Answers),
-    Answers == [definition_answer(met, establishment_taking_decisions, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])].
-test(main_central_administration) :-
-    answers_of(main_establishment, main_central_administration, Answers),
+test(the_relation_reads_out_exactly_one_answer) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_central_administration, Profile),
+    findall(Answer, main_establishment(Profile, Answer), Answers),
     Answers == [definition_answer(met, central_administration, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])].
-test(main_no_place) :-
-    answers_of(main_establishment, main_no_place, Answers),
-    Answers == [definition_answer(not_met, no_main_establishment_identified, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])].
-test(main_processor_central) :-
-    answers_of(main_establishment, main_processor_central, Answers),
-    Answers == [definition_answer(met, central_administration, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])].
-test(main_processor_main_activities) :-
-    answers_of(main_establishment, main_processor_main_activities, Answers),
-    Answers == [definition_answer(met, establishment_of_main_processing_activities, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])].
-test(main_processor_not_subject) :-
-    answers_of(main_establishment, main_processor_not_subject, Answers),
-    Answers == [definition_answer(not_met, no_main_establishment_identified, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])].
-test(main_single_member_state) :-
-    answers_of(main_establishment, main_single_member_state, Answers),
-    Answers == [definition_answer(not_met, not_established_in_more_than_one_member_state, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])].
-test(main_role_missing) :-
-    answers_of(main_establishment, main_role_missing, Answers),
-    Answers == [definition_answer(indeterminate([party_role]), none, [cite(eu_reg_2016_679_art_4_16)])].
-test(main_power_unsure) :-
-    answers_of(main_establishment, main_power_unsure, Answers),
-    Answers == [definition_answer(needs_legal_review(open_textured(other_establishment_can_have_decisions_implemented, cite(eu_reg_2016_679_art_4_16_a)), [inputs_relied_on([decisions_taken_in_other_union_establishment-true, other_establishment_can_have_decisions_implemented-unsure])]), none, [cite(eu_reg_2016_679_art_4_16_a)])].
-
-% ---- 4(18), 4(19) ----
-test(enterprise_met) :-
-    answers_of(enterprise, enterprise_met, Answers),
-    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_18)])].
-test(enterprise_not_economic) :-
-    answers_of(enterprise, enterprise_not_economic, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_18)])].
-test(group_met) :-
-    answers_of(group_of_undertakings, group_met, Answers),
-    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_19)])].
-test(group_not_met) :-
-    answers_of(group_of_undertakings, group_not_met, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_19)])].
-
-% ---- 4(22) ----
-test(authority_established) :-
-    answers_of(supervisory_authority_concerned, authority_established, Answers),
-    Answers == [definition_answer(met, point_a, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_a)])].
-test(authority_affected) :-
-    answers_of(supervisory_authority_concerned, authority_affected, Answers),
-    Answers == [definition_answer(met, point_b, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_b)])].
-test(authority_complaint) :-
-    answers_of(supervisory_authority_concerned, authority_complaint, Answers),
+test(an_empty_profile_lists_every_missing_key_of_point_22) :-
+    findall(Answer, supervisory_authority_concerned([], Answer), Answers),
+    Answers == [definition_answer(indeterminate([party_established_in_authority_member_state, data_subjects_in_authority_member_state_substantially_affected, complaint_lodged_with_authority]), none, [cite(eu_reg_2016_679_art_4_22)])].
+test(an_empty_profile_lists_every_missing_key_of_point_23) :-
+    findall(Answer, cross_border_processing([], Answer), Answers),
+    Answers == [definition_answer(indeterminate([established_in_more_than_one_member_state, processing_in_context_of_establishments_in_more_than_one_member_state, processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state]), none, [cite(eu_reg_2016_679_art_4_23)])].
+test(an_unmet_branch_of_the_or_is_not_entered) :-
+    findall(Answer, cross_border_processing([attribute(established_in_more_than_one_member_state, false)], Answer), Answers),
+    Answers == [definition_answer(indeterminate([processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state]), none, [cite(eu_reg_2016_679_art_4_23)])].
+test(an_empty_profile_lists_every_element_of_point_24) :-
+    findall(Answer, relevant_and_reasoned_objection([], Answer), Answers),
+    Answers == [definition_answer(indeterminate([objection_to_draft_decision, objection_concerns_infringement_or_envisaged_action, objection_demonstrates_significance_of_risks]), none, [cite(eu_reg_2016_679_art_4_24)])].
+test(missing_keys_come_before_an_unsure_judgement) :-
+    findall(Answer, relevant_and_reasoned_objection([attribute(objection_demonstrates_significance_of_risks, unsure)], Answer), Answers),
+    Answers == [definition_answer(indeterminate([objection_to_draft_decision, objection_concerns_infringement_or_envisaged_action]), none, [cite(eu_reg_2016_679_art_4_24)])].
+test(missing_keys_come_before_an_absent_outside_fact) :-
+    findall(Answer, party_is_controller([attribute(purposes_and_means_determined_by_law, true)], Answer), Answers),
+    Answers == [definition_answer(indeterminate([party_determines_purposes_and_means]), none, [cite(eu_reg_2016_679_art_4_7)])].
+test(an_absent_outside_fact_comes_before_an_unsure_judgement) :-
+    findall(Answer, party_is_controller([attribute(party_determines_purposes_and_means, unsure), attribute(purposes_and_means_determined_by_law, true)], Answer), Answers),
+    Answers == [definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)), [resolution(cite(union_or_member_state_law_providing_for_controller), not_attempted), inputs_relied_on([party_determines_purposes_and_means-unsure, purposes_and_means_determined_by_law-true])]), none, [cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)])].
+test(a_met_ground_names_the_first_way_met_on_the_profile_as_given) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(complaint_with_unsure_effect, Profile),
+    findall(Answer, supervisory_authority_concerned(Profile, Answer), Answers),
     Answers == [definition_answer(met, point_c, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_c)])].
-test(authority_none) :-
-    answers_of(supervisory_authority_concerned, authority_none, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_22)])].
-
-% ---- 4(23) ----
-test(cross_border_several) :-
-    answers_of(cross_border_processing, cross_border_several, Answers),
-    Answers == [definition_answer(met, point_a, [cite(eu_reg_2016_679_art_4_23), cite(eu_reg_2016_679_art_4_23_a)])].
-test(cross_border_single) :-
-    answers_of(cross_border_processing, cross_border_single, Answers),
-    Answers == [definition_answer(met, point_b, [cite(eu_reg_2016_679_art_4_23), cite(eu_reg_2016_679_art_4_23_b)])].
-test(cross_border_none) :-
-    answers_of(cross_border_processing, cross_border_none, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_23)])].
-
-% ---- 4(24) ----
-test(objection_met) :-
-    answers_of(relevant_and_reasoned_objection, objection_met, Answers),
-    Answers == [definition_answer(met, none, [cite(eu_reg_2016_679_art_4_24)])].
-test(objection_no_risk) :-
-    answers_of(relevant_and_reasoned_objection, objection_no_risk, Answers),
-    Answers == [definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_24)])].
-test(objection_risk_unsure) :-
-    answers_of(relevant_and_reasoned_objection, objection_risk_unsure, Answers),
-    Answers == [definition_answer(needs_legal_review(open_textured(objection_demonstrates_significance_of_risks, cite(eu_reg_2016_679_art_4_24)), [inputs_relied_on([objection_to_draft_decision-true, objection_concerns_infringement_or_envisaged_action-true, objection_demonstrates_significance_of_risks-unsure])]), none, [cite(eu_reg_2016_679_art_4_24)])].
-
-% ---- input problems answer every relation alike ----
-test(unknown_key_gives_input_problems) :-
-    answers_of(enterprise, unknown_key_profile, Answers),
-    Answers == [definition_answer(input_problems([unknown_key(not_a_contract_key)]), none, [])].
-test(wrong_type_gives_input_problems) :-
-    answers_of(cross_border_processing, wrong_type_profile, Answers),
-    Answers == [definition_answer(input_problems([wrong_type(party_role)]), none, [])].
-test(non_list_gives_input_problems) :-
-    answers_of(party_is_controller, not_an_attribute_list, Answers),
-    Answers == [definition_answer(input_problems([wrong_type(profile)]), none, [])].
-
-% ---- the headline verdict ----
-test(the_verdict_carries_a_citation) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
+test(the_unsure_power_to_implement_refers_once_central_administration_is_given) :-
+    findall(Answer, main_establishment([attribute(party_role, controller), attribute(established_in_more_than_one_member_state, true), attribute(central_administration_in_union, false), attribute(decisions_taken_in_other_union_establishment, true), attribute(other_establishment_can_have_decisions_implemented, unsure)], Answer), Answers),
+    Answers == [definition_answer(needs_legal_review(open_textured(other_establishment_can_have_decisions_implemented, cite(eu_reg_2016_679_art_4_16_a)), [inputs_relied_on([decisions_taken_in_other_union_establishment-true, other_establishment_can_have_decisions_implemented-unsure])]), none, [cite(eu_reg_2016_679_art_4_16_a)])].
+test(the_verdict_reads_out_eleven_definitions_with_citations) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(hospital_health_data, Profile),
     findall(Verdict, decide_gdpr_common_definitions_roles_and_establishments(Profile, Verdict), Verdicts),
-    Verdicts == [gdpr_common_definitions_roles_and_establishments_verdict(met, [cite(eu_reg_2016_679_art_4_7)])].
+    Verdicts = [gdpr_common_definitions_roles_and_establishments_verdict(Definitions, [_|_])],
+    length(Definitions, 11).
+test(the_status_projection_reads_out_one_list) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(hospital_health_data, Profile),
+    findall(Statuses, gdpr_common_definitions_roles_and_establishments_status(Profile, Statuses), Results),
+    Results = [OnlyStatuses],
+    member(defined_term(data_concerning_health, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_15)])), OnlyStatuses).
+test(the_checklist_reads_out_one_item_per_definition_with_cites) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(hospital_health_data, Profile),
+    gdpr_common_definitions_roles_and_establishments_checklist(Profile, Items),
+    length(Items, 11),
+    member(item(data_concerning_health, met, [cite(eu_reg_2016_679_art_4_15)]), Items).
+test(outside_facts_reads_out_the_attested_term_as_given) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_attested, Profile),
+    findall(OutsideFacts, roles_and_establishments_outside_facts(Profile, OutsideFacts), Results),
+    Results == [[outside_fact(party_provided_for_as_controller_by_law, attested(true, attestation(by, at, reason, none)))]].
+test(outside_facts_reads_out_absent) :-
+    findall(OutsideFacts, roles_and_establishments_outside_facts([], OutsideFacts), Results),
+    Results == [[outside_fact(party_provided_for_as_controller_by_law, absent)]].
 
 :- end_module(test_output_mode).

@@ -1,0 +1,329 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/cra_manufacturer_duties
+shape_family: temporal
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "cra_manufacturer_duties"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The name/0 entries are the root_exports (verdict
+# atoms, profile key atoms, ITEM atoms, the judgement value unsure), defined
+# as facts in queries.clausal; the result constructors are facts there too.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- cra_manufacturer_duties.clausal --
+  - "requirements_applicability/4"
+  - "support_period_minimum/4"
+  - "retention_end_date/5"
+  - "decide_cra_manufacturer_duties/2"
+  - "cra_manufacturer_duties_status/2"
+  - "cra_manufacturer_duties_checklist/2"
+  - "cra_manufacturer_duties_decision_resolvable/1"
+  - "cra_manufacturer_duties_status_values/1"
+  # -- queries.clausal --
+  - "cra_manufacturer_duties_profile_keys/1"
+  - "cra_manufacturer_duties_input_problems/2"
+  - "cra_manufacturer_duties_what_if/4"
+  - "subject_to_requirements/0"
+  - "article_14_only/0"
+  - "not_yet_applicable/0"
+  - "not_applicable_outside_support_period/0"
+  - "placing_on_market_date/0"
+  - "substantially_modified_on_or_after_application_date/0"
+  - "expected_use_time_in_months/0"
+  - "security_update_issue_date/0"
+  - "support_period_end_date/0"
+  - "technical_documentation_and_declaration_of_conformity/0"
+  - "information_and_instructions_to_the_user/0"
+  - "security_update/0"
+  - "unsure/0"
+  - "date/3"
+  - "minimum_support_period/1"
+  - "keep_until/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "cra_manufacturer_duties_subject/1"
+  - "cra_manufacturer_duties_profile_for/2"
+  - "cra_manufacturer_duties_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports none (only the kit's formalize_lib and library(reif)).
+uses: []
+
+scope: >-
+  Regulation (EU) 2024/2847 (Cyber Resilience Act), duties of manufacturers,
+  three bounded questions at an ASSESSMENT_DATE: requirements_applicability,
+  which requirements bind a product at that date (Art 69(2) and (3) with Art
+  71(2): not_yet_applicable before 11 September 2026, article_14_only from 11
+  September 2026 to 10 December 2027, and from 11 December 2027
+  subject_to_requirements for a product placed on the market on or after that
+  date or placed earlier and substantially modified on or after it, otherwise
+  article_14_only; an unsure modification judgement goes to a lawyer);
+  support_period_minimum, the five-year (60-month) floor of the support period
+  or the shorter expected use time (Art 13(8), third subparagraph); and
+  retention_end_date, the date until which the technical documentation and EU
+  declaration of conformity (Art 13(13)), the information and instructions to
+  the user (Art 13(18)) or a security update (Art 13(9)) must stay available,
+  the later of ten calendar years after the start date and the support period
+  end date. Out of scope: whether the product is within the scope of the
+  Regulation (the order for product scope), the deadlines of Article 14 (the
+  order for manufacturer reporting), the content of the essential
+  cybersecurity requirements and of Annexes I, II and VII, the other duties of
+  Article 13, delegated category minimums, and the authorised
+  representative's mandate (see deferred_set and excluded_set). Every reading
+  is the drafter's reading, not a lawyer's.
+
+sources:
+  - "Regulation (EU) 2024/2847 of the European Parliament and of the Council (Cyber Resilience Act), OJ L, 2024/2847, 20.11.2024, original OJ text 32024R2847 (pinned, raw sha256 fe0cca4a0caec50e7cf5a91432b94a19b211f86be8584fdba56372bdcea571ed): Art 71(2) (dates of application)"
+  - "Regulation (EU) 2024/2847, Art 69(2) and (3) (products placed on the market before 11 December 2027; Article 14 for those products)"
+  - "Regulation (EU) 2024/2847, Art 13(8) third subparagraph (support period of at least five years), Art 13(19) (end date of the support period)"
+  - "Regulation (EU) 2024/2847, Art 13(9), (13), (18) (periods of availability: at least 10 years or the support period, whichever is longer)"
+  - "Regulation (EU) 2024/2847, Art 3(20), (21), (30) (support period, placing on the market, substantial modification), read as the caller's inputs"
+
+query_interface:
+  3: "requirements_applicability/4"            # status determination
+  7: "cra_manufacturer_duties_checklist/2"     # justification: item(STEP, STATUS, cite(KEY)) per ground
+  16: "cra_manufacturer_duties_what_if/4"      # what_if: re-evaluate under an overridden key
+  23: "support_period_minimum/4"               # calculation (retention_end_date/5 computes the date)
+
+deferred_set:
+- what: headings_and_lead_words
+  units:
+  - 32024R2847#art_003
+  - 32024R2847#art_013
+  - 32024R2847#art_069
+  - 32024R2847#art_071
+  reason: 'The headings of Articles 3, 13, 69 and 71 and the lead words of Article
+    3 carry no rule of their own: they introduce the paragraphs and definitions, which
+    are formalised, or deferred, one by one.'
+  consequence: 'None for a caller: the answers come from the paragraphs.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: support_period_determination
+  units:
+  - 32024R2847#parag_013.008
+  partial: true
+  reason: Art 13(8) is read for its third subparagraph only (at least five years;
+    the expected use time where it is less). Its other subparagraphs (the first, handling
+    vulnerabilities for the support period; the second, determining the support period
+    to reflect the expected use time, with the matters to be taken into account; the
+    fourth, the delegated acts on category minimums; the fifth, the documentation
+    of the determination; the sixth, the vulnerability policies) set duties and a
+    manufacturer's determination with no computation this order makes (reading (5)).
+  consequence: 'The answer gives the floor only: the caller checks that the support
+    period reflects the expected use time and the other matters of Art 13(8), and
+    whether a delegated act sets a higher minimum for the product''s category (open
+    questions (Q6), (Q7)).'
+  declaration: answered_with_caveat
+  debt: true
+  open: the determination is a judgement; formalisable only as one; the deferral stands
+    for this run.
+- what: information_and_instructions_content_and_form
+  units:
+  - 32024R2847#parag_013.018
+  partial: true
+  reason: Art 13(18) is read for its last two sentences only (kept at the disposal
+    of users and authorities, and online where provided online, for at least 10 years
+    or the support period, whichever is longer). Its first sentences (accompany the
+    product with the Annex II information, in a language easily understood, clear
+    and legible) set the content and form of the information, with no date (reading
+    (7)).
+  consequence: The answer gives the end of the period of availability only; the caller
+    checks the content, language and form of the information (Annex II, not pinned).
+  declaration: answered_with_caveat
+  debt: true
+  open: not a computation; the deferral stands for this run.
+- what: support_period_end_date_statement
+  units:
+  - 32024R2847#parag_013.019
+  reason: 'Art 13(19) requires the end date of the support period (at least month
+    and year) to be specified at the time of purchase and, where feasible, an end-of-support
+    notification. It is quoted for reading (6): the end date is the caller''s input,
+    and the duty to state it has no computation.'
+  consequence: The order does not check that the end date was stated; it takes the
+    date given (open question (Q8)).
+  declaration: answered_with_caveat
+  debt: true
+  open: not a computation; the deferral stands for this run.
+- what: definitions_read_as_the_callers_input
+  units:
+  - 32024R2847#point_003_20
+  - 32024R2847#point_003_21
+  - 32024R2847#point_003_30
+  reason: 'Art 3(20) (support period), 3(21) (placing on the market) and 3(30) (substantial
+    modification) are quoted for readings (2), (5) and (6): the placing date and the
+    support period end date are the caller''s dates, and substantial modification
+    is the caller''s judgement substantially_modified_on_or_after_application_date;
+    the order does not test the definitions.'
+  consequence: The caller applies these definitions when it gives the dates and the
+    judgement.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable only as inputs; the deferral stands for this run.
+- what: other_manufacturer_duties
+  units:
+  - 32024R2847#parag_013.001
+  - 32024R2847#parag_013.002
+  - 32024R2847#parag_013.003
+  - 32024R2847#parag_013.004
+  - 32024R2847#parag_013.005
+  - 32024R2847#parag_013.006
+  - 32024R2847#parag_013.007
+  - 32024R2847#parag_013.010
+  - 32024R2847#parag_013.011
+  - 32024R2847#parag_013.012
+  - 32024R2847#parag_013.014
+  - 32024R2847#parag_013.015
+  - 32024R2847#parag_013.016
+  - 32024R2847#parag_013.017
+  - 32024R2847#parag_013.020
+  - 32024R2847#parag_013.021
+  - 32024R2847#parag_013.022
+  - 32024R2847#parag_013.023
+  - 32024R2847#parag_013.024
+  - 32024R2847#parag_013.025
+  reason: The other paragraphs of Article 13 set duties with no date or number this
+    order computes (design and production to Part I of Annex I; risk assessment and
+    its documentation; due diligence on components; reporting vulnerabilities in components;
+    documentation; the version rule of paragraph 10; archives; technical documentation
+    and conformity assessment; series production; identification; contact details;
+    single point of contact; the declaration of conformity copy; corrective action;
+    cooperation with authorities; cessation of operations) or Commission and ADCO
+    powers (paragraphs 24 and 25). A checklist of them would restate the text with
+    no logic.
+  consequence: No answer says whether these duties are met; the caller checks them.
+  declaration: not_an_exception
+  debt: true
+  open: paragraph 10 (three judgements) and the event-triggered duties of paragraphs
+    6, 21 and 23 are formalisable as further queries in a later change to the orders;
+    the deferral stands for this run.
+- what: certificates_under_other_legislation
+  units:
+  - 32024R2847#parag_069.001
+  reason: Art 69(1) keeps EU type-examination certificates and approval decisions
+    under other Union harmonisation legislation valid until 11 June 2028; it concerns
+    certificates, not the duties this order reads.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: definitions_this_order_does_not_read
+  units:
+  - 32024R2847#point_003_1
+  - 32024R2847#point_003_2
+  - 32024R2847#point_003_3
+  - 32024R2847#point_003_4
+  - 32024R2847#point_003_5
+  - 32024R2847#point_003_6
+  - 32024R2847#point_003_7
+  - 32024R2847#point_003_8
+  - 32024R2847#point_003_9
+  - 32024R2847#point_003_10
+  - 32024R2847#point_003_11
+  - 32024R2847#point_003_12
+  - 32024R2847#point_003_13
+  - 32024R2847#point_003_14
+  - 32024R2847#point_003_15
+  - 32024R2847#point_003_16
+  - 32024R2847#point_003_17
+  - 32024R2847#point_003_18
+  - 32024R2847#point_003_19
+  - 32024R2847#point_003_22
+  - 32024R2847#point_003_23
+  - 32024R2847#point_003_24
+  - 32024R2847#point_003_25
+  - 32024R2847#point_003_26
+  - 32024R2847#point_003_27
+  - 32024R2847#point_003_28
+  - 32024R2847#point_003_29
+  - 32024R2847#point_003_31
+  - 32024R2847#point_003_32
+  - 32024R2847#point_003_33
+  - 32024R2847#point_003_34
+  - 32024R2847#point_003_35
+  - 32024R2847#point_003_36
+  - 32024R2847#point_003_37
+  - 32024R2847#point_003_38
+  - 32024R2847#point_003_39
+  - 32024R2847#point_003_40
+  - 32024R2847#point_003_41
+  - 32024R2847#point_003_42
+  - 32024R2847#point_003_43
+  - 32024R2847#point_003_44
+  - 32024R2847#point_003_45
+  - 32024R2847#point_003_46
+  - 32024R2847#point_003_47
+  - 32024R2847#point_003_48
+  - 32024R2847#point_003_49
+  - 32024R2847#point_003_50
+  - 32024R2847#point_003_51
+  reason: The other points of Article 3 define words that no limb of this order reads
+    (for example product with digital elements, manufacturer, making available on
+    the market, intended purpose).
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: entry_into_force
+  units:
+  - 32024R2847#parag_071.001
+  reason: Art 71(1) fixes the entry into force of the Regulation; the dates from which
+    it applies are the ones Art 71(2) gives, which the order reads.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: procedural_no_output
+
+excluded_set:
+- what: voluntary_reporting_platform_and_other_reporting_provisions
+  instrument: Regulation (EU) 2024/2847 Articles 15, 16 and 17
+  cites:
+  - 32024R2847#art_015
+  - 32024R2847#art_016
+  - 32024R2847#art_017
+  reason: Not pinned in this domain. Article 15 is voluntary reporting (no duty),
+    Article 16 sets up ENISA's single reporting platform and the dissemination by
+    CSIRTs, and Article 17 sets ENISA and CSIRT powers; none gives a manufacturer
+    duty with a date or number this order computes.
+  consequence: None for these answers; the reporting obligations of Article 14 are
+    in the order for manufacturer reporting.
+- what: annexes_named_by_article_13
+  instrument: Regulation (EU) 2024/2847 Annexes I, II and VII
+  cites:
+  - 32024R2847#anx_I
+  - 32024R2847#anx_II
+  - 32024R2847#anx_VII
+  reason: Not pinned in this domain. Article 13 refers to the essential cybersecurity
+    requirements (Annex I), the information and instructions to the user (Annex II)
+    and the technical documentation (Annex VII); the order computes periods, not content.
+  consequence: The answers say how long items are kept, never what they must contain.
+- what: authorised_representative_mandate
+  instrument: Regulation (EU) 2024/2847 Article 18
+  cites:
+  - 32024R2847#art_018
+  reason: Not pinned in this domain. Art 18(3)(a) gives an authorised representative
+    the same ten-year period for keeping documentation; the order reads the manufacturer's
+    duty only (reading (10)).
+  consequence: The answers are for the manufacturer (open question (Q5)).

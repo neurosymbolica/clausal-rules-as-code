@@ -7,7 +7,7 @@
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_kernel, [gdpr_joint_controllers_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_citations, [citation/2, implements/1]).
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_gdpr_joint_controllers, [decide_gdpr_joint_controllers/2, gdpr_joint_controllers_checklist/2, gdpr_joint_controllers_decision_resolvable/1, gdpr_joint_controllers_status/2, gdpr_joint_controllers_status_values/1, liability_for_the_entire_damage/4, liable_for_the_entire_damage/0, no_other_responsible_party/0, not_entitled_to_claim_back/0, not_joint_controllers/0, not_responsible_for_the_damage/0, recourse_after_full_compensation/4, rights_against_each_joint_controller/3, rights_exercisable_against_this_controller/0]).
-:- use_module(m__eu_data_protection_gdpr_joint_controllers_queries, [absent/0, controllers_jointly_determine_purposes_and_means/0, full_compensation_paid/0, gdpr_joint_controllers_profile_keys/1, gdpr_joint_controllers_what_if/4, not_attempted/0, other_responsible_parties/0, responsible_under_article_82_2_and_3/0, unsure/0]).
+:- use_module(m__eu_data_protection_gdpr_joint_controllers_queries, [gdpr_joint_controllers_profile_keys/1, gdpr_joint_controllers_what_if/4]).
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_fixtures, [gdpr_joint_controllers_assess/2, gdpr_joint_controllers_profile_for/2, gdpr_joint_controllers_subject/1]).
 
 root_export(absent).

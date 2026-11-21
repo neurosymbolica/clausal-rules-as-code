@@ -1,8 +1,9 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_queries.clausal -- tests for the query layer: the schema, the
-% re-exported input check, the what-if combinator (one per route it can
-% flip) and the root-export atoms.
+% test_queries.clausal -- the query layer: one test per query type
+% registered in manifest query_interface (#2 status, #3 Art 48 status,
+% #13 duty compliance check, #16 what-if), plus the profile key schema,
+% the re-exported input check and the constructor atoms.
 % Run: python -m clausal.testing eu/data_protection/gdpr_chapter_v_extras/tests/test_queries.clausal
 % =====================================================================
 :- module(test_queries, []).
@@ -10,58 +11,77 @@
     gdpr_chapter_v_extras_profile_keys/1,
     gdpr_chapter_v_extras_input_problems/2,
     gdpr_chapter_v_extras_what_if/4,
+    second_subparagraph_duty/5,
+    foreign_judgment_or_decision_recognition/4,
+    onward_transfer_condition/4,
     duty_met/0,
     not_barred_by_article_48/0,
     document_assessment_and_safeguards/0
 ]).
+:- use_module(eu/data_protection/gdpr_chapter_v_extras/gdpr_chapter_v_extras, [gdpr_chapter_v_extras_status/2]).
 :- use_module(eu/data_protection/gdpr_chapter_v_extras/fixtures, [gdpr_chapter_v_extras_profile_for/2]).
-
-fixture_attested(Value, attested(Value, attestation(host_user, host_timestamp, fixture_statement, none))).
 
 test(profile_keys_are_the_contract_keys) :-
     gdpr_chapter_v_extras_profile_keys(ProfileKeys),
     ProfileKeys == [transfer_relies_on_article_49_1_second_subparagraph, party_role, supervisory_authority_informed_of_transfer, data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests, assessment_documented_in_records, suitable_safeguards_documented_in_records, third_country_judgment_or_decision_requires_transfer, international_agreement_basis_for_judgment_or_decision, transfer_is_onward_transfer, onward_transfer_has_chapter_v_basis].
 
-test(the_re_exported_input_check_names_a_wrong_type) :-
-    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(party_role, owner)], Problems), Answers),
-    Answers == [[wrong_type(party_role)]].
+% #13 compliance_check
+test(compliance_check_duty_answers_once) :-
+    gdpr_chapter_v_extras_profile_for(data_subject_fully_informed, Profile),
+    findall(Result-Citations, second_subparagraph_duty(Profile, inform_data_subject, Result, _, Citations), Answers),
+    Answers == [duty_met-[cite(eu_reg_2016_679_art_49_1_second_subpara)]].
 
-test(a_what_if_documenting_the_safeguards_clears_the_breach) :-
-    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
-    findall(Status, gdpr_chapter_v_extras_what_if(Profile, suitable_safeguards_documented_in_records, true, Status), Statuses),
-    Statuses == [no_condition_breached].
+% #3 status_determination
+test(status_determination_article_48_answers_once) :-
+    gdpr_chapter_v_extras_profile_for(judgment_without_international_agreement, Profile),
+    findall(Result, foreign_judgment_or_decision_recognition(Profile, Result, _, _), Results),
+    Results == [not_recognisable_or_enforceable].
 
-test(a_what_if_undocumenting_the_safeguards_breaches) :-
-    gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile),
-    gdpr_chapter_v_extras_what_if(Profile, suitable_safeguards_documented_in_records, false, condition_breached).
+% #2 facade status (the onward-transfer limb)
+test(facade_status_answers_once) :-
+    gdpr_chapter_v_extras_profile_for(onward_transfer_without_chapter_v_basis, Profile),
+    findall(Status, gdpr_chapter_v_extras_status(Profile, Status), Statuses),
+    Statuses == [onward_transfer_may_not_take_place].
 
-test(a_what_if_naming_the_controller_settles_the_status) :-
-    gdpr_chapter_v_extras_profile_for(party_role_unstated, Profile),
-    gdpr_chapter_v_extras_what_if(Profile, party_role, controller, no_condition_breached).
+test(re_exported_onward_query_answers_once) :-
+    gdpr_chapter_v_extras_profile_for(transfer_not_onward, Profile),
+    findall(Result, onward_transfer_condition(Profile, Result, _, _), Results),
+    Results == [not_an_onward_transfer].
 
-test(a_what_if_to_processor_lifts_the_duty_to_inform) :-
-    gdpr_chapter_v_extras_profile_for(controller_supervisory_authority_not_informed, Profile),
-    gdpr_chapter_v_extras_what_if(Profile, party_role, processor, no_condition_breached).
+% #16 what-if
+test(what_if_makes_a_transfer_onward) :-
+    gdpr_chapter_v_extras_profile_for(transfer_not_onward, Profile),
+    findall(Status,
+        gdpr_chapter_v_extras_what_if(Profile, transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none)), Status),
+        Statuses),
+    Statuses == [onward_transfer_may_take_place].
 
-test(a_what_if_removing_the_onward_basis_breaches) :-
-    gdpr_chapter_v_extras_profile_for(onward_transfer_with_basis, Profile),
-    fixture_attested(false, Statement),
-    gdpr_chapter_v_extras_what_if(Profile, onward_transfer_has_chapter_v_basis, Statement, condition_breached).
+test(what_if_on_an_unread_key_changes_nothing) :-
+    gdpr_chapter_v_extras_profile_for(onward_transfer_without_chapter_v_basis, Profile),
+    findall(Status,
+        gdpr_chapter_v_extras_what_if(Profile, party_role, processor, Status),
+        Statuses),
+    Statuses == [onward_transfer_may_not_take_place].
 
-test(a_what_if_adding_an_agreement_lifts_the_article_48_bar) :-
-    gdpr_chapter_v_extras_profile_for(foreign_judgment_without_agreement, Profile),
-    fixture_attested(true, Statement),
-    gdpr_chapter_v_extras_what_if(Profile, international_agreement_basis_for_judgment_or_decision, Statement, no_condition_breached).
+test(what_if_with_a_bad_value_gives_input_problems) :-
+    gdpr_chapter_v_extras_profile_for(onward_transfer_with_chapter_v_basis, Profile),
+    findall(Status,
+        gdpr_chapter_v_extras_what_if(Profile, party_role, banana, Status),
+        Statuses),
+    Statuses == [input_problems([wrong_type(party_role)])].
 
-test(a_what_if_adding_an_agreement_is_not_a_breach, fail) :-
-    gdpr_chapter_v_extras_profile_for(foreign_judgment_without_agreement, Profile),
-    fixture_attested(true, Statement),
-    gdpr_chapter_v_extras_what_if(Profile, international_agreement_basis_for_judgment_or_decision, Statement, condition_breached).
+test(what_if_removing_the_basis_refers) :-
+    findall(Status,
+        gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none)), Status),
+        Statuses),
+    Statuses = [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_44), cite(onward_transfer_chapter_v_basis_statement)), _)].
 
-test(a_what_if_on_a_key_outside_the_contract_is_an_input_problem) :-
-    gdpr_chapter_v_extras_what_if([], colour, blue, input_problems([unknown_key(colour)])).
+test(re_exported_input_check_well_formed) :-
+    gdpr_chapter_v_extras_profile_for(complete_transfer_file, Profile),
+    findall(Problems, gdpr_chapter_v_extras_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
 
-test(the_root_export_atoms_resolve) :-
+test(constructor_atoms_resolve) :-
     duty_met,
     not_barred_by_article_48,
     document_assessment_and_safeguards.

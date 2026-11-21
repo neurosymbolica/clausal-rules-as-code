@@ -1,0 +1,668 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% dora_ict_third_party_contract_provisions.clausal -- the "dora_ict_third_party_contract_provisions" DETERMINATION for
+% eu/dora_ict_third_party_contract_provisions, self-contained top to bottom: its statutory VALUE
+% facts (the element table, the paragraph citations, the referral rows), its
+% derived helpers (the monitoring requirement with the microenterprise
+% derogation, the Art 30(3) requirements, the keys that can still change an
+% answer), the three called queries, its checklist, its verdict assembly and
+% the status projection, with per-rule tests.
+%
+% Source: Regulation (EU) 2022/2554 (DORA), 32022R2554, OJ L 333,
+% 27.12.2022, p. 1 (original OJ text): Art 28(7)(a) to (d) (termination
+% circumstances, reading (2)); Art 30(1) (one written document, reading (6));
+% Art 30(2)(a) to (i) (elements of every arrangement, reading (3));
+% Art 30(3)(a) to (f) with point (e) split in two and the microenterprise
+% derogation from point (e) in its closing words (readings (3), (4), (7)).
+%
+% Defeasible structure (cut-free): the requirement of Art 30(3)(e) that the
+% financial entity hold its own access, inspection and audit rights is the
+% default; the derogation in the closing words of Art 30(3) is its defeater,
+% guarded by financial_entity_is_microenterprise and the delegation term of
+% the contract. The defeater is a ground table (derogation_row/3) read once
+% per profile through complementary clauses, never by a wrapper.
+%
+% Open texture (reading (8)): every element is the caller's judgement, true,
+% false or unsure; no crisp test is invented. An unsure judgement that can
+% change the answer, with no absent key that matters, is referred as
+% needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]).
+%
+% No statutory figure: the pinned text sets no period or amount
+% (reading (11)), so no constant is declared.
+% =====================================================================
+
+:- module(dora_ict_third_party_contract_provisions, [
+    decide_dora_ict_third_party_contract_provisions/2,
+    dora_ict_third_party_contract_provisions_status/2,
+    dora_ict_third_party_contract_provisions_checklist/2,
+    dora_ict_third_party_contract_provisions_decision_resolvable/1,
+    dora_ict_third_party_contract_provisions_status_values/1,
+    contract_provisions_required/3,
+    contract_provisions_sufficient/3,
+    contract_provisions_missing/3,
+    sufficient/0,
+    insufficient/0,
+    none_missing/0,
+    required/1,
+    missing/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(eu/dora_ict_third_party_contract_provisions/kernel, [dora_ict_third_party_contract_provisions_input_problems/2]).
+:- use_module(eu/dora_ict_third_party_contract_provisions/citations, [implements/1]).
+
+% ---- result constructors (exported, never called as queries) ---------
+% The arity-1 and arity-2 constructors are data and have no clauses; their
+% fields are named here.
+:- constructors([required(elements), missing(elements), indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(key, citation), inputs_relied_on(pairs), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+sufficient.
+insufficient.
+none_missing.
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The final verdict vocabulary of contract_provisions_sufficient/3.
+dora_ict_third_party_contract_provisions_status_values([sufficient, insufficient]).
+
+% The twenty-four profile keys, in root_exports order.
+profile_key_order([
+    contract_provides_termination_for_significant_breach,
+    contract_provides_termination_for_circumstances_altering_performance,
+    contract_provides_termination_for_risk_management_weaknesses,
+    contract_provides_termination_where_supervision_impeded,
+    contract_is_single_written_document,
+    contract_provides_description_of_functions_services_and_subcontracting,
+    contract_provides_service_and_data_locations,
+    contract_provides_data_protection_provisions,
+    contract_provides_data_access_recovery_and_return,
+    contract_provides_service_level_descriptions,
+    contract_provides_incident_assistance,
+    contract_provides_cooperation_with_authorities,
+    contract_provides_termination_rights_and_notice_periods,
+    contract_provides_security_awareness_and_training_participation,
+    supports_critical_or_important_function,
+    contract_provides_full_service_levels_with_performance_targets,
+    contract_provides_notice_periods_and_reporting_obligations,
+    contract_provides_contingency_plans_and_security_measures,
+    contract_provides_threat_led_penetration_testing_participation,
+    contract_provides_monitoring_rights_of_the_authorities,
+    contract_provides_exit_strategy_and_transition_period,
+    contract_provides_monitoring_rights_of_the_financial_entity,
+    financial_entity_is_microenterprise,
+    contract_provides_delegated_access_inspection_and_audit
+]).
+
+% The PLAIN keys of Art 30(3), in root_exports order.
+plain_critical_or_important_keys([
+    contract_provides_full_service_levels_with_performance_targets,
+    contract_provides_notice_periods_and_reporting_obligations,
+    contract_provides_contingency_plans_and_security_measures,
+    contract_provides_threat_led_penetration_testing_participation,
+    contract_provides_monitoring_rights_of_the_authorities,
+    contract_provides_exit_strategy_and_transition_period
+]).
+
+% contract_element(Element, Group, ProfileKey, Citation), in ELEMENT ORDER.
+% Group base: required for every arrangement (Art 28(7), Art 30(1), (2)).
+% Group critical_or_important: required only when the arrangement supports a
+% critical or important function (Art 30(3), reading (4)).
+contract_element(termination_for_significant_breach, base, contract_provides_termination_for_significant_breach, cite(eu_reg_2022_2554_art_28_7_a)).
+contract_element(termination_for_circumstances_altering_performance, base, contract_provides_termination_for_circumstances_altering_performance, cite(eu_reg_2022_2554_art_28_7_b)).
+contract_element(termination_for_risk_management_weaknesses, base, contract_provides_termination_for_risk_management_weaknesses, cite(eu_reg_2022_2554_art_28_7_c)).
+contract_element(termination_where_supervision_impeded, base, contract_provides_termination_where_supervision_impeded, cite(eu_reg_2022_2554_art_28_7_d)).
+contract_element(single_written_document, base, contract_is_single_written_document, cite(eu_reg_2022_2554_art_30_1)).
+contract_element(description_of_functions_services_and_subcontracting, base, contract_provides_description_of_functions_services_and_subcontracting, cite(eu_reg_2022_2554_art_30_2_a)).
+contract_element(service_and_data_locations, base, contract_provides_service_and_data_locations, cite(eu_reg_2022_2554_art_30_2_b)).
+contract_element(data_protection_provisions, base, contract_provides_data_protection_provisions, cite(eu_reg_2022_2554_art_30_2_c)).
+contract_element(data_access_recovery_and_return, base, contract_provides_data_access_recovery_and_return, cite(eu_reg_2022_2554_art_30_2_d)).
+contract_element(service_level_descriptions, base, contract_provides_service_level_descriptions, cite(eu_reg_2022_2554_art_30_2_e)).
+contract_element(incident_assistance, base, contract_provides_incident_assistance, cite(eu_reg_2022_2554_art_30_2_f)).
+contract_element(cooperation_with_authorities, base, contract_provides_cooperation_with_authorities, cite(eu_reg_2022_2554_art_30_2_g)).
+contract_element(termination_rights_and_notice_periods, base, contract_provides_termination_rights_and_notice_periods, cite(eu_reg_2022_2554_art_30_2_h)).
+contract_element(security_awareness_and_training_participation, base, contract_provides_security_awareness_and_training_participation, cite(eu_reg_2022_2554_art_30_2_i)).
+contract_element(full_service_levels_with_performance_targets, critical_or_important, contract_provides_full_service_levels_with_performance_targets, cite(eu_reg_2022_2554_art_30_3_a)).
+contract_element(notice_periods_and_reporting_obligations, critical_or_important, contract_provides_notice_periods_and_reporting_obligations, cite(eu_reg_2022_2554_art_30_3_b)).
+contract_element(contingency_plans_and_security_measures, critical_or_important, contract_provides_contingency_plans_and_security_measures, cite(eu_reg_2022_2554_art_30_3_c)).
+contract_element(threat_led_penetration_testing_participation, critical_or_important, contract_provides_threat_led_penetration_testing_participation, cite(eu_reg_2022_2554_art_30_3_d)).
+contract_element(monitoring_rights_of_the_financial_entity, critical_or_important, contract_provides_monitoring_rights_of_the_financial_entity, cite(eu_reg_2022_2554_art_30_3_e)).
+contract_element(monitoring_rights_of_the_authorities, critical_or_important, contract_provides_monitoring_rights_of_the_authorities, cite(eu_reg_2022_2554_art_30_3_e)).
+contract_element(exit_strategy_and_transition_period, critical_or_important, contract_provides_exit_strategy_and_transition_period, cite(eu_reg_2022_2554_art_30_3_f)).
+
+% The extra citations of the substitute atom of reading (7).
+substitute_citation(monitoring_rights_of_the_financial_entity_or_delegated_assurance, cite(eu_reg_2022_2554_art_30_3_e)).
+substitute_citation(monitoring_rights_of_the_financial_entity_or_delegated_assurance, cite(eu_reg_2022_2554_art_30_3)).
+
+% The paragraph citations of final answers (reading (12)).
+paragraph_citations(not_critical_or_important, [cite(eu_reg_2022_2554_art_28_7), cite(eu_reg_2022_2554_art_30_1), cite(eu_reg_2022_2554_art_30_2)]).
+paragraph_citations(checked, [cite(eu_reg_2022_2554_art_28_7), cite(eu_reg_2022_2554_art_30_1), cite(eu_reg_2022_2554_art_30_2), cite(eu_reg_2022_2554_art_30_3)]).
+
+% The referral rows: the citation of open_textured(ProfileKey, Citation).
+referral_citation(contract_provides_termination_for_significant_breach, cite(eu_reg_2022_2554_art_28_7_a)).
+referral_citation(contract_provides_termination_for_circumstances_altering_performance, cite(eu_reg_2022_2554_art_28_7_b)).
+referral_citation(contract_provides_termination_for_risk_management_weaknesses, cite(eu_reg_2022_2554_art_28_7_c)).
+referral_citation(contract_provides_termination_where_supervision_impeded, cite(eu_reg_2022_2554_art_28_7_d)).
+referral_citation(contract_is_single_written_document, cite(eu_reg_2022_2554_art_30_1)).
+referral_citation(contract_provides_description_of_functions_services_and_subcontracting, cite(eu_reg_2022_2554_art_30_2_a)).
+referral_citation(contract_provides_service_and_data_locations, cite(eu_reg_2022_2554_art_30_2_b)).
+referral_citation(contract_provides_data_protection_provisions, cite(eu_reg_2022_2554_art_30_2_c)).
+referral_citation(contract_provides_data_access_recovery_and_return, cite(eu_reg_2022_2554_art_30_2_d)).
+referral_citation(contract_provides_service_level_descriptions, cite(eu_reg_2022_2554_art_30_2_e)).
+referral_citation(contract_provides_incident_assistance, cite(eu_reg_2022_2554_art_30_2_f)).
+referral_citation(contract_provides_cooperation_with_authorities, cite(eu_reg_2022_2554_art_30_2_g)).
+referral_citation(contract_provides_termination_rights_and_notice_periods, cite(eu_reg_2022_2554_art_30_2_h)).
+referral_citation(contract_provides_security_awareness_and_training_participation, cite(eu_reg_2022_2554_art_30_2_i)).
+referral_citation(supports_critical_or_important_function, cite(eu_reg_2022_2554_art_30_3)).
+referral_citation(contract_provides_full_service_levels_with_performance_targets, cite(eu_reg_2022_2554_art_30_3_a)).
+referral_citation(contract_provides_notice_periods_and_reporting_obligations, cite(eu_reg_2022_2554_art_30_3_b)).
+referral_citation(contract_provides_contingency_plans_and_security_measures, cite(eu_reg_2022_2554_art_30_3_c)).
+referral_citation(contract_provides_threat_led_penetration_testing_participation, cite(eu_reg_2022_2554_art_30_3_d)).
+referral_citation(contract_provides_monitoring_rights_of_the_authorities, cite(eu_reg_2022_2554_art_30_3_e)).
+referral_citation(contract_provides_exit_strategy_and_transition_period, cite(eu_reg_2022_2554_art_30_3_f)).
+referral_citation(contract_provides_monitoring_rights_of_the_financial_entity, cite(eu_reg_2022_2554_art_30_3_e)).
+referral_citation(contract_provides_delegated_access_inspection_and_audit, cite(eu_reg_2022_2554_art_30_3)).
+
+% The derogation of the closing words of Art 30(3) (the defeater of the
+% financial entity's own monitoring rights), as a ground table:
+% derogation_row(MicroenterpriseValue, DelegationValue, Status), Status met
+% (the delegation meets the element), fails (it cannot) or open.
+derogation_row(true, true, met).
+derogation_row(true, false, fails).
+derogation_row(true, unsure, open).
+derogation_row(true, absent, open).
+derogation_row(false, true, fails).
+derogation_row(false, false, fails).
+derogation_row(false, unsure, fails).
+derogation_row(false, absent, fails).
+derogation_row(absent, true, open).
+derogation_row(absent, false, fails).
+derogation_row(absent, unsure, open).
+derogation_row(absent, absent, open).
+
+% ---- profile plumbing --------------------------------------------------
+% profile_state(Profile, State): State is ProfileKey-Reading for each of the
+% twenty-four keys in root order, Reading the value as given or absent. Read
+% only for a profile that passed the input check (each key at most once).
+profile_state(Profile, State) :-
+    profile_key_order(ProfileKeys),
+    maplist(key_reading(Profile), ProfileKeys, State).
+
+key_reading(Profile, ProfileKey, ProfileKey-absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_reading(Profile, ProfileKey, ProfileKey-Value) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value).
+
+state_value(State, ProfileKey, Value) :-
+    member(ProfileKey-Value, State).
+
+% first_key_with(ProfileKeys, State, Wanted, Result): found(ProfileKey) for
+% the first key whose reading is Wanted, else none.
+first_key_with([], _, _, none).
+first_key_with([ProfileKey|_], State, Wanted, found(ProfileKey)) :-
+    state_value(State, ProfileKey, Value),
+    Value == Wanted.
+first_key_with([ProfileKey|ProfileKeys], State, Wanted, Result) :-
+    state_value(State, ProfileKey, Value),
+    Value \== Wanted,
+    first_key_with(ProfileKeys, State, Wanted, Result).
+
+% all_true_t(ProfileKeys, State, Truth): true when every key reads true.
+all_true_t([], _, true).
+all_true_t([ProfileKey|ProfileKeys], State, Truth) :-
+    state_value(State, ProfileKey, Value),
+    Value == true,
+    all_true_t(ProfileKeys, State, Truth).
+all_true_t([ProfileKey|_], State, false) :-
+    state_value(State, ProfileKey, Value),
+    Value \== true.
+
+present_pairs(ProfileKeys, State, Pairs) :-
+    findall(ProfileKey-Value,
+            ( member(ProfileKey, ProfileKeys),
+              state_value(State, ProfileKey, Value),
+              Value \== absent ),
+            Pairs).
+
+all_present_pairs(State, Pairs) :-
+    profile_key_order(ProfileKeys),
+    present_pairs(ProfileKeys, State, Pairs).
+
+base_keys(ProfileKeys) :-
+    findall(ProfileKey, contract_element(_, base, ProfileKey, _), ProfileKeys).
+
+base_elements(Elements) :-
+    findall(Element, contract_element(Element, base, _, _), Elements).
+
+% ---- the monitoring requirement (reading (7)) --------------------------
+% Default: the financial entity's own rights under Art 30(3)(e). Defeater:
+% the delegation the closing words of Art 30(3) allow a microenterprise.
+derogation_status(MicroenterpriseValue, DelegationValue, Status) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    derogation_row(MicroenterpriseValue, DelegationValue, Status).
+
+monitoring_status(State, Status) :-
+    implements(eu_reg_2022_2554_art_30_3_e),
+    state_value(State, contract_provides_monitoring_rights_of_the_financial_entity, EntityRightsValue),
+    state_value(State, financial_entity_is_microenterprise, MicroenterpriseValue),
+    state_value(State, contract_provides_delegated_access_inspection_and_audit, DelegationValue),
+    derogation_status(MicroenterpriseValue, DelegationValue, DerogationStatus),
+    monitoring_from(EntityRightsValue, DerogationStatus, Status).
+
+monitoring_from(true, _, met).
+monitoring_from(false, DerogationStatus, DerogationStatus).
+monitoring_from(unsure, met, met).
+monitoring_from(unsure, fails, open).
+monitoring_from(unsure, open, open).
+monitoring_from(absent, met, met).
+monitoring_from(absent, fails, open).
+monitoring_from(absent, open, open).
+
+% ---- the Art 30(3) requirements: all_met | one_fails | open -----------
+critical_or_important_requirements_status(State, Status) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    plain_critical_or_important_keys(PlainKeys),
+    first_key_with(PlainKeys, State, false, PlainFalse),
+    all_true_t(PlainKeys, State, PlainAllTrue),
+    monitoring_status(State, Monitoring),
+    requirements_from(PlainFalse, PlainAllTrue, Monitoring, Status).
+
+requirements_from(found(_), _, _, one_fails).
+requirements_from(none, _, fails, one_fails).
+requirements_from(none, true, met, all_met).
+requirements_from(none, true, open, open).
+requirements_from(none, false, met, open).
+requirements_from(none, false, open, open).
+
+% ---- the keys that can still change the answer (S2/S3, M1/M2) ----------
+% Mode sufficiency_check or missing_check. Built in root order: base keys,
+% the critical-or-important judgement, the plain keys, the monitoring chain.
+relevant_keys(Mode, State, ProfileKeys) :-
+    base_keys(BaseKeys),
+    state_value(State, supports_critical_or_important_function, CriticalValue),
+    critical_or_important_requirements_status(State, Requirements),
+    critical_part(Requirements, CriticalKeys),
+    chain_gate(Mode, CriticalValue, Requirements, Gate),
+    chain_keys(Gate, Mode, State, ChainKeys),
+    append([BaseKeys, CriticalKeys, ChainKeys], ProfileKeys).
+
+critical_part(all_met, []).
+critical_part(Requirements, [supports_critical_or_important_function]) :-
+    Requirements \== all_met.
+
+chain_gate(sufficiency_check, false, _, closed).
+chain_gate(sufficiency_check, CriticalValue, one_fails, closed) :-
+    CriticalValue \== false.
+chain_gate(sufficiency_check, CriticalValue, Requirements, open) :-
+    CriticalValue \== false,
+    Requirements \== one_fails.
+chain_gate(missing_check, false, _, closed).
+chain_gate(missing_check, CriticalValue, _, open) :-
+    CriticalValue \== false.
+
+chain_keys(closed, _, _, []).
+chain_keys(open, Mode, State, ProfileKeys) :-
+    plain_critical_or_important_keys(PlainKeys),
+    state_value(State, contract_provides_monitoring_rights_of_the_financial_entity, EntityRightsValue),
+    state_value(State, financial_entity_is_microenterprise, MicroenterpriseValue),
+    state_value(State, contract_provides_delegated_access_inspection_and_audit, DelegationValue),
+    entity_rights_part(MicroenterpriseValue, DelegationValue, EntityKeys),
+    microenterprise_part(Mode, EntityRightsValue, DelegationValue, MicroenterpriseKeys),
+    delegation_part(EntityRightsValue, MicroenterpriseValue, DelegationKeys),
+    append([PlainKeys, EntityKeys, MicroenterpriseKeys, DelegationKeys], ProfileKeys).
+
+entity_rights_part(true, true, []).
+entity_rights_part(true, DelegationValue, [contract_provides_monitoring_rights_of_the_financial_entity]) :-
+    DelegationValue \== true.
+entity_rights_part(MicroenterpriseValue, _, [contract_provides_monitoring_rights_of_the_financial_entity]) :-
+    MicroenterpriseValue \== true.
+
+microenterprise_part(sufficiency_check, true, _, []).
+microenterprise_part(sufficiency_check, EntityRightsValue, false, []) :-
+    EntityRightsValue \== true.
+microenterprise_part(sufficiency_check, EntityRightsValue, DelegationValue, [financial_entity_is_microenterprise]) :-
+    EntityRightsValue \== true,
+    DelegationValue \== false.
+microenterprise_part(missing_check, true, _, []).
+microenterprise_part(missing_check, EntityRightsValue, _, [financial_entity_is_microenterprise]) :-
+    EntityRightsValue \== true.
+
+delegation_part(true, _, []).
+delegation_part(EntityRightsValue, false, []) :-
+    EntityRightsValue \== true.
+delegation_part(EntityRightsValue, MicroenterpriseValue, [contract_provides_delegated_access_inspection_and_audit]) :-
+    EntityRightsValue \== true,
+    MicroenterpriseValue \== false.
+
+% ---- element display (reading (7)) -------------------------------------
+displayed_element(monitoring_rights_of_the_financial_entity, true, monitoring_rights_of_the_financial_entity_or_delegated_assurance).
+displayed_element(monitoring_rights_of_the_financial_entity, false, monitoring_rights_of_the_financial_entity).
+displayed_element(monitoring_rights_of_the_financial_entity, absent, monitoring_rights_of_the_financial_entity).
+displayed_element(Element, _, Element) :-
+    Element \== monitoring_rights_of_the_financial_entity.
+
+all_elements(MicroenterpriseValue, ElementAtoms) :-
+    findall(ElementAtom,
+            ( contract_element(Element, _, _, _),
+              displayed_element(Element, MicroenterpriseValue, ElementAtom) ),
+            ElementAtoms).
+
+element_citation(ElementAtom, Citation) :-
+    contract_element(ElementAtom, _, _, Citation).
+element_citation(ElementAtom, Citation) :-
+    substitute_citation(ElementAtom, Citation).
+
+elements_citations(ElementAtoms, Citations) :-
+    findall(Citation,
+            ( member(ElementAtom, ElementAtoms),
+              element_citation(ElementAtom, Citation) ),
+            RawCitations),
+    sort(RawCitations, Citations).
+
+% ---- (A) contract_provisions_required/3 --------------------------------
+contract_provisions_required(Profile, input_problems([Problem|Problems]), []) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, [Problem|Problems]).
+contract_provisions_required(Profile, Result, Citations) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, []),
+    profile_state(Profile, State),
+    state_value(State, supports_critical_or_important_function, CriticalValue),
+    state_value(State, financial_entity_is_microenterprise, MicroenterpriseValue),
+    required_answer(CriticalValue, MicroenterpriseValue, State, Result, Citations).
+
+% (R1) not critical or important: the fourteen base elements.
+required_answer(false, _, _, required(Elements), Citations) :-
+    implements(eu_reg_2022_2554_art_30_2),
+    base_elements(Elements),
+    paragraph_citations(not_critical_or_important, Citations).
+% (R2) the critical-or-important judgement absent.
+required_answer(absent, _, _, indeterminate([supports_critical_or_important_function]), []).
+% (R3) microenterprise absent (before any referral).
+required_answer(true, absent, _, indeterminate([financial_entity_is_microenterprise]), []).
+required_answer(unsure, absent, _, indeterminate([financial_entity_is_microenterprise]), []).
+% (R4) the critical-or-important judgement unsure: referred.
+required_answer(unsure, true, State, needs_legal_review(open_textured(supports_critical_or_important_function, cite(eu_reg_2022_2554_art_30_3)), [inputs_relied_on(Pairs)]), []) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    present_pairs([supports_critical_or_important_function, financial_entity_is_microenterprise], State, Pairs).
+required_answer(unsure, false, State, needs_legal_review(open_textured(supports_critical_or_important_function, cite(eu_reg_2022_2554_art_30_3)), [inputs_relied_on(Pairs)]), []) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    present_pairs([supports_critical_or_important_function, financial_entity_is_microenterprise], State, Pairs).
+% (R5) critical or important: all twenty-one elements.
+required_answer(true, true, _, required(Elements), Citations) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    all_elements(true, Elements),
+    paragraph_citations(checked, Citations).
+required_answer(true, false, _, required(Elements), Citations) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    all_elements(false, Elements),
+    paragraph_citations(checked, Citations).
+
+% ---- (B) contract_provisions_sufficient/3 ------------------------------
+contract_provisions_sufficient(Profile, input_problems([Problem|Problems]), []) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, [Problem|Problems]).
+contract_provisions_sufficient(Profile, Result, Citations) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, []),
+    profile_state(Profile, State),
+    sufficiency_settlement(State, Settlement),
+    sufficiency_answer(Settlement, State, Result, Citations).
+
+% (S1) a false value settles the answer before any absent or unsure key.
+sufficiency_settlement(State, Settlement) :-
+    implements(eu_reg_2022_2554_art_30_2),
+    base_keys(BaseKeys),
+    first_key_with(BaseKeys, State, false, BaseFalse),
+    state_value(State, supports_critical_or_important_function, CriticalValue),
+    critical_or_important_requirements_status(State, Requirements),
+    settlement_from(BaseFalse, CriticalValue, Requirements, Settlement).
+
+settlement_from(found(_), _, _, insufficient).
+settlement_from(none, true, one_fails, insufficient).
+settlement_from(none, true, Requirements, open) :-
+    Requirements \== one_fails.
+settlement_from(none, CriticalValue, _, open) :-
+    CriticalValue \== true.
+
+sufficiency_answer(insufficient, _, insufficient, Citations) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    paragraph_citations(checked, Citations).
+sufficiency_answer(open, State, Result, Citations) :-
+    relevant_keys(sufficiency_check, State, ProfileKeys),
+    first_key_with(ProfileKeys, State, absent, Absent),
+    first_key_with(ProfileKeys, State, unsure, Unsure),
+    open_answer(sufficiency_check, Absent, Unsure, State, Result, Citations).
+
+% (S2/M1) the first absent key; (S3/M2) the first unsure judgement;
+% (S4/M3) the final answer.
+open_answer(_, found(ProfileKey), _, _, indeterminate([ProfileKey]), []).
+open_answer(_, none, found(ProfileKey), State, needs_legal_review(open_textured(ProfileKey, Citation), [inputs_relied_on(Pairs)]), []) :-
+    referral_citation(ProfileKey, Citation),
+    all_present_pairs(State, Pairs).
+open_answer(sufficiency_check, none, none, _, sufficient, Citations) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    paragraph_citations(checked, Citations).
+open_answer(missing_check, none, none, State, Result, Citations) :-
+    missing_elements(State, Missing),
+    missing_result(Missing, Result, Citations).
+
+% ---- (C) contract_provisions_missing/3 ---------------------------------
+contract_provisions_missing(Profile, input_problems([Problem|Problems]), []) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, [Problem|Problems]).
+contract_provisions_missing(Profile, Result, Citations) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, []),
+    profile_state(Profile, State),
+    relevant_keys(missing_check, State, ProfileKeys),
+    first_key_with(ProfileKeys, State, absent, Absent),
+    first_key_with(ProfileKeys, State, unsure, Unsure),
+    open_answer(missing_check, Absent, Unsure, State, Result, Citations).
+
+missing_elements(State, Missing) :-
+    state_value(State, supports_critical_or_important_function, CriticalValue),
+    state_value(State, financial_entity_is_microenterprise, MicroenterpriseValue),
+    monitoring_status(State, Monitoring),
+    findall(ElementAtom,
+            ( contract_element(Element, Group, ProfileKey, _),
+              element_missing(Group, Element, ProfileKey, State, CriticalValue, Monitoring),
+              displayed_element(Element, MicroenterpriseValue, ElementAtom) ),
+            Missing).
+
+element_missing(base, _, ProfileKey, State, _, _) :-
+    implements(eu_reg_2022_2554_art_30_2),
+    state_value(State, ProfileKey, false).
+element_missing(critical_or_important, Element, ProfileKey, State, true, _) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    Element \== monitoring_rights_of_the_financial_entity,
+    state_value(State, ProfileKey, false).
+element_missing(critical_or_important, monitoring_rights_of_the_financial_entity, _, _, true, fails) :-
+    implements(eu_reg_2022_2554_art_30_3_e).
+
+missing_result([], none_missing, Citations) :-
+    paragraph_citations(checked, Citations).
+missing_result([ElementAtom|ElementAtoms], missing([ElementAtom|ElementAtoms]), Citations) :-
+    elements_citations([ElementAtom|ElementAtoms], Citations).
+
+% ---- verdict assembly and projection -----------------------------------
+decide_dora_ict_third_party_contract_provisions(Profile, dora_ict_third_party_contract_provisions_verdict(Status, Citations)) :-
+    contract_provisions_sufficient(Profile, Status, Citations).
+
+dora_ict_third_party_contract_provisions_status(Profile, Status) :-
+    decide_dora_ict_third_party_contract_provisions(Profile, dora_ict_third_party_contract_provisions_verdict(Status, _Citations)).
+
+dora_ict_third_party_contract_provisions_decision_resolvable(Profile) :-
+    decide_dora_ict_third_party_contract_provisions(Profile, _Verdict).
+
+% ---- checklist: one row per element, each with its cite(...) -----------
+dora_ict_third_party_contract_provisions_checklist(Profile, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2022_2554_art_30_2))]) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, [Problem|Problems]).
+dora_ict_third_party_contract_provisions_checklist(Profile, Items) :-
+    dora_ict_third_party_contract_provisions_input_problems(Profile, []),
+    profile_state(Profile, State),
+    state_value(State, supports_critical_or_important_function, CriticalValue),
+    state_value(State, financial_entity_is_microenterprise, MicroenterpriseValue),
+    monitoring_status(State, Monitoring),
+    findall(item(ElementAtom, Status, Citation),
+            ( contract_element(Element, Group, ProfileKey, Citation),
+              displayed_element(Element, MicroenterpriseValue, ElementAtom),
+              element_item_status(Group, Element, ProfileKey, State, CriticalValue, Monitoring, Status) ),
+            Items).
+
+element_item_status(base, _, ProfileKey, State, _, _, Status) :-
+    implements(eu_reg_2022_2554_art_30_2),
+    state_value(State, ProfileKey, Value),
+    value_item_status(Value, ProfileKey, Status).
+element_item_status(critical_or_important, _, _, _, false, _, inapplicable).
+element_item_status(critical_or_important, _, _, _, unsure, _, unknown([supports_critical_or_important_function])).
+element_item_status(critical_or_important, _, _, _, absent, _, unknown([supports_critical_or_important_function])).
+element_item_status(critical_or_important, Element, ProfileKey, State, true, _, Status) :-
+    implements(eu_reg_2022_2554_art_30_3),
+    Element \== monitoring_rights_of_the_financial_entity,
+    state_value(State, ProfileKey, Value),
+    value_item_status(Value, ProfileKey, Status).
+element_item_status(critical_or_important, monitoring_rights_of_the_financial_entity, _, _, true, Monitoring, Status) :-
+    implements(eu_reg_2022_2554_art_30_3_e),
+    monitoring_item_status(Monitoring, Status).
+
+value_item_status(true, _, met).
+value_item_status(false, _, unmet(not_provided)).
+value_item_status(unsure, ProfileKey, unknown([ProfileKey])).
+value_item_status(absent, ProfileKey, unknown([ProfileKey])).
+
+monitoring_item_status(met, met).
+monitoring_item_status(fails, unmet(not_provided)).
+monitoring_item_status(open, unknown([contract_provides_monitoring_rights_of_the_financial_entity])).
+
+% ---- test fixtures (internal) ------------------------------------------
+% test_profile(Overrides, Profile): every judgement true and the entity not
+% a microenterprise, except the Overrides; the value absent drops the key.
+test_profile(Overrides, Profile) :-
+    profile_key_order(ProfileKeys),
+    maplist(test_attribute(Overrides), ProfileKeys, Attributes),
+    exclude(absent_attribute, Attributes, Profile).
+
+test_attribute(Overrides, ProfileKey, attribute(ProfileKey, Value)) :-
+    pairs_keys(Overrides, OverriddenKeys),
+    memberd_t(ProfileKey, OverriddenKeys, Overridden),
+    test_value(Overridden, Overrides, ProfileKey, Value).
+
+test_value(true, Overrides, ProfileKey, Value) :-
+    member(ProfileKey-Value, Overrides).
+test_value(false, _, financial_entity_is_microenterprise, false).
+test_value(false, _, ProfileKey, true) :-
+    ProfileKey \== financial_entity_is_microenterprise.
+
+absent_attribute(attribute(_, absent)).
+
+% ---- tests ---------------------------------------------------------------
+test(a_complete_critical_contract_is_sufficient) :-
+    test_profile([], Profile),
+    findall(Result-Citations, contract_provisions_sufficient(Profile, Result, Citations), Answers),
+    Answers = [Answer],
+    Answer = sufficient-Citations,
+    length(Citations, 4).
+test(a_complete_critical_contract_misses_nothing) :-
+    test_profile([], Profile),
+    contract_provisions_missing(Profile, Result, _),
+    Result == none_missing.
+test(required_without_critical_function_is_the_base_list) :-
+    test_profile([supports_critical_or_important_function-false], Profile),
+    findall(Result-Citations, contract_provisions_required(Profile, Result, Citations), Answers),
+    Answers = [required(Elements)-Citations],
+    length(Elements, 14),
+    length(Citations, 3).
+test(required_with_critical_function_has_twenty_one) :-
+    test_profile([], Profile),
+    contract_provisions_required(Profile, required(Elements), Citations),
+    length(Elements, 21),
+    nth1(19, Elements, Position),
+    Position == monitoring_rights_of_the_financial_entity,
+    length(Citations, 4).
+test(required_for_a_microenterprise_names_the_delegation) :-
+    test_profile([financial_entity_is_microenterprise-true], Profile),
+    contract_provisions_required(Profile, required(Elements), _),
+    nth1(19, Elements, Position),
+    Position == monitoring_rights_of_the_financial_entity_or_delegated_assurance.
+test(required_unsure_critical_function_is_referred) :-
+    test_profile([supports_critical_or_important_function-unsure], Profile),
+    contract_provisions_required(Profile, Result, Citations),
+    Result == needs_legal_review(open_textured(supports_critical_or_important_function, cite(eu_reg_2022_2554_art_30_3)), [inputs_relied_on([supports_critical_or_important_function-unsure, financial_entity_is_microenterprise-false])]),
+    Citations == [].
+test(required_asks_for_the_microenterprise_before_referring) :-
+    test_profile([supports_critical_or_important_function-unsure, financial_entity_is_microenterprise-absent], Profile),
+    contract_provisions_required(Profile, Result, []),
+    Result == indeterminate([financial_entity_is_microenterprise]).
+test(required_asks_for_the_critical_function_first) :-
+    test_profile([supports_critical_or_important_function-absent, financial_entity_is_microenterprise-absent], Profile),
+    contract_provisions_required(Profile, Result, []),
+    Result == indeterminate([supports_critical_or_important_function]).
+test(one_false_base_element_is_insufficient) :-
+    test_profile([contract_provides_incident_assistance-false], Profile),
+    contract_provisions_sufficient(Profile, Result, _),
+    Result == insufficient.
+test(one_false_base_element_is_not_sufficient, fail) :-
+    test_profile([contract_provides_incident_assistance-false], Profile),
+    contract_provisions_sufficient(Profile, sufficient, _).
+test(one_false_base_element_is_listed_with_its_citation) :-
+    test_profile([contract_provides_incident_assistance-false], Profile),
+    contract_provisions_missing(Profile, Result, Citations),
+    Result == missing([incident_assistance]),
+    Citations == [cite(eu_reg_2022_2554_art_30_2_f)].
+test(a_false_key_decides_sufficiency_before_an_absent_one) :-
+    test_profile([contract_provides_termination_for_significant_breach-absent, contract_provides_incident_assistance-false], Profile),
+    contract_provisions_sufficient(Profile, Result, _),
+    Result == insufficient.
+test(the_missing_list_waits_for_every_element) :-
+    test_profile([contract_provides_termination_for_significant_breach-absent, contract_provides_incident_assistance-false], Profile),
+    contract_provisions_missing(Profile, Result, []),
+    Result == indeterminate([contract_provides_termination_for_significant_breach]).
+test(a_failed_delegation_is_named_for_a_microenterprise) :-
+    test_profile([contract_provides_monitoring_rights_of_the_financial_entity-false, financial_entity_is_microenterprise-true, contract_provides_delegated_access_inspection_and_audit-false], Profile),
+    contract_provisions_missing(Profile, Result, Citations),
+    Result == missing([monitoring_rights_of_the_financial_entity_or_delegated_assurance]),
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2022_2554_art_30_3), cite(eu_reg_2022_2554_art_30_3_e)].
+test(the_delegation_meets_the_monitoring_requirement) :-
+    test_profile([contract_provides_monitoring_rights_of_the_financial_entity-false, financial_entity_is_microenterprise-true, contract_provides_delegated_access_inspection_and_audit-true], Profile),
+    contract_provisions_sufficient(Profile, Result, _),
+    Result == sufficient.
+test(own_rights_are_not_asked_after_a_delegation) :-
+    test_profile([contract_provides_monitoring_rights_of_the_financial_entity-absent, financial_entity_is_microenterprise-true, contract_provides_delegated_access_inspection_and_audit-true], Profile),
+    contract_provisions_sufficient(Profile, Result, _),
+    Result == sufficient.
+test(an_unsure_document_is_referred_with_all_pairs) :-
+    test_profile([contract_is_single_written_document-unsure], Profile),
+    contract_provisions_sufficient(Profile, Result, []),
+    Result = needs_legal_review(open_textured(contract_is_single_written_document, Citation), [inputs_relied_on(Pairs)]),
+    Citation == cite(eu_reg_2022_2554_art_30_1),
+    length(Pairs, 24).
+test(a_non_critical_arrangement_ignores_art_30_3) :-
+    test_profile([supports_critical_or_important_function-false, contract_provides_full_service_levels_with_performance_targets-false], Profile),
+    contract_provisions_sufficient(Profile, sufficient, _),
+    contract_provisions_missing(Profile, none_missing, _).
+test(an_unsure_critical_function_does_not_matter_when_art_30_3_is_met) :-
+    test_profile([supports_critical_or_important_function-unsure], Profile),
+    contract_provisions_sufficient(Profile, Result, _),
+    Result == sufficient.
+test(an_absent_critical_function_is_asked_when_art_30_3_is_open) :-
+    test_profile([supports_critical_or_important_function-absent, contract_provides_exit_strategy_and_transition_period-absent], Profile),
+    contract_provisions_sufficient(Profile, Result, []),
+    Result == indeterminate([supports_critical_or_important_function]).
+test(an_unknown_key_is_refused) :-
+    contract_provisions_sufficient([attribute(colour, blue)], Result, Citations),
+    Result == input_problems([unknown_key(colour)]),
+    Citations == [].
+test(the_checklist_has_one_row_per_element) :-
+    test_profile([], Profile),
+    dora_ict_third_party_contract_provisions_checklist(Profile, Items),
+    length(Items, 21).
+test(the_verdict_projects_the_sufficiency_answer) :-
+    test_profile([], Profile),
+    dora_ict_third_party_contract_provisions_status(Profile, Status),
+    Status == sufficient.
+
+:- end_module(dora_ict_third_party_contract_provisions).

@@ -1,0 +1,181 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_churches_and_religious_associations.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 91(1) and Art 91(2), pinned
+% unit text of 02016R0679-20160504 (#parag_091.001, #parag_091.002).
+%
+% gdpr_churches_and_religious_associations_profile_keys/1: the seven profile keys of the
+%   order's typed input contract, in root_exports order;
+% gdpr_churches_and_religious_associations_input_problems/2: THE INPUT CHECK (re-exported
+%   from the kernel, as the scaffold wrote it);
+% gdpr_churches_and_religious_associations_what_if/4 (#16 what-if): override one key and
+%   re-evaluate the facade status (the RESULT of church_rules_continuation/4).
+%   The profile is an ATTRIBUTE LIST, not a dict, so the kit's override_key/4
+%   (dict only: it raises type_error(dict, _) on a list) is not used; the
+%   override is local list plumbing: every attribute of the key is dropped
+%   and one attribute(Key, Value) is appended;
+% gdpr_churches_and_religious_associations_eligibility/2 (#2 eligibility, #7 justification):
+%   assessment(Profile, Label, Checklist), Label eligible / ineligible /
+%   indeterminate, read from the RESULT of church_rules_continuation/4, and
+%   Checklist the slice's five Art 91(1) items, each carrying cite(...).
+%   An unsure judgement or an absent key is an unknown([Key]) item: the
+%   open-textured judgement stays with the user, no crisp test is invented.
+%   A profile with input problems is indeterminate with an empty checklist.
+%
+% ROOT ATOMS AND RESULT CONSTRUCTORS. The seven profile key atoms and the
+% judgement value unsure are read by the scorer as package-root attributes,
+% so each is a bare atom (a /0 fact) exported here. The result constructors
+% of the order (indeterminate/1, needs_legal_review/2, ...) are DATA: they
+% are exported and declared with constructors/1, and have no clauses; they
+% are never called as queries.
+%
+% The governed queries church_rules_continuation/4 and church_supervision/4
+% live in the slice; this layer does not restate them.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_churches_and_religious_associations_profile_keys/1,
+    gdpr_churches_and_religious_associations_input_problems/2,
+    gdpr_churches_and_religious_associations_what_if/4,
+    gdpr_churches_and_religious_associations_eligibility/2,
+    body_is_church_or_religious_association_or_community/0,
+    rules_applied_in_a_member_state/0,
+    comprehensive_rules_relating_to_protection_with_regard_to_processing/0,
+    rules_applied_at_entry_into_force_of_the_regulation/0,
+    rules_brought_into_line_with_the_regulation/0,
+    supervisory_authority_is_specific/0,
+    specific_authority_fulfils_chapter_vi_conditions/0,
+    unsure/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/kernel, [gdpr_churches_and_religious_associations_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/gdpr_churches_and_religious_associations, [
+    gdpr_churches_and_religious_associations_status/2,
+    gdpr_churches_and_religious_associations_checklist/2,
+    church_rules_continuation/4
+]).
+
+% ---- result constructors (data shapes, no clauses) ----------------------
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, resolution_status),
+    inputs_relied_on(pairs),
+    outside_fact(key, attested),
+    attested(value, attestation),
+    attestation(by, at, reason, evidence),
+    url(url, retrieved_at),
+    document(upload_identifier, digest),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_churches_and_religious_associations_profile_keys([body_is_church_or_religious_association_or_community, rules_applied_in_a_member_state, comprehensive_rules_relating_to_protection_with_regard_to_processing, rules_applied_at_entry_into_force_of_the_regulation, rules_brought_into_line_with_the_regulation, supervisory_authority_is_specific, specific_authority_fulfils_chapter_vi_conditions]).
+
+% ---- root atoms: the seven profile keys and the judgement value ---------
+body_is_church_or_religious_association_or_community.
+rules_applied_in_a_member_state.
+comprehensive_rules_relating_to_protection_with_regard_to_processing.
+rules_applied_at_entry_into_force_of_the_regulation.
+rules_brought_into_line_with_the_regulation.
+supervisory_authority_is_specific.
+specific_authority_fulfils_chapter_vi_conditions.
+unsure.
+
+% #16 what-if: re-evaluate with one key hypothetically overridden
+gdpr_churches_and_religious_associations_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_churches_and_religious_associations_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, Hypothesis): list plumbing, one solution.
+override_attribute(Profile, Key, Value, Hypothesis) :-
+    remove_attribute(Profile, Key, Kept),
+    append(Kept, [attribute(Key, Value)], Hypothesis).
+
+remove_attribute([], _, []).
+remove_attribute([attribute(ElementKey, _)|Elements], Key, Kept) :-
+    ElementKey == Key,
+    remove_attribute(Elements, Key, Kept).
+remove_attribute([attribute(ElementKey, ElementValue)|Elements], Key, [attribute(ElementKey, ElementValue)|Kept]) :-
+    ElementKey \== Key,
+    remove_attribute(Elements, Key, Kept).
+
+% ---- #2 eligibility with a cited checklist (#7) ------------------------
+% One solution: church_rules_continuation/4 yields one Result, result_label/2
+% has one clause per Result shape, and the input check yields one Problems.
+gdpr_churches_and_religious_associations_eligibility(Profile, assessment(Profile, Label, Checklist)) :-
+    church_rules_continuation(Profile, Result, _Basis, _Citations),
+    result_label(Result, Label),
+    gdpr_churches_and_religious_associations_input_problems(Profile, Problems),
+    eligibility_checklist(Problems, Profile, Checklist).
+
+% result_label(Result, Label): the eligibility label of the Art 91(1) answer.
+result_label(church_rules_may_continue_to_apply, eligible).
+result_label(church_rules_not_covered_by_article_91_1, ineligible).
+result_label(indeterminate(_), indeterminate).
+result_label(needs_legal_review(_, _), indeterminate).
+result_label(input_problems(_), indeterminate).
+
+% Only a well-formed profile has a checklist.
+eligibility_checklist([], Profile, Items) :-
+    gdpr_churches_and_religious_associations_checklist(Profile, Items).
+eligibility_checklist([_|_], _, []).
+
+% ---- tests -------------------------------------------------------------
+test(an_empty_profile_is_indeterminate_with_five_cited_items) :-
+    gdpr_churches_and_religious_associations_eligibility([], assessment(_, Label, Items)),
+    Label == indeterminate,
+    length(Items, 5).
+test(a_false_body_is_ineligible) :-
+    gdpr_churches_and_religious_associations_eligibility(
+        [attribute(body_is_church_or_religious_association_or_community, false)],
+        assessment(_, Label, _)),
+    Label == ineligible.
+test(a_false_body_is_not_eligible, fail) :-
+    gdpr_churches_and_religious_associations_eligibility(
+        [attribute(body_is_church_or_religious_association_or_community, false)],
+        assessment(_, eligible, _)).
+test(a_malformed_profile_is_indeterminate_with_no_checklist) :-
+    gdpr_churches_and_religious_associations_eligibility(
+        [attribute(rules_applied_in_a_member_state, unsure)],
+        assessment(_, Label, Items)),
+    Label == indeterminate,
+    Items == [].
+test(the_profile_key_schema_has_seven_keys) :-
+    gdpr_churches_and_religious_associations_profile_keys(Keys),
+    length(Keys, 7).
+test(the_override_replaces_the_key_once) :-
+    override_attribute([attribute(rules_applied_in_a_member_state, true)], rules_applied_in_a_member_state, false, Hypothesis),
+    Hypothesis == [attribute(rules_applied_in_a_member_state, false)].
+test(what_if_a_false_body_on_an_empty_profile) :-
+    gdpr_churches_and_religious_associations_what_if([], body_is_church_or_religious_association_or_community, false, Status),
+    Status == church_rules_not_covered_by_article_91_1.
+test(the_root_atoms_are_served) :-
+    unsure,
+    body_is_church_or_religious_association_or_community,
+    specific_authority_fulfils_chapter_vi_conditions.
+
+:- end_module(queries).

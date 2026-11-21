@@ -2,67 +2,69 @@
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_complaints_and_judicial_remedies (deontic family).
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. This package has ONE
+% PREDICATES that two or more files CALL. This order has ONE
 % determination slice (gdpr_complaints_and_judicial_remedies.clausal), so
-% no domain predicate is shared and none is defined here.
+% no domain predicate is shared and nothing domain-specific is added here.
 % Exception: the scaffold writes the order's input check
 % gdpr_complaints_and_judicial_remedies_input_problems/2 here, exported, for
-% the slice (and queries.clausal) to import. It is kept as the scaffold wrote it.
-% deontic family: each RESULT states whether a RIGHT exists (the permission
-% to invoke a remedy), or which courts Art 79(2) names.
+% the slice and queries.clausal to import. It is kept as the scaffold wrote it.
 %
-% Source: Regulation (EU) 2016/679 (GDPR) Art 77(1), Art 78(1), Art 78(2),
-% Art 79(1) and Art 79(2), pinned unit text of 02016R0679-20160504 (the
-% consolidated text of 2016-05-04, fmx4 cut by tools/pin_statute.py,
-% fetched 2026-11-12): units parag_077.001, parag_078.001, parag_078.002,
-% parag_079.001 and parag_079.002. Art 77(2), Art 78(3) and (4) and the
-% article titles are deferred. Arts 55 and 56 are not pinned: competence is
-% the outside fact authority_competent_under_articles_55_and_56.
+% Source (the law being formalized): Regulation (EU) 2016/679 (GDPR),
+% consolidated text 02016R0679-20160504 (pinned 2026-11-12):
+%   Art 77(1)  parag_077.001  the right to lodge a complaint;
+%   Art 78(1)  parag_078.001  the remedy against a legally binding decision;
+%   Art 78(2)  parag_078.002  the remedy where the competent authority does
+%                             not handle a complaint or does not inform
+%                             within three months;
+%   Art 79(1)  parag_079.001  the remedy against a controller or processor;
+%   Art 79(2)  parag_079.002  the courts of the proceedings.
+% Deferred: Art 77(2), Art 78(3) and (4), the article titles; Arts 55 and 56
+% (competence) are an outside fact, never decided.
 %
-% Atoms and data terms need NO declaration and NO import. The comment block
-% below only RECORDS the result terms so every file spells them alike.
+% deontic family: STATUS is a vocabulary of RIGHTS that exist or do not.
 %
-% Result terms (the slice builds them; nothing here to export):
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms so every file spells them alike.
 %
-%   gdpr_complaints_and_judicial_remedies_verdict(Status, Citations)
-%     Status    -- exactly the RESULT of the query asked (below).
-%     Citations -- a set-like list of cite(Key) terms, each Key one of
-%                  eu_reg_2016_679_art_77_1, eu_reg_2016_679_art_78_1,
-%                  eu_reg_2016_679_art_78_2, eu_reg_2016_679_art_79_1,
-%                  eu_reg_2016_679_art_79_2; [] for a RESULT that is not final.
+% RESULT TERMS (built by the slice gdpr_complaints_and_judicial_remedies.clausal)
 %
-%   Final RESULT atoms, per query:
-%     complaint_right/3                   complaint_right_exists | no_complaint_right
-%     authority_decision_remedy_right/3   decision_remedy_right_exists | no_decision_remedy_right
-%     authority_inaction_remedy_right/4   inaction_remedy_right_exists | no_inaction_remedy_right
-%     controller_processor_remedy_right/3 judicial_remedy_right_exists | no_judicial_remedy_right
-%     controller_processor_forum/3        forum_establishment_state_only
-%                                         | forum_establishment_or_habitual_residence_state
+% Per-query answers (Profile in, the rest out; exactly one solution each):
+%   complaint_right(Profile, Result, Citations)                    Art 77(1)
+%     Result: complaint_right_exists | no_complaint_right
+%   authority_decision_remedy_right(Profile, Result, Citations)    Art 78(1)
+%     Result: decision_remedy_right_exists | no_decision_remedy_right
+%   authority_inaction_remedy_right(Profile, Result, Basis, Citations)  Art 78(2)
+%     Result: inaction_remedy_right_exists | no_inaction_remedy_right
+%     Basis:  [] or [outside_fact(authority_competent_under_articles_55_and_56,
+%                                 Attested)], Attested copied exactly as supplied
+%   controller_processor_remedy_right(Profile, Result, Citations)  Art 79(1)
+%     Result: judicial_remedy_right_exists | no_judicial_remedy_right
+%   controller_processor_forum(Profile, Result, Citations)         Art 79(2)
+%     Result: forum_establishment_state_only
+%           | forum_establishment_or_habitual_residence_state
+%   Citations: [cite(Key)] for a final Result, Key one of
+%     eu_reg_2016_679_art_77_1, eu_reg_2016_679_art_78_1,
+%     eu_reg_2016_679_art_78_2, eu_reg_2016_679_art_79_1,
+%     eu_reg_2016_679_art_79_2; [] for every non-final Result.
 %
-%   Non-final RESULT compounds (never written bare), exactly one of:
-%     input_problems(Problems)    -- Problems the non-empty list this input
-%                                    check derives: duplicate_key(Key),
-%                                    wrong_type(Key), unknown_key(Key), or
-%                                    [wrong_type(profile)] alone.
-%     indeterminate([Key])        -- the FIRST absent needed key.
-%     needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_78_1)),
-%                        [inputs_relied_on(Pairs)])
-%                                 -- Key the first unsure judgement; Pairs the
-%                                    present judgement keys as Key-Value.
-%     needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2),
-%                                                   cite(competence_statement)),
-%                        [resolution(cite(competence_statement), not_attempted),
-%                         inputs_relied_on([authority_competent_under_articles_55_and_56-absent])])
-%                                 -- the absent outside fact the answer turns on.
+% Non-final Results (the bare atom indeterminate is NEVER written):
+%   input_problems(Problems)       Problems from the input check below;
+%   indeterminate([Key])           the FIRST missing needed key;
+%   needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_78_1)),
+%                      [inputs_relied_on(Pairs)])
+%                                  Key the unsure judgement, Pairs the
+%                                  Key-Value pairs of the present judgements;
+%   needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2),
+%                                                 cite(competence_statement)),
+%                      [resolution(cite(competence_statement), not_attempted),
+%                       inputs_relied_on([authority_competent_under_articles_55_and_56-absent])])
 %
-%   BASIS (authority_inaction_remedy_right/4 only): [] or
-%     [outside_fact(authority_competent_under_articles_55_and_56, Attested)],
-%     Attested the attested(Value, attestation(By, At, Reason, Evidence))
-%     term copied exactly as supplied, never read.
+% Facade verdict term (one per query):
+%   gdpr_complaints_and_judicial_remedies_verdict(answer(Query, Result), Citations)
 %
-% Spell every result and verdict atom exactly as REQUIRED PUBLIC
-% PREDICATES and the order pin it: an atom spelled differently is a
-% DIFFERENT atom, and nothing will warn you.
+% Input problems (items of Problems): duplicate_key(Key), wrong_type(Key),
+% unknown_key(Key); a profile that is not an attribute list gives
+% [wrong_type(profile)] alone.
 % =====================================================================
 
 :- module(kernel, [gdpr_complaints_and_judicial_remedies_input_problems/2]).
@@ -76,9 +78,13 @@
 % Each public query calls this check first: it gives its normal answer only when
 % Problems = [], and when Problems is not [] it gives the answer the order states for
 % a profile with input problems.
-% It gives exactly one answer for every Profile, and the answer is ground:
-% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
-%   Key in every item gives [wrong_type(profile)];
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
 % - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
 %   the key occurs more than once in Profile (whatever its values: none of them is read,
 %   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
@@ -110,7 +116,7 @@ key_type(data_subject_considers_rights_infringed_by_processing, boolean).
 key_type(defendant_is_member_state_public_authority_acting_in_public_powers, boolean).
 
 % attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
-% items, each Key ground; false for anything else, an unbound Term included.
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
 attribute_list_t(Term, false) :-
     var(Term).
 attribute_list_t(Term, true) :-
@@ -128,23 +134,27 @@ attribute_list_t(Term, false) :-
 
 attribute_t(Element, false) :-
     var(Element).
-attribute_t(Element, T) :-
+attribute_t(Element, true) :-
     nonvar(Element),
-    Element = attribute(Key, _),
-    term_variables(Key, Variables),
-    no_variables_t(Variables, T).
+    Element = attribute(_, _).
 attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
-no_variables_t([], true).
-no_variables_t([_|_], false).
-
-% Unknown keys, in profile order, each once: Known grows by each key named.
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    known_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
     unknown_keys(Elements, Known, Problems).
@@ -254,15 +264,31 @@ attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
 
+% ---- tests of the shared input check ------------------------------
 test(an_empty_profile_has_no_problem) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([], []).
-test(an_unbound_profile_is_not_an_attribute_list) :-
-    gdpr_complaints_and_judicial_remedies_input_problems(_, [wrong_type(profile)]).
+    gdpr_complaints_and_judicial_remedies_input_problems([], Problems),
+    Problems == [].
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true), attribute(decision_is_legally_binding, unsure), attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none)))], Problems),
+    Problems == [].
+test(duplicate_wrong_type_and_unknown_in_order) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true), attribute(colour, red), attribute(is_data_subject, false), attribute(decision_concerns_the_caller, maybe), attribute(colour, blue)], Problems),
+    Problems == [duplicate_key(is_data_subject), wrong_type(decision_concerns_the_caller), unknown_key(colour)].
 test(a_crisp_key_given_unsure_is_wrong_type) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, unsure)], [wrong_type(is_data_subject)]).
-test(a_judgement_given_unsure_is_well_formed) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([attribute(decision_is_legally_binding, unsure)], []).
-test(a_repeated_key_is_a_duplicate_only) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true), attribute(is_data_subject, unsure)], [duplicate_key(is_data_subject)]).
-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, unsure)], Problems),
+    Problems == [wrong_type(is_data_subject)].
+test(an_unbound_attestation_argument_is_wrong_type) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(_, at, reason, none)))], Problems),
+    Problems == [wrong_type(authority_competent_under_articles_55_and_56)].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    gdpr_complaints_and_judicial_remedies_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_not_an_attribute_list) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(a_non_attribute_element_is_not_an_attribute_list) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([is_data_subject-true], Problems),
+    Problems == [wrong_type(profile)].
+test(a_well_formed_profile_is_not_refused, fail) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true)], [_|_]).
 :- end_module(kernel).

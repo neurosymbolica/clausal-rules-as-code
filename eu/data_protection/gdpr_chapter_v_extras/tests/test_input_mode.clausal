@@ -1,86 +1,178 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_input_mode.clausal -- INPUT MODE: public predicates called with the
-% result argument BOUND (verdict given, not read out), and the input check
-% driven with malformed profiles and arguments.
-% The profile is an attribute list.
+% result arguments BOUND (answer given, not read out), and input tolerance:
+% every malformed profile or argument gets exactly one input_problems answer.
 % Run: python -m clausal.testing eu/data_protection/gdpr_chapter_v_extras/tests/test_input_mode.clausal
 % =====================================================================
 :- module(test_input_mode, []).
+:- use_module(eu/data_protection/gdpr_chapter_v_extras/kernel, [gdpr_chapter_v_extras_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_chapter_v_extras/gdpr_chapter_v_extras, [
     second_subparagraph_duty/5,
     foreign_judgment_or_decision_recognition/4,
     onward_transfer_condition/4,
     gdpr_chapter_v_extras_status/2
 ]).
-:- use_module(eu/data_protection/gdpr_chapter_v_extras/kernel, [gdpr_chapter_v_extras_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_chapter_v_extras/fixtures, [gdpr_chapter_v_extras_profile_for/2]).
 
-% ---- bound results -----------------------------------------------------
-test(a_met_duty_holds_with_the_result_bound) :-
-    gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile),
-    second_subparagraph_duty(Profile, inform_supervisory_authority, duty_met, _, _).
-test(a_met_duty_rejects_duty_not_met_bound, fail) :-
-    gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile),
-    second_subparagraph_duty(Profile, inform_supervisory_authority, duty_not_met, _, _).
-test(an_unmet_documentation_duty_holds_with_basis_and_citations_bound) :-
-    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
-    second_subparagraph_duty(Profile, document_assessment_and_safeguards, duty_not_met, [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(true, _))], [cite(eu_reg_2016_679_art_49_6)]).
-test(an_unmet_documentation_duty_rejects_the_wrong_citation, fail) :-
-    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
-    second_subparagraph_duty(Profile, document_assessment_and_safeguards, duty_not_met, _, [cite(eu_reg_2016_679_art_49_1_second_subpara)]).
-test(the_processor_answer_holds_bound) :-
-    gdpr_chapter_v_extras_profile_for(processor_documentation_met, Profile),
-    second_subparagraph_duty(Profile, inform_data_subject, not_a_processor_duty, [], [cite(eu_reg_2016_679_art_49_1_second_subpara)]).
-test(the_article_48_bar_holds_bound) :-
-    gdpr_chapter_v_extras_profile_for(foreign_judgment_without_agreement, Profile),
-    foreign_judgment_or_decision_recognition(Profile, not_recognisable_or_enforceable, _, [cite(eu_reg_2016_679_art_48)]).
-test(the_article_48_bar_rejects_not_barred_bound, fail) :-
-    gdpr_chapter_v_extras_profile_for(foreign_judgment_without_agreement, Profile),
-    foreign_judgment_or_decision_recognition(Profile, not_barred_by_article_48, _, _).
-test(the_onward_answer_holds_bound) :-
-    gdpr_chapter_v_extras_profile_for(onward_transfer_without_basis, Profile),
-    onward_transfer_condition(Profile, onward_transfer_may_not_take_place, _, [cite(eu_reg_2016_679_art_44)]).
-test(the_onward_answer_rejects_may_take_place_bound, fail) :-
-    gdpr_chapter_v_extras_profile_for(onward_transfer_without_basis, Profile),
-    onward_transfer_condition(Profile, onward_transfer_may_take_place, _, _).
-test(the_facade_status_holds_bound) :-
-    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
-    gdpr_chapter_v_extras_status(Profile, condition_breached).
-test(the_facade_status_rejects_clear_bound, fail) :-
-    gdpr_chapter_v_extras_profile_for(controller_safeguards_not_documented, Profile),
-    gdpr_chapter_v_extras_status(Profile, no_condition_breached).
+% ---- bound answers, one per route ------------------------------------------
 
-% ---- malformed inputs ---------------------------------------------------
-test(a_duty_outside_the_three_is_an_input_problem) :-
-    second_subparagraph_duty([], inform_everyone, input_problems([wrong_type(duty)]), [], []).
-test(an_unbound_duty_is_an_input_problem) :-
-    findall(Result-Basis-Citations, second_subparagraph_duty([], _, Result, Basis, Citations), Answers),
+test(bound_duty_met_with_basis_and_citations) :-
+    gdpr_chapter_v_extras_profile_for(supervisory_authority_informed, Profile),
+    second_subparagraph_duty(Profile,
+        inform_supervisory_authority,
+        duty_met,
+        [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none)))],
+        [cite(eu_reg_2016_679_art_49_1_second_subpara)]).
+
+test(bound_duty_not_met_is_rejected_for_a_met_duty, fail) :-
+    gdpr_chapter_v_extras_profile_for(supervisory_authority_informed, Profile),
+    second_subparagraph_duty(Profile, inform_supervisory_authority, duty_not_met, _, _).
+
+test(bound_processor_answer) :-
+    gdpr_chapter_v_extras_profile_for(processor_asks_about_informing, Profile),
+    second_subparagraph_duty(Profile,
+        inform_data_subject,
+        not_a_processor_duty,
+        [],
+        [cite(eu_reg_2016_679_art_49_1_second_subpara)]).
+
+test(bound_documentation_duty_met_for_a_processor) :-
+    gdpr_chapter_v_extras_profile_for(records_complete_for_processor, Profile),
+    second_subparagraph_duty(Profile,
+        document_assessment_and_safeguards,
+        duty_met,
+        [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none)))],
+        [cite(eu_reg_2016_679_art_49_6)]).
+
+test(bound_no_second_subparagraph_transfer) :-
+    gdpr_chapter_v_extras_profile_for(transfer_not_under_second_subparagraph, Profile),
+    second_subparagraph_duty(Profile,
+        inform_supervisory_authority,
+        no_second_subparagraph_transfer,
+        [outside_fact(transfer_relies_on_article_49_1_second_subparagraph, attested(false, attestation(by, at, reason, none)))],
+        [cite(eu_reg_2016_679_art_49_1_second_subpara)]).
+
+test(bound_indeterminate_names_one_key) :-
+    gdpr_chapter_v_extras_profile_for(records_safeguards_unstated, Profile),
+    second_subparagraph_duty(Profile,
+        document_assessment_and_safeguards,
+        indeterminate([suitable_safeguards_documented_in_records]),
+        [],
+        []).
+
+test(bound_article_48_not_barred) :-
+    gdpr_chapter_v_extras_profile_for(judgment_with_international_agreement, Profile),
+    foreign_judgment_or_decision_recognition(Profile,
+        not_barred_by_article_48,
+        [outside_fact(third_country_judgment_or_decision_requires_transfer, attested(true, attestation(by, at, reason, none))),
+         outside_fact(international_agreement_basis_for_judgment_or_decision, attested(true, attestation(by, at, reason, none)))],
+        [cite(eu_reg_2016_679_art_48)]).
+
+test(bound_article_48_not_barred_is_rejected_without_agreement, fail) :-
+    gdpr_chapter_v_extras_profile_for(judgment_without_international_agreement, Profile),
+    foreign_judgment_or_decision_recognition(Profile, not_barred_by_article_48, _, _).
+
+test(bound_onward_referral) :-
+    gdpr_chapter_v_extras_profile_for(onward_transfer_basis_unstated, Profile),
+    onward_transfer_condition(Profile,
+        needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_44), cite(onward_transfer_chapter_v_basis_statement)),
+            [resolution(cite(onward_transfer_chapter_v_basis_statement), not_attempted),
+             inputs_relied_on([onward_transfer_has_chapter_v_basis-absent])]),
+        [],
+        []).
+
+test(bound_status_on_the_baseline) :-
+    gdpr_chapter_v_extras_profile_for(todo_baseline_subject, Profile),
+    gdpr_chapter_v_extras_status(Profile, onward_transfer_may_take_place).
+
+test(bound_other_status_is_rejected_on_the_baseline, fail) :-
+    gdpr_chapter_v_extras_profile_for(todo_baseline_subject, Profile),
+    gdpr_chapter_v_extras_status(Profile, onward_transfer_may_not_take_place).
+
+% ---- the input check called directly with a ground input --------------------
+
+test(bound_input_check_well_formed_profile) :-
+    gdpr_chapter_v_extras_input_problems(
+        [attribute(transfer_relies_on_article_49_1_second_subparagraph, attested(true, attestation(by, at, reason, none))),
+         attribute(party_role, controller),
+         attribute(supervisory_authority_informed_of_transfer, true)],
+        []).
+
+test(input_check_read_out_for_a_ground_profile) :-
+    gdpr_chapter_v_extras_input_problems([attribute(party_role, recipient), attribute(colour, blue)], Problems),
+    Problems == [wrong_type(party_role), unknown_key(colour)].
+
+% ---- input tolerance ----------------------------------------------------------
+
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems(_UnboundProfile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_partial_list_is_not_an_attribute_list) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(party_role, controller)|_Rest], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_pair_element_is_not_an_attribute) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(party_role, controller), party_role-controller], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unbound_value_is_wrong_type) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(party_role, _UnboundValue)], Problems), Answers),
+    Answers == [[wrong_type(party_role)]].
+
+test(a_number_key_is_an_unknown_key) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(42, true)], Problems), Answers),
+    Answers == [[unknown_key(42)]].
+
+test(an_unbound_key_is_an_unknown_key_as_given) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(_UnboundKey, true)], Problems), Answers),
+    Answers = [[unknown_key(ReportedKey)]],
+    var(ReportedKey).
+
+test(an_unbound_evidence_is_wrong_type) :-
+    findall(Result,
+        onward_transfer_condition([attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, _UnboundEvidence)))], Result, _, _),
+        Results),
+    Results == [input_problems([wrong_type(transfer_is_onward_transfer)])].
+
+test(a_three_argument_attestation_is_wrong_type) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, none)))], Problems), Answers),
+    Answers == [[wrong_type(transfer_is_onward_transfer)]].
+
+test(an_attested_crisp_key_is_wrong_type) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(supervisory_authority_informed_of_transfer, attested(true, attestation(by, at, reason, none)))], Problems), Answers),
+    Answers == [[wrong_type(supervisory_authority_informed_of_transfer)]].
+
+test(document_evidence_is_accepted) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, document(upload, digest))))], Problems), Answers),
+    Answers == [[]].
+
+test(duplicate_key_reads_no_value) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(party_role, controller), attribute(party_role, banana)], Problems), Answers),
+    Answers == [[duplicate_key(party_role)]].
+
+test(problems_follow_contract_order_then_unknown_keys) :-
+    findall(Problems,
+        gdpr_chapter_v_extras_input_problems(
+            [attribute(extra_key, 1),
+             attribute(onward_transfer_has_chapter_v_basis, true),
+             attribute(party_role, banana),
+             attribute(extra_key, 2)],
+            Problems),
+        Answers),
+    Answers == [[wrong_type(party_role), wrong_type(onward_transfer_has_chapter_v_basis), unknown_key(extra_key)]].
+
+test(an_unbound_duty_is_wrong_type) :-
+    findall(Result-Basis-Citations,
+        second_subparagraph_duty([], _UnboundDuty, Result, Basis, Citations),
+        Answers),
     Answers == [input_problems([wrong_type(duty)])-[]-[]].
-test(a_profile_that_is_not_a_list_is_wrong_type) :-
-    onward_transfer_condition(not_a_list, input_problems([wrong_type(profile)]), [], []).
-test(an_unbound_profile_is_wrong_type) :-
-    findall(Result, foreign_judgment_or_decision_recognition(_, Result, _, _), Answers),
-    Answers == [input_problems([wrong_type(profile)])].
-test(a_list_element_that_is_not_an_attribute_is_wrong_type) :-
-    gdpr_chapter_v_extras_input_problems([attribute(party_role, controller), party_role], [wrong_type(profile)]).
-test(a_key_outside_the_contract_is_unknown) :-
-    onward_transfer_condition([attribute(colour, blue)], input_problems([unknown_key(colour)]), [], []).
-test(a_repeated_contract_key_is_a_duplicate) :-
-    foreign_judgment_or_decision_recognition([attribute(party_role, controller), attribute(party_role, controller)], input_problems([duplicate_key(party_role)]), [], []).
-test(contract_problems_come_before_unknown_keys) :-
-    gdpr_chapter_v_extras_input_problems([attribute(colour, blue), attribute(party_role, owner)], [wrong_type(party_role), unknown_key(colour)]).
-test(a_crisp_key_given_an_attested_term_is_wrong_type) :-
-    gdpr_chapter_v_extras_input_problems([attribute(duty_placeholder_never_used, x)|[]], [unknown_key(duty_placeholder_never_used)]),
-    gdpr_chapter_v_extras_input_problems([attribute(assessment_documented_in_records, attested(true, attestation(by, at, reason, none)))], [wrong_type(assessment_documented_in_records)]).
-test(an_attestation_with_three_arguments_is_wrong_type) :-
-    gdpr_chapter_v_extras_input_problems([attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason)))], [wrong_type(transfer_is_onward_transfer)]).
-test(a_numeric_party_role_is_wrong_type) :-
-    gdpr_chapter_v_extras_input_problems([attribute(party_role, 7)], [wrong_type(party_role)]).
-test(a_well_formed_profile_has_no_problem) :-
-    gdpr_chapter_v_extras_profile_for(controller_all_duties_met, Profile),
-    gdpr_chapter_v_extras_input_problems(Profile, []).
+
 test(a_bad_profile_and_a_bad_duty_are_both_named) :-
-    second_subparagraph_duty(42, inform_everyone, input_problems([wrong_type(profile), wrong_type(duty)]), [], []).
+    findall(Result,
+        second_subparagraph_duty(not_a_list, inform_everyone, Result, _, _),
+        Results),
+    Results == [input_problems([wrong_type(profile), wrong_type(duty)])].
 
 :- end_module(test_input_mode).

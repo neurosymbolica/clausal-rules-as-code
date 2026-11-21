@@ -1,0 +1,61 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: the schema, the
+% what-if combinator registered in manifest query_interface (16), the
+% re-exported input check, and the root-export facts.
+% Run: python -m clausal.testing eu/state_aid/gber_general_conditions/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/state_aid/gber_general_conditions/queries, [
+    gber_general_conditions_profile_keys/1,
+    gber_general_conditions_what_if/4,
+    gber_general_conditions_input_problems/2,
+    within_scope/0,
+    tested_chapter_i_conditions_met/0
+]).
+:- use_module(eu/state_aid/gber_general_conditions/fixtures, [gber_general_conditions_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    gber_general_conditions_profile_keys(ProfileKeys),
+    ProfileKeys == [scheme_excluded_by_article_1_2_a_or_b, export_or_domestic_goods_aid, aided_sector, sector_exception_applies, price_or_pass_on_condition, article_13_regional_aid_category, also_active_in_excluded_sector, separation_of_activities_or_costs_ensured, recovery_order_exclusion_applies, undertaking_in_difficulty, difficulty_exception_applies, difficulty_2020_2021_derogation, non_severable_violation_of_union_law, article_4_category, research_project_doubled, aid_form, form_transparency_condition_met, category_transparency_condition_met, transparent_under_article_5_1, article_6_5_category_conditions_met, tax_measure_conditions_met, application_contains_required_information, aid_type, size_class, large_enterprise_verification_done, identifiable_eligible_costs].
+
+test(what_if_a_recovery_order_turns_met_into_not_met) :-
+    gber_general_conditions_profile_for(compliant_sme_grant, SubjectCase),
+    gber_general_conditions_what_if(SubjectCase, recovery_order_exclusion_applies, true, gber_general_conditions_verdict(chapter_i_conditions_not_met, _)).
+test(what_if_a_recovery_order_is_never_met, fail) :-
+    gber_general_conditions_profile_for(compliant_sme_grant, SubjectCase),
+    gber_general_conditions_what_if(SubjectCase, recovery_order_exclusion_applies, true, gber_general_conditions_verdict(tested_chapter_i_conditions_met, _)).
+test(what_if_answers_once) :-
+    gber_general_conditions_profile_for(compliant_sme_grant, SubjectCase),
+    findall(Verdict, gber_general_conditions_what_if(SubjectCase, aid_form, loan, Verdict), Verdicts),
+    length(Verdicts, 1).
+test(what_if_a_formalised_row_turns_partly_untested_into_met) :-
+    gber_general_conditions_profile_for(other_category_row, SubjectCase),
+    gber_general_conditions_what_if(SubjectCase, article_4_category, sme_investment, gber_general_conditions_verdict(tested_chapter_i_conditions_met, [cite(eu_reg_651_2014_art_3_t1)])).
+test(what_if_the_same_value_changes_nothing) :-
+    gber_general_conditions_profile_for(compliant_sme_grant, SubjectCase),
+    gber_general_conditions_what_if(SubjectCase, aid_form, grant, gber_general_conditions_verdict(tested_chapter_i_conditions_met, _)).
+test(what_if_a_size_outside_the_contract_is_an_input_problem) :-
+    gber_general_conditions_profile_for(compliant_sme_grant, SubjectCase),
+    gber_general_conditions_what_if(SubjectCase, size_class, not_an_enterprise, gber_general_conditions_verdict(input_problems([wrong_type(size_class)]), [])).
+test(what_if_a_known_unsure_difficulty_is_settled) :-
+    gber_general_conditions_profile_for(difficulty_unsure, SubjectCase),
+    gber_general_conditions_what_if(SubjectCase, undertaking_in_difficulty, false, gber_general_conditions_verdict(tested_chapter_i_conditions_met, _)).
+
+test(the_re_exported_input_check_accepts_an_empty_profile) :-
+    gber_general_conditions_input_problems([], []).
+test(the_re_exported_input_check_names_an_unknown_key) :-
+    gber_general_conditions_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+test(the_result_atoms_are_facts) :-
+    within_scope,
+    tested_chapter_i_conditions_met.
+test(the_constructors_build_terms) :-
+    Missing = indeterminate([aid_form]),
+    Missing = indeterminate([MissingKey]),
+    MissingKey == aid_form,
+    Problem = wrong_type(profile),
+    Problem = wrong_type(ProblemKey),
+    ProblemKey == profile.
+
+:- end_module(test_queries).

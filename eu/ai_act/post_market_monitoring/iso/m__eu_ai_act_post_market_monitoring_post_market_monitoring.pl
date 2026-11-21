@@ -1,0 +1,524 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_post_market_monitoring_post_market_monitoring, [post_market_monitoring_duty_status/4, post_market_monitoring_integration_status/3, decide_post_market_monitoring/2, post_market_monitoring_status/2, post_market_monitoring_checklist/2, post_market_monitoring_decision_resolvable/1, post_market_monitoring_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_aggregate, [aggregate_all/3]).
+:- use_module(library(clpz)).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(deadline_lib, [month_last_day/3]).
+:- use_module(m__eu_ai_act_post_market_monitoring_kernel, [post_market_monitoring_input_problems/2]).
+:- use_module(m__eu_ai_act_post_market_monitoring_citations, [implements/1]).
+
+chapter_iii_date(annex_iii, date(2027, 12, 2), cite(eu_reg_2024_1689_art_113_c_i)).
+chapter_iii_date(annex_i, date(2028, 8, 2), cite(eu_reg_2024_1689_art_113_c_ii)).
+
+compliance_deadline(annex_x_large_scale_it_system, date(2030, 12, 31), cite(eu_reg_2024_1689_art_111_1)).
+compliance_deadline(public_authorities, date(2030, 8, 2), cite(eu_reg_2024_1689_art_111_2)).
+
+general_application_date(date(2026, 8, 2), cite(eu_reg_2024_1689_art_113)).
+
+referral_row(significant_changes_in_design_as_from_the_chapter_iii_date, cite(eu_reg_2024_1689_art_111_2)).
+referral_row(intended_to_be_used_by_public_authorities, cite(eu_reg_2024_1689_art_111_2)).
+referral_row(integration_achieves_an_equivalent_level_of_protection, cite(eu_reg_2024_1689_art_72_4)).
+
+duty_query_keys([provider_of_the_system, system_is_a_high_risk_ai_system_listed_in_annex_iii, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, significant_changes_in_design_as_from_the_chapter_iii_date, intended_to_be_used_by_public_authorities]).
+
+integration_query_keys([provider_of_the_system, system_is_a_high_risk_ai_system_listed_in_annex_iii, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, point_5_annex_iii_system_of_a_financial_institution_under_union_financial_services_law, post_market_monitoring_system_and_plan_already_established_under_that_legislation, integration_achieves_an_equivalent_level_of_protection]).
+
+duty_judgement_keys([significant_changes_in_design_as_from_the_chapter_iii_date, intended_to_be_used_by_public_authorities]).
+
+integration_judgement_keys([integration_achieves_an_equivalent_level_of_protection]).
+
+post_market_monitoring_status_values([not_applicable_on_date, not_a_provider, not_a_high_risk_ai_system, compliance_required_by_31_december_2030, existing_system_without_significant_changes_not_covered, compliance_required_by_2_august_2030, duty_applies, integration_not_available, integration_available]).
+
+post_market_monitoring_duty_status(Profile, AssessmentDate, Result, Citations) :-
+    post_market_monitoring_input_problems(Profile, ProfileProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    duty_status_checked(Problems, Profile, AssessmentDate, Result, Citations).
+
+duty_status_checked([], Profile, AssessmentDate, Result, Citations) :-
+    duty_query_keys(QueryKeys),
+    duty_judgement_keys(JudgementKeys),
+    query_status(Profile, QueryKeys, JudgementKeys, duty_ladder(AssessmentDate), Result, Citations).
+duty_status_checked([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+
+post_market_monitoring_integration_status(Profile, Result, Citations) :-
+    post_market_monitoring_input_problems(Profile, Problems),
+    integration_status_checked(Problems, Profile, Result, Citations).
+
+integration_status_checked([], Profile, Result, Citations) :-
+    integration_query_keys(QueryKeys),
+    integration_judgement_keys(JudgementKeys),
+    query_status(Profile, QueryKeys, JudgementKeys, integration_ladder, Result, Citations).
+integration_status_checked([Problem|Problems], _, input_problems([Problem|Problems]), []).
+
+assessment_date_problems(AssessmentDate, Problems) :-
+    valid_date_t(AssessmentDate, Truth),
+    date_problems(Truth, Problems).
+
+date_problems(true, []).
+date_problems(false, [wrong_type(assessment_date)]).
+
+valid_date_t(AssessmentDate, false) :-
+    var(AssessmentDate).
+valid_date_t(AssessmentDate, false) :-
+    nonvar(AssessmentDate),
+    AssessmentDate \= date(_, _, _).
+valid_date_t(AssessmentDate, Truth) :-
+    nonvar(AssessmentDate),
+    AssessmentDate = date(Year, Month, Day),
+    aggregate_all(count, (member(Field, [Year, Month, Day]), integer(Field)), IntegerCount),
+    integer_fields_truth(IntegerCount, AllIntegers),
+    date_fields_t(AllIntegers, Year, Month, Day, Truth).
+
+integer_fields_truth(0, false).
+integer_fields_truth(1, false).
+integer_fields_truth(2, false).
+integer_fields_truth(3, true).
+
+date_fields_t(false, _, _, _, false).
+date_fields_t(true, Year, Month, Day, Truth) :-
+    range_t(Year, 1, 9999, YearTruth),
+    range_t(Month, 1, 12, MonthTruth),
+    month_day_t(YearTruth, MonthTruth, Year, Month, Day, Truth).
+
+month_day_t(true, true, Year, Month, Day, Truth) :-
+    month_last_day(Year, Month, LastDay),
+    range_t(Day, 1, LastDay, Truth).
+month_day_t(true, false, _, _, _, false).
+month_day_t(false, _, _, _, _, false).
+
+range_t(Number, Lowest, Highest, Truth) :-
+    compare(LowOrder, Number, Lowest),
+    compare(HighOrder, Number, Highest),
+    range_truth(LowOrder, HighOrder, Truth).
+
+range_truth(<, _, false).
+range_truth(=, HighOrder, Truth) :-
+    high_truth(HighOrder, Truth).
+range_truth(>, HighOrder, Truth) :-
+    high_truth(HighOrder, Truth).
+
+high_truth(<, true).
+high_truth(=, true).
+high_truth(>, false).
+
+date_before_t(date(Year, Month, Day), date(LimitYear, LimitMonth, LimitDay), Truth) :-
+    compare(Order, calendar_day(Year, Month, Day), calendar_day(LimitYear, LimitMonth, LimitDay)),
+    order_before(Order, Truth).
+
+order_before(<, true).
+order_before(=, false).
+order_before(>, false).
+
+duty_ladder(AssessmentDate, Values, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    chapter_iii_date(annex_iii, EarliestDate, _),
+    date_before_t(AssessmentDate, EarliestDate, Early),
+    duty_general_date_step(Early, AssessmentDate, Values, Result, Citations).
+
+duty_general_date_step(true, _, _, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]) :-
+    implements(eu_reg_2024_1689_art_113_c_i).
+duty_general_date_step(false, AssessmentDate, [Provider|RemainingValues], Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113),
+    general_application_date(_, _),
+    duty_provider_step(Provider, AssessmentDate, RemainingValues, Result, Citations).
+
+duty_provider_step(false, _, _, not_a_provider, [cite(eu_reg_2024_1689_art_72_1)]) :-
+    implements(eu_reg_2024_1689_art_3_3).
+duty_provider_step(true, AssessmentDate, [AnnexIii, AnnexI|RemainingValues], Result, Citations) :-
+    implements(eu_reg_2024_1689_art_3_3),
+    duty_high_risk_step(AnnexIii, AnnexI, AssessmentDate, RemainingValues, Result, Citations).
+
+duty_high_risk_step(false, false, _, _, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_72_1)]) :-
+    implements(eu_reg_2024_1689_art_72_1).
+duty_high_risk_step(true, _, AssessmentDate, RemainingValues, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c_i),
+    duty_transitional_step(RemainingValues, AssessmentDate, Result, Citations).
+duty_high_risk_step(false, true, AssessmentDate, RemainingValues, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c_ii),
+    chapter_iii_date(annex_i, AnnexIDate, _),
+    date_before_t(AssessmentDate, AnnexIDate, Before),
+    duty_annex_i_date_step(Before, AssessmentDate, RemainingValues, Result, Citations).
+
+duty_annex_i_date_step(true, _, _, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]) :-
+    implements(eu_reg_2024_1689_art_113_c_ii).
+duty_annex_i_date_step(false, AssessmentDate, RemainingValues, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c_ii),
+    duty_transitional_step(RemainingValues, AssessmentDate, Result, Citations).
+
+duty_transitional_step([true, _, _, _], AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_1),
+    compliance_deadline(annex_x_large_scale_it_system, Deadline, _),
+    date_before_t(AssessmentDate, Deadline, Before),
+    duty_annex_x_step(Before, Result, Citations).
+duty_transitional_step([false, PlacedBefore, Significant, Public], AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    implements(eu_reg_2024_1689_art_3_8),
+    duty_existing_system_step(PlacedBefore, Significant, Public, AssessmentDate, Result, Citations).
+
+duty_annex_x_step(true, compliance_required_by_31_december_2030, [cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]) :-
+    implements(eu_reg_2024_1689_art_111_1).
+duty_annex_x_step(false, duty_applies, [cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]) :-
+    implements(eu_reg_2024_1689_art_72_1),
+    implements(eu_reg_2024_1689_art_3_25).
+
+duty_existing_system_step(false, _, _, _, duty_applies, [cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]) :-
+    implements(eu_reg_2024_1689_art_3_9),
+    implements(eu_reg_2024_1689_art_3_11).
+duty_existing_system_step(true, true, _, _, duty_applies, [cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]) :-
+    implements(eu_reg_2024_1689_art_111_2).
+duty_existing_system_step(true, false, false, _, existing_system_without_significant_changes_not_covered, [cite(eu_reg_2024_1689_art_111_2)]) :-
+    implements(eu_reg_2024_1689_art_111_2).
+duty_existing_system_step(true, false, true, AssessmentDate, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    compliance_deadline(public_authorities, Deadline, _),
+    date_before_t(AssessmentDate, Deadline, Before),
+    duty_public_authorities_step(Before, Result, Citations).
+
+duty_public_authorities_step(true, compliance_required_by_2_august_2030, [cite(eu_reg_2024_1689_art_111_2), cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]) :-
+    implements(eu_reg_2024_1689_art_111_2).
+duty_public_authorities_step(false, duty_applies, [cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)]) :-
+    implements(eu_reg_2024_1689_art_72_3).
+
+integration_ladder([false|_], not_a_provider, [cite(eu_reg_2024_1689_art_72_4)]) :-
+    implements(eu_reg_2024_1689_art_3_3).
+integration_ladder([true, AnnexIii, AnnexI|RemainingValues], Result, Citations) :-
+    implements(eu_reg_2024_1689_art_3_3),
+    integration_high_risk_step(AnnexIii, AnnexI, RemainingValues, Result, Citations).
+
+integration_high_risk_step(false, false, _, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_72_4)]) :-
+    implements(eu_reg_2024_1689_art_72_4).
+integration_high_risk_step(true, _, RemainingValues, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_72_4),
+    integration_choice_step(RemainingValues, Result, Citations).
+integration_high_risk_step(false, true, RemainingValues, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_72_4),
+    integration_choice_step(RemainingValues, Result, Citations).
+
+integration_choice_step([Covered, Financial, Established, Equivalent], Result, Citations) :-
+    implements(eu_reg_2024_1689_art_72_4),
+    either_true(Covered, Financial, Route),
+    integration_test(Route, Established, Equivalent, Result, Citations).
+
+integration_test(true, true, true, integration_available, [cite(eu_reg_2024_1689_art_72_4)]) :-
+    implements(eu_reg_2024_1689_art_72_4).
+integration_test(false, _, _, integration_not_available, [cite(eu_reg_2024_1689_art_72_4)]) :-
+    implements(eu_reg_2024_1689_art_72_4).
+integration_test(true, false, _, integration_not_available, [cite(eu_reg_2024_1689_art_72_4)]) :-
+    implements(eu_reg_2024_1689_art_72_4).
+integration_test(true, true, false, integration_not_available, [cite(eu_reg_2024_1689_art_72_4)]) :-
+    implements(eu_reg_2024_1689_art_72_4).
+
+either_true(true, _, true).
+either_true(false, Truth, Truth).
+
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, State) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value),
+    value_state(Value, State).
+
+value_state(true, given(true)).
+value_state(false, given(false)).
+value_state(unsure, unsure).
+
+state_value(given(Value), Value).
+state_value(unsure, Value) :-
+    member(Value, [true, false]).
+state_value(absent, Value) :-
+    member(Value, [true, false]).
+
+completion(States, Values) :-
+    maplist(state_value, States, Values).
+
+query_status(Profile, QueryKeys, JudgementKeys, Ladder, Result, Citations) :-
+    maplist(key_state(Profile), QueryKeys, States),
+    findall(Values - answer(LadderResult, SortedCitations), (completion(States, Values), call(Ladder, Values, LadderResult, LadderCitations), sort(LadderCitations, SortedCitations)), Table),
+    findall(Answer, member(_ - Answer, Table), Answers),
+    sort(Answers, DistinctAnswers),
+    status_from_answers(DistinctAnswers, Profile, QueryKeys, JudgementKeys, States, Table, Result, Citations).
+
+status_from_answers([answer(Result, Citations)], _, _, _, _, _, Result, Citations).
+status_from_answers([_, _|_], Profile, QueryKeys, JudgementKeys, States, Table, Result, []) :-
+    free_indices(States, absent, AbsentIndices),
+    free_indices(States, unsure, UnsureIndices),
+    append(AbsentIndices, UnsureIndices, FreeIndices),
+    maplist(index_witnesses(Table), FreeIndices, WitnessRows),
+    first_missing(AbsentIndices, AbsentIndices, WitnessRows, Missing),
+    open_status(Missing, UnsureIndices, WitnessRows, Profile, QueryKeys, JudgementKeys, Result).
+
+free_indices(States, StateName, Indices) :-
+    findall(Index, nth0(Index, States, StateName), FoundIndices),
+    sort(FoundIndices, Indices).
+
+index_witnesses(Table, Index, Index - Witnesses) :-
+    findall(TrueCompletion - FalseCompletion, (member(TrueCompletion - TrueAnswer, Table), nth0(Index, TrueCompletion, true), replace_at(Index, TrueCompletion, false, FalseCompletion), member(FalseCompletion - FalseAnswer, Table), TrueAnswer \== FalseAnswer), Witnesses).
+
+witnesses_of(Index, WitnessRows, Witnesses) :-
+    member(Index - Witnesses, WitnessRows).
+
+replace_at(0, [_|Tail], Value, [Value|Tail]).
+replace_at(Index, [Head|Tail], Value, [Head|NewTail]) :-
+    Index #> 0,
+    Previous #= Index - 1,
+    replace_at(Previous, Tail, Value, NewTail).
+
+matters_shape([], false).
+matters_shape([_|_], true).
+
+first_missing([], _, _, none).
+first_missing([Index|Indices], AbsentIndices, WitnessRows, Missing) :-
+    candidate_t(Index, AbsentIndices, WitnessRows, Truth),
+    first_missing_step(Truth, Index, Indices, AbsentIndices, WitnessRows, Missing).
+
+first_missing_step(true, Index, _, _, _, found(Index)).
+first_missing_step(false, _, Indices, AbsentIndices, WitnessRows, Missing) :-
+    first_missing(Indices, AbsentIndices, WitnessRows, Missing).
+
+candidate_t(Index, AbsentIndices, WitnessRows, Truth) :-
+    witnesses_of(Index, WitnessRows, Witnesses),
+    matters_shape(Witnesses, Matters),
+    candidate_given(Matters, Index, AbsentIndices, WitnessRows, Truth).
+
+candidate_given(false, _, _, _, false).
+candidate_given(true, Index, AbsentIndices, WitnessRows, Truth) :-
+    behind_any_t(AbsentIndices, Index, WitnessRows, Behind),
+    truth_negation(Behind, Truth).
+
+truth_negation(true, false).
+truth_negation(false, true).
+
+behind_any_t([], _, _, false).
+behind_any_t([Other|Others], Index, WitnessRows, Truth) :-
+    Other == Index,
+    behind_any_t(Others, Index, WitnessRows, Truth).
+behind_any_t([Other|Others], Index, WitnessRows, Truth) :-
+    Other \== Index,
+    behind_t(Index, Other, WitnessRows, Behind),
+    behind_any_rest(Behind, Others, Index, WitnessRows, Truth).
+
+behind_any_rest(true, _, _, _, true).
+behind_any_rest(false, Others, Index, WitnessRows, Truth) :-
+    behind_any_t(Others, Index, WitnessRows, Truth).
+
+behind_t(Index, Other, WitnessRows, Truth) :-
+    witnesses_of(Index, WitnessRows, IndexWitnesses),
+    findall(OtherValue, (member(IndexCompletion - _, IndexWitnesses), nth0(Other, IndexCompletion, OtherValue)), OtherValuesFound),
+    sort(OtherValuesFound, OtherValues),
+    witnesses_of(Other, WitnessRows, OtherWitnesses),
+    findall(IndexValue, (member(OtherCompletion - _, OtherWitnesses), nth0(Index, OtherCompletion, IndexValue)), IndexValuesFound),
+    sort(IndexValuesFound, IndexValues),
+    behind_truth(OtherValues, IndexValues, Truth).
+
+behind_truth([], _, false).
+behind_truth([_], [], false).
+behind_truth([_], [_], false).
+behind_truth([_], [false, true], true).
+behind_truth([_, _|_], _, false).
+
+open_status(found(Index), _, _, _, QueryKeys, _, indeterminate([MissingKey])) :-
+    nth0(Index, QueryKeys, MissingKey).
+open_status(none, UnsureIndices, WitnessRows, Profile, QueryKeys, JudgementKeys, Result) :-
+    first_mattering(UnsureIndices, WitnessRows, Mattering),
+    referral(Mattering, Profile, QueryKeys, JudgementKeys, Result).
+
+first_mattering([], _, none).
+first_mattering([Index|Indices], WitnessRows, Mattering) :-
+    witnesses_of(Index, WitnessRows, Witnesses),
+    matters_shape(Witnesses, Matters),
+    first_mattering_step(Matters, Index, Indices, WitnessRows, Mattering).
+
+first_mattering_step(true, Index, _, _, found(Index)).
+first_mattering_step(false, _, Indices, WitnessRows, Mattering) :-
+    first_mattering(Indices, WitnessRows, Mattering).
+
+referral(found(Index), Profile, QueryKeys, JudgementKeys, needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on(Pairs)])) :-
+    nth0(Index, QueryKeys, JudgementKey),
+    referral_row(JudgementKey, Citation),
+    relied_pairs(JudgementKeys, Profile, Pairs).
+
+relied_pairs([], _, []).
+relied_pairs([JudgementKey|JudgementKeys], Profile, Pairs) :-
+    profile_lacks(Profile, JudgementKey),
+    relied_pairs(JudgementKeys, Profile, Pairs).
+relied_pairs([JudgementKey|JudgementKeys], Profile, [JudgementKey - Value|Pairs]) :-
+    profile_has(Profile, JudgementKey),
+    profile_get(Profile, JudgementKey, Value),
+    relied_pairs(JudgementKeys, Profile, Pairs).
+
+request_parts(Request, integration, Request, no_date) :-
+    var(Request).
+request_parts(Request, duty, Profile, AssessmentDate) :-
+    nonvar(Request),
+    Request = duty(Profile, AssessmentDate).
+request_parts(Request, integration, Profile, no_date) :-
+    nonvar(Request),
+    Request = integration(Profile).
+request_parts(Request, integration, Request, no_date) :-
+    nonvar(Request),
+    Request \= duty(_, _),
+    Request \= integration(_).
+
+decide_post_market_monitoring(Request, post_market_monitoring_verdict(Status, Citations)) :-
+    request_parts(Request, RequestKind, Profile, AssessmentDate),
+    request_status(RequestKind, Profile, AssessmentDate, Status, Citations).
+
+request_status(duty, Profile, AssessmentDate, Status, Citations) :-
+    post_market_monitoring_duty_status(Profile, AssessmentDate, Status, Citations).
+request_status(integration, Profile, _, Status, Citations) :-
+    post_market_monitoring_integration_status(Profile, Status, Citations).
+
+post_market_monitoring_status(Request, Status) :-
+    decide_post_market_monitoring(Request, post_market_monitoring_verdict(Status, _Citations)).
+
+post_market_monitoring_decision_resolvable(Request) :-
+    decide_post_market_monitoring(Request, _Verdict).
+
+post_market_monitoring_checklist(Request, [item(verdict, Status, Citations)|Rows]) :-
+    decide_post_market_monitoring(Request, post_market_monitoring_verdict(Status, Citations)),
+    request_parts(Request, RequestKind, Profile, AssessmentDate),
+    request_problems(RequestKind, Profile, AssessmentDate, Problems),
+    checklist_rows(Problems, RequestKind, Profile, AssessmentDate, Rows).
+
+request_problems(duty, Profile, AssessmentDate, Problems) :-
+    post_market_monitoring_input_problems(Profile, ProfileProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems).
+request_problems(integration, Profile, _, Problems) :-
+    post_market_monitoring_input_problems(Profile, Problems).
+
+checklist_rows([_|_], _, _, _, []).
+checklist_rows([], duty, Profile, AssessmentDate, [ProviderRow, HighRiskRow, DateRow]) :-
+    provider_row(Profile, ProviderRow),
+    high_risk_row(Profile, HighRiskRow),
+    chapter_iii_date_row(Profile, AssessmentDate, DateRow).
+checklist_rows([], integration, Profile, _, [ProviderRow, HighRiskRow, CoverageRow, ExistingRow, EquivalentRow]) :-
+    provider_row(Profile, ProviderRow),
+    high_risk_row(Profile, HighRiskRow),
+    coverage_row(Profile, CoverageRow),
+    existing_system_row(Profile, ExistingRow),
+    equivalent_protection_row(Profile, EquivalentRow).
+
+provider_row(Profile, item(provider_of_the_system, Status, cite(eu_reg_2024_1689_art_3_3))) :-
+    implements(eu_reg_2024_1689_art_3_3),
+    single_row_status(Profile, provider_of_the_system, Status).
+
+high_risk_row(Profile, item(high_risk_ai_system, Status, cite(eu_reg_2024_1689_art_72_1))) :-
+    implements(eu_reg_2024_1689_art_72_1),
+    either_row_status(Profile, system_is_a_high_risk_ai_system_listed_in_annex_iii, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, not_a_high_risk_ai_system, Status).
+
+chapter_iii_date_row(Profile, AssessmentDate, item(chapter_iii_date_reached, Status, cite(eu_reg_2024_1689_art_113_c))) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    chapter_iii_date(annex_iii, AnnexIiiDate, _),
+    chapter_iii_date(annex_i, AnnexIDate, _),
+    date_before_t(AssessmentDate, AnnexIiiDate, Early),
+    date_before_t(AssessmentDate, AnnexIDate, BeforeAnnexIDate),
+    key_state(Profile, system_is_a_high_risk_ai_system_listed_in_annex_iii, AnnexIiiState),
+    date_row_status(Early, BeforeAnnexIDate, AnnexIiiState, Status).
+
+date_row_status(true, _, _, unmet(before_chapter_iii_date)).
+date_row_status(false, false, _, met).
+date_row_status(false, true, given(true), met).
+date_row_status(false, true, given(false), unmet(before_chapter_iii_date)).
+date_row_status(false, true, absent, unknown([system_is_a_high_risk_ai_system_listed_in_annex_iii])).
+
+coverage_row(Profile, item(union_legislation_route, Status, cite(eu_reg_2024_1689_art_72_4))) :-
+    implements(eu_reg_2024_1689_art_72_4),
+    either_row_status(Profile, covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, point_5_annex_iii_system_of_a_financial_institution_under_union_financial_services_law, no_union_legislation_route, Status).
+
+existing_system_row(Profile, item(existing_system_and_plan, Status, cite(eu_reg_2024_1689_art_72_4))) :-
+    implements(eu_reg_2024_1689_art_72_4),
+    single_row_status(Profile, post_market_monitoring_system_and_plan_already_established_under_that_legislation, Status).
+
+equivalent_protection_row(Profile, item(equivalent_level_of_protection, Status, cite(eu_reg_2024_1689_art_72_4))) :-
+    implements(eu_reg_2024_1689_art_72_4),
+    single_row_status(Profile, integration_achieves_an_equivalent_level_of_protection, Status).
+
+single_row_status(Profile, ProfileKey, Status) :-
+    key_state(Profile, ProfileKey, State),
+    single_status(State, ProfileKey, Status).
+
+single_status(given(true), _, met).
+single_status(given(false), ProfileKey, unmet(ProfileKey)).
+single_status(unsure, ProfileKey, unknown([ProfileKey])).
+single_status(absent, ProfileKey, unknown([ProfileKey])).
+
+either_row_status(Profile, FirstKey, SecondKey, Reason, Status) :-
+    key_state(Profile, FirstKey, FirstState),
+    key_state(Profile, SecondKey, SecondState),
+    either_status(FirstState, SecondState, FirstKey, SecondKey, Reason, Status).
+
+either_status(given(true), _, _, _, _, met).
+either_status(given(false), given(true), _, _, _, met).
+either_status(given(false), given(false), _, _, Reason, unmet(Reason)).
+either_status(given(false), absent, _, SecondKey, _, unknown([SecondKey])).
+either_status(absent, given(true), _, _, _, met).
+either_status(absent, given(false), FirstKey, _, _, unknown([FirstKey])).
+either_status(absent, absent, FirstKey, SecondKey, _, unknown([FirstKey, SecondKey])).
+
+test(before_the_first_chapter_iii_date_nothing_applies) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true)], date(2027, 12, 1), not_applicable_on_date, Citations),
+    sort(Citations, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]).
+test(not_a_provider_on_the_chapter_iii_date) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, false)], date(2027, 12, 2), not_a_provider, [cite(eu_reg_2024_1689_art_72_1)]).
+test(an_empty_profile_asks_for_the_provider) :-
+    post_market_monitoring_duty_status([], date(2028, 1, 1), indeterminate([provider_of_the_system]), []).
+test(an_empty_profile_yields_one_solution) :-
+    findall(Result, post_market_monitoring_duty_status([], date(2028, 1, 1), Result, _), Results),
+    length(Results, 1).
+test(an_annex_iii_system_has_the_duty) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, false)], date(2028, 1, 1), duty_applies, Citations),
+    Citations == [cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)].
+test(an_annex_i_only_system_waits_for_august_2028) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, false), attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, true)], date(2028, 8, 1), not_applicable_on_date, Citations),
+    Citations == [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)].
+test(not_a_high_risk_system) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, false), attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false)], date(2029, 1, 1), not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_72_1)]).
+test(an_annex_x_component_before_the_end_of_2030) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, true)], date(2030, 12, 30), compliance_required_by_31_december_2030, Citations),
+    Citations == [cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)].
+test(an_annex_x_component_on_31_december_2030) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, true)], date(2030, 12, 31), duty_applies, _).
+test(an_existing_unchanged_system_is_not_covered) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, true), attribute(significant_changes_in_design_as_from_the_chapter_iii_date, false), attribute(intended_to_be_used_by_public_authorities, false)], date(2029, 1, 1), existing_system_without_significant_changes_not_covered, [cite(eu_reg_2024_1689_art_111_2)]).
+test(a_public_authority_system_must_comply_by_august_2030) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, true), attribute(significant_changes_in_design_as_from_the_chapter_iii_date, false), attribute(intended_to_be_used_by_public_authorities, true)], date(2029, 1, 1), compliance_required_by_2_august_2030, Citations),
+    Citations == [cite(eu_reg_2024_1689_art_111_2), cite(eu_reg_2024_1689_art_72_1), cite(eu_reg_2024_1689_art_72_3)].
+test(an_unsure_public_authority_judgement_is_referred) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, true), attribute(significant_changes_in_design_as_from_the_chapter_iii_date, false), attribute(intended_to_be_used_by_public_authorities, unsure)], date(2029, 1, 1), Result, []),
+    Result == needs_legal_review(open_textured(intended_to_be_used_by_public_authorities, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_as_from_the_chapter_iii_date - false, intended_to_be_used_by_public_authorities - unsure])]).
+test(a_missing_fact_comes_before_a_referral) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, true), attribute(significant_changes_in_design_as_from_the_chapter_iii_date, unsure)], date(2029, 1, 1), indeterminate([intended_to_be_used_by_public_authorities]), []).
+test(a_bad_date_and_an_unknown_key_are_input_problems) :-
+    post_market_monitoring_duty_status([attribute(colour, red)], date(2027, 2, 30), input_problems([unknown_key(colour), wrong_type(assessment_date)]), []).
+test(an_unbound_date_is_an_input_problem) :-
+    post_market_monitoring_duty_status([], _, input_problems([wrong_type(assessment_date)]), []).
+test(a_leap_day_is_a_real_date) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, false)], date(2028, 2, 29), not_a_provider, _).
+test(the_integration_choice_is_open) :-
+    post_market_monitoring_integration_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, true), attribute(post_market_monitoring_system_and_plan_already_established_under_that_legislation, true), attribute(integration_achieves_an_equivalent_level_of_protection, true)], integration_available, [cite(eu_reg_2024_1689_art_72_4)]).
+test(no_existing_system_and_plan_closes_the_choice) :-
+    post_market_monitoring_integration_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, true), attribute(post_market_monitoring_system_and_plan_already_established_under_that_legislation, false)], integration_not_available, [cite(eu_reg_2024_1689_art_72_4)]).
+test(an_unsure_equivalence_is_referred) :-
+    post_market_monitoring_integration_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, true), attribute(post_market_monitoring_system_and_plan_already_established_under_that_legislation, true), attribute(integration_achieves_an_equivalent_level_of_protection, unsure)], Result, []),
+    Result == needs_legal_review(open_textured(integration_achieves_an_equivalent_level_of_protection, cite(eu_reg_2024_1689_art_72_4)), [inputs_relied_on([integration_achieves_an_equivalent_level_of_protection - unsure])]).
+test(integration_not_a_provider) :-
+    post_market_monitoring_integration_status([attribute(provider_of_the_system, false)], not_a_provider, [cite(eu_reg_2024_1689_art_72_4)]).
+test(a_profile_that_is_not_a_list_is_an_input_problem) :-
+    post_market_monitoring_integration_status(profile, input_problems([wrong_type(profile)]), []).
+test(the_checklist_carries_a_cite_per_row) :-
+    post_market_monitoring_checklist(integration([attribute(provider_of_the_system, true)]), Items),
+    member(item(provider_of_the_system, met, cite(eu_reg_2024_1689_art_3_3)), Items),
+    member(item(high_risk_ai_system, unknown(_), cite(eu_reg_2024_1689_art_72_1)), Items).
+test(the_facade_answers_a_duty_request) :-
+    post_market_monitoring_status(duty([attribute(provider_of_the_system, false)], date(2028, 1, 1)), not_a_provider).
+
+test(not_a_provider_is_not_duty_applies, fail) :-
+    post_market_monitoring_duty_status([attribute(provider_of_the_system, false)], date(2027, 12, 2), duty_applies, _).
+test(no_existing_system_and_plan_is_not_available, fail) :-
+    post_market_monitoring_integration_status([attribute(provider_of_the_system, true), attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true), attribute(covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, true), attribute(post_market_monitoring_system_and_plan_already_established_under_that_legislation, false)], integration_available, _).

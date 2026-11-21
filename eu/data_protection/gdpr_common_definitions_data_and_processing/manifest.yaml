@@ -3,7 +3,11 @@ id: eu/data_protection/gdpr_common_definitions_data_and_processing
 shape_family: classification
 kit_version: "0.1.0"
 # The domain's .clausal file set, in import-DAG order (determination slices
-# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
 modules:
   - "kernel"
   - "citations"
@@ -11,8 +15,13 @@ modules:
   - "gdpr_common_definitions_data_and_processing"
   - "queries"
   - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
+  # (gdpr_common_definitions_data_and_processing_input_problems/2 is defined
+  # here and re-exported by queries.clausal; listed once, below)
   # -- citations.clausal --
   - "citation/2"
   # -- gdpr_common_definitions_data_and_processing.clausal --
@@ -34,7 +43,6 @@ public_interface:
   - "information_society_service/2"
   - "international_organisation/2"
   - "data_and_processing_outside_facts/2"
-  # -- result constructors --
   - "definition_answer/3"
   - "unmet_elements/1"
   - "input_problems/1"
@@ -62,18 +70,38 @@ public_interface:
   - "gdpr_common_definitions_data_and_processing_profile_for/2"
   - "gdpr_common_definitions_data_and_processing_assess/2"
 
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only the kit library formalize_lib, which
+# is not a backbone package.
 uses: []
 
-scope: "Regulation (EU) 2016/679 Art 4 points (1)-(6), (9)-(12), (25) and (26): given a profile of facts about one situation, whether each defined term (personal data, processing, restriction of processing, profiling, pseudonymisation, filing system, recipient, third party, consent elements, personal data breach, information society service, international organisation) is met, not met, indeterminate for an absent key, or referred to a lawyer for an unsure judgement or an unattested outside fact. Only DEFINITIONS are answered: never that an obligation applies, that a processing is lawful or that a transfer may take place. Points 4(7), (8), (13)-(24) are handled in the sibling order gdpr-common-definitions-roles-and-establishments; Directive (EU) 2015/1535 Art 1(1)(b) is not pinned and is read only as an attested outside fact."
+scope: "Given a profile of facts about one situation, decide ONCE, for every
+  data-protection order, whether each of the data and processing definitions of
+  Article 4 of Regulation (EU) 2016/679 (GDPR) is met: points 4(1) personal data,
+  4(2) processing, 4(3) restriction of processing, 4(4) profiling, 4(5)
+  pseudonymisation, 4(6) filing system, 4(9) recipient, 4(10) third party, 4(11)
+  consent (its five elements), 4(12) personal data breach, 4(25) information
+  society service (an attested outside fact on Directive (EU) 2015/1535 Art
+  1(1)(b)) and 4(26) international organisation. Each answer is met, not_met,
+  indeterminate(MISSING_KEYS) or needs_legal_review (an unsure user judgement,
+  open_textured, or an absent outside fact, cross_reference_unresolved), with
+  input_problems first. Out of scope: every obligation, lawfulness of processing
+  and transfers; the other points of Article 4 (sibling orders
+  gdpr-common-definitions-roles-and-establishments and gdpr-binding-corporate-rules;
+  4(17) and 4(21) deferred); the content of Directive (EU) 2015/1535 and of public
+  international law, which arrive as attested outside facts."
 
 sources:
-  - "Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, Art 4(1), 4(2), 4(3), 4(4), 4(5), 4(6), 4(9), 4(10), 4(11), 4(12), 4(25), 4(26)"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the protection of natural persons with regard to the processing of personal data and on the free movement of such data (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, Article 4 points (1)-(6), (9)-(12), (25) and (26); consolidated text 02016R0679-20160504 with the 2018 corrigendum (OJ L 127, 23.5.2018, p. 2)"
+  - "Directive (EU) 2015/1535 of the European Parliament and of the Council of 9 September 2015, Article 1(1)(b) -- cross-referenced by GDPR Art 4(25); not pinned, carried as the attested outside fact service_is_information_society_service"
 
 query_interface:
-  3: "gdpr_common_definitions_data_and_processing_status/2"      # status_determination
-  7: "gdpr_common_definitions_data_and_processing_checklist/2"   # justification: cited row per relation
+  3: "gdpr_common_definitions_data_and_processing_status/2"      # status_determination: classification of every definition
+  7: "gdpr_common_definitions_data_and_processing_checklist/2"   # justification: one cited item per definition
   16: "gdpr_common_definitions_data_and_processing_what_if/4"    # what_if: re-evaluate under an overridden key
 
 deferred_set:
@@ -96,11 +124,8 @@ deferred_set:
   - 02016R0679-20160504#point_004_16
   - 02016R0679-20160504#point_004_16_a
   - 02016R0679-20160504#point_004_16_b
-  - 02016R0679-20160504#point_004_17
   - 02016R0679-20160504#point_004_18
   - 02016R0679-20160504#point_004_19
-  - 02016R0679-20160504#point_004_20
-  - 02016R0679-20160504#point_004_21
   - 02016R0679-20160504#point_004_22
   - 02016R0679-20160504#point_004_22_a
   - 02016R0679-20160504#point_004_22_b
@@ -111,11 +136,46 @@ deferred_set:
   - 02016R0679-20160504#point_004_24
   declaration: not_an_exception
   not_formalized_because: in_sibling
-  reason: disposed of in gdpr-common-definitions-roles-and-establishments, the other
-    half of the Art 4 definitions (formalized there, except 4(17), 4(20) and 4(21),
-    which it defers with their own reasons); one disposition per point across the
-    two orders
+  decided_in: gdpr-common-definitions-roles-and-establishments
+  reason: formalized in gdpr-common-definitions-roles-and-establishments, the other
+    half of the Art 4 definitions; one disposition per point across the two orders.
+    Points 4(17), 4(20) and 4(21) have rows of their own below (amended 2026-11-18).
   consequence: This order gives no answer for these points; the caller uses gdpr-common-definitions-roles-and-establishments.
+- what: art_4_20_binding_corporate_rules
+  units:
+  - 02016R0679-20160504#point_004_20
+  declaration: not_an_exception
+  not_formalized_because: in_sibling
+  decided_in: gdpr-binding-corporate-rules
+  reason: Art 4(20) is formalised in the sibling order gdpr-binding-corporate-rules
+    (binding_corporate_rules_definition/3, the seven elements of the definition);
+    no relation of this order reads it.
+  consequence: This order gives no answer for 4(20); the caller uses gdpr-binding-corporate-rules
+    (binding_corporate_rules_definition/3).
+- what: art_4_17_representative
+  units:
+  - 02016R0679-20160504#point_004_17
+  declaration: not_an_exception
+  debt: true
+  reason: The operative content of 4(17) is a designation in writing pursuant to Article
+    27, which is not pinned here; no order decides 4(17) itself (gdpr-common-definitions-roles-and-establishments
+    defers it as debt; gdpr-territorial-material-scope pins Article 27 but does not
+    formalise 4(17)).
+  consequence: This order does not say whether a person is a representative; the caller
+    checks the designation under Article 27, for example with gdpr-territorial-material-scope.
+  open: formalisable once Article 27 is pinned or a sibling relation may be called;
+    the deferral stands for this run.
+- what: art_4_21_supervisory_authority
+  units:
+  - 02016R0679-20160504#point_004_21
+  declaration: not_an_exception
+  not_formalized_because: national_law
+  reason: Whether a body is a supervisory authority turns on its establishment by
+    a Member State pursuant to Article 51 and on its independence, neither pinned
+    here; it is a fact about which bodies Member States set up (gdpr-common-definitions-roles-and-establishments
+    defers it for the same reason).
+  consequence: This order does not say whether a body is a supervisory authority;
+    the caller establishes it.
 
 excluded_set:
 - what: directive_2015_1535_definition

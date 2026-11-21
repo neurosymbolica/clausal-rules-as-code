@@ -49,15 +49,15 @@ attribute_t(Element, false) :-
 
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    identical_member_t(Key, Known, IsKnown),
+    known_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
 
-identical_member_t(_, [], false).
-identical_member_t(Key, [Known|_], true) :-
-    Key == Known.
-identical_member_t(Key, [Known|Knowns], T) :-
-    Key \== Known,
-    identical_member_t(Key, Knowns, T).
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
     unknown_keys(Elements, Known, Problems).

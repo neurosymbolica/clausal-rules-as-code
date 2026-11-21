@@ -1,0 +1,173 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_scope_and_entity_types_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_scope_and_entity_types_dora_scope_and_entity_types, [decide_dora_scope_and_entity_types/2, dora_scope_decision/3, dora_entity_category/3, dora_scope_and_entity_types_checklist/2]).
+:- use_module(m__eu_dora_scope_and_entity_types_fixtures, [dora_scope_and_entity_types_subject/1, dora_scope_and_entity_types_profile_for/2]).
+
+subject_classifies(Subject) :-
+    dora_scope_and_entity_types_subject(Subject),
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    decide_dora_scope_and_entity_types(Profile, _Verdict).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, dora_scope_and_entity_types_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_subject_has_one_verdict) :-
+    findall(SubjectCount, verdict_count(SubjectCount), SubjectCounts),
+    SubjectCounts = [_|_],
+    maplist(exactly_one, SubjectCounts).
+test(determinism_every_subject_has_one_scope_answer) :-
+    findall(SubjectCount, scope_count(SubjectCount), SubjectCounts),
+    SubjectCounts = [_|_],
+    maplist(exactly_one, SubjectCounts).
+test(determinism_every_subject_has_one_category_answer) :-
+    findall(SubjectCount, category_count(SubjectCount), SubjectCounts),
+    SubjectCounts = [_|_],
+    maplist(exactly_one, SubjectCounts).
+test(determinism_every_subject_has_one_checklist) :-
+    findall(SubjectCount, checklist_count(SubjectCount), SubjectCounts),
+    SubjectCounts = [_|_],
+    maplist(exactly_one, SubjectCounts).
+test(determinism_every_type_atom_has_one_answer) :-
+    shared_type_set(EntityTypes),
+    length(EntityTypes, 29),
+    maplist(one_answer_for_type, EntityTypes).
+test(citations_every_scope_answer_has_the_citations_of_its_form) :-
+    findall(Subject, dora_scope_and_entity_types_subject(Subject), Subjects),
+    maplist(scope_answer_fits, Subjects).
+test(citations_every_category_answer_has_the_citations_of_its_form) :-
+    findall(Subject, dora_scope_and_entity_types_subject(Subject), Subjects),
+    maplist(category_answer_fits, Subjects).
+test(citations_every_checklist_item_carries_provenance) :-
+    findall(Subject, dora_scope_and_entity_types_subject(Subject), Subjects),
+    maplist(checklist_cited, Subjects).
+test(consistency_the_category_follows_the_scope_answer) :-
+    findall(Subject, dora_scope_and_entity_types_subject(Subject), Subjects),
+    maplist(queries_agree, Subjects).
+test(invariant_a_key_of_another_type_is_never_read) :-
+    unexcluded_types(EntityTypes),
+    maplist(unread_keys_leave_in_scope, EntityTypes).
+test(invariant_the_member_count_flips_once_between_15_and_16) :-
+    numlist(0, 15, LowCounts),
+    maplist(members_out_of_scope, LowCounts),
+    numlist(16, 60, HighCounts),
+    maplist(members_in_scope, HighCounts).
+test(invariant_a_true_size_fact_decides_whatever_the_other) :-
+    maplist(microenterprise_decides_alone, [[], [attribute(financial_entity_is_small_or_medium_sized_enterprise, true)], [attribute(financial_entity_is_small_or_medium_sized_enterprise, false)]]),
+    maplist(small_or_medium_decides_alone, [[], [attribute(financial_entity_is_microenterprise, true)], [attribute(financial_entity_is_microenterprise, false)]]).
+
+exactly_one(_ - 1).
+
+verdict_count(Subject - VerdictCount) :-
+    dora_scope_and_entity_types_subject(Subject),
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    findall(Verdict, decide_dora_scope_and_entity_types(Profile, Verdict), Verdicts),
+    length(Verdicts, VerdictCount).
+
+scope_count(Subject - AnswerCount) :-
+    dora_scope_and_entity_types_subject(Subject),
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    findall(Result - Citations, dora_scope_decision(Profile, Result, Citations), Answers),
+    length(Answers, AnswerCount).
+
+category_count(Subject - AnswerCount) :-
+    dora_scope_and_entity_types_subject(Subject),
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    findall(Result - Citations, dora_entity_category(Profile, Result, Citations), Answers),
+    length(Answers, AnswerCount).
+
+checklist_count(Subject - ChecklistCount) :-
+    dora_scope_and_entity_types_subject(Subject),
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    findall(Items, dora_scope_and_entity_types_checklist(Profile, Items), Checklists),
+    length(Checklists, ChecklistCount).
+
+shared_type_set([credit_institution, institution_exempted_pursuant_to_directive_2013_36, payment_institution, exempted_payment_institution, account_information_service_provider, electronic_money_institution, exempted_electronic_money_institution, investment_firm, crypto_asset_service_provider, issuer_of_asset_referenced_tokens, central_securities_depository, central_counterparty, trading_venue, trade_repository, manager_of_alternative_investment_funds, management_company, data_reporting_service_provider, insurance_undertaking, reinsurance_undertaking, insurance_intermediary, reinsurance_intermediary, ancillary_insurance_intermediary, institution_for_occupational_retirement_provision, credit_rating_agency, administrator_of_critical_benchmarks, crowdfunding_service_provider, securitisation_repository, ict_third_party_service_provider, none_of_the_listed_types]).
+
+unexcluded_types([payment_institution, exempted_payment_institution, account_information_service_provider, electronic_money_institution, exempted_electronic_money_institution, crypto_asset_service_provider, issuer_of_asset_referenced_tokens, central_securities_depository, central_counterparty, trading_venue, trade_repository, management_company, data_reporting_service_provider, credit_rating_agency, administrator_of_critical_benchmarks, crowdfunding_service_provider, securitisation_repository, ict_third_party_service_provider]).
+
+one_answer_for_type(EntityType) :-
+    findall(Result - Citations, dora_scope_decision([attribute(dora_entity_type, EntityType)], Result, Citations), Answers),
+    length(Answers, 1),
+    findall(Category - Citations, dora_entity_category([attribute(dora_entity_type, EntityType)], Category, Citations), Categories),
+    length(Categories, 1).
+
+cite_term(cite(CitationKey)) :-
+    atom(CitationKey).
+
+scope_citations_fit(in_scope(_), [_|_]).
+scope_citations_fit(out_of_scope, [_|_]).
+scope_citations_fit(indeterminate([_]), []).
+scope_citations_fit(input_problems([_|_]), []).
+
+category_citations_fit(financial_entity, [_|_]).
+category_citations_fit(ict_third_party_service_provider, [_|_]).
+category_citations_fit(out_of_scope, [_|_]).
+category_citations_fit(indeterminate([_]), []).
+category_citations_fit(input_problems([_|_]), []).
+
+scope_answer_fits(Subject) :-
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    dora_scope_decision(Profile, Result, Citations),
+    scope_citations_fit(Result, Citations),
+    maplist(cite_term, Citations).
+
+category_answer_fits(Subject) :-
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    dora_entity_category(Profile, Result, Citations),
+    category_citations_fit(Result, Citations),
+    maplist(cite_term, Citations).
+
+checklist_item_cited(item(_, _, [FirstCitation|OtherCitations])) :-
+    maplist(cite_term, [FirstCitation|OtherCitations]).
+
+checklist_cited(Subject) :-
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    dora_scope_and_entity_types_checklist(Profile, Items),
+    Items = [_|_],
+    maplist(checklist_item_cited, Items).
+
+consistent(in_scope(ict_third_party_service_provider), ict_third_party_service_provider).
+consistent(in_scope(EntityType), financial_entity) :-
+    dif(EntityType, ict_third_party_service_provider).
+consistent(out_of_scope, out_of_scope).
+consistent(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+consistent(input_problems(Problems), input_problems(Problems)).
+
+queries_agree(Subject) :-
+    dora_scope_and_entity_types_profile_for(Subject, Profile),
+    dora_scope_decision(Profile, ScopeResult, _),
+    dora_entity_category(Profile, CategoryResult, _),
+    consistent(ScopeResult, CategoryResult).
+
+unread_keys_leave_in_scope(EntityType) :-
+    findall(Result, dora_scope_decision([attribute(dora_entity_type, EntityType), attribute(aifm_under_article_3_2_of_directive_2011_61, true), attribute(undertaking_under_article_4_of_directive_2009_138, true), attribute(iorp_pension_scheme_members_total, 0), attribute(exempted_under_articles_2_and_3_of_directive_2014_65, true), attribute(financial_entity_is_microenterprise, true), attribute(financial_entity_is_small_or_medium_sized_enterprise, true), attribute(post_office_giro_institution_under_article_2_5_3_of_directive_2013_36, true), attribute(exempted_from_dora_scope_by_member_state, true)], Result, _), Results),
+    Results == [in_scope(EntityType)].
+
+members_out_of_scope(MemberCount) :-
+    dora_scope_decision([attribute(dora_entity_type, institution_for_occupational_retirement_provision), attribute(iorp_pension_scheme_members_total, MemberCount)], out_of_scope, [cite(eu_reg_2022_2554_art_2_3_c)]).
+
+members_in_scope(MemberCount) :-
+    dora_scope_decision([attribute(dora_entity_type, institution_for_occupational_retirement_provision), attribute(iorp_pension_scheme_members_total, MemberCount)], in_scope(institution_for_occupational_retirement_provision), [cite(eu_reg_2022_2554_art_2_1_p)]).
+
+microenterprise_decides_alone(SizeAttributes) :-
+    findall(Result, dora_scope_decision([attribute(dora_entity_type, reinsurance_intermediary), attribute(financial_entity_is_microenterprise, true)|SizeAttributes], Result, _), Results),
+    Results == [out_of_scope].
+
+small_or_medium_decides_alone(SizeAttributes) :-
+    findall(Result, dora_scope_decision([attribute(dora_entity_type, insurance_intermediary), attribute(financial_entity_is_small_or_medium_sized_enterprise, true)|SizeAttributes], Result, _), Results),
+    Results == [out_of_scope].
+
+cp_test_names([totality_every_subject_classifies, determinism_every_subject_has_one_verdict, determinism_every_subject_has_one_scope_answer, determinism_every_subject_has_one_category_answer, determinism_every_subject_has_one_checklist, determinism_every_type_atom_has_one_answer, citations_every_scope_answer_has_the_citations_of_its_form, citations_every_category_answer_has_the_citations_of_its_form, citations_every_checklist_item_carries_provenance, consistency_the_category_follows_the_scope_answer, invariant_a_key_of_another_type_is_never_read, invariant_the_member_count_flips_once_between_15_and_16, invariant_a_true_size_fact_decides_whatever_the_other]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

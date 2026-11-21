@@ -4,80 +4,123 @@
 % A TOP-LAYER consumer: it imports the determination slice's PUBLIC
 % predicates it calls, and nothing else.
 %
-% Query types this domain serves (manifest query_interface):
-%   #2 eligibility   decide_gdpr_compensation_and_liability/2 (slice): the
-%                    verdict of compensation_liability/4 with its CITATIONS,
-%                    and the cited checklist
-%                    gdpr_compensation_and_liability_checklist/2.
-%                    Mapping: liable_for_damage is the positive verdict;
-%                    exempt_from_liability, not_liable_for_damage and
-%                    right_not_established are negative; indeterminate/1,
-%                    needs_legal_review/2 and input_problems/1 are the
-%                    non-final (indeterminate) answers.
-%   #7 justification gdpr_compensation_and_liability_checklist/2 (slice):
-%                    every item carries cite(...) provenance, met items
-%                    included.
-%   #16 what-if      gdpr_compensation_and_liability_what_if/4 (here):
-%                    override one key, re-evaluate.
+% Source: Regulation (EU) 2016/679 (GDPR), Article 82(1) to (3).
+%
+% Query types served by the package:
+%   #2 eligibility   -- compensation_liability/4 (the step ladder of the
+%                       order), decide_gdpr_compensation_and_liability/2 and
+%                       gdpr_compensation_and_liability_status/2 (the slice);
+%   #7 justification -- gdpr_compensation_and_liability_checklist/2: every
+%                       checklist item carries cite(Key);
+%   #16 what-if      -- gdpr_compensation_and_liability_what_if/4 below:
+%                       override one key of the attribute list, re-evaluate.
 %
 % gdpr_compensation_and_liability_profile_keys/1: top-level profile key schema
-% gdpr_compensation_and_liability_input_problems/2: the problems a profile has ([] = none)
+% gdpr_compensation_and_liability_input_problems/2: the problems a profile has
+%   ([] = none), re-exported from the kernel as the scaffold wrote it.
 %
-% The open-textured judgements are never decided here: a what-if only
-% re-asks the slice with the caller's hypothetical judgement or statement.
+% The profile is an ATTRIBUTE LIST, not a dict, so the kit's dict-based
+% override_key/4 does not apply: the what-if override is local list
+% plumbing (drop every attribute of the key, then add the new one); it
+% decides nothing statutory and carries no implements/1 marker. The
+% re-evaluation goes through the slice's step ladder, so the input check
+% still comes first.
 %
-% The profile of this order is an ATTRIBUTE LIST [attribute(KEY, VALUE), ...],
-% not a dict, so the override is the list plumbing attribute_override/4
-% below: every entry of the key is replaced by the one new entry, so the
-% hypothesis never carries a duplicate key. (kit override_key/4 is written
-% for dict profiles; the working notes (not published) records the attribute-list override as a
-% candidate for kit promotion.) Plumbing only: no statutory marker.
+% RESULT CONSTRUCTORS: the order exports its result and data terms
+% (indeterminate/1, needs_legal_review/2, ...). A constructor is data and
+% has no clauses: they are declared with constructors/1 below and stay in
+% the export list. The four final result atoms are plain facts. The
+% profile key atoms, the party_role atoms, the judgement value unsure and
+% the markers absent and not_attempted are bare atoms: an export list
+% holds only name/arity entries, so they are listed under root_atoms in
+% manifest.yaml and reach the package root through the generated facade.
 % =====================================================================
 
 :- module(queries, [
     gdpr_compensation_and_liability_profile_keys/1,
     gdpr_compensation_and_liability_input_problems/2,
-    gdpr_compensation_and_liability_what_if/4
+    gdpr_compensation_and_liability_what_if/4,
+    right_not_established/0,
+    not_liable_for_damage/0,
+    exempt_from_liability/0,
+    liable_for_damage/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
 ]).
 
 :- use_module(eu/data_protection/gdpr_compensation_and_liability/kernel, [gdpr_compensation_and_liability_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_compensation_and_liability/gdpr_compensation_and_liability, [gdpr_compensation_and_liability_status/2]).
 
+:- constructors([indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(input, citation), cross_reference_unresolved(citation, target), resolution(target, resolution_status), inputs_relied_on(pairs), provenance(origin, detail), outside_fact(key, attested), attested(attested_value, attestation), attestation(by, at, reason, evidence), url(address, retrieved_at), document(upload_identifier, checksum), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
 % schema of top-level profile keys: the keys of the order's typed input contract, in its order
 gdpr_compensation_and_liability_profile_keys([party_role, involved_in_the_processing, processor_breached_obligations_directed_to_processors, processor_acted_outside_or_contrary_to_lawful_instructions, damage_suffered, infringement_of_the_regulation_occurred, damage_resulted_from_the_infringement, not_in_any_way_responsible_for_the_event]).
 
-% #16 what-if: re-evaluate with one key hypothetically overridden
+% #16 what-if: re-evaluate with one key hypothetically overridden.
 gdpr_compensation_and_liability_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
     gdpr_compensation_and_liability_status(Hypothesis, NewStatus).
 
-% attribute_override(Profile, Key, Value, Hypothesis): every attribute(Key, _)
-% is dropped and attribute(Key, Value) is added once at the end.
-attribute_override([], Key, Value, [attribute(Key, Value)]).
-attribute_override([attribute(ElementKey, _)|Elements], Key, Value, Hypothesis) :-
-    ElementKey == Key,
-    attribute_override(Elements, Key, Value, Hypothesis).
-attribute_override([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
-    ElementKey \== Key,
-    attribute_override(Elements, Key, Value, Hypothesis).
+% override_attribute(Elements, Key, Value, Hypothesis): every attribute of
+% Key is dropped and attribute(Key, Value) is added at the end.
+override_attribute(Elements, OverriddenKey, NewValue, Hypothesis) :-
+    drop_key(Elements, OverriddenKey, Kept),
+    append(Kept, [attribute(OverriddenKey, NewValue)], Hypothesis).
 
-test(the_override_replaces_an_existing_entry) :-
-    attribute_override([attribute(damage_suffered, true), attribute(party_role, controller)], damage_suffered, false, Hypothesis),
-    Hypothesis == [attribute(party_role, controller), attribute(damage_suffered, false)].
-test(the_override_adds_an_absent_entry) :-
-    attribute_override([], party_role, processor, Hypothesis),
-    Hypothesis == [attribute(party_role, processor)].
-test(the_override_collapses_a_duplicate_key) :-
-    attribute_override([attribute(damage_suffered, true), attribute(damage_suffered, false)], damage_suffered, unsure, Hypothesis),
-    Hypothesis == [attribute(damage_suffered, unsure)].
-test(a_false_judgement_by_what_if_refutes_the_right) :-
-    gdpr_compensation_and_liability_what_if([attribute(damage_suffered, true)], damage_suffered, false, right_not_established).
-test(a_true_judgement_by_what_if_is_not_refuted, fail) :-
-    gdpr_compensation_and_liability_what_if([attribute(damage_suffered, false)], damage_suffered, true, right_not_established).
-test(a_true_judgement_by_what_if_names_the_next_key) :-
-    gdpr_compensation_and_liability_what_if([attribute(damage_suffered, false)], damage_suffered, true, indeterminate([infringement_of_the_regulation_occurred])).
-test(the_key_schema_has_eight_keys) :-
-    gdpr_compensation_and_liability_profile_keys(Keys),
-    length(Keys, 8).
+drop_key([], _, []).
+drop_key([Element|Elements], OverriddenKey, Kept) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey,
+    drop_key(Elements, OverriddenKey, Kept).
+drop_key([Element|Elements], OverriddenKey, [Element|Kept]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== OverriddenKey,
+    drop_key(Elements, OverriddenKey, Kept).
+drop_key([Element|Elements], OverriddenKey, [Element|Kept]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    drop_key(Elements, OverriddenKey, Kept).
+drop_key([Element|Elements], OverriddenKey, [Element|Kept]) :-
+    var(Element),
+    drop_key(Elements, OverriddenKey, Kept).
+
+% ---- the final result atoms (each a fact; never called as a query) -------
+right_not_established.
+not_liable_for_damage.
+exempt_from_liability.
+liable_for_damage.
+
+test(the_profile_keys_are_the_eight_contract_keys) :-
+    gdpr_compensation_and_liability_profile_keys(ProfileKeys),
+    length(ProfileKeys, 8).
+test(supplying_the_statement_turns_a_referral_into_liability) :-
+    gdpr_compensation_and_liability_what_if([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], not_in_any_way_responsible_for_the_event, attested(false, attestation(host, at, reason, none)), liable_for_damage).
+test(overriding_involvement_puts_the_controller_outside) :-
+    gdpr_compensation_and_liability_what_if([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host, at, reason, none)))], involved_in_the_processing, false, not_liable_for_damage).
+test(overriding_involvement_is_not_liable_for_damage, fail) :-
+    gdpr_compensation_and_liability_what_if([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host, at, reason, none)))], involved_in_the_processing, false, liable_for_damage).
+test(an_override_with_a_wrong_type_is_an_input_problem) :-
+    gdpr_compensation_and_liability_what_if([attribute(damage_suffered, true)], damage_suffered, maybe, input_problems([wrong_type(damage_suffered)])).
+test(the_final_result_atoms_have_defining_clauses) :-
+    right_not_established,
+    not_liable_for_damage,
+    exempt_from_liability,
+    liable_for_damage.
 
 :- end_module(queries).

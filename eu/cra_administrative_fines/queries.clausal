@@ -1,0 +1,250 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/cra_administrative_fines.
+% A TOP-LAYER consumer: it imports the determination slice's and the
+% kernel's PUBLIC predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), pinned text of
+% 32024R2847 (OJ L, 2024/2847, 20.11.2024): Art 64(1) to (4), (10)(b) and
+% Art 71(2). Every statutory decision is made in the slice
+% cra_administrative_fines.clausal; this file only re-runs it on an edited
+% request, so it carries no implements/1 marker.
+%
+% Query types this domain serves, and where:
+%   #23 calculation    administrative_fine_maximum/4 (the slice): the cap in
+%                      euro cents, fine_maximum(Tier, Basis, CapInEuroCents).
+%   #7  justification  cra_administrative_fines_checklist/2 (the slice): one
+%                      item per ground, each with its cite(...) list.
+%   #16 what-if        cra_administrative_fines_what_if/4 (here): the VERDICT
+%                      after one edit of the request, used for the boundary
+%                      demonstrations (the date of application, the tier ties).
+%
+% cra_administrative_fines_profile_keys/1: the four profile keys, in contract order.
+% cra_administrative_fines_input_problems/2: the scaffold's input check (kernel),
+%   re-exported as written.
+%
+% RESULT CONSTRUCTORS and ROOT EXPORTS: the order names the result terms
+% (date/3, fine_maximum/3, ...) and the profile atoms (the four keys, the
+% twenty-one provision atoms and the judgement value unsure) as public names
+% of the package. The result constructors are data: they are exported and
+% declared below with :- constructors, and have no clauses. The root atoms
+% are arity-0 facts; they are never called as queries and decide nothing.
+%
+% The request term is infringement(Profile, InfringementDate): the profile is an
+% ATTRIBUTE LIST, so the dict combinator override_key/4 does not apply; the edit
+% below replaces every attribute of the edited key by one new attribute.
+% =====================================================================
+
+:- module(queries, [
+    cra_administrative_fines_profile_keys/1,
+    cra_administrative_fines_input_problems/2,
+    cra_administrative_fines_what_if/4,
+    not_yet_applicable/0,
+    not_listed_in_article_64/0,
+    date/3,
+    fine_maximum/3,
+    fine_excluded/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    infringed_provision/0,
+    offender_is_open_source_software_steward/0,
+    offender_is_undertaking/0,
+    total_worldwide_annual_turnover_in_euros/0,
+    annex_i_essential_cybersecurity_requirements/0,
+    article_13/0,
+    article_14/0,
+    article_18/0,
+    article_19/0,
+    article_20/0,
+    article_21/0,
+    article_22/0,
+    article_23/0,
+    article_28/0,
+    article_30_paragraphs_1_to_4/0,
+    article_31_paragraphs_1_to_4/0,
+    article_32_paragraphs_1_to_3/0,
+    article_33_paragraph_5/0,
+    article_39/0,
+    article_41/0,
+    article_47/0,
+    article_49/0,
+    article_53/0,
+    incorrect_incomplete_or_misleading_information_in_reply_to_request/0,
+    other_provision/0,
+    unsure/0
+]).
+
+:- use_module(eu/cra_administrative_fines/kernel, [
+    cra_administrative_fines_input_problems/2,
+    cra_administrative_fines_contract_keys/1,
+    cra_administrative_fines_calendar_day_t/2
+]).
+:- use_module(eu/cra_administrative_fines/cra_administrative_fines, [cra_administrative_fines_status/2]).
+
+% ---- result constructors (data: no clauses) ----------------------------
+
+:- constructors([
+    fine_maximum(tier, basis, cap_in_euro_cents),
+    fine_excluded(exception),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+not_yet_applicable.
+not_listed_in_article_64.
+
+% date(Year, Month, Day): the INFRINGEMENT_DATE argument; as a goal it holds
+% for a real calendar day only (the kernel's calendar check).
+date(Year, Month, Day) :-
+    cra_administrative_fines_calendar_day_t(date(Year, Month, Day), true).
+
+% ---- root exports: the profile keys, the provision atoms, unsure ------
+
+infringed_provision.
+offender_is_open_source_software_steward.
+offender_is_undertaking.
+total_worldwide_annual_turnover_in_euros.
+
+annex_i_essential_cybersecurity_requirements.
+article_13.
+article_14.
+article_18.
+article_19.
+article_20.
+article_21.
+article_22.
+article_23.
+article_28.
+article_30_paragraphs_1_to_4.
+article_31_paragraphs_1_to_4.
+article_32_paragraphs_1_to_3.
+article_33_paragraph_5.
+article_39.
+article_41.
+article_47.
+article_49.
+article_53.
+incorrect_incomplete_or_misleading_information_in_reply_to_request.
+other_provision.
+
+unsure.
+
+% The schema of top-level profile keys: the keys of the order's typed input
+% contract, in its order (root_exports order).
+cra_administrative_fines_profile_keys(ProfileKeys) :-
+    cra_administrative_fines_contract_keys(ProfileKeys).
+
+% #16 what-if: the VERDICT of the request with one part replaced.
+% The key infringement_date replaces the date argument; any other key replaces
+% (or adds) that attribute of the profile. The edited request is judged by the
+% query itself, input check first, so an edit outside the contract is reported
+% as the query reports it.
+cra_administrative_fines_what_if(infringement(Profile, _OriginalDate), infringement_date, NewDate, NewStatus) :-
+    cra_administrative_fines_status(infringement(Profile, NewDate), NewStatus).
+cra_administrative_fines_what_if(infringement(Profile, InfringementDate), OverriddenKey, NewValue, NewStatus) :-
+    dif(OverriddenKey, infringement_date),
+    profile_with_value(Profile, OverriddenKey, NewValue, HypotheticalProfile),
+    cra_administrative_fines_status(infringement(HypotheticalProfile, InfringementDate), NewStatus).
+
+% profile_with_value(Profile, OverriddenKey, NewValue, HypotheticalProfile):
+% every attribute whose key is identical (==) to OverriddenKey is dropped and one
+% attribute(OverriddenKey, NewValue) is appended. Other elements are kept as
+% given, so a malformed profile stays malformed for the input check.
+profile_with_value(Profile, OverriddenKey, NewValue, HypotheticalProfile) :-
+    profile_without_key(Profile, OverriddenKey, KeptElements),
+    append(KeptElements, [attribute(OverriddenKey, NewValue)], HypotheticalProfile).
+
+profile_without_key([], _, []).
+profile_without_key([Element|Elements], OverriddenKey, KeptElements) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey,
+    profile_without_key(Elements, OverriddenKey, KeptElements).
+profile_without_key([Element|Elements], OverriddenKey, [Element|KeptElements]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== OverriddenKey,
+    profile_without_key(Elements, OverriddenKey, KeptElements).
+profile_without_key([Element|Elements], OverriddenKey, [Element|KeptElements]) :-
+    var(Element),
+    profile_without_key(Elements, OverriddenKey, KeptElements).
+profile_without_key([Element|Elements], OverriddenKey, [Element|KeptElements]) :-
+    nonvar(Element),
+    functor(Element, ElementName, ElementArity),
+    dif(ElementName/ElementArity, attribute/2),
+    profile_without_key(Elements, OverriddenKey, KeptElements).
+
+% ---- tests ------------------------------------------------------------
+
+test(the_profile_keys_in_contract_order) :-
+    cra_administrative_fines_profile_keys([infringed_provision, offender_is_open_source_software_steward, offender_is_undertaking, total_worldwide_annual_turnover_in_euros]).
+
+test(the_input_check_is_re_exported) :-
+    cra_administrative_fines_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+test(the_result_constructors_build_as_data) :-
+    not_yet_applicable,
+    not_listed_in_article_64,
+    Verdict = fine_maximum(highest_maximum_tier, fixed_amount, 1500000000),
+    functor(Verdict, fine_maximum, 3),
+    Exclusion = fine_excluded(open_source_software_steward),
+    functor(Exclusion, fine_excluded, 1),
+    Missing = indeterminate([infringed_provision]),
+    functor(Missing, indeterminate, 1),
+    Refusal = input_problems([wrong_type(profile)]),
+    functor(Refusal, input_problems, 1).
+
+test(the_root_atoms_are_defined) :-
+    infringed_provision,
+    article_13,
+    incorrect_incomplete_or_misleading_information_in_reply_to_request,
+    other_provision,
+    unsure.
+
+test(a_leap_day_is_a_date) :-
+    date(2028, 2, 29).
+
+test(a_non_leap_day_is_no_date, fail) :-
+    date(2027, 2, 29).
+
+test(moving_the_date_to_the_application_day_reads_the_provision) :-
+    cra_administrative_fines_status(infringement([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, false)], date(2027, 12, 10)), not_yet_applicable),
+    findall(Status, cra_administrative_fines_what_if(infringement([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, false)], date(2027, 12, 10)), infringement_date, date(2027, 12, 11), Status), Statuses),
+    Statuses = [fine_maximum(highest_maximum_tier, fixed_amount_for_non_undertaking, CapInEuroCents)],
+    CapInEuroCents =:= 1500000000.
+
+test(one_euro_more_turnover_flips_the_basis_at_the_highest_tie) :-
+    cra_administrative_fines_status(infringement([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000000)], date(2028, 1, 1)), fine_maximum(highest_maximum_tier, fixed_amount, FixedInEuroCents)),
+    FixedInEuroCents =:= 1500000000,
+    cra_administrative_fines_what_if(infringement([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000000)], date(2028, 1, 1)), total_worldwide_annual_turnover_in_euros, 600000001, fine_maximum(highest_maximum_tier, percentage_of_turnover, PercentageInEuroCents)),
+    PercentageInEuroCents =:= 1500000002.
+
+test(the_tie_is_not_the_percentage_basis, fail) :-
+    cra_administrative_fines_what_if(infringement([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 1)], date(2028, 1, 1)), total_worldwide_annual_turnover_in_euros, 600000000, fine_maximum(_, percentage_of_turnover, _)).
+
+test(a_steward_edit_in_the_middle_tier_excludes_the_fine) :-
+    findall(Status, cra_administrative_fines_what_if(infringement([attribute(infringed_provision, article_28), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, false)], date(2028, 1, 1)), offender_is_open_source_software_steward, true, Status), Statuses),
+    Statuses == [fine_excluded(open_source_software_steward)].
+
+test(an_edit_replaces_the_attribute_and_adds_no_duplicate) :-
+    findall(Status, cra_administrative_fines_what_if(infringement([attribute(infringed_provision, article_14), attribute(offender_is_undertaking, false)], date(2028, 1, 1)), offender_is_undertaking, true, Status), Statuses),
+    Statuses == [indeterminate([total_worldwide_annual_turnover_in_euros])].
+
+test(an_edit_outside_the_contract_is_an_input_problem) :-
+    cra_administrative_fines_what_if(infringement([], date(2028, 1, 1)), colour, red, input_problems([unknown_key(colour)])).
+
+:- end_module(queries).

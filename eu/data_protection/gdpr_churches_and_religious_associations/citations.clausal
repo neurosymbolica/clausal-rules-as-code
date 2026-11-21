@@ -1,0 +1,70 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% citations.clausal -- statutory citation records for eu/data_protection/gdpr_churches_and_religious_associations.
+%
+% Instrument: Regulation (EU) 2016/679 (GDPR), consolidated text
+% 02016R0679-20160504 (the consolidated text of 2016-05-04), pinned units
+% #parag_091.001 and #parag_091.002 (fmx4 cut by
+% _tools/provisions/formex_article_cut.py, fetched 2026-11-20).
+%
+% citation/2 record form: a FACT, the key an atom, the second argument a
+% pair list with keys exactly label, ref, verbatim, in that order:
+%   citation(Key, [label-'...', ref-'...', verbatim-'...']).
+% The verbatim pair is present only while the key's entry in
+% citations-sources.yaml is `status: verified`; each verbatim is an exact
+% substring of the pinned unit text.
+%
+% The two provision keys are the corpus lexicon's canonical keys
+% (_lexicon/citations.yaml):
+%   eu_reg_2016_679_art_91_1 -- GDPR Art 91(1), the continuation of the
+%     existing comprehensive rules of churches and religious associations
+%     or communities (read by both queries);
+%   eu_reg_2016_679_art_91_2 -- GDPR Art 91(2), the supervision of such
+%     bodies by an independent supervisory authority, which may be
+%     specific (read by church_supervision).
+% The two referral TARGET keys of outside_facts: are recorded too, because
+% a referral writes cite(Target) for them:
+%   rules_applied_at_entry_into_force_statement -- the attested statement
+%     that the body applied the rules at the time of entry into force of
+%     the Regulation (Art 91(1); Art 99 not pinned);
+%   chapter_vi_conditions_statement -- the attested statement that a
+%     specific supervisory authority fulfils the conditions of Chapter VI
+%     (Art 91(2); Chapter VI not pinned).
+% Both are unverified: no text of their own is pinned, so they carry no
+% verbatim.
+% Not recorded: the Art 91 heading (02016R0679-20160504#art_091, deferred,
+% carries no rule); Chapter VI, Art 99 and Art 4 (excluded, not pinned).
+%
+% PROVENANCE: every operative clause opens its body with implements(Key),
+% Key a key recorded below.
+% =====================================================================
+
+:- module(citations, [
+    citation/2,
+    implements/1
+]).
+
+citation(eu_reg_2016_679_art_91_1, [label-'Regulation (EU) 2016/679 (GDPR) Art 91(1), existing comprehensive rules of churches and religious associations or communities', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504 (unit 02016R0679-20160504#parag_091.001)', verbatim-'Where in a Member State, churches and religious associations or communities apply, at the time of entry into force of this Regulation, comprehensive rules relating to the protection of natural persons with regard to processing, such rules may continue to apply, provided that they are brought into line with this Regulation.']).
+
+citation(eu_reg_2016_679_art_91_2, [label-'Regulation (EU) 2016/679 (GDPR) Art 91(2), supervision of churches and religious associations by an independent supervisory authority, which may be specific', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504 (unit 02016R0679-20160504#parag_091.002)', verbatim-'Churches and religious associations which apply comprehensive rules in accordance with paragraph 1 of this Article shall be subject to the supervision of an independent supervisory authority, which may be specific, provided that it fulfils the conditions laid down in Chapter VI of this Regulation.']).
+
+citation(rules_applied_at_entry_into_force_statement, [label-'Attested outside statement for Regulation (EU) 2016/679 (GDPR) Art 91(1): the body applied the rules at the time of entry into force of the Regulation (Art 99 not pinned)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504 (unit 02016R0679-20160504#parag_091.001; referral target of the outside fact rules_applied_at_entry_into_force_of_the_regulation)']).
+
+citation(chapter_vi_conditions_statement, [label-'Attested outside statement for Regulation (EU) 2016/679 (GDPR) Art 91(2): the specific supervisory authority fulfils the conditions laid down in Chapter VI (Arts 51 to 59, not pinned)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504 (unit 02016R0679-20160504#parag_091.002; referral target of the outside fact specific_authority_fulfils_chapter_vi_conditions)']).
+
+% implements(Key): the provenance marker. It succeeds for every recorded key
+% and fails for a key this module does not record.
+implements(Key) :-
+    citation(Key, _).
+
+test(article_91_1_is_recorded) :-
+    implements(eu_reg_2016_679_art_91_1).
+test(article_91_2_is_recorded) :-
+    implements(eu_reg_2016_679_art_91_2).
+test(the_referral_targets_are_recorded) :-
+    citation(rules_applied_at_entry_into_force_statement, [label-_, ref-_]),
+    citation(chapter_vi_conditions_statement, [label-_, ref-_]).
+test(a_shortened_key_is_not_recorded, fail) :-
+    implements(gdpr_art_91_1).
+
+:- end_module(citations).

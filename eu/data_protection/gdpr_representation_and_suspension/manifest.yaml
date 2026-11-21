@@ -1,0 +1,193 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_representation_and_suspension
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_representation_and_suspension"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_representation_and_suspension.clausal --
+  - "mandated_representation/5"
+  - "representation_without_mandate/5"
+  - "court_contact_duty/3"
+  - "court_suspension_option/3"
+  - "court_declining_jurisdiction_option/4"
+  - "decide_gdpr_representation_and_suspension/2"
+  - "gdpr_representation_and_suspension_status/2"
+  - "gdpr_representation_and_suspension_checklist/2"
+  - "gdpr_representation_and_suspension_decision_resolvable/1"
+  - "gdpr_representation_and_suspension_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_representation_and_suspension_profile_keys/1"
+  - "gdpr_representation_and_suspension_input_problems/2"
+  - "gdpr_representation_and_suspension_what_if/4"
+  - "may_act_on_mandate/0"
+  - "may_not_act_on_mandate/0"
+  - "may_act_without_mandate/0"
+  - "may_not_act_without_mandate/0"
+  - "contact_duty_applies/0"
+  - "contact_duty_does_not_apply/0"
+  - "may_suspend_proceedings/0"
+  - "suspension_not_available/0"
+  - "may_decline_jurisdiction/0"
+  - "declining_jurisdiction_not_available/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "gdpr_representation_and_suspension_subject/1"
+  - "gdpr_representation_and_suspension_profile_for/2"
+  - "gdpr_representation_and_suspension_assess/2"
+
+# root_exports: the home of every bare atom the scorer resolves on the
+# package root (the eighteen profile keys, the ten result atoms, the four
+# action atoms, unsure, absent and not_attempted).
+root_exports:
+  - body_is_not_for_profit
+  - body_properly_constituted_under_member_state_law
+  - body_statutory_objectives_in_public_interest
+  - body_active_in_protection_of_data_subjects_rights_and_freedoms
+  - data_subject_mandated_the_body
+  - member_state_law_provides_for_mandated_compensation_claims
+  - member_state_law_provides_for_the_action_without_mandate
+  - body_considers_data_subject_rights_infringed_by_processing
+  - court_is_competent_court
+  - court_has_information_on_proceedings_pending_in_another_member_state
+  - other_proceedings_pending_in_court_of_another_member_state
+  - other_proceedings_concern_same_controller_or_processor
+  - other_proceedings_concern_same_subject_matter
+  - court_is_court_first_seized
+  - other_proceedings_pending_at_first_instance
+  - party_applied_for_court_to_decline_jurisdiction
+  - court_first_seized_has_jurisdiction_over_the_actions
+  - law_of_court_first_seized_permits_consolidation
+  - may_act_on_mandate
+  - may_not_act_on_mandate
+  - may_act_without_mandate
+  - may_not_act_without_mandate
+  - contact_duty_applies
+  - contact_duty_does_not_apply
+  - may_suspend_proceedings
+  - suspension_not_available
+  - may_decline_jurisdiction
+  - declining_jurisdiction_not_available
+  - lodge_complaint_under_article_77
+  - exercise_rights_under_article_78
+  - exercise_right_under_article_79
+  - receive_compensation_under_article_82
+  - unsure
+  - absent
+  - not_attempted
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib,
+# library(reif)), no shared backbone package.
+uses: []
+
+scope: "Regulation (EU) 2016/679 (GDPR) Art 80 (representation of data subjects) and
+  Art 81 (suspension of proceedings), from the pinned text of 02016R0679-20160504 only.
+  Decided here: whether a not-for-profit body, organisation or association may act on
+  a data subject mandate for one of the four actions Art 80(1) names (mandated_representation);
+  whether such a body may act without a mandate where a Member State has so provided
+  (representation_without_mandate, Art 80(2)); whether a competent court must contact
+  the court of another Member State (court_contact_duty, Art 81(1)); whether a court
+  other than the court first seized may suspend its proceedings (court_suspension_option,
+  Art 81(2)) or decline jurisdiction (court_declining_jurisdiction_option, Art 81(3)).
+  Out of scope: whether the data subject has the rights of Arts 77, 78, 79 or 82 (sibling
+  orders gdpr-complaints-and-judicial-remedies and gdpr-compensation-and-liability);
+  the law of the Member States on the constitution of bodies, mandates, compensation
+  claims, competence, seising, jurisdiction and consolidation, read only as attested
+  outside facts or caller statements and never decided; how a court should use its
+  options. The open-textured words properly constituted, public interest, active in
+  the field and same subject matter are the caller's judgements; unsure is referred
+  to a lawyer."
+
+sources:
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April
+    2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated
+    text 02016R0679-20160504: Art 80(1) [parag_080.001], Art 80(2) [parag_080.002],
+    Art 81(1) [parag_081.001], Art 81(2) [parag_081.002], Art 81(3) [parag_081.003]"
+
+query_interface:
+  2: "gdpr_representation_and_suspension_status/2"      # eligibility: the verdict (may / may not; duty applies / does not; option available / not) or a status compound
+  7: "gdpr_representation_and_suspension_checklist/2"   # justification: one item per condition read, each with cite(...) provenance
+  16: "gdpr_representation_and_suspension_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_080
+  - 02016R0679-20160504#art_081
+  not_formalized_because: structural
+  reason: 'The titles of Articles 80 and 81 carry no obligation: document structure,
+    not operative law. Deferred so every unit of the pinned extracts is accounted
+    for.'
+  consequence: 'None for a caller: an article title carries no obligation.'
+  declaration: not_an_exception
+
+excluded_set:
+- what: the_data_subject_rights_exercised
+  instrument: Regulation (EU) 2016/679 Arts 77, 78 and 79
+  cites:
+  - 02016R0679-20160504#art_077
+  - 02016R0679-20160504#art_078
+  - 02016R0679-20160504#art_079
+  reason: Not pinned here. Whether the data subject has the right to lodge a complaint
+    (Art 77) or a judicial remedy (Arts 78, 79) is decided by gdpr-complaints-and-judicial-remedies;
+    Art 80 lets a body exercise those rights for the data subject and this order reads
+    only Art 80 (reading (1)).
+  consequence: The answers of mandated_representation and representation_without_mandate
+    never say that the right exists; the caller asks gdpr-complaints-and-judicial-remedies.
+- what: the_right_to_compensation
+  instrument: Regulation (EU) 2016/679 Art 82
+  cites:
+  - 02016R0679-20160504#art_082
+  reason: Not pinned here. Whether the data subject has a right to receive compensation
+    is decided by gdpr-compensation-and-liability; Art 80(1) lets a mandated body
+    exercise it where Member State law provides (reading (4)).
+  consequence: may_act_on_mandate for the compensation action never says that compensation
+    is owed.
+- what: competence_of_courts_and_procedural_law
+  instrument: Regulation (EU) 2016/679 Art 79(2), and the procedural law of the Member
+    States
+  cites:
+  - 02016R0679-20160504#parag_079.002
+  reason: Not pinned here. Which courts are competent (Art 79(2) and national rules),
+    when a court is seized, and whether the law of the court first seized permits
+    consolidation are not read; the order takes the caller's statements court_is_competent_court
+    and court_is_court_first_seized and the attested outside facts court_first_seized_has_jurisdiction_over_the_actions
+    and law_of_court_first_seized_permits_consolidation (readings (7), (10), (11)).
+  consequence: Competence, seising, jurisdiction and consolidation are never decided
+    by this order.

@@ -1,4 +1,4 @@
-# The reporting obligations of manufacturers under Article 14 of Regulation (EU) 2024/2847 (Cyber Resilience Act), with the definitions of Article 3 that Article 14 uses ...
+# Reporting obligations of manufacturers under Article 14(1) to (6) of Regulation (EU) 2024/2847 (Cyber Resilience Act), with the Article 3 definitions that Article 14 ...
 
 `eu/cra_art14_manufacturer_reporting`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 240/240 | none (no provision-tracking ledger) | pass | pass | pass |
+| 200/200 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-The reporting obligations of manufacturers under Article 14 of Regulation (EU) 2024/2847 (Cyber Resilience Act), with the definitions of Article 3 that Article 14 uses and the date of application of Article 14 in Article 71(2). Decided here: whether an incident having an impact on the security of a product with digital elements is severe (Art 14(5)(a) or (b), an OR of two judgement keys); which reporting steps are due, with their limits, for an actively exploited vulnerability (Art 14(1), (2)(a) to (c)) or a severe incident (Art 14(3), (4)(a) to (c)), plus the intermediate report on request (Art 14(6)), none before awareness on 11 September 2026 (Art 71(2)); and whether an early warning or a notification was submitted within its 24-hour or 72-hour limit and without undue delay (a judgement key; an unsure judgement goes to a lawyer). Out of scope: who is a manufacturer and whether the event is one of the two kinds (the caller's classification), the recipient CSIRT, ENISA and the single reporting platform (Art 14(1), (3), (7)), the content of each step and 'unless the relevant information has already been provided', informing users (Art 14(8)), the Commission's acts (Art 14(9), ...
+Reporting obligations of manufacturers under Article 14(1) to (6) of Regulation (EU) 2024/2847 (Cyber Resilience Act), with the Article 3 definitions that Article 14 uses (read as the caller's classification) and the date of application of Article 14 in Article 71(2) (11 September 2026). Decided here: whether an incident having an impact on the security of a product with digital elements is severe (Art 14(5), either limb); which reporting steps are due, with their limits, for an actively exploited vulnerability (Art 14(2)) or a severe incident (Art 14(4)), with the intermediate report on request (Art 14(6)); and whether an early warning or a notification was submitted within its 24-hour or 72-hour limit (a partial hour rounded up) and without undue delay. Out of scope (deferred or excluded sets): who is a manufacturer and which product or event is covered, product scope and transitional provisions, the recipient CSIRT and the single reporting platform (Art 14(7), Art 16), the content of each report and the clause on information already provided, informing users (Art 14(8)), the Commission's acts (Art 14(9) and (10)), computing the end of the 14-day and one-month calendar periods, ...
 
 ## Pinned sources
 

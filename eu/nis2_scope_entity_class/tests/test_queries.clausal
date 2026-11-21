@@ -1,14 +1,15 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_queries.clausal -- PROPERTY tests for the query layer: profile keys,
-% the what-if combinator, the input check and the exported vocabulary.
+% test_queries.clausal -- PROPERTY tests for the query layer: one group per
+% query-taxonomy predicate registered in manifest.yaml query_interface
+% (#2 eligibility, #7 justification, #16 what-if) and the root exports.
 % Run: python -m clausal.testing eu/nis2_scope_entity_class/tests/test_queries.clausal
 % =====================================================================
 :- module(test_queries, []).
 :- use_module(eu/nis2_scope_entity_class/queries, [
     nis2_scope_entity_class_profile_keys/1,
-    nis2_scope_entity_class_what_if/4,
     nis2_scope_entity_class_input_problems/2,
+    nis2_scope_entity_class_what_if/4,
     microenterprise/0,
     small_enterprise/0,
     medium_sized_enterprise/0,
@@ -17,66 +18,34 @@
     out_of_scope/0,
     essential_entity/0,
     important_entity/0,
-    unsure/0,
     not_a_trust_service_provider/0,
-    central_government/0
+    other_public_administration/0,
+    unsure/0,
+    staff_headcount/0
+]).
+:- use_module(eu/nis2_scope_entity_class/kernel, [nis2_scope_entity_class_profile_key_order/1]).
+:- use_module(eu/nis2_scope_entity_class/nis2_scope_entity_class, [
+    decide_nis2_scope_entity_class/2,
+    nis2_scope_entity_class_checklist/2
 ]).
 :- use_module(eu/nis2_scope_entity_class/fixtures, [nis2_scope_entity_class_profile_for/2]).
 
+profile_of(Subject, Profile) :-
+    nis2_scope_entity_class_profile_for(Subject, Profile).
+
+cited_item(item(Identifier, _, cite(Key))) :-
+    atom(Identifier),
+    atom(Key).
+
+% ---- schema and root exports ----
 test(profile_keys_are_the_contract_keys) :-
     nis2_scope_entity_class_profile_keys(ProfileKeys),
     ProfileKeys == [annex_i_type, annex_ii_type, services_or_activities_in_union, staff_headcount, annual_turnover_eur, annual_balance_sheet_total_eur, public_electronic_communications_provider, trust_service_provider_status, tld_name_registry, dns_service_provider, sole_provider_of_an_essential_service_in_a_member_state, disruption_could_significantly_impact_public_safety_security_or_health, disruption_could_induce_a_significant_systemic_risk, critical_by_specific_national_or_regional_importance, public_administration_kind, public_administration_in_national_security_defence_or_law_enforcement, critical_entity_under_directive_2022_2557, domain_name_registration_service_entity, exempted_from_dora_scope_by_member_state, identified_by_member_state_as_essential_entity, former_operator_of_essential_services_kept_essential_by_member_state].
-
-test(what_if_a_critical_entity_flips_out_of_scope_to_eligible) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_what_if(Profile, critical_entity_under_directive_2022_2557, true, Status),
-    Status == eligible.
-
-test(what_if_the_unchanged_value_keeps_the_baseline) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_what_if(Profile, critical_entity_under_directive_2022_2557, false, Status),
-    Status == ineligible.
-
-test(what_if_a_dora_exemption_flips_a_critical_entity_out) :-
-    nis2_scope_entity_class_profile_for(critical_entity, Profile),
-    nis2_scope_entity_class_what_if(Profile, exempted_from_dora_scope_by_member_state, true, Status),
-    Status == ineligible.
-
-test(what_if_staff_at_fifty_flips_the_size_rule) :-
-    nis2_scope_entity_class_profile_for(small_annex_just_below, Profile),
-    nis2_scope_entity_class_what_if(Profile, staff_headcount, 50, Status),
-    Status == eligible.
-
-test(what_if_staff_at_forty_nine_keeps_it_out) :-
-    nis2_scope_entity_class_profile_for(small_annex_just_below, Profile),
-    nis2_scope_entity_class_what_if(Profile, staff_headcount, 49, Status),
-    Status == ineligible.
-
-test(what_if_an_unsure_judgement_needs_review) :-
-    nis2_scope_entity_class_profile_for(sole_provider, Profile),
-    nis2_scope_entity_class_what_if(Profile, sole_provider_of_an_essential_service_in_a_member_state, unsure, Status),
-    Status = needs_legal_review(open_textured(sole_provider_of_an_essential_service_in_a_member_state, cite(eu_dir_2022_2555_art_2_2_b)), _).
-
-test(what_if_exactly_one_answer) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    findall(Status, nis2_scope_entity_class_what_if(Profile, domain_name_registration_service_entity, true, Status), Statuses),
-    Statuses == [eligible].
-
-test(what_if_an_invalid_value_is_an_input_problem) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_what_if(Profile, tld_name_registry, unsure, Status),
-    Status == input_problems([wrong_type(tld_name_registry)]).
-
-test(input_problems_empty_for_a_good_profile) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_input_problems(Profile, Problems),
-    Problems == [].
-
-test(input_problems_name_an_unknown_key) :-
-    nis2_scope_entity_class_input_problems([attribute(bogus, true)], Problems),
-    Problems == [unknown_key(bogus)].
-
-test(vocabulary_atoms_are_exported) :-
+test(profile_keys_match_the_kernel_order) :-
+    nis2_scope_entity_class_profile_keys(ProfileKeys),
+    nis2_scope_entity_class_profile_key_order(KernelKeys),
+    ProfileKeys == KernelKeys.
+test(the_answer_atoms_are_root_exports) :-
     microenterprise,
     small_enterprise,
     medium_sized_enterprise,
@@ -84,9 +53,75 @@ test(vocabulary_atoms_are_exported) :-
     in_scope,
     out_of_scope,
     essential_entity,
-    important_entity,
-    unsure,
+    important_entity.
+test(the_value_atoms_are_root_exports) :-
     not_a_trust_service_provider,
-    central_government.
+    other_public_administration,
+    unsure,
+    staff_headcount.
+
+% ---- the re-exported input check ----
+test(the_input_check_is_served_by_the_query_layer) :-
+    nis2_scope_entity_class_input_problems([attribute(colour, red), attribute(annex_i_type, yes)], [wrong_type(annex_i_type), unknown_key(colour)]).
+test(the_input_check_passes_a_fixture) :-
+    profile_of(critical_entity, Profile),
+    nis2_scope_entity_class_input_problems(Profile, []).
+
+% ---- #2 eligibility ----
+test(the_verdict_of_a_fixture) :-
+    profile_of(central_government_annex_one, Profile),
+    findall(Verdict, decide_nis2_scope_entity_class(Profile, Verdict), Verdicts),
+    Verdicts == [nis2_scope_entity_class_verdict(essential_entity, [cite(eu_dir_2022_2555_art_3_1_d)])].
+
+% ---- #7 justification ----
+test(the_checklist_has_one_cited_row_per_ground) :-
+    profile_of(critical_entity, Profile),
+    nis2_scope_entity_class_checklist(Profile, Items),
+    length(Items, 24),
+    maplist(cited_item, Items).
+test(the_checklist_marks_the_deciding_grounds_met) :-
+    profile_of(critical_entity, Profile),
+    nis2_scope_entity_class_checklist(Profile, Items),
+    member(item(scope_critical_entity, met, cite(eu_dir_2022_2555_art_2_3)), Items),
+    member(item(essential_critical_entity, met, cite(eu_dir_2022_2555_art_3_1_f)), Items).
+test(the_checklist_marks_an_unmet_ground) :-
+    profile_of(baseline_micro_outside_annexes, Profile),
+    nis2_scope_entity_class_checklist(Profile, Items),
+    member(item(scope_size_rule, unmet(some_conjunct_unmet), cite(eu_dir_2022_2555_art_2_1)), Items).
+test(the_checklist_marks_an_exclusion_met) :-
+    profile_of(national_security_administration_critical_entity, Profile),
+    nis2_scope_entity_class_checklist(Profile, Items),
+    member(item(national_security_public_administration_exclusion, met, cite(eu_dir_2022_2555_art_2_7)), Items).
+test(the_checklist_marks_an_absent_key_unknown) :-
+    profile_of(partial_annex_one_only, Profile),
+    nis2_scope_entity_class_checklist(Profile, Items),
+    member(item(dora_exemption_exclusion, unknown([exempted_from_dora_scope_by_member_state]), cite(eu_dir_2022_2555_art_2_10)), Items).
+test(the_checklist_of_a_malformed_profile) :-
+    nis2_scope_entity_class_checklist([attribute(colour, red)], Items),
+    Items == [item(input_check, unmet(input_problems([unknown_key(colour)])), cite(eu_dir_2022_2555_art_2_1))].
+
+% ---- #16 what-if ----
+test(what_if_a_critical_entity) :-
+    profile_of(baseline_micro_outside_annexes, Profile),
+    nis2_scope_entity_class_what_if(Profile, critical_entity_under_directive_2022_2557, true, essential_entity).
+test(what_if_the_turnover_rises_over_the_small_ceiling) :-
+    profile_of(size_rule_small_annex_one, Profile),
+    nis2_scope_entity_class_what_if(Profile, annual_turnover_eur, 10000001, important_entity).
+test(what_if_the_unsure_annex_type_is_decided) :-
+    profile_of(unsure_annex_one_communications, Profile),
+    nis2_scope_entity_class_what_if(Profile, annex_i_type, true, important_entity).
+test(what_if_the_unsure_annex_type_is_denied) :-
+    profile_of(unsure_annex_one_communications, Profile),
+    nis2_scope_entity_class_what_if(Profile, annex_i_type, false, out_of_scope).
+test(what_if_answers_once) :-
+    profile_of(size_rule_small_annex_one, Profile),
+    findall(Status, nis2_scope_entity_class_what_if(Profile, annual_turnover_eur, 10000001, Status), Statuses),
+    Statuses == [important_entity].
+test(what_if_a_malformed_value_is_an_input_problem) :-
+    profile_of(baseline_micro_outside_annexes, Profile),
+    nis2_scope_entity_class_what_if(Profile, staff_headcount, -1, input_problems([wrong_type(staff_headcount)])).
+test(what_if_the_small_entity_stays_out_without_the_override, fail) :-
+    profile_of(size_rule_small_annex_one, Profile),
+    nis2_scope_entity_class_what_if(Profile, annual_turnover_eur, 10000000, important_entity).
 
 :- end_module(test_queries).

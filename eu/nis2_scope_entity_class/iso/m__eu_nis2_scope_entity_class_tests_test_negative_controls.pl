@@ -4,8 +4,12 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_nis2_scope_entity_class_nis2_scope_entity_class, [nis2_scope_entity_class_status/2, nis2_scope_entity_class_status_values/1, scope_decision/3, entity_class/3]).
+:- use_module(m__eu_nis2_scope_entity_class_nis2_scope_entity_class, [size_class/3, scope_decision/3, entity_class/3, nis2_scope_entity_class_status_values/1]).
 :- use_module(m__eu_nis2_scope_entity_class_fixtures, [nis2_scope_entity_class_profile_for/2]).
+
+size_of(Subject, Size) :-
+    nis2_scope_entity_class_profile_for(Subject, Profile),
+    size_class(Profile, Size, _).
 
 scope_of(Subject, Result) :-
     nis2_scope_entity_class_profile_for(Subject, Profile),
@@ -15,150 +19,155 @@ class_of(Subject, Class) :-
     nis2_scope_entity_class_profile_for(Subject, Profile),
     entity_class(Profile, Class, _).
 
-test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+test(the_near_miss_atoms_are_verdict_atoms) :-
     nis2_scope_entity_class_status_values(StatusValues),
-    member(ineligible, StatusValues),
-    member(eligible, StatusValues).
-test(the_baseline_profile_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_status(Profile, ineligible).
-test(g1_critical_entity_in_scope) :-
+    StatusValues == [essential_entity, important_entity, out_of_scope].
+test(size_micro_positive) :-
+    size_of(size_micro_at_ceilings, microenterprise).
+test(size_micro_near_miss_is_small) :-
+    size_of(size_micro_turnover_one_euro_over, small_enterprise).
+test(size_medium_positive) :-
+    size_of(size_medium_at_turnover_ceiling, medium_sized_enterprise).
+test(size_medium_near_miss_is_large) :-
+    size_of(size_medium_staff_one_over, large_enterprise).
+test(exclusion_national_security_positive) :-
+    scope_of(national_security_administration_critical_entity, out_of_scope).
+test(exclusion_national_security_trust_service_near_miss) :-
+    scope_of(national_security_trust_service_critical_entity, in_scope).
+test(exclusion_dora_positive) :-
+    scope_of(resilience_exempted_critical_entity, out_of_scope).
+test(exclusion_dora_near_miss) :-
     scope_of(critical_entity, in_scope).
-test(g1_without_it_out_of_scope) :-
-    scope_of(baseline_out_of_scope, out_of_scope).
-test(g2_registrar_in_scope) :-
-    scope_of(domain_registrar, in_scope).
-test(g3_communications_provider_in_scope) :-
-    scope_of(electronic_communications_micro, in_scope).
-test(g3_non_provider_out_of_scope) :-
-    scope_of(electronic_communications_not_provider, out_of_scope).
-test(g4_non_qualified_trust_in_scope) :-
-    scope_of(non_qualified_trust_provider, in_scope).
-test(g5_tld_registry_in_scope) :-
-    scope_of(tld_registry, in_scope).
-test(g6_dns_provider_in_scope) :-
-    scope_of(dns_provider, in_scope).
-test(g456_without_annex_type_out_of_scope) :-
-    scope_of(micro_at_ceiling, out_of_scope).
-test(g7_sole_provider_in_scope) :-
-    scope_of(sole_provider, in_scope).
-test(g7_without_annex_type_out_of_scope) :-
-    scope_of(sole_provider_without_annex_type, out_of_scope).
-test(g8_safety_disruption_in_scope) :-
-    scope_of(safety_disruption, in_scope).
-test(g9_systemic_risk_in_scope) :-
-    scope_of(systemic_risk, in_scope).
-test(g10_national_importance_in_scope) :-
-    scope_of(national_importance, in_scope).
-test(g11_central_government_in_scope) :-
-    scope_of(central_government, in_scope).
-test(g12_regional_government_in_scope) :-
-    scope_of(regional_government, in_scope).
-test(g11_other_public_administration_out_of_scope) :-
-    scope_of(other_public_administration, out_of_scope).
-test(g13_staff_fifty_in_scope) :-
-    scope_of(medium_annex_at_staff_floor, in_scope).
-test(g13_staff_forty_nine_out_of_scope) :-
-    scope_of(small_annex_just_below, out_of_scope).
-test(g13_both_financials_over_in_scope) :-
-    scope_of(small_annex_one_euro_over_both, in_scope).
-test(g13_one_financial_over_out_of_scope) :-
-    scope_of(small_annex_one_figure_over, out_of_scope).
-test(x1_national_security_out_of_scope) :-
-    scope_of(national_security_exclusion, out_of_scope).
-test(x1_trust_provider_is_not_excluded) :-
-    scope_of(national_security_trust_provider, in_scope).
-test(x2_dora_exemption_out_of_scope) :-
-    scope_of(dora_exemption, out_of_scope).
-test(x2_without_exemption_in_scope) :-
+test(scope_critical_entity_positive) :-
     scope_of(critical_entity, in_scope).
-test(e1_large_annex_i_essential) :-
-    class_of(large_annex_by_staff, essential_entity).
-test(e1_medium_annex_i_important) :-
-    class_of(medium_annex_staff_just_below_large, important_entity).
-test(e1_large_by_financials_essential) :-
-    class_of(large_annex_by_financials, essential_entity).
-test(e1_one_financial_at_ceiling_important) :-
-    class_of(medium_annex_one_figure_at_ceiling, important_entity).
-test(e2_qualified_essential) :-
-    class_of(qualified_trust_provider, essential_entity).
-test(e2_non_qualified_important) :-
-    class_of(non_qualified_trust_provider, important_entity).
-test(e3_tld_essential) :-
-    class_of(tld_registry, essential_entity).
-test(e4_dns_essential) :-
-    class_of(dns_provider, essential_entity).
-test(e5_medium_communications_essential) :-
-    class_of(electronic_communications_medium, essential_entity).
-test(e5_micro_communications_important) :-
-    class_of(electronic_communications_micro, important_entity).
-test(e6_central_government_essential) :-
-    class_of(central_government, essential_entity).
-test(e6_regional_government_important) :-
-    class_of(regional_government, important_entity).
-test(e7_identified_essential) :-
-    class_of(identified_essential, essential_entity).
-test(e7_not_identified_important) :-
-    class_of(sole_provider, important_entity).
-test(e8_critical_essential) :-
+test(scope_domain_name_registration_positive) :-
+    scope_of(domain_name_registration, in_scope).
+test(scope_baseline_near_miss) :-
+    scope_of(baseline_micro_outside_annexes, out_of_scope).
+test(scope_electronic_communications_positive) :-
+    scope_of(electronic_communications_micro_annex_one, in_scope).
+test(scope_electronic_communications_near_miss) :-
+    scope_of(electronic_communications_outside_annexes, out_of_scope).
+test(scope_trust_service_positive) :-
+    scope_of(non_qualified_trust_service_annex_two, in_scope).
+test(scope_trust_service_near_miss) :-
+    scope_of(qualified_trust_service_outside_annexes, out_of_scope).
+test(scope_top_level_domain_registry_positive) :-
+    scope_of(top_level_domain_registry_annex_one, in_scope).
+test(scope_domain_name_system_positive) :-
+    scope_of(domain_name_system_annex_two, in_scope).
+test(scope_sole_provider_positive) :-
+    scope_of(sole_provider_annex_one, in_scope).
+test(scope_public_safety_impact_positive) :-
+    scope_of(public_safety_impact_annex_two, in_scope).
+test(scope_systemic_risk_positive) :-
+    scope_of(systemic_risk_annex_one, in_scope).
+test(scope_specific_importance_positive) :-
+    scope_of(specific_importance_annex_two, in_scope).
+test(scope_annex_type_without_a_point_near_miss) :-
+    scope_of(sole_provider_denied_annex_one, out_of_scope).
+test(scope_central_government_positive) :-
+    scope_of(central_government_annex_one, in_scope).
+test(scope_regional_administration_positive) :-
+    scope_of(regional_administration_annex_one, in_scope).
+test(scope_other_public_administration_near_miss) :-
+    scope_of(other_public_administration_annex_one, out_of_scope).
+test(scope_size_rule_positive) :-
+    scope_of(size_rule_medium_annex_one, in_scope).
+test(scope_size_rule_small_near_miss) :-
+    scope_of(size_rule_small_annex_one, out_of_scope).
+test(scope_size_rule_outside_union_near_miss) :-
+    scope_of(size_rule_outside_union, out_of_scope).
+test(class_large_annex_one_positive) :-
+    class_of(large_annex_one_essential, essential_entity).
+test(class_medium_annex_one_near_miss) :-
+    class_of(medium_annex_one_at_turnover_ceiling, important_entity).
+test(class_large_annex_two_near_miss) :-
+    class_of(large_annex_two_important, important_entity).
+test(class_qualified_trust_service_positive) :-
+    class_of(qualified_trust_service_annex_two, essential_entity).
+test(class_non_qualified_trust_service_near_miss) :-
+    class_of(non_qualified_trust_service_annex_two, important_entity).
+test(class_top_level_domain_registry_positive) :-
+    class_of(top_level_domain_registry_annex_one, essential_entity).
+test(class_domain_name_system_positive) :-
+    class_of(domain_name_system_annex_two, essential_entity).
+test(class_former_operator_positive) :-
+    class_of(former_operator_kept_essential_annex_one, essential_entity).
+test(class_sole_provider_near_miss) :-
+    class_of(sole_provider_annex_one, important_entity).
+test(class_medium_electronic_communications_positive) :-
+    class_of(electronic_communications_medium_annex_two, essential_entity).
+test(class_small_electronic_communications_near_miss) :-
+    class_of(electronic_communications_small_annex_two, important_entity).
+test(class_central_government_positive) :-
+    class_of(central_government_annex_one, essential_entity).
+test(class_regional_administration_near_miss) :-
+    class_of(regional_administration_annex_one, important_entity).
+test(class_member_state_identified_positive) :-
+    class_of(member_state_identified_essential_annex_one, essential_entity).
+test(class_identified_outside_annexes_near_miss) :-
+    class_of(identified_outside_annexes_registration, important_entity).
+test(class_critical_entity_positive) :-
     class_of(critical_entity, essential_entity).
-test(e8_registrar_important) :-
-    class_of(domain_registrar, important_entity).
-test(e9_former_operator_essential) :-
-    class_of(former_operator_essential, essential_entity).
-test(e9_without_it_important) :-
-    class_of(sole_provider, important_entity).
-test(unsure_sole_provider_needs_review) :-
-    scope_of(unsure_sole_provider, needs_legal_review(_, _)).
-test(sure_sole_provider_is_a_final_answer) :-
-    scope_of(sole_provider, in_scope).
-test(missing_exclusion_keys_are_indeterminate) :-
-    scope_of(empty_profile, indeterminate(_)).
+test(class_domain_name_registration_near_miss) :-
+    class_of(domain_name_registration, important_entity).
+test(referral_positive) :-
+    scope_of(unsure_annex_one_communications, needs_legal_review(open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)), _)).
+test(referral_near_miss_decided_annex_type) :-
+    scope_of(electronic_communications_micro_annex_one, in_scope).
+test(missing_key_positive) :-
+    scope_of(partial_annex_one_only, indeterminate([exempted_from_dora_scope_by_member_state])).
+test(input_problem_positive) :-
+    class_of(input_unknown_key, input_problems([unknown_key(colour)])).
 
-test(the_baseline_profile_is_not_eligible, fail) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_status(Profile, eligible).
-test(g1_without_it_not_in_scope, fail) :-
-    scope_of(baseline_out_of_scope, in_scope).
-test(g2_registrar_is_not_out_of_scope, fail) :-
-    scope_of(domain_registrar, out_of_scope).
-test(g3_non_provider_not_in_scope, fail) :-
-    scope_of(electronic_communications_not_provider, in_scope).
-test(g7_without_annex_type_not_in_scope, fail) :-
-    scope_of(sole_provider_without_annex_type, in_scope).
-test(g11_other_public_administration_not_in_scope, fail) :-
-    scope_of(other_public_administration, in_scope).
-test(g13_staff_forty_nine_not_in_scope, fail) :-
-    scope_of(small_annex_just_below, in_scope).
-test(g13_one_financial_over_not_in_scope, fail) :-
-    scope_of(small_annex_one_figure_over, in_scope).
-test(x1_trust_provider_not_out_of_scope, fail) :-
-    scope_of(national_security_trust_provider, out_of_scope).
-test(x1_exclusion_not_in_scope, fail) :-
-    scope_of(national_security_exclusion, in_scope).
-test(x2_exemption_not_in_scope, fail) :-
-    scope_of(dora_exemption, in_scope).
-test(e1_medium_not_essential, fail) :-
-    class_of(medium_annex_staff_just_below_large, essential_entity).
-test(e2_non_qualified_not_essential, fail) :-
-    class_of(non_qualified_trust_provider, essential_entity).
-test(e5_micro_not_essential, fail) :-
-    class_of(electronic_communications_micro, essential_entity).
-test(e6_regional_not_essential, fail) :-
-    class_of(regional_government, essential_entity).
-test(e7_not_identified_not_essential, fail) :-
-    class_of(sole_provider, essential_entity).
-test(e8_registrar_not_essential, fail) :-
-    class_of(domain_registrar, essential_entity).
-test(unsure_sole_provider_is_not_in_scope, fail) :-
-    scope_of(unsure_sole_provider, in_scope).
-test(unsure_sole_provider_is_not_out_of_scope, fail) :-
-    scope_of(unsure_sole_provider, out_of_scope).
-test(missing_exclusion_keys_are_not_in_scope, fail) :-
-    scope_of(empty_profile, in_scope).
+test(size_micro_near_miss_is_not_micro, fail) :-
+    size_of(size_micro_turnover_one_euro_over, microenterprise).
+test(size_medium_near_miss_is_not_medium, fail) :-
+    size_of(size_medium_staff_one_over, medium_sized_enterprise).
+test(exclusion_national_security_trust_service_is_not_excluded, fail) :-
+    scope_of(national_security_trust_service_critical_entity, out_of_scope).
+test(exclusion_dora_near_miss_is_not_excluded, fail) :-
+    scope_of(critical_entity, out_of_scope).
+test(scope_baseline_is_not_in_scope, fail) :-
+    scope_of(baseline_micro_outside_annexes, in_scope).
+test(scope_electronic_communications_near_miss_is_not_in_scope, fail) :-
+    scope_of(electronic_communications_outside_annexes, in_scope).
+test(scope_trust_service_near_miss_is_not_in_scope, fail) :-
+    scope_of(qualified_trust_service_outside_annexes, in_scope).
+test(scope_annex_type_without_a_point_is_not_in_scope, fail) :-
+    scope_of(sole_provider_denied_annex_one, in_scope).
+test(scope_other_public_administration_is_not_in_scope, fail) :-
+    scope_of(other_public_administration_annex_one, in_scope).
+test(scope_size_rule_small_is_not_in_scope, fail) :-
+    scope_of(size_rule_small_annex_one, in_scope).
+test(scope_size_rule_outside_union_is_not_in_scope, fail) :-
+    scope_of(size_rule_outside_union, in_scope).
+test(class_medium_annex_one_is_not_essential, fail) :-
+    class_of(medium_annex_one_at_turnover_ceiling, essential_entity).
+test(class_large_annex_two_is_not_essential, fail) :-
+    class_of(large_annex_two_important, essential_entity).
+test(class_non_qualified_trust_service_is_not_essential, fail) :-
+    class_of(non_qualified_trust_service_annex_two, essential_entity).
+test(class_sole_provider_is_not_essential, fail) :-
+    class_of(sole_provider_annex_one, essential_entity).
+test(class_small_electronic_communications_is_not_essential, fail) :-
+    class_of(electronic_communications_small_annex_two, essential_entity).
+test(class_regional_administration_is_not_essential, fail) :-
+    class_of(regional_administration_annex_one, essential_entity).
+test(class_identified_outside_annexes_is_not_essential, fail) :-
+    class_of(identified_outside_annexes_registration, essential_entity).
+test(class_domain_name_registration_is_not_essential, fail) :-
+    class_of(domain_name_registration, essential_entity).
+test(referral_is_not_in_scope, fail) :-
+    scope_of(unsure_annex_one_communications, in_scope).
+test(missing_key_is_not_in_scope, fail) :-
+    scope_of(partial_annex_one_only, in_scope).
+test(input_problem_is_not_out_of_scope, fail) :-
+    class_of(input_unknown_key, out_of_scope).
 
-cp_test_names([the_near_miss_verdict_is_a_real_verdict_atom, the_baseline_profile_is_ineligible, g1_critical_entity_in_scope, g1_without_it_out_of_scope, g2_registrar_in_scope, g3_communications_provider_in_scope, g3_non_provider_out_of_scope, g4_non_qualified_trust_in_scope, g5_tld_registry_in_scope, g6_dns_provider_in_scope, g456_without_annex_type_out_of_scope, g7_sole_provider_in_scope, g7_without_annex_type_out_of_scope, g8_safety_disruption_in_scope, g9_systemic_risk_in_scope, g10_national_importance_in_scope, g11_central_government_in_scope, g12_regional_government_in_scope, g11_other_public_administration_out_of_scope, g13_staff_fifty_in_scope, g13_staff_forty_nine_out_of_scope, g13_both_financials_over_in_scope, g13_one_financial_over_out_of_scope, x1_national_security_out_of_scope, x1_trust_provider_is_not_excluded, x2_dora_exemption_out_of_scope, x2_without_exemption_in_scope, e1_large_annex_i_essential, e1_medium_annex_i_important, e1_large_by_financials_essential, e1_one_financial_at_ceiling_important, e2_qualified_essential, e2_non_qualified_important, e3_tld_essential, e4_dns_essential, e5_medium_communications_essential, e5_micro_communications_important, e6_central_government_essential, e6_regional_government_important, e7_identified_essential, e7_not_identified_important, e8_critical_essential, e8_registrar_important, e9_former_operator_essential, e9_without_it_important, unsure_sole_provider_needs_review, sure_sole_provider_is_a_final_answer, missing_exclusion_keys_are_indeterminate]).
-cp_test_fail_names([the_baseline_profile_is_not_eligible, g1_without_it_not_in_scope, g2_registrar_is_not_out_of_scope, g3_non_provider_not_in_scope, g7_without_annex_type_not_in_scope, g11_other_public_administration_not_in_scope, g13_staff_forty_nine_not_in_scope, g13_one_financial_over_not_in_scope, x1_trust_provider_not_out_of_scope, x1_exclusion_not_in_scope, x2_exemption_not_in_scope, e1_medium_not_essential, e2_non_qualified_not_essential, e5_micro_not_essential, e6_regional_not_essential, e7_not_identified_not_essential, e8_registrar_not_essential, unsure_sole_provider_is_not_in_scope, unsure_sole_provider_is_not_out_of_scope, missing_exclusion_keys_are_not_in_scope]).
+cp_test_names([the_near_miss_atoms_are_verdict_atoms, size_micro_positive, size_micro_near_miss_is_small, size_medium_positive, size_medium_near_miss_is_large, exclusion_national_security_positive, exclusion_national_security_trust_service_near_miss, exclusion_dora_positive, exclusion_dora_near_miss, scope_critical_entity_positive, scope_domain_name_registration_positive, scope_baseline_near_miss, scope_electronic_communications_positive, scope_electronic_communications_near_miss, scope_trust_service_positive, scope_trust_service_near_miss, scope_top_level_domain_registry_positive, scope_domain_name_system_positive, scope_sole_provider_positive, scope_public_safety_impact_positive, scope_systemic_risk_positive, scope_specific_importance_positive, scope_annex_type_without_a_point_near_miss, scope_central_government_positive, scope_regional_administration_positive, scope_other_public_administration_near_miss, scope_size_rule_positive, scope_size_rule_small_near_miss, scope_size_rule_outside_union_near_miss, class_large_annex_one_positive, class_medium_annex_one_near_miss, class_large_annex_two_near_miss, class_qualified_trust_service_positive, class_non_qualified_trust_service_near_miss, class_top_level_domain_registry_positive, class_domain_name_system_positive, class_former_operator_positive, class_sole_provider_near_miss, class_medium_electronic_communications_positive, class_small_electronic_communications_near_miss, class_central_government_positive, class_regional_administration_near_miss, class_member_state_identified_positive, class_identified_outside_annexes_near_miss, class_critical_entity_positive, class_domain_name_registration_near_miss, referral_positive, referral_near_miss_decided_annex_type, missing_key_positive, input_problem_positive]).
+cp_test_fail_names([size_micro_near_miss_is_not_micro, size_medium_near_miss_is_not_medium, exclusion_national_security_trust_service_is_not_excluded, exclusion_dora_near_miss_is_not_excluded, scope_baseline_is_not_in_scope, scope_electronic_communications_near_miss_is_not_in_scope, scope_trust_service_near_miss_is_not_in_scope, scope_annex_type_without_a_point_is_not_in_scope, scope_other_public_administration_is_not_in_scope, scope_size_rule_small_is_not_in_scope, scope_size_rule_outside_union_is_not_in_scope, class_medium_annex_one_is_not_essential, class_large_annex_two_is_not_essential, class_non_qualified_trust_service_is_not_essential, class_sole_provider_is_not_essential, class_small_electronic_communications_is_not_essential, class_regional_administration_is_not_essential, class_identified_outside_annexes_is_not_essential, class_domain_name_registration_is_not_essential, referral_is_not_in_scope, missing_key_is_not_in_scope, input_problem_is_not_out_of_scope]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

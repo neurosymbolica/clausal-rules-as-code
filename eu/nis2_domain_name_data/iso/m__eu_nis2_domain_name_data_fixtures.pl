@@ -1,22 +1,86 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_nis2_domain_name_data_fixtures, [nis2_domain_name_data_subject/1, nis2_domain_name_data_profile_for/2, nis2_domain_name_data_assess/2]).
+:- module(m__eu_nis2_domain_name_data_fixtures, [nis2_domain_name_data_subject/1, nis2_domain_name_data_profile_for/2, nis2_domain_name_data_hours_for/2, nis2_domain_name_data_assess/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
 :- use_module(m__eu_nis2_domain_name_data_nis2_domain_name_data, [decide_nis2_domain_name_data/2]).
 
-nis2_domain_name_data_subject(registry_addressed).
-nis2_domain_name_data_subject(registrar_addressed).
-nis2_domain_name_data_subject(other_provider).
-nis2_domain_name_data_subject(no_provider_type).
-nis2_domain_name_data_subject(invalid_provider_type).
+nis2_domain_name_data_subject(registry_full_profile).
+nis2_domain_name_data_subject(registrar_entity_profile).
+nis2_domain_name_data_subject(other_entity).
+nis2_domain_name_data_subject(provider_type_absent).
+nis2_domain_name_data_subject(point_of_contact_same).
+nis2_domain_name_data_subject(point_of_contact_email_differs_only).
+nis2_domain_name_data_subject(point_of_contact_telephone_differs_only).
+nis2_domain_name_data_subject(point_of_contact_telephone_absent).
+nis2_domain_name_data_subject(non_personal_data).
+nis2_domain_name_data_subject(personal_data).
+nis2_domain_name_data_subject(personal_data_unsure).
+nis2_domain_name_data_subject(personal_data_absent).
+nis2_domain_name_data_subject(access_both_true).
+nis2_domain_name_data_subject(access_seeker_false_lawful_true).
+nis2_domain_name_data_subject(access_lawful_false_seeker_unsure).
+nis2_domain_name_data_subject(access_seeker_unsure_lawful_absent).
+nis2_domain_name_data_subject(access_seeker_absent_lawful_unsure).
+nis2_domain_name_data_subject(access_both_unsure).
+nis2_domain_name_data_subject(access_seeker_true_lawful_unsure).
+nis2_domain_name_data_subject(reply_zero_hours_on_time).
+nis2_domain_name_data_subject(reply_72_hours_on_time).
+nis2_domain_name_data_subject(reply_73_hours_late).
+nis2_domain_name_data_subject(reply_72_hours_undue_delay).
+nis2_domain_name_data_subject(reply_73_hours_undue_delay).
+nis2_domain_name_data_subject(reply_72_hours_unsure).
+nis2_domain_name_data_subject(reply_73_hours_unsure).
+nis2_domain_name_data_subject(reply_72_hours_judgement_absent).
+nis2_domain_name_data_subject(reply_73_hours_judgement_absent).
+nis2_domain_name_data_subject(duplicate_key_profile).
+nis2_domain_name_data_subject(unknown_key_profile).
+nis2_domain_name_data_subject(wrong_type_profile).
+nis2_domain_name_data_subject(not_attribute_list).
 
-nis2_domain_name_data_profile_for(registry_addressed, [attribute(provider_type, tld_name_registry), attribute(point_of_contact_email_address_differs_from_registrant, true), attribute(point_of_contact_telephone_number_differs_from_registrant, false), attribute(registration_data_is_personal_data, false), attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, true), attribute(reply_without_undue_delay, true)]).
-nis2_domain_name_data_profile_for(registrar_addressed, [attribute(provider_type, domain_name_registration_service_entity), attribute(point_of_contact_email_address_differs_from_registrant, false), attribute(point_of_contact_telephone_number_differs_from_registrant, false), attribute(registration_data_is_personal_data, true), attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, false), attribute(reply_without_undue_delay, false)]).
-nis2_domain_name_data_profile_for(other_provider, [attribute(provider_type, other), attribute(point_of_contact_email_address_differs_from_registrant, true), attribute(point_of_contact_telephone_number_differs_from_registrant, false), attribute(registration_data_is_personal_data, false), attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, true), attribute(reply_without_undue_delay, true)]).
-nis2_domain_name_data_profile_for(no_provider_type, []).
-nis2_domain_name_data_profile_for(invalid_provider_type, [attribute(provider_type, bogus)]).
+nis2_domain_name_data_profile_for(registry_full_profile, [attribute(provider_type, tld_name_registry), attribute(point_of_contact_email_address_differs_from_registrant, true), attribute(point_of_contact_telephone_number_differs_from_registrant, true), attribute(registration_data_is_personal_data, false), attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, true), attribute(reply_without_undue_delay, true)]).
+nis2_domain_name_data_profile_for(registrar_entity_profile, [attribute(provider_type, domain_name_registration_service_entity), attribute(point_of_contact_email_address_differs_from_registrant, false), attribute(point_of_contact_telephone_number_differs_from_registrant, false)]).
+nis2_domain_name_data_profile_for(other_entity, [attribute(provider_type, other)]).
+nis2_domain_name_data_profile_for(provider_type_absent, [attribute(registration_data_is_personal_data, false)]).
+nis2_domain_name_data_profile_for(point_of_contact_same, [attribute(provider_type, tld_name_registry), attribute(point_of_contact_email_address_differs_from_registrant, false), attribute(point_of_contact_telephone_number_differs_from_registrant, false)]).
+nis2_domain_name_data_profile_for(point_of_contact_email_differs_only, [attribute(provider_type, tld_name_registry), attribute(point_of_contact_email_address_differs_from_registrant, true), attribute(point_of_contact_telephone_number_differs_from_registrant, false)]).
+nis2_domain_name_data_profile_for(point_of_contact_telephone_differs_only, [attribute(provider_type, tld_name_registry), attribute(point_of_contact_email_address_differs_from_registrant, false), attribute(point_of_contact_telephone_number_differs_from_registrant, true)]).
+nis2_domain_name_data_profile_for(point_of_contact_telephone_absent, [attribute(provider_type, tld_name_registry), attribute(point_of_contact_email_address_differs_from_registrant, true)]).
+nis2_domain_name_data_profile_for(non_personal_data, [attribute(provider_type, tld_name_registry), attribute(registration_data_is_personal_data, false)]).
+nis2_domain_name_data_profile_for(personal_data, [attribute(provider_type, tld_name_registry), attribute(registration_data_is_personal_data, true)]).
+nis2_domain_name_data_profile_for(personal_data_unsure, [attribute(provider_type, tld_name_registry), attribute(registration_data_is_personal_data, unsure)]).
+nis2_domain_name_data_profile_for(personal_data_absent, [attribute(provider_type, tld_name_registry)]).
+nis2_domain_name_data_profile_for(access_both_true, [attribute(provider_type, domain_name_registration_service_entity), attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, true)]).
+nis2_domain_name_data_profile_for(access_seeker_false_lawful_true, [attribute(provider_type, domain_name_registration_service_entity), attribute(requester_is_legitimate_access_seeker, false), attribute(request_is_lawful_and_duly_substantiated, true)]).
+nis2_domain_name_data_profile_for(access_lawful_false_seeker_unsure, [attribute(provider_type, domain_name_registration_service_entity), attribute(requester_is_legitimate_access_seeker, unsure), attribute(request_is_lawful_and_duly_substantiated, false)]).
+nis2_domain_name_data_profile_for(access_seeker_unsure_lawful_absent, [attribute(provider_type, domain_name_registration_service_entity), attribute(requester_is_legitimate_access_seeker, unsure)]).
+nis2_domain_name_data_profile_for(access_seeker_absent_lawful_unsure, [attribute(provider_type, domain_name_registration_service_entity), attribute(request_is_lawful_and_duly_substantiated, unsure)]).
+nis2_domain_name_data_profile_for(access_both_unsure, [attribute(provider_type, domain_name_registration_service_entity), attribute(requester_is_legitimate_access_seeker, unsure), attribute(request_is_lawful_and_duly_substantiated, unsure)]).
+nis2_domain_name_data_profile_for(access_seeker_true_lawful_unsure, [attribute(provider_type, domain_name_registration_service_entity), attribute(requester_is_legitimate_access_seeker, true), attribute(request_is_lawful_and_duly_substantiated, unsure)]).
+nis2_domain_name_data_profile_for(reply_zero_hours_on_time, [attribute(provider_type, tld_name_registry), attribute(reply_without_undue_delay, true)]).
+nis2_domain_name_data_profile_for(reply_72_hours_on_time, [attribute(provider_type, tld_name_registry), attribute(reply_without_undue_delay, true)]).
+nis2_domain_name_data_profile_for(reply_73_hours_late, [attribute(provider_type, tld_name_registry), attribute(reply_without_undue_delay, true)]).
+nis2_domain_name_data_profile_for(reply_72_hours_undue_delay, [attribute(provider_type, tld_name_registry), attribute(reply_without_undue_delay, false)]).
+nis2_domain_name_data_profile_for(reply_73_hours_undue_delay, [attribute(provider_type, tld_name_registry), attribute(reply_without_undue_delay, false)]).
+nis2_domain_name_data_profile_for(reply_72_hours_unsure, [attribute(provider_type, tld_name_registry), attribute(reply_without_undue_delay, unsure)]).
+nis2_domain_name_data_profile_for(reply_73_hours_unsure, [attribute(provider_type, tld_name_registry), attribute(reply_without_undue_delay, unsure)]).
+nis2_domain_name_data_profile_for(reply_72_hours_judgement_absent, [attribute(provider_type, tld_name_registry)]).
+nis2_domain_name_data_profile_for(reply_73_hours_judgement_absent, [attribute(provider_type, tld_name_registry)]).
+nis2_domain_name_data_profile_for(duplicate_key_profile, [attribute(provider_type, tld_name_registry), attribute(provider_type, tld_name_registry)]).
+nis2_domain_name_data_profile_for(unknown_key_profile, [attribute(provider_type, tld_name_registry), attribute(colour, blue), attribute(colour, red)]).
+nis2_domain_name_data_profile_for(wrong_type_profile, [attribute(provider_type, tld_name_registry), attribute(point_of_contact_email_address_differs_from_registrant, unsure)]).
+nis2_domain_name_data_profile_for(not_attribute_list, not_a_profile).
+
+nis2_domain_name_data_hours_for(reply_zero_hours_on_time, 0).
+nis2_domain_name_data_hours_for(reply_72_hours_on_time, 72).
+nis2_domain_name_data_hours_for(reply_73_hours_late, 73).
+nis2_domain_name_data_hours_for(reply_72_hours_undue_delay, 72).
+nis2_domain_name_data_hours_for(reply_73_hours_undue_delay, 73).
+nis2_domain_name_data_hours_for(reply_72_hours_unsure, 72).
+nis2_domain_name_data_hours_for(reply_73_hours_unsure, 73).
+nis2_domain_name_data_hours_for(reply_72_hours_judgement_absent, 72).
+nis2_domain_name_data_hours_for(reply_73_hours_judgement_absent, 73).
 
 nis2_domain_name_data_assess(Subject, Result) :-
     nis2_domain_name_data_profile_for(Subject, Profile),

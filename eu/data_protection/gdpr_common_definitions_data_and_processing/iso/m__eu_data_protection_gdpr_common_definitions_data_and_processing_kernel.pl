@@ -60,9 +60,14 @@ attribute_list_t(Term, false) :-
 
 attribute_t(Element, false) :-
     var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(Key, _),
+    var(Key).
 attribute_t(Element, T) :-
     nonvar(Element),
     Element = attribute(Key, _),
+    nonvar(Key),
     term_variables(Key, Variables),
     no_variables_t(Variables, T).
 attribute_t(Element, false) :-
@@ -72,9 +77,16 @@ attribute_t(Element, false) :-
 no_variables_t([], true).
 no_variables_t([_|_], false).
 
+identical_member_t(_, [], false).
+identical_member_t(Key, [Candidate|_], true) :-
+    Key == Candidate.
+identical_member_t(Key, [Candidate|Remaining], T) :-
+    Key \== Candidate,
+    identical_member_t(Key, Remaining, T).
+
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    identical_member_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
@@ -167,3 +179,44 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_common_definitions_data_and_processing_input_problems([], Problems),
+    Problems == [].
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(information_relates_to_natural_person, unsure), attribute(natural_person_identified, false), attribute(service_is_information_society_service, attested(true, attestation(host, moment, reason, none)))], Problems),
+    Problems == [].
+test(an_atom_is_not_a_profile) :-
+    gdpr_common_definitions_data_and_processing_input_problems(nothing, Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_profile_is_not_a_profile) :-
+    gdpr_common_definitions_data_and_processing_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_not_a_profile) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(processing_automated, true)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(a_non_ground_compound_key_is_not_a_profile) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(wrapper(_), true)], Problems),
+    Problems == [wrong_type(profile)].
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(natural_person_identified, unsure)], Problems),
+    Problems == [wrong_type(natural_person_identified)].
+test(a_bare_outside_fact_is_wrong_type) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(organisation_governed_by_public_international_law, true)], Problems),
+    Problems == [wrong_type(organisation_governed_by_public_international_law)].
+test(a_repeated_key_is_duplicate_and_its_values_unread) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(processing_automated, true), attribute(processing_automated, nonsense)], Problems),
+    Problems == [duplicate_key(processing_automated)].
+test(unknown_and_unbound_keys_in_first_occurrence_order) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(extra_key, true), attribute(Variable, one), attribute(Variable, two), attribute(extra_key, false)], Problems),
+    Problems == [unknown_key(extra_key), unknown_key(Variable)].
+test(an_unbound_key_does_not_bind_to_a_contract_key) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(Variable, true), attribute(processing_automated, true)], Problems),
+    Problems == [unknown_key(Variable)],
+    var(Variable).
+test(exactly_one_answer) :-
+    findall(Problems, gdpr_common_definitions_data_and_processing_input_problems([attribute(processing_automated, true)], Problems), Answers),
+    length(Answers, 1).
+
+test(a_well_formed_profile_is_not_a_profile_problem, fail) :-
+    gdpr_common_definitions_data_and_processing_input_problems([attribute(processing_automated, true)], [wrong_type(profile)]).

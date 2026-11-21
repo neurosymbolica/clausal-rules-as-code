@@ -1,211 +1,210 @@
 # SIGNATURE — eu/data_protection/gdpr_joint_controllers
 
-## Public query surface (summary)
+## Public query surface
 
-The three order queries plus the input check are the contract. Each takes PROFILE first and yields EXACTLY ONE solution.
+The order has three statutory queries and an input check. Their names are fixed by THE CALLED CONTRACT; the three queries carry no prefix by contract.
+
 - `rights_against_each_joint_controller/3`
 - `liability_for_the_entire_damage/4`
 - `recourse_after_full_compensation/4`
 - `gdpr_joint_controllers_input_problems/2`
 
-The facade is the eligibility view (query type #2) of the Art 82(5) claim back:
+The scaffold facade, whose names are kept, gives the claim-back eligibility verdict and its cited checklist:
+
 - `decide_gdpr_joint_controllers(PROFILE, gdpr_joint_controllers_verdict(STATUS, CITATIONS))`
 - `gdpr_joint_controllers_status(PROFILE, STATUS)`
+- `gdpr_joint_controllers_checklist(PROFILE, CHECKLIST)`
+- `gdpr_joint_controllers_what_if(PROFILE, KEY, VALUE, STATUS)`
 
-Its justification checklist (query type #7) is `gdpr_joint_controllers_checklist/2`, with `cite(...)` on every item.
+The fixtures predicate keeps its scaffolded name.
 
-Totality and determinism:
-- Every public predicate is total over all terms; the input check never fails or raises.
-- Every public predicate is deterministic: one solution, with disjoint guarded clauses and no cut or if-then-else.
-- No statutory figures exist, so nothing is imported or declared as a constant.
+The following claims hold for every query:
 
-## Verdict STATUS atoms (replace scaffold `required / permitted / not_applicable`)
+- **Totality.** Every query yields EXACTLY ONE solution for every PROFILE term, malformed ones included. The input check never fails and never raises.
+- **Determinism.** Each limb set is mutually exclusive by head pattern and guard. There is no `!`, `->` or `*->`. Ground outputs are folded into clause heads (C17).
+- **Imported figures.** None. The order has no statutory figures, so no `constant_value` is needed.
 
-Facade STATUS, mapped from the RESULT of `recourse_after_full_compensation`:
+## Verdict STATUS atoms (replace the placeholder `{ required, permitted, not_applicable }`)
 
-| STATUS | from RESULT |
-|---|---|
-| `eligible` | `entitled_to_claim_back(PARTIES)` |
-| `ineligible` | `not_entitled_to_claim_back` |
-| `unresolved` | `indeterminate([KEY])` |
-| `referred_for_legal_review` | `needs_legal_review(REASON, CONTEXT)` |
-| `malformed_input` | `input_problems(PROBLEMS)` |
+The facade `STATUS` is one of `eligible`, `ineligible` or `indeterminate`. It answers whether the caller is entitled to claim back under Art 82(5).
 
-The bare atom `indeterminate` is never written, because of the atom-shadowing trap with `indeterminate/1`.
+| `recourse_after_full_compensation` RESULT | Facade STATUS | Facade CITATIONS |
+|---|---|---|
+| `entitled_to_claim_back(PARTIES)` | `eligible` | the query's CITATIONS, `[cite(eu_reg_2016_679_art_82_5)]` |
+| `not_entitled_to_claim_back` | `ineligible` | `[cite(eu_reg_2016_679_art_82_5)]` |
+| `indeterminate(_)`, `needs_legal_review(_, _)` or `input_problems(_)` | `indeterminate` | `[]` |
 
-Order RESULT atoms:
+The statutory result atoms of the queries, exactly as specified, are:
+
 - `not_joint_controllers`
 - `rights_exercisable_against_this_controller`
 - `not_responsible_for_the_damage`
 - `no_other_responsible_party`
 - `liable_for_the_entire_damage`
 - `not_entitled_to_claim_back`
+- the constructor `entitled_to_claim_back/1`
 
-Order RESULT constructor: `entitled_to_claim_back/1`.
+The status compounds are:
 
-Status compounds:
-- `indeterminate/1`
-- `needs_legal_review/2`
-- `open_textured/2`
-- `cross_reference_unresolved/2`
-- `resolution/2`
-- `inputs_relied_on/1`
-- `input_problems/1`
+- `indeterminate([Key])`, never the bare atom
+- `needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)])`
+- `needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4), cite(responsibility_under_article_82_statement)), [resolution(cite(responsibility_under_article_82_statement), not_attempted), inputs_relied_on([responsible_under_article_82_2_and_3-absent])])`, which is THE ABSENT REFERRAL
+- `input_problems(Problems)`
 
-Other exported constructors:
-- `outside_fact/2`
-- `attested/2`
-- `attestation/4`
-- `url/2`
-- `document/2`
-- `unknown_key/1`
-- `wrong_type/1`
-- `duplicate_key/1`
+## Profile keys (attribute list; read only with `profile_get/3`, presence first)
 
-## Profile keys (input_contract order = root_exports order)
+The four keys, in contract order:
 
-1. `controllers_jointly_determine_purposes_and_means`: judgement, one of `true | false | unsure`.
-2. `responsible_under_article_82_2_and_3`: outside fact, `attested(true|false, attestation(BY, AT, REASON, EVIDENCE))`.
-   - EVIDENCE is one of `url(URL, RETRIEVED_AT)`, `document(UPLOAD_ID, SHA256)` or `none`.
-   - The fields are never read.
-   - Kinds in precedence order: attested, fetched (fetcher none).
-3. `other_responsible_parties`: list key, a proper list of bare atoms, possibly `[]`.
-4. `full_compensation_paid`: judgement, one of `true | false | unsure`.
+| # | Key | Kind | Value vocabulary |
+|---|---|---|---|
+| 1 | `controllers_jointly_determine_purposes_and_means` | judgement, tri-state | `true` \| `false` \| `unsure` |
+| 2 | `responsible_under_article_82_2_and_3` | outside fact | `attested(true\|false, attestation(By, At, Reason, Evidence))` |
+| 3 | `other_responsible_parties` | list | proper list of bare atoms, `[]` allowed, repeats allowed |
+| 4 | `full_compensation_paid` | judgement, tri-state | `true` \| `false` \| `unsure` |
 
-There are no numeric or date keys, so no unit suffix and no `date/…` term is used. The profile is read only with `profile_get/3`, `profile_has/2` and `profile_lacks/2`. Keys are bare atoms.
+In the outside-fact key, `Evidence` is `none`, `url(Url, RetrievedAt)` or `document(UploadIdentifier, Sha256)`. No key is numeric and none is a date, so no unit suffix or date term is needed.
 
-## Citation-key atoms (canonical `_lexicon/citations.yaml` scheme)
+## Citation-key atoms (canonical lexicon, `_lexicon/citations.yaml`)
 
-- `eu_reg_2016_679_art_26_3`: Art 26(3), rights against each joint controller.
-- `eu_reg_2016_679_art_28_10`: Art 28(10), a processor determining purposes and means is considered a controller.
-- `eu_reg_2016_679_art_82_4`: Art 82(4), liability for the entire damage. It is also the citation of the `outside_facts:` entry.
-- `eu_reg_2016_679_art_82_5`: Art 82(5), claim back after full compensation.
-- `responsibility_under_article_82_statement`: referral target, the Art 82(2)/(3) statement from `gdpr-compensation-and-liability`.
+- `eu_reg_2016_679_art_26_3`: Art 26(3), unit `parag_026.003`
+- `eu_reg_2016_679_art_28_10`: Art 28(10), unit `parag_028.010`
+- `eu_reg_2016_679_art_82_4`: Art 82(4), unit `parag_082.004`; it is also the citation of the `outside_facts:` entry
+- `eu_reg_2016_679_art_82_5`: Art 82(5), unit `parag_082.005`
+- `responsibility_under_article_82_statement`: the cross-reference TARGET of THE ABSENT REFERRAL, not a rule
 
-Deferred and not cited: Art 26(1), Art 82(2), Art 82(3).
+No shortened atom is ever invented. Art 26(1), Art 82(2) and Art 82(3) are deferred: they are quoted for reading only and are not in the vocabulary.
 
 ## Public predicates
 
-- `rights_against_each_joint_controller(Profile, Result, Citations)`: Art 26(3) with Art 28(10), limbs 0 and A1 to A4. Cites `eu_reg_2016_679_art_26_3` and `eu_reg_2016_679_art_28_10`.
-- `liability_for_the_entire_damage(Profile, Result, Basis, Citations)`: Art 82(4), limbs 0 and B1 to B5. Basis is `[outside_fact(responsible_under_article_82_2_and_3, Attested)]` on a final answer and `[]` otherwise. Cites `eu_reg_2016_679_art_82_4`.
-- `recourse_after_full_compensation(Profile, Result, Basis, Citations)`: Art 82(5), limbs 0 and C1 to C8. Basis is the copied outside fact only at C1 and C8. Cites `eu_reg_2016_679_art_82_5`.
-- `gdpr_joint_controllers_input_problems(Profile, Problems)`: typed input check of the four keys. Cites none (input check).
-- `decide_gdpr_joint_controllers(Profile, Verdict)`: eligibility verdict. Verdict is `gdpr_joint_controllers_verdict(Status, Citations)`, where Status is mapped from the recourse RESULT and Citations is the recourse CITATIONS. Cites `eu_reg_2016_679_art_82_5`.
-- `gdpr_joint_controllers_status(Profile, Status)`: Status alone, as above. Cites `eu_reg_2016_679_art_82_5`.
-- `gdpr_joint_controllers_checklist(Profile, Checklist)`: justification checklist built with `eval_requirements/4`. Each element is `item(RequirementId, ItemStatus, cite(Key))`. The checklist is `[]` when the input check reports problems. Cites `eu_reg_2016_679_art_82_4` and `eu_reg_2016_679_art_82_5`.
-- `gdpr_joint_controllers_what_if(Profile, Key, Value, Status)`: Status after overriding Key with Value. It uses `what_if/5` with the closure `gdpr_joint_controllers_status`. Cites as the status.
-- `gdpr_joint_controllers_fixture(Name, Profile)` and `gdpr_joint_controllers_fixture_expected(Name, Query, Expected)`: fixtures, one per limb (A1 to A4, B1 to B5, C1 to C8), plus input-problem cases. Cites the citation of each limb.
+- `rights_against_each_joint_controller(Profile, Result, Citations)`: Art 26(3) with Art 28(10). It runs step 0, then limbs A1 to A4, and reads `controllers_jointly_determine_purposes_and_means` only. It cites `eu_reg_2016_679_art_26_3` and `eu_reg_2016_679_art_28_10`.
+- `liability_for_the_entire_damage(Profile, Result, Basis, Citations)`: Art 82(4). It runs step 0, then limbs B1 to B5, and reads S and O. Basis is `[outside_fact(responsible_under_article_82_2_and_3, Attested)]` on a final answer and `[]` otherwise. It cites `eu_reg_2016_679_art_82_4`.
+- `recourse_after_full_compensation(Profile, Result, Basis, Citations)`: Art 82(5). It runs step 0, then limbs C1 to C8, and reads S, O and F. Basis holds the copied outside fact only at C1 and C8. It cites `eu_reg_2016_679_art_82_5`.
+- `gdpr_joint_controllers_input_problems(Profile, Problems)`: THE INPUT CHECK. It yields exactly one solution for every term. It applies no provision.
+- `decide_gdpr_joint_controllers(Profile, Verdict)`: `Verdict = gdpr_joint_controllers_verdict(Status, Citations)`, the claim-back eligibility derived from `recourse_after_full_compensation/4`. Art 82(5).
+- `gdpr_joint_controllers_status(Profile, Status)`: the projection of the Status of `decide_gdpr_joint_controllers/2`. Art 82(5).
+- `gdpr_joint_controllers_checklist(Profile, Checklist)`: three cited items, each the `item/3` of formalize_lib. Art 82(4) and Art 82(5). The items are:
+  - `item(responsible_under_article_82, ItemStatus, cite(eu_reg_2016_679_art_82_4))`, which reads S;
+  - `item(other_responsible_party_listed, ItemStatus, cite(eu_reg_2016_679_art_82_4))`, which reads O;
+  - `item(full_compensation_paid, ItemStatus, cite(eu_reg_2016_679_art_82_5))`, which reads F.
+
+  Each `ItemStatus` is `met`, `unmet(Reason)`, `unknown([Key])` (judgement or list key only) or `referred(Referral)`. `Referral` is THE ABSENT REFERRAL for an absent S, or the open_textured term for an unsure F. The open-textured judgement is handed to the user and never given a crisp test. A malformed profile gives `[]`.
+- `gdpr_joint_controllers_what_if(Profile, Key, Value, Status)`: replaces `attribute(Key, _)` by `attribute(Key, Value)` with `profile_set/3`, then returns `gdpr_joint_controllers_status/2` of the edited profile. Art 82(5).
+- Fixtures, under the scaffolded predicate name: named PROFILE terms covering every limb A1 to A4, B1 to B5 and C1 to C8, plus input-problem cases.
 
 ## Planned reuse (manifest `uses:`)
 
-- `formalize_lib`:
-  - `profile_get/3`, `profile_has/2`, `profile_lacks/2`, `profile_set/3`;
-  - `eval_requirements/4`, `item/3`, `unmet/1`, `unknown/1`;
-  - `check_tri/4`, used for the `full_compensation_paid` checklist item;
-  - `has_unmet/1`, `has_unknown/1`;
-  - `attribute/2`.
-- `kit.query_combinators`: `what_if/5`.
-- `validate_props` (tests):
-  - `run_props/1`, `prop_totality/3`, `prop_determinism/3`;
-  - `prop_citation_complete/3`, `prop_consistency/4`, `prop_missing_key_coverage/3`;
-  - `bad_citation/1`.
-- Not used:
-  - currency_vocab, vat_category, country (no money or places);
-  - date_time, deadline_lib, rolling_window (no dates);
-  - compliance_lib (the limbs are a closed decision table, not a modality lattice or plan search).
-- Local, flagged in the working notes (not published) as a candidate kit module: the attested-wrapper type test and the BASIS copy.
+- **`formalize_lib`.** Used predicates:
+  - `profile_get/3`, the only value reader in the queries;
+  - `profile_has/2` and `profile_lacks/2`, for presence first;
+  - `profile_set/3`, for what-if;
+  - `attribute/2` and `item/3`, as constructors.
 
-## Layout
+  `assess/6` and `decide_labeled/3` are NOT used. The limbs are an ORDERED first-step-decides list with referral precedence, and the referred statuses are not `unknown/1`. The facade verdict is therefore derived from the query result, not aggregated. `check_tri/4` is not used either, because an `unsure` value must produce the order's own open_textured referral term, not a kit unknown.
+- **`validate_props`** (tests). Used predicates: `run_props/1`, `prop_totality/3`, `prop_determinism/3`, `prop_citation_complete/3`, `prop_missing_key_coverage/3`.
+- **`kit/query_combinators`.** Not used. `override_key/4` targets dicts, and the profile is an attribute list, so `profile_set/3` is used instead.
+- **Family backbone `_common`.** No deontic backbone predicate is imported. The order has no modality lattice: `kit/compliance_lib` does not fit Art 26(3) and Art 82(4) and (5) as formalised, which are result-valued, not obligation-valued.
 
-The layout is unchanged: kernel -> citations -> parameters -> gdpr_joint_controllers -> queries -> fixtures -> package facade.
-- **kernel.clausal**: no domain predicate is shared, because there is only one slice. It keeps its scaffold floor only.
-- **citations.clausal**: the five citation keys above, with unit ids `02016R0679-20160504#parag_026.003`, `#parag_028.010`, `#parag_082.004` and `#parag_082.005`, plus the referral target.
-- **parameters.clausal**: intentionally empty, with a comment saying the order has no statutory figures.
-- **queries.clausal**: the facade-facing wrappers that delegate to the slice, and the facade STATUS mapping (one clause per RESULT shape, constant in the head).
-- **fixtures.clausal**: the fixtures above.
+## Per-file plan (layout unchanged: kernel -> citations -> parameters -> gdpr_joint_controllers -> queries -> fixtures -> package facade)
 
-## Slice: gdpr_joint_controllers.clausal
+- `kernel.clausal`: keeps its scaffolded generic floor. NO domain predicate is shared, because there is only one determination slice.
+- `citations.clausal`: four citation facts plus the target atom, each with instrument, article, paragraph and pinned unit identifier.
+- `parameters.clausal`: declares no `constant_value`. A comment states that the rules carry no threshold, period or amount.
+- `gdpr_joint_controllers.clausal`: the slice, described below.
+- `queries.clausal`: re-exports the four contract predicates.
+- `fixtures.clausal`: the fixtures.
+- Facade: the decide, status, checklist and what-if predicates.
 
-**VALUE facts owned:**
-- No thresholds, periods or tables.
-- The ordered contract-key facts `gdpr_joint_controllers_contract_key(Position, Key, Type)`:
-  - `1, controllers_jointly_determine_purposes_and_means, judgement`
-  - `2, responsible_under_article_82_2_and_3, outside_fact`
-  - `3, other_responsible_parties, list_of_atoms`
-  - `4, full_compensation_paid, judgement`
-- The absent-referral term, as a fact in the head: `gdpr_joint_controllers_absent_referral(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_4), cite(responsibility_under_article_82_statement)), [resolution(cite(responsibility_under_article_82_statement), not_attempted), inputs_relied_on([responsible_under_article_82_2_and_3-absent])]))`.
+## Slice — `gdpr_joint_controllers.clausal`
 
-### Rules
+### Statutory VALUE facts it owns
 
-**R0 input check.**
-- Not an attribute list gives `[wrong_type(profile)]` alone. This covers: non-list, unbound, partial list, or any element that is unbound or not `attribute(_, _)`.
-- Otherwise, for each contract key in position order:
-  - `duplicate_key(K)` if it occurs more than once (counted with `==`, values unread);
-  - else `wrong_type(K)` if present and of the wrong type.
-- Then `unknown_key(K)` for each non-contract key, including non-atom keys, in first-occurrence order, deduplicated with `==`.
-- The type tests are non-binding:
-  - judgement: `atom` and a member of `true`/`false`/`unsure`;
-  - outside fact: bound `attested(X, A)`, with X `true` or `false` and A bound with functor `attestation/4`;
-  - list: `is_list`, with each element a bound atom other than `[]`.
+None numeric. It owns these fact tables:
 
-**Classifiers** (one clause per class, exclusive guards, class constant in the head):
-- J and F: `true`, `false`, `unsure`, `absent`;
-- S: `attested_true(Attested)`, `attested_false(Attested)`, `absent`;
-- O: `absent`, `empty`, `non_empty(Parties)`.
+- `gdpr_joint_controllers_contract_key(Key, Position)` for the four keys in contract order, positions 1 to 4;
+- `gdpr_joint_controllers_judgement_key/1` for keys 1 and 4;
+- `gdpr_joint_controllers_outside_fact(responsible_under_article_82_2_and_3, cite(eu_reg_2016_679_art_82_4), responsibility_under_article_82_statement)`.
 
-**Routes.** Problems not `[]` gives step 0. Otherwise:
-- **rights_against_each_joint_controller:**
-  - A1: J false gives `not_joint_controllers`, `[cite(eu_reg_2016_679_art_26_3)]`.
-  - A2: J absent gives `indeterminate([controllers_jointly_determine_purposes_and_means])`, `[]`.
-  - A3: J unsure gives `needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_3)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means-unsure])])`, `[]`.
-  - A4: J true gives `rights_exercisable_against_this_controller`, `[cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]`.
-- **liability_for_the_entire_damage:**
-  - B1: S attested_false gives `not_responsible_for_the_damage`, BASIS the copied outside fact, `[cite(eu_reg_2016_679_art_82_4)]`.
-  - B2: S absent gives the absent referral, `[]`, `[]`.
-  - B3: S attested_true and O absent gives `indeterminate([other_responsible_parties])`, `[]`, `[]`.
-  - B4: S attested_true and O empty gives `no_other_responsible_party`, BASIS the copied outside fact, `[cite(eu_reg_2016_679_art_82_4)]`.
-  - B5: S attested_true and O non_empty gives `liable_for_the_entire_damage`, BASIS the copied outside fact, `[cite(eu_reg_2016_679_art_82_4)]`.
-- **recourse_after_full_compensation:**
-  - C1: S attested_false gives `not_entitled_to_claim_back`, BASIS the copied outside fact, `[cite(eu_reg_2016_679_art_82_5)]`.
-  - C2: S not false and O empty gives `not_entitled_to_claim_back`, `[]`, `[cite(eu_reg_2016_679_art_82_5)]`.
-  - C3: S not false, O not empty and F false gives `not_entitled_to_claim_back`, `[]`, `[cite(eu_reg_2016_679_art_82_5)]`.
-  - C4: S absent, O absent or non_empty, and F not false gives the absent referral, `[]`, `[]`.
-  - C5: S attested_true, O absent and F not false gives `indeterminate([other_responsible_parties])`.
-  - C6: S attested_true, O non_empty and F absent gives `indeterminate([full_compensation_paid])`.
-  - C7: S attested_true, O non_empty and F unsure gives `needs_legal_review(open_textured(full_compensation_paid, cite(eu_reg_2016_679_art_82_5)), [inputs_relied_on([full_compensation_paid-unsure])])`.
-  - C8: S attested_true(A), O non_empty(P) and F true gives `entitled_to_claim_back(P)`, `[outside_fact(responsible_under_article_82_2_and_3, A)]`, `[cite(eu_reg_2016_679_art_82_5)]`.
+### Input check (step 0 of every query)
 
-**Checklist requirements**, in the form `requirement(RequirementId, Profile, Status, Citation)` with the id FIRST:
-- `caller_responsible_under_article_82_2_and_3`, citing `cite(eu_reg_2016_679_art_82_4)`:
-  - met when S is attested true;
-  - `unmet(not_responsible)` when false;
-  - `unknown([responsible_under_article_82_2_and_3])` when absent. This is a checklist marker only, never a MISSING_KEYS.
-- `other_responsible_party_listed`, citing `cite(eu_reg_2016_679_art_82_4)`:
-  - met when O is non-empty;
-  - `unmet(no_other_responsible_party)` when `[]`;
-  - `unknown([other_responsible_parties])` when absent.
-- `full_compensation_paid`, citing `cite(eu_reg_2016_679_art_82_5)`: `check_tri/4` on `full_compensation_paid`.
+`gdpr_joint_controllers_input_problems(Profile, Problems)` works on the raw term with type tests only: `var/1`, `atom/1`, `is_list/1`, `ground/1` and structural matching.
 
-**Verdict atoms (slice):** the six RESULT atoms, plus `entitled_to_claim_back/1` and the status compounds above.
+1. The Profile is checked first. It must be a proper list whose every element is `attribute(Key, Value)`.
+   - Each of these gives `[wrong_type(profile)]` alone: an unbound Profile, a partial list, an unbound element, or a non-attribute element.
+2. Each contract key is then checked in contract order.
+   - If the key occurs more than once, the problem is `duplicate_key(Key)`, and no value is read.
+   - Otherwise, a present value outside its type gives `wrong_type(Key)`.
+3. The type of each key is as follows:
+   - **Judgement keys**: the atom `true`, `false` or `unsure`. An unbound value or an attested term is a wrong type.
+   - **S**: `attested(V, attestation(A1, A2, A3, A4))` with V the atom `true` or `false` and all four arguments ground. Any unbound argument, or one holding a variable, is a wrong type. A bare `true`, `false` or `unsure` is a wrong type.
+   - **O**: a proper list, every element satisfying `atom/1`. The empty list `[]` itself as an element is NOT an atom here. Repeats are fine.
+4. Last comes `unknown_key(Key)` for each non-contract key (non-atom keys included, as given), once, in order of first occurrence.
 
-**Shared with other slices:** none. Nothing is moved to kernel.clausal.
+The absence of a key is never a problem.
 
-**Tests (per rule, all seven modes):**
-- one positive fixture per limb A1 to A4, B1 to B5 and C1 to C8, each asserting `findall` length 1 and the exact RESULT, BASIS and CITATIONS;
-- precedence tests:
-  - C2 and C3 with S absent;
-  - B2 with O absent;
-  - C5 with F unsure;
-  - C4 with F unsure and O absent;
-- input-check tests:
-  - duplicate key with equal values, which must not also give wrong_type;
-  - bare `true` as S;
-  - `[]` and a string as list elements;
-  - an unbound value;
-  - an unbound profile;
-  - a partial list;
-  - a non-atom key;
-  - repeated unknown keys;
-  - a well-formed `[]` list;
-- each negative test paired with a positive test on the same case;
-- validate_props properties: totality, determinism, citation completeness (every citation in the vocabulary) and checklist/status consistency.
+### Rules (limbs; first step that answers decides; each clause head carries its ground outputs)
+
+Step 0 is common to every query. Problems `[_|_]` gives `input_problems(Problems)`, with Basis `[]` and Citations `[]`. Otherwise Problems is `[]`, and the limbs follow.
+
+The outputs of `rights_against_each_joint_controller` (J = `controllers_jointly_determine_purposes_and_means`) are:
+
+| Step | J | Result | Citations |
+|---|---|---|---|
+| A1 | `false` | `not_joint_controllers` | `[cite(eu_reg_2016_679_art_26_3)]` |
+| A2 | absent | `indeterminate([controllers_jointly_determine_purposes_and_means])` | `[]` |
+| A3 | `unsure` | `needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_3)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means-unsure])])` | `[]` |
+| A4 | `true` | `rights_exercisable_against_this_controller` | `[cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]` |
+
+The outputs of `liability_for_the_entire_damage` (S = `responsible_under_article_82_2_and_3`, O = `other_responsible_parties`; Attested = S's term as supplied) are:
+
+| Step | Condition | Result | Basis | Citations |
+|---|---|---|---|---|
+| B1 | S `attested(false, _)`, any O | `not_responsible_for_the_damage` | `[outside_fact(responsible_under_article_82_2_and_3, Attested)]` | `[cite(eu_reg_2016_679_art_82_4)]` |
+| B2 | S absent, any O | THE ABSENT REFERRAL | `[]` | `[]` |
+| B3 | S `attested(true, _)`, O absent | `indeterminate([other_responsible_parties])` | `[]` | `[]` |
+| B4 | S `attested(true, _)`, O `[]` | `no_other_responsible_party` | `[outside_fact(responsible_under_article_82_2_and_3, Attested)]` | `[cite(eu_reg_2016_679_art_82_4)]` |
+| B5 | S `attested(true, _)`, O `[_\|_]` | `liable_for_the_entire_damage` | `[outside_fact(responsible_under_article_82_2_and_3, Attested)]` | `[cite(eu_reg_2016_679_art_82_4)]` |
+
+The outputs of `recourse_after_full_compensation` (F = `full_compensation_paid`) are:
+
+| Step | Condition | Result | Basis | Citations |
+|---|---|---|---|---|
+| C1 | S `attested(false, _)` | `not_entitled_to_claim_back` | `[outside_fact(responsible_under_article_82_2_and_3, Attested)]` | `[cite(eu_reg_2016_679_art_82_5)]` |
+| C2 | not C1, O `[]` | `not_entitled_to_claim_back` | `[]` | `[cite(eu_reg_2016_679_art_82_5)]` |
+| C3 | not C1 or C2, F `false` | `not_entitled_to_claim_back` | `[]` | `[cite(eu_reg_2016_679_art_82_5)]` |
+| C4 | none of C1 to C3, S absent | THE ABSENT REFERRAL | `[]` | `[]` |
+| C5 | S true, O absent (F absent, true or unsure) | `indeterminate([other_responsible_parties])` | `[]` | `[]` |
+| C6 | S true, O `[_\|_]`, F absent | `indeterminate([full_compensation_paid])` | `[]` | `[]` |
+| C7 | S true, O `[_\|_]`, F `unsure` | `needs_legal_review(open_textured(full_compensation_paid, cite(eu_reg_2016_679_art_82_5)), [inputs_relied_on([full_compensation_paid-unsure])])` | `[]` | `[]` |
+| C8 | S true, O = Parties `[_\|_]`, F `true` | `entitled_to_claim_back(Parties)` | `[outside_fact(responsible_under_article_82_2_and_3, Attested)]` | `[cite(eu_reg_2016_679_art_82_5)]` |
+
+Mutual exclusion is made explicit by guard predicates, so that one profile matches exactly one clause. The guards are `responsibility_state/2` (`attested_true(Attested)`, `attested_false(Attested)` or `absent`) and `parties_state/2` (`empty`, `listed(Parties)` or `absent`).
+
+### Verdict atoms
+
+The slice's verdict atoms are the statutory result atoms and compounds listed above. The facade maps them to `eligible`, `ineligible` or `indeterminate`.
+
+### Checklist item builders (owned here, used by the facade)
+
+`gdpr_joint_controllers_checklist_item/3` has three independent rows, each reading one key, as specified under the public checklist predicate.
+
+The consistency property tested is:
+
+- `eligible` if and only if all three items are `met`;
+- `ineligible` if and only if at least one item is `unmet`;
+- otherwise `indeterminate`.
+
+The one exception is `input_problems`, which gives checklist `[]` and status `indeterminate`.
+
+### Predicates shared with another slice
+
+None. There is a single slice, so nothing goes into `kernel.clausal`.
+
+## Tests (seven modes)
+
+1. One unit test per limb (A1 to A4, B1 to B5, C1 to C8). Each negative case is paired with a positive one on the same profile.
+2. Counting: `findall` plus `length(_, 1)` for every query and fixture.
+3. Input-check totality over malformed terms: unbound, partial list, unbound element, non-attribute element, non-atom key, unbound value, duplicates, an attestation with an unbound argument, and an O element that is a number, string, compound, list, `[]` or unbound.
+4. Precedence: B2 before B3, and C1, C2 and C3 before C4, before C5, C6 and C7.
+5. Citation completeness, and BASIS copied exactly, attested term identical.
+6. Checklist and verdict consistency.
+7. What-if flips, for example F `false` to `true` turns `ineligible` into `eligible` when S is attested true and O is non-empty.

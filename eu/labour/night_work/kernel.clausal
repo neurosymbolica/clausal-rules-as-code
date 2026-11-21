@@ -1,0 +1,412 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/labour/night_work (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. The one such predicate is the
+% order's input check night_work_input_problems/2. The scaffold writes it
+% here, exported, for the slice night_work.clausal to call at step 0 of
+% both queries and for queries.clausal to re-export.
+%
+% Source: Directive 2003/88/EC (Working Time Directive), OJ L 299,
+% 18.11.2003 (original act, CELEX 32003L0088). The input check applies the
+% typed input contract of the order. It also applies the ADDED checks of
+% INTERFACE - THE INPUT CHECK:
+%   - the ranges of night_time_start (0, or 301 to 1439), night_time_end
+%     (300 to 1439) and night_work_reference_period_days (at least 1);
+%   - THE NIGHT-TIME RULE drawn from Art 2(3) ("any period of not less than
+%     seven hours ... which must include, in any case, the period between
+%     midnight and 5.00"), reported as wrong_type(night_time_end).
+% No citation marker is carried here: the kernel is the DAG root and
+% loads before citations.clausal. The slice marks the operative clauses.
+%
+% Atoms and data terms need NO declaration and NO import. Nothing
+% vocabulary-shaped lives here. The comment block below only RECORDS the
+% result terms, so that every file spells them alike.
+%
+% Result terms of the one determination slice (night_work.clausal).
+%
+%   night_work_average_status(Profile, Worker, Shifts, PeriodStart,
+%                             PeriodEnd, Result, Citations)  -- Art 8(a)
+%     Result is one of:
+%       - the atom average_night_hours_kept
+%       - the atom average_night_hours_exceeded
+%       - the atom night_work_limits_not_applied_to_worker
+%       - the atom not_a_night_worker
+%       - the atom night_work_derogation_applies
+%       - a status compound itself (below)
+%     Citations is a flat set-like list of cite(Key), or [] when the
+%     result is not final.
+%
+%   hazardous_night_work_status(Profile, Worker, Shifts, PeriodStart,
+%                               PeriodEnd, Result, Citations)  -- Art 8(b)
+%     Result is one of:
+%       - the atom hazardous_night_work_hours_kept
+%       - the atom hazardous_night_work_hours_exceeded
+%       - the atom night_work_limits_not_applied_to_worker
+%       - the atom not_a_night_worker
+%       - the atom no_special_hazards_or_heavy_strain
+%       - the atom night_work_derogation_applies
+%       - a status compound itself (below)
+%     Citations are as for Art 8(a).
+%
+%   Not-final status compounds (Citations []), never wrapped in a list:
+%     input_problems(Problems)
+%         Problems is the flat list of unknown_key(Key), wrong_type(Key)
+%         and duplicate_key(Key) terms.
+%     indeterminate([Key])
+%         Exactly one bare key atom (with the behind test).
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%         Pairs is a flat list of Key-Value terms in root_exports order.
+%         An unscored trailing provenance(Clause, Citations) may follow.
+%
+%   The scaffold facade verdict:
+%     night_work_verdict(Status, Citations)
+%         Status is the Result of the query the case names.
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES pin it: an atom spelled differently is a DIFFERENT atom.
+% =====================================================================
+
+:- module(kernel, [night_work_input_problems/2]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+
+% Figures of the ADDED range checks and of THE NIGHT-TIME RULE (Art 2(3)),
+% in minutes after midnight or whole days.
+:- constant_value(midnight_clock_minute, 0).
+:- constant_value(earliest_nonzero_night_time_start_minute, 301).
+:- constant_value(mandatory_night_time_end_minute, 300).
+:- constant_value(latest_clock_minute, 1439).
+:- constant_value(minutes_per_day, 1440).
+:- constant_value(minimum_night_time_minutes, 420).
+:- constant_value(minimum_reference_period_days, 1).
+
+% ---- input checks: the problems a profile has, if any -----------
+% night_work_input_problems(Profile, Problems): Problems = [] means the
+% profile can be judged. Each public query calls this check first. It
+% gives its normal answer only when Problems = []. When Problems is not [],
+% it gives the answer the order states for a profile with input problems.
+%
+% The check gives exactly one answer for every Profile:
+% - A Profile that is not an attribute list gives [wrong_type(profile)].
+% - A Key that is not an atom is unknown_key(Key), Key as given.
+% - Then, for each contract key in the contract's key order:
+%     - duplicate_key(Key) when the key repeats;
+%     - else wrong_type(Key) when its one value is outside its type, its
+%       ADDED range, or (night_time_end) THE NIGHT-TIME RULE.
+% - Then unknown_key(Key) for each key outside the contract, in the order
+%   of its first occurrence.
+% An absent key is not a problem.
+night_work_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [on_call_on_site_counts_as_working_time, on_call_standby_counts_as_working_time, night_time_start, night_time_end, night_work_reference_period_days, worker_category, night_worker, special_hazards_or_heavy_strain, derogation_from_article_8],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value. The integer keys carry
+% the ADDED ranges of INTERFACE - THE INPUT CHECK as their types.
+key_type(on_call_on_site_counts_as_working_time, judgement).
+key_type(on_call_standby_counts_as_working_time, judgement).
+key_type(night_time_start, night_time_start_minute).
+key_type(night_time_end, night_time_end_minute).
+key_type(night_work_reference_period_days, reference_period_days).
+key_type(worker_category, worker_category_atom).
+key_type(night_worker, judgement).
+key_type(special_hazards_or_heavy_strain, judgement).
+key_type(derogation_from_article_8, derogation_from_article_8_atom).
+
+% attribute_list_t(Term, T): T is true when Term is a list of
+% attribute(Key, Value) items, whatever each Key is. T is false for
+% anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs
+% more than once (none of its values is read). Otherwise wrong_type(Key)
+% when its one value is outside the key's type, or breaks the cross-key
+% rule.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items
+% give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    cross_key_rule_t(InType, Key, Profile, Kept),
+    name_wrong_type(Kept, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% cross_key_rule_t(InType, Key, Profile, T): a value already outside its
+% type is one wrong_type only. A value in its type is checked against the
+% cross-key rule of its key (only night_time_end has one).
+cross_key_rule_t(false, _, _, false).
+cross_key_rule_t(true, Key, Profile, T) :-
+    cross_key_rule_for_t(Key, Profile, T).
+
+cross_key_rule_for_t(night_time_end, Profile, T) :-
+    key_occurrences(Profile, night_time_start, StartOccurrences),
+    night_time_rule_t(StartOccurrences, Profile, T).
+cross_key_rule_for_t(Key, _, true) :-
+    dif(Key, night_time_end).
+
+% THE NIGHT-TIME RULE (an ADDED check, Art 2(3)). It applies only when
+% both of these hold:
+%   - night_time_start is present once and within its own range;
+%   - night_time_end is present once and within its own range (the caller
+%     has already established this).
+night_time_rule_t(none, _, true).
+night_time_rule_t(many, _, true).
+night_time_rule_t(one, Profile, T) :-
+    key_value(Profile, night_time_start, Start),
+    value_in_type_t(night_time_start_minute, Start, StartInType),
+    night_time_start_rule_t(StartInType, Profile, Start, T).
+
+night_time_start_rule_t(false, _, _, true).
+night_time_start_rule_t(true, Profile, Start, T) :-
+    key_value(Profile, night_time_end, End),
+    night_time_pair_t(Start, End, T).
+
+% night_time_pair_t(Start, End, T): T is true when the clock period
+% [Start, End) lasts at least seven hours and includes midnight to 05:00.
+% This holds in either of two cases:
+%   - Start is 0 and End is at least 420;
+%   - Start is at least 301, End is before Start, and the period across
+%     midnight is at least 420 minutes long.
+night_time_pair_t(Start, End, true) :-
+    Start #= constant(midnight_clock_minute),
+    End #>= constant(minimum_night_time_minutes).
+night_time_pair_t(Start, End, false) :-
+    Start #= constant(midnight_clock_minute),
+    End #< constant(minimum_night_time_minutes).
+night_time_pair_t(Start, End, true) :-
+    Start #>= constant(earliest_nonzero_night_time_start_minute),
+    End #< Start,
+    constant(minutes_per_day) - Start + End #>= constant(minimum_night_time_minutes).
+night_time_pair_t(Start, End, false) :-
+    Start #>= constant(earliest_nonzero_night_time_start_minute),
+    End #< Start,
+    constant(minutes_per_day) - Start + End #< constant(minimum_night_time_minutes).
+night_time_pair_t(Start, End, false) :-
+    Start #>= constant(earliest_nonzero_night_time_start_minute),
+    End #>= Start.
+
+% key_value(Elements, Key, Value): the value of a key that occurs exactly
+% once.
+key_value([attribute(ElementKey, Value)|_], Key, Value) :-
+    ElementKey == Key.
+key_value([attribute(ElementKey, _)|Elements], Key, Value) :-
+    ElementKey \== Key,
+    key_value(Elements, Key, Value).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value
+% Elements gives Key is in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is
+% checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(worker_category_atom, Value, T) :-
+    in_type_t(enum([other_worker, mobile_worker, seagoing_fishing_vessel_worker]), Value, T).
+
+in_type_t(derogation_from_article_8_atom, Value, T) :-
+    in_type_t(enum([no_derogation, derogation_under_article_17_1, derogation_under_article_17_3, derogation_under_article_18]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(night_time_start_minute, Value, T) :-
+    integer_t(Value, IsInteger),
+    integer_in_range_t(IsInteger, night_time_start_minute, Value, T).
+
+in_type_t(night_time_end_minute, Value, T) :-
+    integer_t(Value, IsInteger),
+    integer_in_range_t(IsInteger, night_time_end_minute, Value, T).
+
+in_type_t(reference_period_days, Value, T) :-
+    integer_t(Value, IsInteger),
+    integer_in_range_t(IsInteger, reference_period_days, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one
+% of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer.
+% T is false when it is a float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% integer_in_range_t(IsInteger, Range, Value, T): a non-integer is outside
+% every range; an integer is checked against the ADDED range of its key.
+integer_in_range_t(false, _, _, false).
+integer_in_range_t(true, Range, Value, T) :-
+    range_t(Range, Value, T).
+
+% night_time_start: 0, or from 301 to 1439.
+range_t(night_time_start_minute, Value, true) :-
+    Value #= constant(midnight_clock_minute).
+range_t(night_time_start_minute, Value, true) :-
+    Value #>= constant(earliest_nonzero_night_time_start_minute),
+    Value #=< constant(latest_clock_minute).
+range_t(night_time_start_minute, Value, false) :-
+    Value #\= constant(midnight_clock_minute),
+    Value #< constant(earliest_nonzero_night_time_start_minute).
+range_t(night_time_start_minute, Value, false) :-
+    Value #> constant(latest_clock_minute).
+
+% night_time_end: from 300 to 1439.
+range_t(night_time_end_minute, Value, true) :-
+    Value #>= constant(mandatory_night_time_end_minute),
+    Value #=< constant(latest_clock_minute).
+range_t(night_time_end_minute, Value, false) :-
+    Value #< constant(mandatory_night_time_end_minute).
+range_t(night_time_end_minute, Value, false) :-
+    Value #> constant(latest_clock_minute).
+
+% night_work_reference_period_days: at least 1.
+range_t(reference_period_days, Value, true) :-
+    Value #>= constant(minimum_reference_period_days).
+range_t(reference_period_days, Value, false) :-
+    Value #< constant(minimum_reference_period_days).
+
+% ---- tests ------------------------------------------------------
+test(an_empty_profile_has_no_problem) :-
+    night_work_input_problems([], []).
+test(a_full_good_profile_has_no_problem) :-
+    night_work_input_problems([attribute(on_call_on_site_counts_as_working_time, true), attribute(on_call_standby_counts_as_working_time, unsure), attribute(night_time_start, 1320), attribute(night_time_end, 300), attribute(night_work_reference_period_days, 7), attribute(worker_category, other_worker), attribute(night_worker, true), attribute(special_hazards_or_heavy_strain, false), attribute(derogation_from_article_8, no_derogation)], []).
+test(a_term_that_is_not_a_list_is_not_a_profile) :-
+    night_work_input_problems(profile, [wrong_type(profile)]).
+test(an_unbound_profile_is_not_a_profile) :-
+    night_work_input_problems(_, [wrong_type(profile)]).
+test(midnight_start_with_seven_hours_is_kept) :-
+    night_work_input_problems([attribute(night_time_start, 0), attribute(night_time_end, 420)], []).
+test(midnight_start_with_less_than_seven_hours_breaks_the_rule) :-
+    night_work_input_problems([attribute(night_time_start, 0), attribute(night_time_end, 419)], [wrong_type(night_time_end)]).
+test(a_night_time_of_six_hours_breaks_the_rule) :-
+    night_work_input_problems([attribute(night_time_start, 1380), attribute(night_time_end, 300)], [wrong_type(night_time_end)]).
+test(an_end_after_the_start_breaks_the_rule) :-
+    night_work_input_problems([attribute(night_time_start, 400), attribute(night_time_end, 1000)], [wrong_type(night_time_end)]).
+test(a_start_out_of_range_is_its_own_problem_only) :-
+    night_work_input_problems([attribute(night_time_start, 200), attribute(night_time_end, 300)], [wrong_type(night_time_start)]).
+test(an_end_out_of_range_is_named_once) :-
+    night_work_input_problems([attribute(night_time_start, 1320), attribute(night_time_end, 200)], [wrong_type(night_time_end)]).
+test(a_zero_reference_period_is_out_of_range) :-
+    night_work_input_problems([attribute(night_work_reference_period_days, 0)], [wrong_type(night_work_reference_period_days)]).
+test(a_compound_reference_period_is_wrong_type) :-
+    night_work_input_problems([attribute(night_work_reference_period_days, days(7))], [wrong_type(night_work_reference_period_days)]).
+test(a_repeated_key_is_a_duplicate_only) :-
+    night_work_input_problems([attribute(worker_category, other_worker), attribute(worker_category, bad)], [duplicate_key(worker_category)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    night_work_input_problems([attribute(colour, red), attribute(derogation_from_article_8, maybe), attribute(night_worker, yes), attribute(colour, blue)], [wrong_type(night_worker), wrong_type(derogation_from_article_8), unknown_key(colour)]).
+test(an_unbound_value_is_wrong_type) :-
+    night_work_input_problems([attribute(night_worker, _)], [wrong_type(night_worker)]).
+test(an_absent_key_is_not_a_problem, fail) :-
+    night_work_input_problems([attribute(night_worker, true)], [_|_]).
+
+:- end_module(kernel).

@@ -1,42 +1,77 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/nis2_incident_reporting (temporal family).
-% Source: Directive (EU) 2022/2555 (NIS 2) Art 23(1), (3), (4) (OJ L 333, 27.12.2022).
-% DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. The only one is the order's input
-% check nis2_incident_reporting_input_problems/2, written here from the typed input
-% contract and exported for every slice to import.
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive) Art 23(1), Art 23(3)(a)
+% and (b), Art 23(4)(a) to (e) and its last sentence; pinned unit text of
+% 32022L2555 (OJ L 333, 27.12.2022; raw sha256
+% 6ee66d5c419d9a056fb98d94083cacf9b818803bd6b416435718e0d4919cb589).
 %
-% Atoms and data terms need NO declaration and NO import. Nothing
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. The one predicate here is the
+% order's input check nis2_incident_reporting_input_problems/2, written by
+% the scaffold from the typed input contract and imported by the slice and
+% by queries.clausal:
+%   :- use_module(eu/nis2_incident_reporting/kernel, [nis2_incident_reporting_input_problems/2]).
+% The one determination slice (nis2_incident_reporting.clausal) owns every
+% other helper, its value facts (the 24 and 72 hour limits, the 24 hour
+% trust service provider limit, the one-month periods) and its tests.
+%
+% Atoms and data terms need NO declaration and NO import: nothing
 % vocabulary-shaped lives here; the comment block below only RECORDS the
 % result terms so every file spells them alike.
 %
-% NOTHING SINGLE-CALLER LIVES HERE. A predicate only ONE file calls is
-% defined in THAT file. Move a predicate here the moment a SECOND file
-% calls it, and only then; export it as name/arity and import it where
-% it is called:
-%   :- use_module(eu/nis2_incident_reporting/kernel, [shared_predicate/2]).
+% RESULT TERMS (exact spelling; the scorer compares them verbatim):
 %
-% Result terms (the single slice, nis2_incident_reporting, builds them):
 %   nis2_incident_reporting_verdict(Status, Citations)
-%       Status: significant | not_significant | indeterminate(MissingKeys)
-%               | needs_legal_review(open_textured(Key, cite(CitationKey)),
-%                                   [inputs_relied_on(Pairs)])
-%               | input_problems(Problems)
-%       Citations: list of cite(Key) terms, [] for every non-final Status.
-%   step_due(Step, Limit, cite(Key))
-%       Step: early_warning | incident_notification | intermediate_report
-%             | final_report | progress_report | final_report_after_handling
-%       Limit: hours_after_awareness(N) | on_request_of_csirt_or_competent_authority
-%              | months_after_notification(1) | at_final_report_due
-%              | months_after_handling(1)
-%   timeliness Result: on_time | late(hour_limit) | late(without_undue_delay)
-%              | indeterminate(MissingKeys) | needs_legal_review(Reason, Context)
-%              | input_problems(Problems)
-%   input problems: duplicate_key(Key) | wrong_type(Key) | unknown_key(Key)
-%   inputs_relied_on(Pairs): Key-Value pairs of the judgement keys read.
-%   provenance(Clause, Citations): optional, unscored.
-% Shared across the slices: the checklist row id overall (an atom).
+%     the facade's eligibility verdict (query type #2). Status is the
+%     STATUS of incident_significance/3, Citations its cite(Key) list.
+%
+%   incident_significance(Profile, Status, Citations)
+%     Status: the atom significant or not_significant, or one status
+%     compound below. Citations: a set-like flat list of cite(Key) terms:
+%     [cite(eu_dir_2022_2555_art_23_3_a)] or [cite(eu_dir_2022_2555_art_23_3_b)]
+%     for significant (the FIRST met limb only), both for not_significant,
+%     [] for every non-final Status.
+%
+%   incident_reporting_steps(Profile, Steps)
+%     Steps: an ordered flat list of step_due(Step, Limit, cite(Key)) terms
+%     ([] when the incident is not significant), or one status compound
+%     alone. Step: early_warning | incident_notification |
+%     intermediate_report | final_report | progress_report |
+%     final_report_after_handling. Limit: hours_after_awareness(24 or 72) |
+%     on_request_of_csirt_or_competent_authority |
+%     months_after_notification(1) | at_final_report_due |
+%     months_after_handling(1).
+%
+%   reporting_step_timeliness(Profile, Step, HoursElapsed, Result)
+%     Step: early_warning | incident_notification (an argument, not a key).
+%     Result: the atom on_time, or late(hour_limit), or
+%     late(without_undue_delay), or one status compound.
+%
+%   STATUS COMPOUNDS (never written as bare atoms):
+%     indeterminate([Key])          -- exactly ONE absent key, the first
+%                                      needed one in root_exports order;
+%     needs_legal_review(open_textured(Key, cite(Citation)),
+%                        [inputs_relied_on(Pairs)])
+%                                   -- Pairs a list of Key-Value terms of
+%                                      the judgement keys read and present,
+%                                      optionally followed by one unscored
+%                                      provenance(Clause, Citations);
+%     input_problems(Problems)      -- Problems the non-empty list from
+%                                      nis2_incident_reporting_input_problems/2
+%                                      (then, for timeliness,
+%                                      wrong_type(step), wrong_type(hours_elapsed)).
+%   PROBLEM TERMS: duplicate_key(Key), wrong_type(Key), unknown_key(Key),
+%     wrong_type(profile).
+%   JUDGEMENT VALUES: true | false | unsure. CRISP VALUES: true | false.
+%
+% PROFILE KEYS (root_exports and input_contract order):
+%   severe_operational_disruption_or_financial_loss         judgement, Art 23(3)(a)
+%   considerable_damage_to_other_persons                    judgement, Art 23(3)(b)
+%   trust_service_provider_incident_affects_trust_services  crisp,     Art 23(4) last sentence
+%   incident_ongoing_at_final_report_due                    crisp,     Art 23(4)(e)
+%   early_warning_without_undue_delay                       judgement, Art 23(4)(a)
+%   incident_notification_without_undue_delay               judgement, Art 23(4)(b)
 % =====================================================================
 
 :- module(kernel, [nis2_incident_reporting_input_problems/2]).

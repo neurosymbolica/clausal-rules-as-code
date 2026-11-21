@@ -63,18 +63,31 @@ attribute_t(Element, false) :-
 attribute_t(Element, T) :-
     nonvar(Element),
     Element = attribute(Key, _),
-    term_variables(Key, Variables),
-    no_variables_t(Variables, T).
+    key_shape_t(Key, T).
 attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
+key_shape_t(Key, true) :-
+    var(Key).
+key_shape_t(Key, T) :-
+    nonvar(Key),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, T).
+
 no_variables_t([], true).
 no_variables_t([_|_], false).
 
+identical_member_t(_, [], false).
+identical_member_t(Term, [Element|_], true) :-
+    Term == Element.
+identical_member_t(Term, [Element|Elements], T) :-
+    Term \== Element,
+    identical_member_t(Term, Elements, T).
+
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    identical_member_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
@@ -167,3 +180,22 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([], []).
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, controller), attribute(data_are_personal_data, unsure), attribute(party_provided_for_as_controller_by_law, attested(true, attestation(host, now, reason, none)))], []).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems(_, [wrong_type(profile)]).
+test(a_non_ground_compound_key_is_not_an_attribute_list) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(foo(_), true)], [wrong_type(profile)]).
+test(an_unbound_key_is_one_unknown_key) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(Key, first), attribute(Key, second)], Problems),
+    Problems = [unknown_key(Reported)],
+    Reported == Key.
+test(a_repeated_contract_key_is_a_duplicate_only) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, controller), attribute(party_role, bogus)], [duplicate_key(party_role)]).
+test(unsure_is_wrong_for_a_crisp_key) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(complaint_lodged_with_authority, unsure)], [wrong_type(complaint_lodged_with_authority)]).
+test(contract_problems_come_before_unknown_keys) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(stray, 1), attribute(party_role, other), attribute(stray, 2)], [wrong_type(party_role), unknown_key(stray)]).

@@ -1,18 +1,17 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_properties.clausal -- structural PROPERTIES over the subject set.
-% Totality: every registered subject yields a verdict.
-% Determinism: every registered subject yields exactly one answer.
-% Shape: every answer is one of the order's forms, final answers cite Art 31
-% and non-final answers carry no basis and no citation.
-% Justification: every checklist item carries cite(eu_reg_2016_679_art_31).
+% test_properties.clausal -- structural PROPERTIES.
+% Totality and determinism over the fixture subjects AND over every
+% well-formed profile built from the six keys (each key absent or given
+% one of its values: 3*3*3*3*4*3 = 972 profiles): each yields exactly one
+% answer. Invariants: a final answer cites Art 31, a non-final one cites
+% nothing; an outside fact is never named missing; no request means no duty.
 % Run: python -m clausal.testing eu/data_protection/gdpr_cooperation_with_the_supervisory_authority/tests/test_properties.clausal
 % =====================================================================
 :- module(test_properties, []).
 :- use_module(eu/data_protection/gdpr_cooperation_with_the_supervisory_authority/gdpr_cooperation_with_the_supervisory_authority, [
     cooperation_duty/4,
     decide_gdpr_cooperation_with_the_supervisory_authority/2,
-    gdpr_cooperation_with_the_supervisory_authority_checklist/2,
     gdpr_cooperation_with_the_supervisory_authority_status_values/1
 ]).
 :- use_module(eu/data_protection/gdpr_cooperation_with_the_supervisory_authority/fixtures, [
@@ -25,32 +24,64 @@ subject_classifies(Subject) :-
     gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile),
     decide_gdpr_cooperation_with_the_supervisory_authority(Profile, _Verdict).
 
-subject_answers_once(Subject) :-
+answer_count(Profile, Count) :-
+    findall(Result, cooperation_duty(Profile, Result, _, _), Results),
+    length(Results, Count).
+
+subject_answer_count(Subject, Count) :-
     gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile),
-    findall(Result-Basis-Citations, cooperation_duty(Profile, Result, Basis, Citations), Answers),
-    length(Answers, 1).
+    answer_count(Profile, Count).
 
-subject_answer_well_formed(Subject) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile),
-    cooperation_duty(Profile, Result, Basis, Citations),
-    answer_well_formed(Result, Basis, Citations).
+% ---- the generated well-formed profiles ------------------------------
+crisp_choice(absent).
+crisp_choice(given(true)).
+crisp_choice(given(false)).
 
-answer_well_formed(cooperation_not_required, [], [cite(eu_reg_2016_679_art_31)]).
-answer_well_formed(cooperation_met, [outside_fact(cooperation_given, attested(true, _))], [cite(eu_reg_2016_679_art_31)]).
-answer_well_formed(cooperation_not_met, [outside_fact(cooperation_given, attested(false, _))], [cite(eu_reg_2016_679_art_31)]).
-answer_well_formed(indeterminate([Key]), [], []) :-
-    atom(Key).
-answer_well_formed(needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)), [inputs_relied_on(_)]), [], []).
-answer_well_formed(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)), [resolution(cite(cooperation_statement), not_attempted), inputs_relied_on(_)]), [], []).
-answer_well_formed(input_problems([_|_]), [], []).
+judgement_choice(absent).
+judgement_choice(given(true)).
+judgement_choice(given(false)).
+judgement_choice(given(unsure)).
 
-subject_checklist_cited(Subject) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile),
-    gdpr_cooperation_with_the_supervisory_authority_checklist(Profile, [Item|Items]),
-    maplist(item_cited, [Item|Items]).
+statement_choice(absent).
+statement_choice(given(attested(true, attestation(host, at_time, reason, none)))).
+statement_choice(given(attested(false, attestation(host, at_time, reason, document(upload_identifier, digest_value))))).
 
-item_cited(item(_, _, cite(eu_reg_2016_679_art_31))).
+choices_profile([], []).
+choices_profile([_-absent|Choices], Profile) :-
+    choices_profile(Choices, Profile).
+choices_profile([ProfileKey-given(Value)|Choices], [attribute(ProfileKey, Value)|Profile]) :-
+    choices_profile(Choices, Profile).
 
+generated_profile(Profile) :-
+    crisp_choice(Controller),
+    crisp_choice(Processor),
+    crisp_choice(Representative),
+    crisp_choice(Request),
+    judgement_choice(Tasks),
+    statement_choice(Statement),
+    choices_profile([
+        acts_as_controller-Controller,
+        acts_as_processor-Processor,
+        acts_as_representative_of_controller_or_processor-Representative,
+        authority_request_made-Request,
+        request_is_in_performance_of_authority_tasks-Tasks,
+        cooperation_given-Statement
+    ], Profile).
+
+% A final answer cites Art 31 and has its basis; a non-final one has none.
+answer_shape_consistent(Result, Basis, Citations) :-
+    gdpr_cooperation_with_the_supervisory_authority_status_values(StatusValues),
+    member(Result, StatusValues),
+    Citations == [cite(eu_reg_2016_679_art_31)],
+    final_basis(Result, Basis).
+answer_shape_consistent(Result, [], []) :-
+    compound(Result).
+
+final_basis(cooperation_not_required, []).
+final_basis(cooperation_met, [outside_fact(cooperation_given, attested(true, attestation(_, _, _, _)))]).
+final_basis(cooperation_not_met, [outside_fact(cooperation_given, attested(false, attestation(_, _, _, _)))]).
+
+% ---- fixture subjects -------------------------------------------------
 % sort/2 collapses a subject that classifies more than once.
 test(totality_every_subject_classifies) :-
     findall(Subject, gdpr_cooperation_with_the_supervisory_authority_subject(Subject), Subjects),
@@ -58,35 +89,47 @@ test(totality_every_subject_classifies) :-
     findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
     sort(ClassifiedSubjects, SubjectSet).
 
-test(determinism_every_subject_answers_once) :-
+test(determinism_every_subject_has_exactly_one_answer) :-
     findall(Subject, gdpr_cooperation_with_the_supervisory_authority_subject(Subject), Subjects),
-    maplist(subject_answers_once, Subjects).
+    findall(Subject, (gdpr_cooperation_with_the_supervisory_authority_subject(Subject), subject_answer_count(Subject, 1)), Determined),
+    Determined == Subjects.
 
-test(every_answer_has_the_order_shape) :-
-    findall(Subject, gdpr_cooperation_with_the_supervisory_authority_subject(Subject), Subjects),
-    maplist(subject_answer_well_formed, Subjects).
+% ---- every well-formed profile ----------------------------------------
+test(the_generator_builds_every_combination) :-
+    findall(Profile, generated_profile(Profile), Profiles),
+    length(Profiles, 972).
 
-test(every_checklist_item_is_cited) :-
-    findall(Subject, gdpr_cooperation_with_the_supervisory_authority_subject(Subject), Subjects),
-    maplist(subject_checklist_cited, Subjects).
+test(every_well_formed_profile_has_exactly_one_answer) :-
+    findall(Profile, generated_profile(Profile), Profiles),
+    findall(Profile, (member(Profile, Profiles), answer_count(Profile, 1)), Determined),
+    length(Determined, 972).
 
-test(the_final_vocabulary_is_three_atoms) :-
-    gdpr_cooperation_with_the_supervisory_authority_status_values(Values),
-    Values == [cooperation_not_required, cooperation_met, cooperation_not_met].
+test(every_answer_has_the_shape_of_its_status) :-
+    findall(Profile, (generated_profile(Profile), cooperation_duty(Profile, Result, Basis, Citations), answer_shape_consistent(Result, Basis, Citations)), Consistent),
+    length(Consistent, 972).
 
-% Falsifier of the shape property: a final answer without its citation is
-% not well-formed, so the property is not vacuous.
-test(a_final_answer_without_citation_is_malformed, fail) :-
-    answer_well_formed(cooperation_met, [outside_fact(cooperation_given, attested(true, none))], []).
+test(no_well_formed_profile_has_an_input_problem, fail) :-
+    generated_profile(Profile),
+    cooperation_duty(Profile, input_problems(_), _, _).
 
-% Invariant (reading 2): without a request the statement never matters.
-test(no_request_ignores_the_statement) :-
-    cooperation_duty([attribute(acts_as_controller, true),
-                      attribute(authority_request_made, false),
-                      attribute(cooperation_given, attested(false, attestation(by, at, reason, none)))],
-                     Result,
-                     _,
-                     _),
-    Result == cooperation_not_required.
+test(the_outside_fact_is_never_named_missing, fail) :-
+    generated_profile(Profile),
+    cooperation_duty(Profile, indeterminate([cooperation_given]), _, _).
+
+test(a_missing_key_list_names_exactly_one_key, fail) :-
+    generated_profile(Profile),
+    cooperation_duty(Profile, indeterminate([_, _|_]), _, _).
+
+test(no_request_never_imposes_a_duty) :-
+    findall(Profile, (generated_profile(Profile), member(attribute(authority_request_made, false), Profile)), NoRequestProfiles),
+    length(NoRequestProfiles, Count),
+    findall(Profile, (member(Profile, NoRequestProfiles), cooperation_duty(Profile, cooperation_not_required, [], [cite(eu_reg_2016_679_art_31)])), NotRequired),
+    length(NotRequired, Count),
+    Count == 324.
+
+test(an_attested_true_never_gives_not_met, fail) :-
+    generated_profile(Profile),
+    member(attribute(cooperation_given, attested(true, _)), Profile),
+    cooperation_duty(Profile, cooperation_not_met, _, _).
 
 :- end_module(test_properties).

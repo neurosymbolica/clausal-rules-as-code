@@ -4,144 +4,170 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_cra_art14_manufacturer_reporting_cra_art14_manufacturer_reporting, [severe_incident_status/3, manufacturer_reporting_steps/4, manufacturer_reporting_step_timeliness/5, cra_art14_manufacturer_reporting_status/2, cra_art14_manufacturer_reporting_status_values/1]).
-:- use_module(m__eu_cra_art14_manufacturer_reporting_kernel, [cra_art14_manufacturer_reporting_input_problems/2]).
+:- use_module(m__eu_cra_art14_manufacturer_reporting_cra_art14_manufacturer_reporting, [severe_incident_status/3, manufacturer_reporting_steps/4, manufacturer_reporting_step_timeliness/5, cra_art14_manufacturer_reporting_status_values/1]).
 :- use_module(m__eu_cra_art14_manufacturer_reporting_fixtures, [cra_art14_manufacturer_reporting_profile_for/2]).
 
-test(the_status_table_holds_both_final_atoms) :-
+expected_vulnerability_steps([step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)), step_due(notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_2_b)), step_due(final_report, days_after_measure_available(14), cite(eu_reg_2024_2847_art_14_2_c)), step_due(intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6))]).
+
+expected_incident_steps([step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_4_a)), step_due(notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_4_b)), step_due(final_report, months_after_notification(1), cite(eu_reg_2024_2847_art_14_4_c)), step_due(intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6))]).
+
+fixture(Subject, Profile) :-
+    cra_art14_manufacturer_reporting_profile_for(Subject, Profile).
+
+test(the_status_table_holds_both_severity_atoms) :-
     cra_art14_manufacturer_reporting_status_values(StatusValues),
     StatusValues == [severe, not_severe].
-test(protection_limb_true_is_severe) :-
-    cra_art14_manufacturer_reporting_profile_for(severe_by_protection_limb, Profile),
-    cra_art14_manufacturer_reporting_status(Profile, severe).
-test(protection_limb_false_near_miss_is_not_severe) :-
-    cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false, Profile),
-    cra_art14_manufacturer_reporting_status(Profile, not_severe).
-test(malicious_code_limb_true_is_severe) :-
-    cra_art14_manufacturer_reporting_profile_for(severe_by_malicious_code_limb, Profile),
-    cra_art14_manufacturer_reporting_status(Profile, severe).
-test(malicious_code_unsure_near_miss_refers) :-
-    cra_art14_manufacturer_reporting_profile_for(severity_protection_false_malicious_code_unsure, Profile),
-    cra_art14_manufacturer_reporting_status(Profile, needs_legal_review(open_textured(leads_to_malicious_code_in_product_or_user_systems, _Citation), _Context)).
-test(no_judgement_names_the_protection_limb) :-
-    severe_incident_status([], indeterminate([affects_protection_of_sensitive_or_important_data_or_functions]), []).
-test(protection_false_near_miss_names_malicious_code) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false)], indeterminate([leads_to_malicious_code_in_product_or_user_systems]), []).
-test(unsure_protection_beside_false_refers) :-
-    cra_art14_manufacturer_reporting_profile_for(severity_protection_unsure_malicious_code_false, Profile),
-    cra_art14_manufacturer_reporting_status(Profile, needs_legal_review(open_textured(affects_protection_of_sensitive_or_important_data_or_functions, cite(eu_reg_2024_2847_art_14_5_a)), _Context)).
-test(unsure_protection_beside_true_near_miss_is_severe) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure), attribute(leads_to_malicious_code_in_product_or_user_systems, true)], severe, [cite(eu_reg_2024_2847_art_14_5)]).
-test(both_limbs_false_is_not_severe) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false), attribute(leads_to_malicious_code_in_product_or_user_systems, false)], not_severe, [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]).
-test(awareness_the_day_before_application_has_no_step) :-
+test(s0_positive_duplicate_key_is_refused) :-
+    fixture(duplicate_key_problem, Profile),
+    severe_incident_status(Profile, input_problems([duplicate_key(affects_protection_of_sensitive_or_important_data_or_functions)]), []).
+test(s0_near_miss_single_key_is_judged) :-
+    fixture(severe_by_protection_limb, Profile),
+    severe_incident_status(Profile, severe, [cite(eu_reg_2024_2847_art_14_5)]).
+test(s0_positive_wrong_value_is_refused) :-
+    fixture(wrong_type_problem, Profile),
+    severe_incident_status(Profile, input_problems([wrong_type(affects_protection_of_sensitive_or_important_data_or_functions)]), []).
+test(s1_positive_protection_limb_true_is_severe) :-
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true), attribute(leads_to_malicious_code_in_product_or_user_systems, false)], severe, [cite(eu_reg_2024_2847_art_14_5)]).
+test(s1_near_miss_protection_limb_false_is_not_severe) :-
+    fixture(not_severe_both_limbs_false, Profile),
+    severe_incident_status(Profile, not_severe, _Citations).
+test(s1_positive_malicious_code_limb_true_is_severe) :-
+    fixture(severe_by_malicious_code_limb, Profile),
+    severe_incident_status(Profile, severe, [cite(eu_reg_2024_2847_art_14_5)]).
+test(s1_near_miss_malicious_code_limb_unsure_refers) :-
+    fixture(malicious_code_limb_unsure_referral, Profile),
+    severe_incident_status(Profile, needs_legal_review(_Reason, _Context), []).
+test(s2_positive_absent_protection_limb_is_named) :-
+    fixture(protection_limb_missing, Profile),
+    severe_incident_status(Profile, indeterminate([affects_protection_of_sensitive_or_important_data_or_functions]), []).
+test(s2_positive_absent_code_limb_beside_unsure_is_named) :-
+    fixture(malicious_code_limb_missing, Profile),
+    severe_incident_status(Profile, indeterminate([leads_to_malicious_code_in_product_or_user_systems]), []).
+test(s2_near_miss_given_code_limb_refers_on_the_unsure_limb) :-
+    fixture(protection_limb_unsure_referral, Profile),
+    severe_incident_status(Profile, needs_legal_review(open_textured(affects_protection_of_sensitive_or_important_data_or_functions, cite(eu_reg_2024_2847_art_14_5_a)), [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions - unsure, leads_to_malicious_code_in_product_or_user_systems - false])]), []).
+test(s3_positive_unsure_code_limb_refers) :-
+    fixture(malicious_code_limb_unsure_referral, Profile),
+    severe_incident_status(Profile, needs_legal_review(open_textured(leads_to_malicious_code_in_product_or_user_systems, cite(eu_reg_2024_2847_art_14_5_b)), [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions - false, leads_to_malicious_code_in_product_or_user_systems - unsure])]), []).
+test(s4_positive_both_false_is_not_severe_citing_both_limbs) :-
+    fixture(not_severe_both_limbs_false, Profile),
+    severe_incident_status(Profile, not_severe, [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]).
+test(r1_positive_before_application_lists_no_step) :-
     manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 10), []).
-test(awareness_on_application_day_near_miss_has_four_steps) :-
-    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 11), [_, _, _, _]).
-test(awareness_before_application_reads_no_severity_key) :-
+test(r1_near_miss_application_day_lists_the_steps) :-
+    expected_vulnerability_steps(Expected),
+    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 11), Expected).
+test(r1_positive_incident_before_application_reads_no_key) :-
     manufacturer_reporting_steps([], incident_impacting_product_security, date(2025, 12, 31), []).
-test(vulnerability_with_no_key_has_its_steps) :-
-    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2027, 3, 1), [step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)), _, _, _]).
-test(incident_with_no_key_near_miss_is_indeterminate) :-
-    manufacturer_reporting_steps([], incident_impacting_product_security, date(2027, 3, 1), indeterminate([affects_protection_of_sensitive_or_important_data_or_functions])).
-test(severe_incident_has_the_final_report_one_month_after_notification) :-
-    cra_art14_manufacturer_reporting_profile_for(severe_by_protection_limb, Profile),
-    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 3, 1), [_, _, step_due(final_report, months_after_notification(1), cite(eu_reg_2024_2847_art_14_4_c)), _]).
-test(not_severe_incident_near_miss_has_no_step) :-
-    cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false, Profile),
+test(r1_near_miss_incident_after_application_reads_the_key) :-
+    manufacturer_reporting_steps([], incident_impacting_product_security, date(2026, 9, 11), indeterminate([affects_protection_of_sensitive_or_important_data_or_functions])).
+test(r2_positive_vulnerability_lists_steps_with_both_limbs_false) :-
+    expected_vulnerability_steps(Expected),
+    fixture(not_severe_both_limbs_false, Profile),
+    manufacturer_reporting_steps(Profile, actively_exploited_vulnerability, date(2027, 3, 1), Expected).
+test(r2_near_miss_incident_with_both_limbs_false_lists_no_step) :-
+    fixture(not_severe_both_limbs_false, Profile),
     manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 3, 1), []).
-test(incident_unsure_beside_missing_is_indeterminate) :-
-    cra_art14_manufacturer_reporting_profile_for(severity_protection_unsure_malicious_code_missing, Profile),
-    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 3, 1), indeterminate([leads_to_malicious_code_in_product_or_user_systems])).
-test(incident_unsure_beside_false_near_miss_refers) :-
-    cra_art14_manufacturer_reporting_profile_for(severity_protection_unsure_malicious_code_false, Profile),
-    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 3, 1), needs_legal_review(open_textured(affects_protection_of_sensitive_or_important_data_or_functions, cite(eu_reg_2024_2847_art_14_5_a)), [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions - unsure, leads_to_malicious_code_in_product_or_user_systems - false])])).
-test(early_warning_at_25_hours_is_late_whatever_the_judgement) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_without_delay, Profile),
+test(r3_positive_severe_incident_lists_incident_steps) :-
+    expected_incident_steps(Expected),
+    fixture(severe_by_protection_limb, Profile),
+    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2026, 9, 11), Expected).
+test(r3_positive_open_severity_is_passed_on) :-
+    fixture(malicious_code_limb_unsure_referral, Profile),
+    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 1, 1), needs_legal_review(open_textured(leads_to_malicious_code_in_product_or_user_systems, cite(eu_reg_2024_2847_art_14_5_b)), [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions - false, leads_to_malicious_code_in_product_or_user_systems - unsure])])).
+test(t1_positive_early_warning_after_24_hours_is_late) :-
+    fixture(early_warning_without_undue_delay_given, Profile),
     manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 25, late(hour_limit)).
-test(early_warning_at_24_hours_near_miss_is_on_time) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_without_delay, Profile),
+test(t1_near_miss_early_warning_at_24_hours_is_on_time) :-
+    fixture(early_warning_without_undue_delay_given, Profile),
     manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 24, on_time).
-test(notification_at_73_hours_is_late_even_if_unsure) :-
-    cra_art14_manufacturer_reporting_profile_for(notification_unsure, Profile),
+test(t1_positive_notification_after_72_hours_is_late) :-
+    fixture(notification_without_undue_delay_given, Profile),
     manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, notification, 73, late(hour_limit)).
-test(notification_at_72_hours_near_miss_refers) :-
-    cra_art14_manufacturer_reporting_profile_for(notification_unsure, Profile),
-    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, notification, 72, needs_legal_review(open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_4_b)), _Context)).
-test(notification_at_25_hours_is_within_its_own_limit) :-
-    cra_art14_manufacturer_reporting_profile_for(notification_without_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, notification, 25, on_time).
-test(early_warning_without_delay_is_on_time) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_without_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, early_warning, 5, on_time).
-test(early_warning_with_delay_near_miss_is_late) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_with_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, early_warning, 5, late(without_undue_delay)).
-test(notification_with_only_early_warning_key_is_indeterminate) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_without_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, notification, 30, indeterminate([notification_without_undue_delay])).
-test(notification_key_given_near_miss_is_on_time) :-
-    cra_art14_manufacturer_reporting_profile_for(notification_without_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, notification, 30, on_time).
-test(vulnerability_referral_cites_paragraph_2) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_unsure, Profile),
-    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 2, needs_legal_review(open_textured(early_warning_without_undue_delay, cite(eu_reg_2024_2847_art_14_2_a)), _Context)).
-test(timeliness_reads_no_severity_key) :-
+test(t1_near_miss_notification_at_72_hours_is_on_time) :-
+    fixture(notification_without_undue_delay_given, Profile),
+    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, notification, 72, on_time).
+test(t2_positive_with_undue_delay_is_late) :-
+    fixture(early_warning_with_undue_delay, Profile),
+    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 10, late(without_undue_delay)).
+test(t2_positive_unsure_undue_delay_refers_with_the_vulnerability_citation) :-
+    fixture(notification_undue_delay_unsure, Profile),
+    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, notification, 50, needs_legal_review(open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_2_b)), [inputs_relied_on([notification_without_undue_delay - unsure])])).
+test(t2_near_miss_unsure_undue_delay_refers_with_the_incident_citation) :-
+    fixture(notification_undue_delay_unsure, Profile),
+    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, notification, 50, needs_legal_review(open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_4_b)), [inputs_relied_on([notification_without_undue_delay - unsure])])).
+test(t2_positive_absent_key_of_the_step_is_named) :-
+    fixture(early_warning_without_undue_delay_given, Profile),
+    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, notification, 10, indeterminate([notification_without_undue_delay])).
+test(t2_near_miss_the_step_with_its_key_is_on_time) :-
+    fixture(early_warning_without_undue_delay_given, Profile),
+    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 10, on_time).
+test(t2_positive_severity_keys_are_never_read) :-
     manufacturer_reporting_step_timeliness([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure), attribute(early_warning_without_undue_delay, true)], incident_impacting_product_security, early_warning, 5, on_time).
-test(a_repeated_key_is_a_duplicate_key_only) :-
-    cra_art14_manufacturer_reporting_input_problems([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true), attribute(affects_protection_of_sensitive_or_important_data_or_functions, yes)], [duplicate_key(affects_protection_of_sensitive_or_important_data_or_functions)]).
-test(a_single_key_near_miss_has_no_problem) :-
-    cra_art14_manufacturer_reporting_input_problems([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true)], []).
-test(a_problem_profile_gets_its_input_problems) :-
-    manufacturer_reporting_steps([attribute(colour, red)], actively_exploited_vulnerability, date(2027, 3, 1), input_problems([unknown_key(colour)])).
+test(arguments_positive_bad_step_is_refused) :-
+    manufacturer_reporting_step_timeliness([], actively_exploited_vulnerability, final_report, 3, input_problems([wrong_type(step)])).
+test(arguments_near_miss_good_step_is_judged) :-
+    manufacturer_reporting_step_timeliness([], actively_exploited_vulnerability, early_warning, 3, indeterminate([early_warning_without_undue_delay])).
+test(arguments_positive_bad_event_is_refused) :-
+    manufacturer_reporting_steps([], data_breach, date(2027, 1, 1), input_problems([wrong_type(event)])).
+test(arguments_near_miss_good_event_is_judged) :-
+    expected_vulnerability_steps(Expected),
+    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2027, 1, 1), Expected).
 
-test(protection_limb_false_near_miss_is_not_severe_as_severe, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false, Profile),
-    cra_art14_manufacturer_reporting_status(Profile, severe).
-test(malicious_code_unsure_near_miss_is_not_severe, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(severity_protection_false_malicious_code_unsure, Profile),
-    cra_art14_manufacturer_reporting_status(Profile, severe).
-test(protection_false_near_miss_does_not_name_protection, fail) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false)], indeterminate([affects_protection_of_sensitive_or_important_data_or_functions]), _Citations).
-test(unsure_protection_beside_true_near_miss_does_not_refer, fail) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure), attribute(leads_to_malicious_code_in_product_or_user_systems, true)], needs_legal_review(_Reason, _Context), _Citations).
-test(malicious_code_true_near_miss_is_not_not_severe, fail) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false), attribute(leads_to_malicious_code_in_product_or_user_systems, true)], not_severe, _Citations).
-test(awareness_on_application_day_near_miss_has_steps_not_none, fail) :-
-    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 11), []).
-test(incident_with_no_key_near_miss_has_no_list_of_steps, fail) :-
-    manufacturer_reporting_steps([], incident_impacting_product_security, date(2027, 3, 1), [_|_]).
-test(not_severe_incident_near_miss_has_no_step_list, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(not_severe_both_limbs_false, Profile),
-    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 3, 1), [_|_]).
-test(incident_unsure_beside_false_near_miss_is_not_indeterminate, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(severity_protection_unsure_malicious_code_false, Profile),
-    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 3, 1), indeterminate(_Keys)).
-test(early_warning_at_24_hours_near_miss_is_not_late_by_hours, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_without_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 24, late(hour_limit)).
-test(notification_at_72_hours_near_miss_is_not_late_by_hours, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(notification_unsure, Profile),
-    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, notification, 72, late(hour_limit)).
-test(early_warning_with_delay_near_miss_is_not_on_time, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_with_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, early_warning, 5, on_time).
-test(notification_key_given_near_miss_is_not_indeterminate, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(notification_without_delay, Profile),
-    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, notification, 30, indeterminate(_Keys)).
-test(incident_referral_near_miss_does_not_cite_paragraph_2, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(early_warning_unsure, Profile),
-    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, early_warning, 2, needs_legal_review(open_textured(early_warning_without_undue_delay, cite(eu_reg_2024_2847_art_14_2_a)), _Context)).
-test(a_repeated_key_is_not_also_wrong_type, fail) :-
-    cra_art14_manufacturer_reporting_input_problems([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true), attribute(affects_protection_of_sensitive_or_important_data_or_functions, yes)], [duplicate_key(affects_protection_of_sensitive_or_important_data_or_functions), wrong_type(affects_protection_of_sensitive_or_important_data_or_functions)]).
-test(a_problem_profile_gets_no_severity_verdict, fail) :-
-    cra_art14_manufacturer_reporting_profile_for(wrong_type_protection_value, Profile),
+test(s0_near_miss_single_key_is_not_refused, fail) :-
+    fixture(severe_by_protection_limb, Profile),
+    severe_incident_status(Profile, input_problems(_Problems), _Citations).
+test(s0_wrong_value_is_not_judged_severe, fail) :-
+    fixture(wrong_type_problem, Profile),
     severe_incident_status(Profile, severe, _Citations).
-test(a_problem_profile_gets_no_steps, fail) :-
-    manufacturer_reporting_steps([attribute(colour, red)], actively_exploited_vulnerability, date(2027, 3, 1), [_|_]).
+test(s1_near_miss_protection_limb_false_is_never_severe, fail) :-
+    fixture(not_severe_both_limbs_false, Profile),
+    severe_incident_status(Profile, severe, _Citations).
+test(s1_near_miss_malicious_code_limb_unsure_is_not_severe, fail) :-
+    fixture(malicious_code_limb_unsure_referral, Profile),
+    severe_incident_status(Profile, severe, _Citations).
+test(s2_near_miss_given_protection_limb_is_not_indeterminate, fail) :-
+    fixture(not_severe_both_limbs_false, Profile),
+    severe_incident_status(Profile, indeterminate(_MissingKeys), _Citations).
+test(s2_near_miss_given_code_limb_is_not_indeterminate, fail) :-
+    fixture(protection_limb_unsure_referral, Profile),
+    severe_incident_status(Profile, indeterminate(_MissingKeys), _Citations).
+test(s3_near_miss_false_code_limb_does_not_refer, fail) :-
+    fixture(not_severe_both_limbs_false, Profile),
+    severe_incident_status(Profile, needs_legal_review(_Reason, _Context), _Citations).
+test(s4_near_miss_one_limb_true_is_not_not_severe, fail) :-
+    fixture(severe_by_malicious_code_limb, Profile),
+    severe_incident_status(Profile, not_severe, _Citations).
+test(r1_near_miss_application_day_is_not_empty, fail) :-
+    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 11), []).
+test(r2_near_miss_incident_does_not_get_the_vulnerability_list, fail) :-
+    expected_vulnerability_steps(Expected),
+    fixture(not_severe_both_limbs_false, Profile),
+    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 3, 1), Expected).
+test(r3_near_miss_not_severe_incident_lists_no_incident_step, fail) :-
+    expected_incident_steps(Expected),
+    fixture(not_severe_both_limbs_false, Profile),
+    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2026, 9, 11), Expected).
+test(r3_near_miss_open_severity_is_not_an_empty_list, fail) :-
+    fixture(malicious_code_limb_unsure_referral, Profile),
+    manufacturer_reporting_steps(Profile, incident_impacting_product_security, date(2027, 1, 1), []).
+test(t1_near_miss_at_24_hours_is_not_late_by_the_hour_limit, fail) :-
+    fixture(early_warning_without_undue_delay_given, Profile),
+    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 24, late(hour_limit)).
+test(t2_near_miss_with_undue_delay_is_not_on_time, fail) :-
+    fixture(early_warning_with_undue_delay, Profile),
+    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, early_warning, 10, on_time).
+test(t2_near_miss_incident_is_not_cited_to_the_vulnerability_point, fail) :-
+    fixture(notification_undue_delay_unsure, Profile),
+    manufacturer_reporting_step_timeliness(Profile, incident_impacting_product_security, notification, 50, needs_legal_review(open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_2_b)), _Context)).
+test(t2_near_miss_the_other_step_key_is_not_borrowed, fail) :-
+    fixture(early_warning_without_undue_delay_given, Profile),
+    manufacturer_reporting_step_timeliness(Profile, actively_exploited_vulnerability, notification, 10, on_time).
+test(arguments_near_miss_good_step_is_not_refused, fail) :-
+    manufacturer_reporting_step_timeliness([], actively_exploited_vulnerability, early_warning, 3, input_problems(_Problems)).
 
-cp_test_names([the_status_table_holds_both_final_atoms, protection_limb_true_is_severe, protection_limb_false_near_miss_is_not_severe, malicious_code_limb_true_is_severe, malicious_code_unsure_near_miss_refers, no_judgement_names_the_protection_limb, protection_false_near_miss_names_malicious_code, unsure_protection_beside_false_refers, unsure_protection_beside_true_near_miss_is_severe, both_limbs_false_is_not_severe, awareness_the_day_before_application_has_no_step, awareness_on_application_day_near_miss_has_four_steps, awareness_before_application_reads_no_severity_key, vulnerability_with_no_key_has_its_steps, incident_with_no_key_near_miss_is_indeterminate, severe_incident_has_the_final_report_one_month_after_notification, not_severe_incident_near_miss_has_no_step, incident_unsure_beside_missing_is_indeterminate, incident_unsure_beside_false_near_miss_refers, early_warning_at_25_hours_is_late_whatever_the_judgement, early_warning_at_24_hours_near_miss_is_on_time, notification_at_73_hours_is_late_even_if_unsure, notification_at_72_hours_near_miss_refers, notification_at_25_hours_is_within_its_own_limit, early_warning_without_delay_is_on_time, early_warning_with_delay_near_miss_is_late, notification_with_only_early_warning_key_is_indeterminate, notification_key_given_near_miss_is_on_time, vulnerability_referral_cites_paragraph_2, timeliness_reads_no_severity_key, a_repeated_key_is_a_duplicate_key_only, a_single_key_near_miss_has_no_problem, a_problem_profile_gets_its_input_problems]).
-cp_test_fail_names([protection_limb_false_near_miss_is_not_severe_as_severe, malicious_code_unsure_near_miss_is_not_severe, protection_false_near_miss_does_not_name_protection, unsure_protection_beside_true_near_miss_does_not_refer, malicious_code_true_near_miss_is_not_not_severe, awareness_on_application_day_near_miss_has_steps_not_none, incident_with_no_key_near_miss_has_no_list_of_steps, not_severe_incident_near_miss_has_no_step_list, incident_unsure_beside_false_near_miss_is_not_indeterminate, early_warning_at_24_hours_near_miss_is_not_late_by_hours, notification_at_72_hours_near_miss_is_not_late_by_hours, early_warning_with_delay_near_miss_is_not_on_time, notification_key_given_near_miss_is_not_indeterminate, incident_referral_near_miss_does_not_cite_paragraph_2, a_repeated_key_is_not_also_wrong_type, a_problem_profile_gets_no_severity_verdict, a_problem_profile_gets_no_steps]).
+cp_test_names([the_status_table_holds_both_severity_atoms, s0_positive_duplicate_key_is_refused, s0_near_miss_single_key_is_judged, s0_positive_wrong_value_is_refused, s1_positive_protection_limb_true_is_severe, s1_near_miss_protection_limb_false_is_not_severe, s1_positive_malicious_code_limb_true_is_severe, s1_near_miss_malicious_code_limb_unsure_refers, s2_positive_absent_protection_limb_is_named, s2_positive_absent_code_limb_beside_unsure_is_named, s2_near_miss_given_code_limb_refers_on_the_unsure_limb, s3_positive_unsure_code_limb_refers, s4_positive_both_false_is_not_severe_citing_both_limbs, r1_positive_before_application_lists_no_step, r1_near_miss_application_day_lists_the_steps, r1_positive_incident_before_application_reads_no_key, r1_near_miss_incident_after_application_reads_the_key, r2_positive_vulnerability_lists_steps_with_both_limbs_false, r2_near_miss_incident_with_both_limbs_false_lists_no_step, r3_positive_severe_incident_lists_incident_steps, r3_positive_open_severity_is_passed_on, t1_positive_early_warning_after_24_hours_is_late, t1_near_miss_early_warning_at_24_hours_is_on_time, t1_positive_notification_after_72_hours_is_late, t1_near_miss_notification_at_72_hours_is_on_time, t2_positive_with_undue_delay_is_late, t2_positive_unsure_undue_delay_refers_with_the_vulnerability_citation, t2_near_miss_unsure_undue_delay_refers_with_the_incident_citation, t2_positive_absent_key_of_the_step_is_named, t2_near_miss_the_step_with_its_key_is_on_time, t2_positive_severity_keys_are_never_read, arguments_positive_bad_step_is_refused, arguments_near_miss_good_step_is_judged, arguments_positive_bad_event_is_refused, arguments_near_miss_good_event_is_judged]).
+cp_test_fail_names([s0_near_miss_single_key_is_not_refused, s0_wrong_value_is_not_judged_severe, s1_near_miss_protection_limb_false_is_never_severe, s1_near_miss_malicious_code_limb_unsure_is_not_severe, s2_near_miss_given_protection_limb_is_not_indeterminate, s2_near_miss_given_code_limb_is_not_indeterminate, s3_near_miss_false_code_limb_does_not_refer, s4_near_miss_one_limb_true_is_not_not_severe, r1_near_miss_application_day_is_not_empty, r2_near_miss_incident_does_not_get_the_vulnerability_list, r3_near_miss_not_severe_incident_lists_no_incident_step, r3_near_miss_open_severity_is_not_an_empty_list, t1_near_miss_at_24_hours_is_not_late_by_the_hour_limit, t2_near_miss_with_undue_delay_is_not_on_time, t2_near_miss_incident_is_not_cited_to_the_vulnerability_point, t2_near_miss_the_other_step_key_is_not_borrowed, arguments_near_miss_good_step_is_not_refused]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

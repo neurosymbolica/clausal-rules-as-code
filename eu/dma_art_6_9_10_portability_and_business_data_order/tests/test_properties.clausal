@@ -1,0 +1,139 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality, determinism (exactly one answer per query and subject), the
+% answer shapes, one CITATIONS and one BASIS per final RESULT, citations
+% drawn from the vocabulary, and a cited checklist (#7).
+% Run: python -m clausal.testing eu/dma_art_6_9_10_portability_and_business_data_order/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/dma_art_6_9_10_portability_and_business_data_order/dma_art_6_9_10_portability_and_business_data_order, [
+    article_6_application_status/4,
+    end_user_data_portability_status/4,
+    business_user_data_access_status/4,
+    decide_dma_art_6_9_10_portability_and_business_data_order/2,
+    dma_art_6_9_10_portability_and_business_data_order_checklist/2,
+    dma_art_6_9_10_portability_and_business_data_order_status_values/1
+]).
+:- use_module(eu/dma_art_6_9_10_portability_and_business_data_order/fixtures, [
+    dma_art_6_9_10_portability_and_business_data_order_subject/1,
+    dma_art_6_9_10_portability_and_business_data_order_profile_for/2
+]).
+
+subject_classifies(Subject) :-
+    dma_art_6_9_10_portability_and_business_data_order_subject(Subject),
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+    decide_dma_art_6_9_10_portability_and_business_data_order(Profile, _Verdict).
+
+all_subjects(Subjects) :-
+    findall(Subject, dma_art_6_9_10_portability_and_business_data_order_subject(Subject), Subjects).
+
+one_answer_per_query(Subject) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+    findall(ApplicationResult, article_6_application_status(Profile, ApplicationResult, _, _), ApplicationResults),
+    length(ApplicationResults, 1),
+    findall(PortabilityResult, end_user_data_portability_status(Profile, PortabilityResult, _, _), PortabilityResults),
+    length(PortabilityResults, 1),
+    findall(BusinessResult, business_user_data_access_status(Profile, BusinessResult, _, _), BusinessResults),
+    length(BusinessResults, 1).
+
+query_answer(Profile, Result, Basis, Citations) :-
+    article_6_application_status(Profile, Result, Basis, Citations).
+query_answer(Profile, Result, Basis, Citations) :-
+    end_user_data_portability_status(Profile, Result, Basis, Citations).
+query_answer(Profile, Result, Basis, Citations) :-
+    business_user_data_access_status(Profile, Result, Basis, Citations).
+
+all_answers(Answers) :-
+    findall(Result-Basis-Citations,
+            ( dma_art_6_9_10_portability_and_business_data_order_subject(Subject),
+              dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+              query_answer(Profile, Result, Basis, Citations) ),
+            Answers).
+
+% A final answer is a vocabulary atom with a basis and citations; a
+% not-final one is a compound with neither.
+answer_shape(Result-[_|_]-[_|_]) :-
+    atom(Result),
+    dma_art_6_9_10_portability_and_business_data_order_status_values(StatusValues),
+    member(Result, StatusValues).
+answer_shape(Result-[]-[]) :-
+    compound(Result).
+
+basis_keys([], []).
+basis_keys([outside_fact(FactKey, _)|Facts], [FactKey|FactKeys]) :-
+    basis_keys(Facts, FactKeys).
+
+vocabulary_citation(cite(eu_reg_2022_1925_art_6_1)).
+vocabulary_citation(cite(eu_reg_2022_1925_art_6_9)).
+vocabulary_citation(cite(eu_reg_2022_1925_art_6_10)).
+vocabulary_citation(cite(eu_reg_2022_1925_art_2_25)).
+vocabulary_citation(cite(eu_reg_2022_1925_art_2_32)).
+
+cited_item(item(_, _, [cite(_)|_])).
+
+% Each key occurs once in the deduplicated pair list.
+keys_unique(Pairs) :-
+    sort(Pairs, UniquePairs),
+    pairs_keys(UniquePairs, Keys),
+    sort(Keys, KeySet),
+    length(Keys, KeyCount),
+    length(KeySet, KeyCount).
+
+% sort/2 collapses a subject that classifies more than once.
+test(totality_every_subject_classifies) :-
+    all_subjects(Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+
+test(determinism_every_subject_one_answer_per_query) :-
+    all_subjects(Subjects),
+    maplist(one_answer_per_query, Subjects).
+
+test(determinism_one_verdict_per_subject) :-
+    all_subjects(Subjects),
+    findall(Subject-Verdict,
+            ( member(Subject, Subjects),
+              dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+              decide_dma_art_6_9_10_portability_and_business_data_order(Profile, Verdict) ),
+            Verdicts),
+    length(Subjects, SubjectCount),
+    length(Verdicts, SubjectCount).
+
+test(every_answer_has_its_shape) :-
+    all_answers(Answers),
+    maplist(answer_shape, Answers).
+
+test(one_citation_list_per_final_result) :-
+    all_answers(Answers),
+    findall(Result-SortedCitations,
+            ( member(Result-[_|_]-Citations, Answers),
+              sort(Citations, SortedCitations) ),
+            Pairs),
+    keys_unique(Pairs).
+
+test(one_basis_per_final_result) :-
+    all_answers(Answers),
+    findall(Result-FactKeys,
+            ( member(Result-[Fact|Facts]-_, Answers),
+              basis_keys([Fact|Facts], FactKeys) ),
+            Pairs),
+    keys_unique(Pairs).
+
+test(every_citation_is_vocabulary) :-
+    all_answers(Answers),
+    findall(Citation, ( member(_-_-Citations, Answers), member(Citation, Citations) ), AllCitations),
+    maplist(vocabulary_citation, AllCitations).
+
+test(every_checklist_row_is_cited) :-
+    findall(Items,
+            ( dma_art_6_9_10_portability_and_business_data_order_subject(Subject),
+              dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+              dma_art_6_9_10_portability_and_business_data_order_checklist(Profile, Items) ),
+            AllItems),
+    append(AllItems, FlatItems),
+    FlatItems = [_|_],
+    maplist(cited_item, FlatItems).
+
+:- end_module(test_properties).

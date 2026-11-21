@@ -1,41 +1,57 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/nis2_domain_name_data (deontic family).
-% Source: Directive (EU) 2022/2555 (NIS 2), Art 28(1) to (6), unit 32022L2555
-% (OJ L 333, 27.12.2022).
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive) Article 28(1) to (6)
+% (OJ L 333, 27.12.2022; CELEX 32022L2555, units parag_028.001 to
+% parag_028.006 and point_028.002_a to point_028.002_d).
+%
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL. Here that is the order's input check
-% nis2_domain_name_data_input_problems/2, written by the scaffold from the typed
-% input contract and exported for every slice to import:
-%   :- use_module(eu/nis2_domain_name_data/kernel, [nis2_domain_name_data_input_problems/2]).
-% deontic family: the slice answers are modal (must_publish_without_undue_delay,
-% must_provide_access, on_time, late(...)).
+% PREDICATES that two or more files CALL. The one shared predicate is the
+% order's input check nis2_domain_name_data_input_problems/2 (THE INPUT
+% CHECK), written by the scaffold from the typed input contract and called
+% by the slice nis2_domain_name_data.clausal, re-exported by queries.clausal
+% and read by the package facade. Nothing single-caller lives here: the
+% PAIRS helper, the hour-count check and the duty and field tables belong
+% to the slice that reads them.
 %
-% Atoms and data terms need NO declaration and NO import. So nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
-% result terms so every file spells them alike.
+% The input check decides no statutory condition (it is profile plumbing),
+% so its clauses carry no implements/1 marker.
 %
-% NOTHING SINGLE-CALLER LIVES HERE. A predicate only ONE file calls is
-% defined in THAT file.
+% Atoms and data terms need NO declaration and NO import. The block below
+% only RECORDS the result terms so every file spells them alike.
 %
-% Result terms built by the determination slice (nis2_domain_name_data):
-%   nis2_domain_name_data_verdict(status, citations)
-%       status    : eligible | ineligible | indeterminate(MissingKeys)
-%                   | needs_legal_review(Reason, Context) | input_problems(Problems)
-%       citations : a list of cite(Key) terms
-%   duty(Duty, cite(Key))    one element of the provider_duties/2 list
-%   field(Name, cite(Key))   one element of the required_registration_data/2 list
-%   indeterminate(MissingKeys)   MissingKeys: non-empty list of bare key atoms,
-%                                in profile-key order, no duplicates
-%   needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)])
-%       Pairs: Key-Value pairs of the judgement keys the query reads that are present
-%   inputs_relied_on(Pairs)
-%   provenance(Clause, Citations)   optional, unscored context item
-%   input_problems(Problems)     Problems: duplicate_key(Key) | wrong_type(Key)
-%                                | unknown_key(Key)
-%   late(Requirement)            Requirement: hour_limit | without_undue_delay
-% Shared across the slices: the profile key names of the input contract (atoms --
-% nothing to export).
+% ---- Result terms built by the slice nis2_domain_name_data.clausal ----
+% Facade verdict (query types #2 eligibility and #7 justification):
+%   nis2_domain_name_data_verdict(Status, Citations)
+%     Status    -- addressed_provider | not_addressed_provider
+%                  | indeterminate([provider_type]) | input_problems(Problems)
+%     Citations -- flat list of cite(Key) terms; [] for a non-final Status.
+% Contract queries (the scorer compares these verbatim):
+%   provider_duties(Profile, Duties)
+%     Duties -- one ordered list of duty(DutyAtom, cite(Key)), [] for a
+%               provider of type other, or ONE status compound alone.
+%   required_registration_data(Profile, Fields)
+%     Fields -- one ordered list of field(NameAtom, cite(Key)), or ONE status
+%               compound alone.
+%   publication_duty(Profile, Result, Citations)
+%     Result -- must_publish_without_undue_delay | no_publication_duty
+%               | status compound; Citations [] when not final.
+%   access_duty(Profile, Result, Citations)
+%     Result -- must_provide_access | no_duty_to_provide_access
+%               | status compound; Citations [] when not final.
+%   access_reply_timeliness(Profile, HoursElapsed, Result)
+%     Result -- on_time | late(hour_limit) | late(without_undue_delay)
+%               | status compound (query type #15 deadline).
+% Status compounds (the bare atom indeterminate is NEVER written):
+%   indeterminate(MissingKeys)      -- MissingKeys a list of exactly ONE key atom.
+%   needs_legal_review(Reason, Context)
+%     Reason  -- open_textured(Key, cite(CitationKey))
+%     Context -- [inputs_relied_on(Pairs)] optionally followed by one unscored
+%                provenance(Clause, Citations); Pairs Key-Value, root_exports order.
+%   input_problems(Problems)        -- Problems the ordered list of
+%                duplicate_key(Key), wrong_type(Key), unknown_key(Key) terms
+%                (and wrong_type(hours_elapsed) for access_reply_timeliness).
+% Judgement value besides true and false: unsure.
 % =====================================================================
 
 :- module(kernel, [nis2_domain_name_data_input_problems/2]).

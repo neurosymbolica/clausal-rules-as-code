@@ -1,0 +1,162 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/dora_ict_risk_response_and_recovery loads, its result terms build
+% and destructure, the pinned result atoms are distinct, the real
+% citation records resolve, and the scaffold's input check gives exactly
+% one answer for each shape of profile it is shown.
+% It imports ONLY the kernel and citations exports. The determination
+% slice does not exist yet at this phase, so it is not referenced.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/dora_ict_risk_response_and_recovery/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/dora_ict_risk_response_and_recovery/kernel, [dora_ict_risk_response_and_recovery_input_problems/2]).
+:- use_module(eu/dora_ict_risk_response_and_recovery/citations, [citation/2, implements/1]).
+
+% ---- the result atoms the order pins are distinct ------------------
+
+test(the_complete_atoms_are_distinct) :-
+    dif(complete, incomplete),
+    dif(complete, simplified_framework_entity),
+    dif(incomplete, simplified_framework_entity).
+
+test(the_outstanding_atoms_are_distinct) :-
+    dif(none_outstanding, simplified_framework_entity),
+    dif(none_outstanding, complete).
+
+test(the_duty_atoms_are_distinct) :-
+    dif(ict_business_continuity_policy, continuity_policy_implementation_arrangements),
+    dif(redundant_ict_capacities, assessment_of_need_for_redundant_ict_capacities),
+    dif(data_integrity_checks_when_recovering, data_consistency_checks_when_reconstructing_data).
+
+test(the_judgement_value_is_neither_truth_value) :-
+    dif(unsure, true),
+    dif(unsure, false).
+
+% ---- the result terms build and destructure ------------------------
+
+test(the_required_term_carries_its_duties) :-
+    Result = required([ict_business_continuity_policy, backup_systems]),
+    Result = required(Duties),
+    Duties == [ict_business_continuity_policy, backup_systems].
+
+test(the_outstanding_term_carries_its_duties) :-
+    Result = outstanding([crisis_management_function]),
+    Result = outstanding(Duties),
+    Duties == [crisis_management_function].
+
+test(the_required_term_is_not_the_outstanding_term, fail) :-
+    required([backup_systems]) = outstanding([backup_systems]).
+
+test(the_indeterminate_term_names_one_key) :-
+    Result = indeterminate([financial_entity_is_article_16_1_entity]),
+    Result = indeterminate([MissingKey]),
+    MissingKey == financial_entity_is_article_16_1_entity.
+
+test(the_referral_term_destructures) :-
+    Result = needs_legal_review(
+        open_textured(has_ict_business_continuity_policy, cite(eu_reg_2022_2554_art_11_1)),
+        [inputs_relied_on([financial_entity_is_article_16_1_entity-false, has_ict_business_continuity_policy-unsure])]
+    ),
+    Result = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]),
+    Key == has_ict_business_continuity_policy,
+    Citation == cite(eu_reg_2022_2554_art_11_1),
+    Pairs == [financial_entity_is_article_16_1_entity-false, has_ict_business_continuity_policy-unsure].
+
+test(the_input_problems_term_destructures) :-
+    Result = input_problems([duplicate_key(dora_entity_type), wrong_type(profile), unknown_key(bogus_key)]),
+    Result = input_problems(Problems),
+    Problems == [duplicate_key(dora_entity_type), wrong_type(profile), unknown_key(bogus_key)].
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = dora_ict_risk_response_and_recovery_verdict(simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]),
+    Verdict = dora_ict_risk_response_and_recovery_verdict(Status, Citations),
+    Status == simplified_framework_entity,
+    Citations == [cite(eu_reg_2022_2554_art_16_1)].
+
+% ---- the real citation records resolve -----------------------------
+
+test(the_gate_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_16_1, _Record).
+
+test(a_paragraph_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_11_1, Record),
+    member(label-_Label, Record).
+
+test(a_point_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_12_5_c, _Record).
+
+test(the_microenterprise_marker_key_is_recorded) :-
+    citation(eu_reg_2022_2554_art_3_60, _Record).
+
+test(the_fixed_paragraph_citations_are_all_recorded) :-
+    maplist(implements, [eu_reg_2022_2554_art_11_1, eu_reg_2022_2554_art_11_2, eu_reg_2022_2554_art_11_3, eu_reg_2022_2554_art_11_4, eu_reg_2022_2554_art_11_5, eu_reg_2022_2554_art_11_6, eu_reg_2022_2554_art_11_7, eu_reg_2022_2554_art_11_8, eu_reg_2022_2554_art_11_9, eu_reg_2022_2554_art_11_10, eu_reg_2022_2554_art_12_1, eu_reg_2022_2554_art_12_2, eu_reg_2022_2554_art_12_3, eu_reg_2022_2554_art_12_4, eu_reg_2022_2554_art_12_5, eu_reg_2022_2554_art_12_6, eu_reg_2022_2554_art_12_7]).
+
+test(the_marker_holds_for_a_recorded_key) :-
+    implements(eu_reg_2022_2554_art_12_7).
+
+test(the_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(eu_todo_primary_source).
+
+% ---- the input check: one answer per profile -----------------------
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, dora_ict_risk_response_and_recovery_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_has_no_problem) :-
+    dora_ict_risk_response_and_recovery_input_problems(
+        [attribute(financial_entity_is_article_16_1_entity, false),
+         attribute(financial_entity_is_microenterprise, true),
+         attribute(dora_entity_type, central_securities_depository),
+         attribute(has_ict_business_continuity_policy, unsure)],
+        Problems),
+    Problems == [].
+
+test(a_well_formed_profile_is_not_refused, fail) :-
+    dora_ict_risk_response_and_recovery_input_problems(
+        [attribute(financial_entity_is_article_16_1_entity, false)],
+        [_|_]).
+
+test(a_term_that_is_not_a_list_is_the_wrong_type) :-
+    findall(Problems, dora_ict_risk_response_and_recovery_input_problems(not_a_profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unbound_profile_is_the_wrong_type) :-
+    dora_ict_risk_response_and_recovery_input_problems(_Unbound, Problems),
+    Problems == [wrong_type(profile)].
+
+test(unsure_is_the_wrong_type_for_the_gate) :-
+    dora_ict_risk_response_and_recovery_input_problems(
+        [attribute(financial_entity_is_article_16_1_entity, unsure)],
+        Problems),
+    Problems == [wrong_type(financial_entity_is_article_16_1_entity)].
+
+test(an_unknown_entity_type_is_the_wrong_type) :-
+    dora_ict_risk_response_and_recovery_input_problems(
+        [attribute(dora_entity_type, bank)],
+        Problems),
+    Problems == [wrong_type(dora_entity_type)].
+
+test(a_key_outside_the_contract_is_unknown) :-
+    dora_ict_risk_response_and_recovery_input_problems(
+        [attribute(bogus_key, true)],
+        Problems),
+    Problems == [unknown_key(bogus_key)].
+
+test(a_repeated_contract_key_is_a_duplicate_only) :-
+    dora_ict_risk_response_and_recovery_input_problems(
+        [attribute(financial_entity_is_article_16_1_entity, true),
+         attribute(financial_entity_is_article_16_1_entity, maybe)],
+        Problems),
+    Problems == [duplicate_key(financial_entity_is_article_16_1_entity)].
+
+test(contract_problems_come_before_unknown_keys) :-
+    dora_ict_risk_response_and_recovery_input_problems(
+        [attribute(bogus_key, true),
+         attribute(has_ict_business_continuity_policy, maybe)],
+        Problems),
+    Problems == [wrong_type(has_ict_business_continuity_policy), unknown_key(bogus_key)].
+
+:- end_module(test_load).

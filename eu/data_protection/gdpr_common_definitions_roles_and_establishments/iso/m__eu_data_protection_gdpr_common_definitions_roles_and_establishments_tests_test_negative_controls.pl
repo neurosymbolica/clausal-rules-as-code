@@ -4,135 +4,176 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_gdpr_common_definitions_roles_and_establishments, [party_is_controller/2, party_is_processor/2, genetic_data/2, biometric_data/2, data_concerning_health/2, main_establishment/2, enterprise/2, group_of_undertakings/2, supervisory_authority_concerned/2, cross_border_processing/2, relevant_and_reasoned_objection/2, gdpr_common_definitions_roles_and_establishments_status_values/1]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_gdpr_common_definitions_roles_and_establishments, [party_is_controller/2, party_is_processor/2, genetic_data/2, biometric_data/2, data_concerning_health/2, main_establishment/2, enterprise/2, group_of_undertakings/2, supervisory_authority_concerned/2, cross_border_processing/2, relevant_and_reasoned_objection/2, roles_and_establishments_outside_facts/2, gdpr_common_definitions_roles_and_establishments_status_values/1]).
 :- use_module(m__eu_data_protection_gdpr_common_definitions_roles_and_establishments_fixtures, [gdpr_common_definitions_roles_and_establishments_profile_for/2]).
 
-answer_of(Relation, Subject, Answer) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(Subject, Profile),
-    call(Relation, Profile, Answer).
-
-test(the_near_miss_statuses_are_real_status_atoms) :-
+test(the_status_table_names_both_final_statuses) :-
     gdpr_common_definitions_roles_and_establishments_status_values(StatusValues),
-    member(not_met, StatusValues),
-    member(met, StatusValues).
-test(controller_by_determination) :-
-    answer_of(party_is_controller, controller_determines, definition_answer(met, determines_purposes_and_means, _)).
-test(controller_by_law_route) :-
-    answer_of(party_is_controller, controller_by_law, definition_answer(met, provided_for_by_law, _)).
-test(law_not_providing_for_the_party_is_not_met) :-
-    answer_of(party_is_controller, controller_law_not_provided, definition_answer(not_met, none, _)).
-test(an_unattested_law_fact_refers_rather_than_decides) :-
-    answer_of(party_is_controller, controller_law_unattested, definition_answer(needs_legal_review(cross_reference_unresolved(_, _), _), none, _)).
-test(processor_route) :-
-    answer_of(party_is_processor, processor_on_behalf, definition_answer(met, none, _)).
-test(processor_not_on_behalf_is_not_met) :-
-    answer_of(party_is_processor, processor_not_on_behalf, definition_answer(not_met, none, _)).
-test(genetic_route) :-
-    answer_of(genetic_data, genetic_data_met, definition_answer(met, none, _)).
-test(genetic_not_genetic_is_not_met) :-
-    answer_of(genetic_data, genetic_data_not_genetic, definition_answer(not_met, none, _)).
-test(biometric_route) :-
-    answer_of(biometric_data, biometric_data_met, definition_answer(met, none, _)).
-test(biometric_not_personal_data_is_not_met) :-
-    answer_of(biometric_data, biometric_not_personal_data, definition_answer(not_met, none, _)).
-test(health_route) :-
-    answer_of(data_concerning_health, health_data_met, definition_answer(met, none, _)).
-test(health_not_health_is_not_met) :-
-    answer_of(data_concerning_health, health_data_not_health, definition_answer(not_met, none, _)).
-test(main_establishment_where_decisions_are_taken) :-
-    answer_of(main_establishment, main_decisions_elsewhere, definition_answer(met, establishment_taking_decisions, _)).
-test(main_central_administration_route) :-
-    answer_of(main_establishment, main_central_administration, definition_answer(met, central_administration, _)).
-test(main_no_place_gap) :-
-    answer_of(main_establishment, main_no_place, definition_answer(not_met, no_main_establishment_identified, _)).
-test(main_processor_central_route) :-
-    answer_of(main_establishment, main_processor_central, definition_answer(met, central_administration, _)).
-test(main_processor_main_activities_route) :-
-    answer_of(main_establishment, main_processor_main_activities, definition_answer(met, establishment_of_main_processing_activities, _)).
-test(main_processor_not_subject_is_not_met) :-
-    answer_of(main_establishment, main_processor_not_subject, definition_answer(not_met, no_main_establishment_identified, _)).
-test(main_single_member_state_does_not_apply) :-
-    answer_of(main_establishment, main_single_member_state, definition_answer(not_met, not_established_in_more_than_one_member_state, _)).
-test(main_role_missing_is_indeterminate) :-
-    answer_of(main_establishment, main_role_missing, definition_answer(indeterminate([party_role]), none, _)).
-test(enterprise_route) :-
-    answer_of(enterprise, enterprise_met, definition_answer(met, none, _)).
-test(enterprise_not_economic_is_not_met) :-
-    answer_of(enterprise, enterprise_not_economic, definition_answer(not_met, none, _)).
-test(group_route) :-
-    answer_of(group_of_undertakings, group_met, definition_answer(met, none, _)).
-test(group_not_met_is_not_met) :-
-    answer_of(group_of_undertakings, group_not_met, definition_answer(not_met, none, _)).
-test(authority_point_a) :-
-    answer_of(supervisory_authority_concerned, authority_established, definition_answer(met, point_a, _)).
-test(authority_point_b) :-
-    answer_of(supervisory_authority_concerned, authority_affected, definition_answer(met, point_b, _)).
-test(authority_point_c) :-
-    answer_of(supervisory_authority_concerned, authority_complaint, definition_answer(met, point_c, _)).
-test(authority_none_is_not_met) :-
-    answer_of(supervisory_authority_concerned, authority_none, definition_answer(not_met, none, _)).
-test(cross_border_point_a) :-
-    answer_of(cross_border_processing, cross_border_several, definition_answer(met, point_a, _)).
-test(cross_border_point_b) :-
-    answer_of(cross_border_processing, cross_border_single, definition_answer(met, point_b, _)).
-test(cross_border_none_is_not_met) :-
-    answer_of(cross_border_processing, cross_border_none, definition_answer(not_met, none, _)).
-test(objection_route) :-
-    answer_of(relevant_and_reasoned_objection, objection_met, definition_answer(met, none, _)).
-test(objection_no_risk_is_not_met) :-
-    answer_of(relevant_and_reasoned_objection, objection_no_risk, definition_answer(not_met, none, _)).
-test(objection_unsure_hands_the_judgement_to_the_user) :-
-    answer_of(relevant_and_reasoned_objection, objection_risk_unsure, definition_answer(needs_legal_review(open_textured(objection_demonstrates_significance_of_risks, _), _), none, _)).
+    StatusValues == [met, not_met].
+test(controller_judgement_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_judgement, Profile),
+    party_is_controller(Profile, definition_answer(met, determines_purposes_and_means, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_judgement_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_judgement_false, Profile),
+    party_is_controller(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_law_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_attested, Profile),
+    party_is_controller(Profile, definition_answer(met, provided_for_by_law, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_law_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_attested_false, Profile),
+    party_is_controller(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_7)])).
+test(controller_law_unattested_refers) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_unattested, Profile),
+    party_is_controller(Profile, definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)), [resolution(cite(union_or_member_state_law_providing_for_controller), not_attempted), inputs_relied_on([party_determines_purposes_and_means - false, purposes_and_means_determined_by_law - true])]), none, [cite(eu_reg_2016_679_art_4_7), cite(union_or_member_state_law_providing_for_controller)])).
+test(processor_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(cloud_processor, Profile),
+    party_is_processor(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_8)])).
+test(processor_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(not_on_behalf_of_controller, Profile),
+    party_is_processor(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_8)])).
+test(genetic_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_test_laboratory, Profile),
+    genetic_data(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_13)])).
+test(genetic_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_not_personal, Profile),
+    genetic_data(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_13)])).
+test(biometric_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(biometric_access_control, Profile),
+    biometric_data(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_14)])).
+test(biometric_near_miss_refers_to_point_one) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(biometric_personal_data_unsure, Profile),
+    biometric_data(Profile, definition_answer(needs_legal_review(open_textured(data_are_personal_data, cite(eu_reg_2016_679_art_4_1)), [inputs_relied_on([data_are_personal_data - unsure])]), none, [cite(eu_reg_2016_679_art_4_1)])).
+test(health_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(hospital_health_data, Profile),
+    data_concerning_health(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_15)])).
+test(health_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(health_status_not_revealed, Profile),
+    data_concerning_health(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_15)])).
+test(main_establishment_deciding_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_with_deciding_establishment, Profile),
+    main_establishment(Profile, definition_answer(met, establishment_taking_decisions, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_deciding_near_miss_names_central_administration) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_power_to_implement_unsure, Profile),
+    main_establishment(Profile, definition_answer(indeterminate([central_administration_in_union]), none, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_central_administration_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_central_administration, Profile),
+    main_establishment(Profile, definition_answer(met, central_administration, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_central_administration_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_without_main_establishment, Profile),
+    main_establishment(Profile, definition_answer(not_met, no_main_establishment_identified, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(main_establishment_single_member_state) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(single_member_state_party, Profile),
+    main_establishment(Profile, definition_answer(not_met, not_established_in_more_than_one_member_state, [cite(eu_reg_2016_679_art_4_16)])).
+test(main_establishment_processor_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(cloud_processor_two_member_states, Profile),
+    main_establishment(Profile, definition_answer(met, establishment_of_main_processing_activities, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])).
+test(main_establishment_processor_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(processor_without_specific_obligations, Profile),
+    main_establishment(Profile, definition_answer(not_met, no_main_establishment_identified, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_b)])).
+test(enterprise_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(trading_partnership, Profile),
+    enterprise(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_18)])).
+test(enterprise_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(partnership_without_economic_activity, Profile),
+    enterprise(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_18)])).
+test(group_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(holding_group, Profile),
+    group_of_undertakings(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_19)])).
+test(group_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(undertakings_without_control, Profile),
+    group_of_undertakings(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_19)])).
+test(authority_positive_point_c) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(complaint_only_authority, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(met, point_c, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_c)])).
+test(authority_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(authority_not_concerned, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_22)])).
+test(authority_point_a_comes_first) :-
+    supervisory_authority_concerned([attribute(party_established_in_authority_member_state, true), attribute(complaint_lodged_with_authority, true)], definition_answer(met, point_a, [cite(eu_reg_2016_679_art_4_22), cite(eu_reg_2016_679_art_4_22_a)])).
+test(cross_border_point_a_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(establishments_in_several_member_states, Profile),
+    cross_border_processing(Profile, definition_answer(met, point_a, [cite(eu_reg_2016_679_art_4_23), cite(eu_reg_2016_679_art_4_23_a)])).
+test(cross_border_point_b_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(single_establishment_cross_border, Profile),
+    cross_border_processing(Profile, definition_answer(met, point_b, [cite(eu_reg_2016_679_art_4_23), cite(eu_reg_2016_679_art_4_23_b)])).
+test(cross_border_point_b_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(single_establishment_local_effect, Profile),
+    cross_border_processing(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_23)])).
+test(objection_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(reasoned_objection, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_24)])).
+test(objection_near_miss) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_incomplete, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_24)])).
+test(objection_unsure_risks_refers) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_risks_unsure, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(needs_legal_review(open_textured(objection_demonstrates_significance_of_risks, cite(eu_reg_2016_679_art_4_24)), [inputs_relied_on([objection_to_draft_decision - true, objection_concerns_infringement_or_envisaged_action - true, objection_demonstrates_significance_of_risks - unsure])]), none, [cite(eu_reg_2016_679_art_4_24)])).
+test(outside_fact_attested_positive) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_attested, Profile),
+    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, attested(true, attestation(by, at, reason, none)))]).
+test(outside_fact_near_miss_absent) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_unattested, Profile),
+    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, absent)]).
 
-test(controller_by_determination_is_not_by_law, fail) :-
-    answer_of(party_is_controller, controller_determines, definition_answer(_, provided_for_by_law, _)).
-test(law_not_providing_for_the_party_is_not_controller, fail) :-
-    answer_of(party_is_controller, controller_law_not_provided, definition_answer(met, _, _)).
-test(an_unattested_law_fact_is_not_met, fail) :-
-    answer_of(party_is_controller, controller_law_unattested, definition_answer(not_met, _, _)).
-test(processor_not_on_behalf_near_miss, fail) :-
-    answer_of(party_is_processor, processor_not_on_behalf, definition_answer(met, _, _)).
-test(genetic_near_miss_not_genetic, fail) :-
-    answer_of(genetic_data, genetic_data_not_genetic, definition_answer(met, _, _)).
-test(biometric_near_miss_not_personal_data, fail) :-
-    answer_of(biometric_data, biometric_not_personal_data, definition_answer(met, _, _)).
-test(health_near_miss_not_health, fail) :-
-    answer_of(data_concerning_health, health_data_not_health, definition_answer(met, _, _)).
-test(main_decisions_elsewhere_is_not_central_administration, fail) :-
-    answer_of(main_establishment, main_decisions_elsewhere, definition_answer(_, central_administration, _)).
-test(main_central_administration_is_not_deciding_establishment, fail) :-
-    answer_of(main_establishment, main_central_administration, definition_answer(_, establishment_taking_decisions, _)).
-test(main_no_place_is_not_met_flip, fail) :-
-    answer_of(main_establishment, main_no_place, definition_answer(met, _, _)).
-test(main_processor_not_subject_near_miss, fail) :-
-    answer_of(main_establishment, main_processor_not_subject, definition_answer(met, _, _)).
-test(main_single_member_state_near_miss, fail) :-
-    answer_of(main_establishment, main_single_member_state, definition_answer(met, _, _)).
-test(enterprise_near_miss_not_economic, fail) :-
-    answer_of(enterprise, enterprise_not_economic, definition_answer(met, _, _)).
-test(group_near_miss, fail) :-
-    answer_of(group_of_undertakings, group_not_met, definition_answer(met, _, _)).
-test(authority_point_a_is_not_point_b, fail) :-
-    answer_of(supervisory_authority_concerned, authority_established, definition_answer(_, point_b, _)).
-test(authority_point_b_is_not_point_a, fail) :-
-    answer_of(supervisory_authority_concerned, authority_affected, definition_answer(_, point_a, _)).
-test(authority_point_c_is_not_point_b, fail) :-
-    answer_of(supervisory_authority_concerned, authority_complaint, definition_answer(_, point_b, _)).
-test(authority_none_near_miss, fail) :-
-    answer_of(supervisory_authority_concerned, authority_none, definition_answer(met, _, _)).
-test(cross_border_point_a_is_not_point_b, fail) :-
-    answer_of(cross_border_processing, cross_border_several, definition_answer(_, point_b, _)).
-test(cross_border_point_b_is_not_point_a, fail) :-
-    answer_of(cross_border_processing, cross_border_single, definition_answer(_, point_a, _)).
-test(cross_border_none_near_miss, fail) :-
-    answer_of(cross_border_processing, cross_border_none, definition_answer(met, _, _)).
-test(objection_near_miss_no_risk, fail) :-
-    answer_of(relevant_and_reasoned_objection, objection_no_risk, definition_answer(met, _, _)).
-test(objection_unsure_is_not_decided, fail) :-
-    answer_of(relevant_and_reasoned_objection, objection_risk_unsure, definition_answer(not_met, _, _)).
+test(controller_judgement_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_judgement_false, Profile),
+    party_is_controller(Profile, definition_answer(met, _, _)).
+test(controller_law_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_attested_false, Profile),
+    party_is_controller(Profile, definition_answer(met, _, _)).
+test(controller_law_unattested_is_not_final, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_unattested, Profile),
+    party_is_controller(Profile, definition_answer(not_met, _, _)).
+test(processor_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(not_on_behalf_of_controller, Profile),
+    party_is_processor(Profile, definition_answer(met, _, _)).
+test(genetic_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_not_personal, Profile),
+    genetic_data(Profile, definition_answer(met, _, _)).
+test(biometric_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(biometric_personal_data_unsure, Profile),
+    biometric_data(Profile, definition_answer(met, _, _)).
+test(health_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(health_status_not_revealed, Profile),
+    data_concerning_health(Profile, definition_answer(met, _, _)).
+test(main_establishment_deciding_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_power_to_implement_unsure, Profile),
+    main_establishment(Profile, definition_answer(met, _, _)).
+test(main_establishment_central_administration_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_without_main_establishment, Profile),
+    main_establishment(Profile, definition_answer(met, _, _)).
+test(main_establishment_single_member_state_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(single_member_state_party, Profile),
+    main_establishment(Profile, definition_answer(met, _, _)).
+test(main_establishment_processor_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(processor_without_specific_obligations, Profile),
+    main_establishment(Profile, definition_answer(met, _, _)).
+test(enterprise_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(partnership_without_economic_activity, Profile),
+    enterprise(Profile, definition_answer(met, _, _)).
+test(group_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(undertakings_without_control, Profile),
+    group_of_undertakings(Profile, definition_answer(met, _, _)).
+test(authority_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(authority_not_concerned, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(met, _, _)).
+test(authority_point_a_is_not_point_c, fail) :-
+    supervisory_authority_concerned([attribute(party_established_in_authority_member_state, true), attribute(complaint_lodged_with_authority, true)], definition_answer(met, point_c, _)).
+test(cross_border_point_b_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(single_establishment_local_effect, Profile),
+    cross_border_processing(Profile, definition_answer(met, _, _)).
+test(objection_near_miss_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_incomplete, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(met, _, _)).
+test(objection_unsure_risks_is_not_met, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(objection_risks_unsure, Profile),
+    relevant_and_reasoned_objection(Profile, definition_answer(met, _, _)).
+test(outside_fact_near_miss_is_not_attested, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(law_designated_controller_unattested, Profile),
+    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, attested(_, _))]).
 
-cp_test_names([the_near_miss_statuses_are_real_status_atoms, controller_by_determination, controller_by_law_route, law_not_providing_for_the_party_is_not_met, an_unattested_law_fact_refers_rather_than_decides, processor_route, processor_not_on_behalf_is_not_met, genetic_route, genetic_not_genetic_is_not_met, biometric_route, biometric_not_personal_data_is_not_met, health_route, health_not_health_is_not_met, main_establishment_where_decisions_are_taken, main_central_administration_route, main_no_place_gap, main_processor_central_route, main_processor_main_activities_route, main_processor_not_subject_is_not_met, main_single_member_state_does_not_apply, main_role_missing_is_indeterminate, enterprise_route, enterprise_not_economic_is_not_met, group_route, group_not_met_is_not_met, authority_point_a, authority_point_b, authority_point_c, authority_none_is_not_met, cross_border_point_a, cross_border_point_b, cross_border_none_is_not_met, objection_route, objection_no_risk_is_not_met, objection_unsure_hands_the_judgement_to_the_user]).
-cp_test_fail_names([controller_by_determination_is_not_by_law, law_not_providing_for_the_party_is_not_controller, an_unattested_law_fact_is_not_met, processor_not_on_behalf_near_miss, genetic_near_miss_not_genetic, biometric_near_miss_not_personal_data, health_near_miss_not_health, main_decisions_elsewhere_is_not_central_administration, main_central_administration_is_not_deciding_establishment, main_no_place_is_not_met_flip, main_processor_not_subject_near_miss, main_single_member_state_near_miss, enterprise_near_miss_not_economic, group_near_miss, authority_point_a_is_not_point_b, authority_point_b_is_not_point_a, authority_point_c_is_not_point_b, authority_none_near_miss, cross_border_point_a_is_not_point_b, cross_border_point_b_is_not_point_a, cross_border_none_near_miss, objection_near_miss_no_risk, objection_unsure_is_not_decided]).
+cp_test_names([the_status_table_names_both_final_statuses, controller_judgement_positive, controller_judgement_near_miss, controller_law_positive, controller_law_near_miss, controller_law_unattested_refers, processor_positive, processor_near_miss, genetic_positive, genetic_near_miss, biometric_positive, biometric_near_miss_refers_to_point_one, health_positive, health_near_miss, main_establishment_deciding_positive, main_establishment_deciding_near_miss_names_central_administration, main_establishment_central_administration_positive, main_establishment_central_administration_near_miss, main_establishment_single_member_state, main_establishment_processor_positive, main_establishment_processor_near_miss, enterprise_positive, enterprise_near_miss, group_positive, group_near_miss, authority_positive_point_c, authority_near_miss, authority_point_a_comes_first, cross_border_point_a_positive, cross_border_point_b_positive, cross_border_point_b_near_miss, objection_positive, objection_near_miss, objection_unsure_risks_refers, outside_fact_attested_positive, outside_fact_near_miss_absent]).
+cp_test_fail_names([controller_judgement_near_miss_is_not_met, controller_law_near_miss_is_not_met, controller_law_unattested_is_not_final, processor_near_miss_is_not_met, genetic_near_miss_is_not_met, biometric_near_miss_is_not_met, health_near_miss_is_not_met, main_establishment_deciding_near_miss_is_not_met, main_establishment_central_administration_near_miss_is_not_met, main_establishment_single_member_state_is_not_met, main_establishment_processor_near_miss_is_not_met, enterprise_near_miss_is_not_met, group_near_miss_is_not_met, authority_near_miss_is_not_met, authority_point_a_is_not_point_c, cross_border_point_b_near_miss_is_not_met, objection_near_miss_is_not_met, objection_unsure_risks_is_not_met, outside_fact_near_miss_is_not_attested]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

@@ -1,157 +1,361 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_public_interface.clausal -- the package's PUBLIC surface, exercised
-% through the public submodules. Each fixture subject resolves to
-% its concrete expected verdict; near-miss controls get the opposite one.
+% through the package facade (what an external caller sees).
+% Each fixture subject resolves to its EXPECTED COMPLY and EXCEPTION, exactly
+% once; every well-formed subject has a non-empty, cited checklist; every
+% near-miss control gets a different COMPLY from its positive case.
+% Run: python -m clausal.testing eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/tests/test_public_interface.clausal
 % =====================================================================
 :- module(test_public_interface, []).
-:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/queries, [
+:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception, [
+    decide_request_exception/2,
+    request_exception_status/2,
+    request_exception_checklist/2,
+    request_exception_decision_resolvable/1,
+    request_exception_status_values/1,
     request_decision/2,
     request_exception/2,
-    provenance/2,
-    attested/2
-]).
-:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/request_exception, [request_exception_checklist/2]).
-:- use_module(eu/data_protection/gdpr_data_subject_rights_articles_20_to_22_decision_and_exception/fixtures, [
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems/2,
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_what_if/4,
     gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_subject/1,
     gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for/2,
     gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_assess/2
 ]).
 
-% expected(Subject, Comply, Exception)
-expected(portability_engaged, must_comply, none).
-expected(portability_not_automated, need_not_comply, none).
-expected(portability_public_task, need_not_comply, art20_3_public_task).
-expected(portability_public_task_denied, must_comply, none).
-expected(portability_rights_of_others, need_not_comply, art20_4_rights_of_others).
-expected(portability_rights_of_others_denied, must_comply, none).
-expected(portability_manifestly_excessive, need_not_comply, art12_5_manifestly_unfounded_or_excessive).
-expected(portability_manifestly_excessive_denied, must_comply, none).
-expected(portability_unable_to_identify, need_not_comply, art12_2_unable_to_identify).
-expected(portability_unable_to_identify_denied, must_comply, none).
-expected(portability_restricted_by_law, need_not_comply, art23_legislative_restriction).
-expected(portability_restriction_denied, must_comply, none).
-expected(portability_identity_unconfirmed, suspended(art12_6_identity_not_confirmed), none).
-expected(portability_identity_confirmed, must_comply, none).
-expected(portability_open_unsure_rights_of_others, needs_legal_review(open_textured(transmission_would_adversely_affect_rights_and_freedoms_of_others, cite(eu_reg_2016_679_art_20_4)), [inputs_relied_on([request_type-portability, transmission_would_adversely_affect_rights_and_freedoms_of_others-unsure])]), none).
-expected(objection_art21_1_engaged, must_comply, none).
-expected(objection_art21_1_not_particular, need_not_comply, none).
-expected(objection_art21_1_compelling, need_not_comply, art21_1_compelling_legitimate_grounds).
-expected(objection_art21_1_compelling_denied, must_comply, none).
-expected(objection_art21_1_legal_claims, need_not_comply, art21_1_legal_claims).
-expected(objection_art21_1_unsure_particular, needs_legal_review(open_textured(objection_grounds_relate_to_particular_situation, cite(eu_reg_2016_679_art_21_1)), [inputs_relied_on([request_type-objection, objection_ground_claimed-art21_1, objection_grounds_relate_to_particular_situation-unsure])]), none).
-expected(objection_art21_2_engaged, must_comply, none).
-expected(objection_art21_2_not_marketing, need_not_comply, none).
-expected(objection_art21_2_no_balancing, must_comply, none).
-expected(objection_art21_6_engaged, must_comply, none).
-expected(objection_art21_6_public_interest, need_not_comply, art21_6_public_interest_task).
-expected(objection_art21_6_public_interest_denied, must_comply, none).
-expected(objection_art21_6_not_research, need_not_comply, none).
-expected(automated_engaged, must_comply, none).
-expected(automated_not_solely, need_not_comply, none).
-expected(automated_contract, need_not_comply, art22_2_a).
-expected(automated_contract_denied, must_comply, none).
-expected(automated_consent, need_not_comply, art22_2_c).
-expected(automated_consent_special_bar, must_comply, none).
-expected(automated_consent_special_safeguarded, need_not_comply, art22_2_c).
-expected(automated_law_authorised, need_not_comply, art22_2_b).
-expected(automated_law_not_authorised, must_comply, none).
-expected(missing_keys_automated, indeterminate([decision_based_solely_on_automated_processing, decision_produces_legal_or_similarly_significant_effects]), none).
-expected(objection_missing_ground, indeterminate([objection_ground_claimed]), none).
-expected(no_request_type, indeterminate([request_type]), none).
-expected(unknown_key_problem, input_problems([unknown_key(not_a_contract_key)]), none).
-expected(wrong_type_problem, input_problems([wrong_type(extension_claimed)]), none).
-expected(duplicate_key_problem, input_problems([duplicate_key(processing_carried_out_by_automated_means)]), none).
+% ---- expected(Subject, Comply, Exception) -------------------------------
+expected(portability_engaged_must_comply, must_comply, none).
+expected(portability_not_automated_not_engaged, need_not_comply, none).
+expected(portability_public_task_relieves, need_not_comply, art20_3_public_task).
+expected(portability_public_task_false_must_comply, must_comply, none).
+expected(portability_rights_of_others_relieves, need_not_comply, art20_4_rights_of_others).
+expected(portability_rights_of_others_unsure_refers, needs_legal_review(open_textured(transmission_would_adversely_affect_rights_and_freedoms_of_others, cite(eu_reg_2016_679_art_20_4)), [inputs_relied_on([request_type-portability, transmission_would_adversely_affect_rights_and_freedoms_of_others-unsure])]), none).
+expected(portability_missing_keys, indeterminate([personal_data_provided_by_data_subject, processing_based_on_consent_or_contract, processing_carried_out_by_automated_means]), none).
+expected(objection_direct_marketing_absolute, must_comply, none).
+expected(objection_direct_marketing_not_engaged, need_not_comply, none).
+expected(objection_article_21_1_compelling_grounds, need_not_comply, art21_1_compelling_legitimate_grounds).
+expected(objection_article_21_1_compelling_grounds_false, must_comply, none).
+expected(objection_article_21_1_legal_claims, need_not_comply, art21_1_legal_claims).
+expected(objection_article_21_1_legal_claims_false, must_comply, none).
+expected(objection_article_21_6_public_interest_task, need_not_comply, art21_6_public_interest_task).
+expected(objection_article_21_6_public_interest_task_false, must_comply, none).
+expected(objection_ground_absent_grounds_disagree, indeterminate([objection_ground_claimed]), none).
+expected(objection_ground_absent_grounds_agree, need_not_comply, none).
+expected(automated_decision_engaged_must_comply, must_comply, none).
+expected(automated_decision_not_solely_automated, need_not_comply, none).
+expected(automated_decision_contract_with_safeguards, need_not_comply, art22_2_a).
+expected(automated_decision_contract_unsure_refers, needs_legal_review(open_textured(decision_necessary_for_contract_with_data_subject, cite(eu_reg_2016_679_art_22_2_a)), [inputs_relied_on([request_type-automated_decision, decision_necessary_for_contract_with_data_subject-unsure])]), none).
+expected(automated_decision_explicit_consent_barred_special_categories, must_comply, none).
+expected(automated_decision_explicit_consent_safeguards_met, need_not_comply, art22_2_c).
+expected(automated_decision_special_category_safeguards_missing, indeterminate([special_category_condition_and_safeguards_met_for_decision]), none).
+expected(automated_decision_authorised_by_law_attested, need_not_comply, art22_2_b).
+expected(automated_decision_authorised_by_law_attested_false, must_comply, none).
+expected(manifestly_excessive_fee_open, need_not_comply, art12_5_manifestly_unfounded_or_excessive).
+expected(manifestly_excessive_unsure_refers, needs_legal_review(open_textured(request_manifestly_unfounded_or_excessive, cite(eu_reg_2016_679_art_12_5)), [inputs_relied_on([request_type-portability, request_manifestly_unfounded_or_excessive-unsure])]), none).
+expected(unable_to_identify_relieves, need_not_comply, art12_2_unable_to_identify).
+expected(unable_to_identify_false_must_comply, must_comply, none).
+expected(legislative_restriction_attested_true, need_not_comply, art23_legislative_restriction).
+expected(legislative_restriction_attested_false, must_comply, none).
+expected(identity_doubts_suspend, suspended(art12_6_identity_not_confirmed), none).
+expected(identity_doubts_identity_confirmed, must_comply, none).
+expected(identity_doubts_unsure_refers, needs_legal_review(open_textured(reasonable_doubts_about_identity, cite(eu_reg_2016_679_art_12_6)), [inputs_relied_on([request_type-portability, reasonable_doubts_about_identity-unsure])]), none).
+expected(request_type_absent_all_types_not_engaged, need_not_comply, none).
+expected(request_type_absent_types_disagree, indeterminate([request_type]), none).
+expected(duplicate_and_unknown_keys, input_problems([duplicate_key(request_type), unknown_key(colour)]), none).
+expected(crisp_flag_given_unsure_wrong_type, input_problems([wrong_type(processing_carried_out_by_automated_means)]), none).
 
-resolves_as(Subject, Comply, Exception) :-
-    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(Subject, Profile),
-    request_decision(Profile, Comply),
+% ---- near_miss(PositiveSubject, ControlSubject) --------------------------
+near_miss(portability_engaged_must_comply, portability_not_automated_not_engaged).
+near_miss(portability_public_task_relieves, portability_public_task_false_must_comply).
+near_miss(portability_rights_of_others_relieves, portability_rights_of_others_unsure_refers).
+near_miss(portability_engaged_must_comply, portability_missing_keys).
+near_miss(objection_direct_marketing_absolute, objection_direct_marketing_not_engaged).
+near_miss(objection_article_21_1_compelling_grounds, objection_article_21_1_compelling_grounds_false).
+near_miss(objection_article_21_1_legal_claims, objection_article_21_1_legal_claims_false).
+near_miss(objection_article_21_6_public_interest_task, objection_article_21_6_public_interest_task_false).
+near_miss(objection_ground_absent_grounds_disagree, objection_ground_absent_grounds_agree).
+near_miss(automated_decision_engaged_must_comply, automated_decision_not_solely_automated).
+near_miss(automated_decision_contract_with_safeguards, automated_decision_contract_unsure_refers).
+near_miss(automated_decision_explicit_consent_safeguards_met, automated_decision_explicit_consent_barred_special_categories).
+near_miss(automated_decision_explicit_consent_safeguards_met, automated_decision_special_category_safeguards_missing).
+near_miss(automated_decision_authorised_by_law_attested, automated_decision_authorised_by_law_attested_false).
+near_miss(manifestly_excessive_fee_open, manifestly_excessive_unsure_refers).
+near_miss(unable_to_identify_relieves, unable_to_identify_false_must_comply).
+near_miss(legislative_restriction_attested_true, legislative_restriction_attested_false).
+near_miss(identity_doubts_suspend, identity_doubts_identity_confirmed).
+near_miss(identity_doubts_suspend, identity_doubts_unsure_refers).
+near_miss(request_type_absent_all_types_not_engaged, request_type_absent_types_disagree).
+near_miss(portability_engaged_must_comply, duplicate_and_unknown_keys).
+near_miss(portability_engaged_must_comply, crisp_flag_given_unsure_wrong_type).
+
+% The family of a COMPLY term: final, open (non-final) or refused (input problems).
+comply_family(must_comply, final).
+comply_family(need_not_comply, final).
+comply_family(indeterminate(_), open).
+comply_family(needs_legal_review(_, _), open).
+comply_family(suspended(_), open).
+comply_family(input_problems(_), refused).
+
+% ---- helpers -------------------------------------------------------------
+subject_profile(Subject, Profile) :-
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(Subject, Profile).
+
+subject_comply(Subject, Comply) :-
+    subject_profile(Subject, Profile),
+    request_decision(Profile, Comply).
+
+subject_exception(Subject, Exception) :-
+    subject_profile(Subject, Profile),
     request_exception(Profile, Exception).
 
-test(every_subject_resolves_to_its_expected_verdict) :-
-    findall(Subject-Comply-Exception, (expected(Subject, Comply, Exception), resolves_as(Subject, Comply, Exception)), Matched),
-    findall(Subject-Comply-Exception, expected(Subject, Comply, Exception), Everything),
-    Matched == Everything.
-
-test(every_fixture_subject_has_an_expectation) :-
-    findall(Subject, gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_subject(Subject), Subjects),
-    findall(Subject, expected(Subject, _, _), Expecteds),
-    Subjects == Expecteds,
-    length(Subjects, 43).
-
-test(each_decision_has_exactly_one_answer) :-
-    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_engaged, Profile),
+subject_has_expected_comply_once(Subject) :-
+    expected(Subject, ExpectedComply, _),
+    subject_profile(Subject, Profile),
     findall(Comply, request_decision(Profile, Comply), Answers),
-    Answers == [must_comply].
+    Answers == [ExpectedComply].
 
-test(portability_engaged_must_comply) :-
-    resolves_as(portability_engaged, must_comply, none).
+subject_has_expected_exception_once(Subject) :-
+    expected(Subject, _, ExpectedException),
+    subject_profile(Subject, Profile),
+    findall(Exception, request_exception(Profile, Exception), Answers),
+    Answers == [ExpectedException].
 
-test(portability_near_miss_is_not_must_comply, fail) :-
-    resolves_as(portability_not_automated, must_comply, _).
+subject_assessed_as_expected(Subject) :-
+    expected(Subject, _, ExpectedException),
+    findall(Result, gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_assess(Subject, Result), Results),
+    Results = [request_exception_verdict(ExpectedException, _Citations)].
 
-test(portability_near_miss_need_not_comply) :-
-    resolves_as(portability_not_automated, need_not_comply, none).
+well_formed_subject(Subject) :-
+    expected(Subject, Comply, _),
+    comply_family(Comply, Family),
+    dif(Family, refused).
 
-test(public_task_relieves) :-
-    resolves_as(portability_public_task, need_not_comply, art20_3_public_task).
+refused_subject(Subject) :-
+    expected(Subject, Comply, _),
+    comply_family(Comply, refused).
 
-test(public_task_denied_does_not_relieve, fail) :-
-    resolves_as(portability_public_task_denied, need_not_comply, _).
+cited_item(item(_, _, cite(_))).
 
-test(direct_marketing_objection_is_absolute) :-
-    resolves_as(objection_art21_2_no_balancing, must_comply, none).
+subject_checklist_cited(Subject) :-
+    subject_profile(Subject, Profile),
+    request_exception_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(cited_item, [FirstItem|OtherItems]).
 
-test(special_category_bar_removes_consent_exception, fail) :-
-    resolves_as(automated_consent_special_bar, need_not_comply, _).
+subject_checklist_empty(Subject) :-
+    subject_profile(Subject, Profile),
+    request_exception_checklist(Profile, []).
 
-test(special_category_bar_leaves_the_duty) :-
-    resolves_as(automated_consent_special_bar, must_comply, none).
+control_differs(Positive, Control) :-
+    subject_comply(Positive, PositiveComply),
+    subject_comply(Control, ControlComply),
+    dif(PositiveComply, ControlComply).
 
-test(identity_suspension_is_not_final, fail) :-
-    resolves_as(portability_identity_unconfirmed, must_comply, _).
+% ---- registry ------------------------------------------------------------
+test(every_fixture_subject_has_exactly_one_expected_row) :-
+    findall(Subject, gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_subject(Subject), Subjects),
+    findall(Subject, expected(Subject, _, _), ExpectedSubjects),
+    msort(Subjects, SortedSubjects),
+    msort(ExpectedSubjects, SortedExpected),
+    SortedSubjects == SortedExpected,
+    sort(Subjects, DistinctSubjects),
+    length(Subjects, Count),
+    length(DistinctSubjects, Count).
 
-test(identity_suspension_status) :-
-    resolves_as(portability_identity_unconfirmed, suspended(art12_6_identity_not_confirmed), none).
+test(every_subject_resolves_to_its_expected_comply_exactly_once) :-
+    findall(Subject, expected(Subject, _, _), Subjects),
+    Subjects = [_|_],
+    maplist(subject_has_expected_comply_once, Subjects).
 
-test(assess_returns_the_exception_and_its_citations) :-
-    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_assess(portability_public_task, request_exception_verdict(art20_3_public_task, Citations)),
-    Citations == [cite(eu_reg_2016_679_art_20_1), cite(eu_reg_2016_679_art_20_3)].
+test(every_subject_resolves_to_its_expected_exception_exactly_once) :-
+    findall(Subject, expected(Subject, _, _), Subjects),
+    maplist(subject_has_expected_exception_once, Subjects).
 
-test(checklist_is_non_empty_and_cited) :-
-    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(portability_engaged, Profile),
-    request_exception_checklist(Profile, [item(engagement, met, cite(eu_reg_2016_679_art_20_1))|_OtherItems]).
+test(assess_wrapper_names_the_expected_exception_for_every_subject) :-
+    findall(Subject, expected(Subject, _, _), Subjects),
+    maplist(subject_assessed_as_expected, Subjects).
 
-test(checklist_of_an_exception_case_is_non_empty) :-
-    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_profile_for(automated_consent, Profile),
-    request_exception_checklist(Profile, [_FirstItem|_OtherItems]).
+test(every_well_formed_subject_has_a_non_empty_cited_checklist) :-
+    findall(Subject, well_formed_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(subject_checklist_cited, Subjects).
 
-% ---- result constructors with a check ---------------------------------
-test(provenance_accepts_a_citation_list) :-
-    provenance(engagement, [eu_reg_2016_679_art_20_1]).
+test(input_problem_subjects_have_an_empty_checklist) :-
+    findall(Subject, refused_subject(Subject), Subjects),
+    Subjects = [_, _|_],
+    maplist(subject_checklist_empty, Subjects).
 
-test(provenance_accepts_an_empty_citation_list) :-
-    provenance(suspension, []).
+test(every_near_miss_control_gets_a_different_comply) :-
+    findall(Positive-Control, near_miss(Positive, Control), Pairs),
+    Pairs = [_|_],
+    maplist(pair_differs, Pairs).
 
-test(provenance_rejects_a_non_list, fail) :-
-    provenance(engagement, eu_reg_2016_679_art_20_1).
+pair_differs(Positive-Control) :-
+    control_differs(Positive, Control).
 
-test(attested_true_value_is_accepted) :-
-    attested(true, attestation(host, checked, statute_reviewed, none)).
+% ---- portability, concrete -----------------------------------------------
+test(portability_engaged_is_must_comply) :-
+    subject_comply(portability_engaged_must_comply, must_comply).
+test(portability_engaged_is_not_need_not_comply, fail) :-
+    subject_comply(portability_engaged_must_comply, need_not_comply).
+test(portability_not_automated_is_need_not_comply) :-
+    subject_comply(portability_not_automated_not_engaged, need_not_comply).
+test(portability_not_automated_is_not_must_comply, fail) :-
+    subject_comply(portability_not_automated_not_engaged, must_comply).
+test(portability_public_task_names_art20_3) :-
+    subject_exception(portability_public_task_relieves, art20_3_public_task).
+test(portability_public_task_false_names_no_exception) :-
+    subject_exception(portability_public_task_false_must_comply, none).
+test(portability_public_task_false_is_not_art20_3, fail) :-
+    subject_exception(portability_public_task_false_must_comply, art20_3_public_task).
+test(portability_rights_of_others_names_art20_4) :-
+    subject_exception(portability_rights_of_others_relieves, art20_4_rights_of_others).
+test(portability_rights_of_others_unsure_refers_to_art20_4) :-
+    subject_comply(portability_rights_of_others_unsure_refers, needs_legal_review(open_textured(transmission_would_adversely_affect_rights_and_freedoms_of_others, cite(eu_reg_2016_679_art_20_4)), _)).
+test(portability_rights_of_others_unsure_is_not_final, fail) :-
+    subject_comply(portability_rights_of_others_unsure_refers, need_not_comply).
+test(portability_missing_keys_are_listed_all) :-
+    subject_comply(portability_missing_keys, indeterminate([personal_data_provided_by_data_subject, processing_based_on_consent_or_contract, processing_carried_out_by_automated_means])).
+test(portability_missing_keys_never_bare_indeterminate, fail) :-
+    subject_comply(portability_missing_keys, indeterminate).
 
-test(attested_false_value_is_accepted) :-
-    attested(false, attestation(host, checked, statute_reviewed, none)).
+% ---- objection, concrete -------------------------------------------------
+test(direct_marketing_objection_is_must_comply) :-
+    subject_comply(objection_direct_marketing_absolute, must_comply).
+test(direct_marketing_objection_ignores_compelling_grounds, fail) :-
+    subject_exception(objection_direct_marketing_absolute, art21_1_compelling_legitimate_grounds).
+test(direct_marketing_not_engaged_is_need_not_comply) :-
+    subject_comply(objection_direct_marketing_not_engaged, need_not_comply).
+test(compelling_grounds_name_art21_1_exception) :-
+    subject_exception(objection_article_21_1_compelling_grounds, art21_1_compelling_legitimate_grounds).
+test(compelling_grounds_false_is_must_comply) :-
+    subject_comply(objection_article_21_1_compelling_grounds_false, must_comply).
+test(compelling_grounds_false_is_not_need_not_comply, fail) :-
+    subject_comply(objection_article_21_1_compelling_grounds_false, need_not_comply).
+test(legal_claims_name_art21_1_legal_claims) :-
+    subject_exception(objection_article_21_1_legal_claims, art21_1_legal_claims).
+test(legal_claims_false_is_must_comply) :-
+    subject_comply(objection_article_21_1_legal_claims_false, must_comply).
+test(research_public_interest_task_names_art21_6) :-
+    subject_exception(objection_article_21_6_public_interest_task, art21_6_public_interest_task).
+test(research_public_interest_task_false_is_must_comply) :-
+    subject_comply(objection_article_21_6_public_interest_task_false, must_comply).
+test(absent_ground_disagreeing_names_the_ground) :-
+    subject_comply(objection_ground_absent_grounds_disagree, indeterminate([objection_ground_claimed])).
+test(absent_ground_disagreeing_is_not_bare_indeterminate, fail) :-
+    subject_comply(objection_ground_absent_grounds_disagree, indeterminate).
+test(absent_ground_agreeing_decides) :-
+    subject_comply(objection_ground_absent_grounds_agree, need_not_comply).
 
-test(attested_holiday_list_is_accepted) :-
-    attested([date(2026, 12, 25)], attestation(host, checked, calendar, none)).
+% ---- automated decision, concrete ----------------------------------------
+test(automated_decision_engaged_is_must_comply) :-
+    subject_comply(automated_decision_engaged_must_comply, must_comply).
+test(automated_decision_not_solely_is_need_not_comply) :-
+    subject_comply(automated_decision_not_solely_automated, need_not_comply).
+test(contract_necessity_names_art22_2_a_with_safeguards) :-
+    subject_profile(automated_decision_contract_with_safeguards, Profile),
+    decide_request_exception(Profile, request_exception_verdict(art22_2_a, [cite(eu_reg_2016_679_art_22_2_a)])).
+test(contract_necessity_unsure_refers_to_art22_2_a) :-
+    subject_comply(automated_decision_contract_unsure_refers, needs_legal_review(open_textured(decision_necessary_for_contract_with_data_subject, cite(eu_reg_2016_679_art_22_2_a)), _)).
+test(special_categories_bar_the_consent_exception) :-
+    subject_comply(automated_decision_explicit_consent_barred_special_categories, must_comply).
+test(special_categories_barred_is_not_art22_2_c, fail) :-
+    subject_exception(automated_decision_explicit_consent_barred_special_categories, art22_2_c).
+test(special_categories_with_safeguards_name_art22_2_c) :-
+    subject_exception(automated_decision_explicit_consent_safeguards_met, art22_2_c).
+test(special_categories_safeguards_absent_is_indeterminate) :-
+    subject_comply(automated_decision_special_category_safeguards_missing, indeterminate([special_category_condition_and_safeguards_met_for_decision])).
+test(authorising_law_attested_names_art22_2_b) :-
+    subject_exception(automated_decision_authorised_by_law_attested, art22_2_b).
+test(authorising_law_attested_false_is_must_comply) :-
+    subject_comply(automated_decision_authorised_by_law_attested_false, must_comply).
 
-test(attested_unbound_value_is_rejected, fail) :-
-    attested(_Value, attestation(host, checked, statute_reviewed, none)).
+% ---- common exceptions and the suspension, concrete ---------------------
+test(manifestly_excessive_names_art12_5) :-
+    subject_exception(manifestly_excessive_fee_open, art12_5_manifestly_unfounded_or_excessive).
+test(manifestly_excessive_unsure_refers_to_art12_5) :-
+    subject_comply(manifestly_excessive_unsure_refers, needs_legal_review(open_textured(request_manifestly_unfounded_or_excessive, cite(eu_reg_2016_679_art_12_5)), _)).
+test(unable_to_identify_names_art12_2) :-
+    subject_exception(unable_to_identify_relieves, art12_2_unable_to_identify).
+test(unable_to_identify_false_is_must_comply) :-
+    subject_comply(unable_to_identify_false_must_comply, must_comply).
+test(legislative_restriction_attested_names_art23) :-
+    subject_exception(legislative_restriction_attested_true, art23_legislative_restriction).
+test(legislative_restriction_attested_false_is_must_comply) :-
+    subject_comply(legislative_restriction_attested_false, must_comply).
+test(identity_doubts_suspend) :-
+    subject_comply(identity_doubts_suspend, suspended(art12_6_identity_not_confirmed)).
+test(identity_doubts_suspend_is_not_need_not_comply, fail) :-
+    subject_comply(identity_doubts_suspend, need_not_comply).
+test(identity_confirmed_is_must_comply) :-
+    subject_comply(identity_doubts_identity_confirmed, must_comply).
+test(identity_doubts_unsure_refers_to_art12_6) :-
+    subject_comply(identity_doubts_unsure_refers, needs_legal_review(open_textured(reasonable_doubts_about_identity, cite(eu_reg_2016_679_art_12_6)), _)).
 
-test(attested_without_an_attestation_term_is_rejected, fail) :-
-    attested(true, not_an_attestation).
+% ---- step (i) and step (0), concrete -------------------------------------
+test(absent_request_type_all_not_engaged_decides) :-
+    subject_comply(request_type_absent_all_types_not_engaged, need_not_comply).
+test(absent_request_type_disagreeing_names_request_type) :-
+    subject_comply(request_type_absent_types_disagree, indeterminate([request_type])).
+test(duplicate_and_unknown_keys_are_input_problems) :-
+    subject_profile(duplicate_and_unknown_keys, Profile),
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems(Profile, [duplicate_key(request_type), unknown_key(colour)]).
+test(duplicate_key_is_never_also_wrong_type, fail) :-
+    subject_profile(duplicate_and_unknown_keys, Profile),
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems(Profile, Problems),
+    member(wrong_type(request_type), Problems).
+test(crisp_flag_given_unsure_is_wrong_type) :-
+    subject_comply(crisp_flag_given_unsure_wrong_type, input_problems([wrong_type(processing_carried_out_by_automated_means)])).
+test(well_formed_fixture_has_no_input_problem) :-
+    subject_profile(portability_engaged_must_comply, Profile),
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems(Profile, []).
+test(non_list_profile_is_refused) :-
+    request_decision(profile, input_problems([wrong_type(profile)])).
+test(non_list_profile_exception_is_none) :-
+    request_exception(profile, none).
 
-test(an_attested_fact_with_document_evidence_is_accepted) :-
-    attested(true, attestation(host, checked, statute_reviewed, document(upload_0001, sha256_0123456789abcdef))).
+% ---- evidence terms inside an outside fact ---------------------------------
+test(url_evidence_in_an_outside_fact_is_well_typed) :-
+    Evidence = url('https://example.org/law', date(2026, 11, 18)),
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_input_problems(
+        [attribute(request_type, portability),
+         attribute(legislative_restriction_applies_to_the_right, attested(true, attestation(by, at, reason, Evidence)))],
+        []).
+test(document_evidence_in_an_outside_fact_relieves) :-
+    Evidence = document(upload_one, sha256_digest),
+    subject_profile(portability_engaged_must_comply, BaseProfile),
+    append(BaseProfile, [attribute(legislative_restriction_applies_to_the_right, attested(true, attestation(by, at, reason, Evidence)))], Profile),
+    request_exception(Profile, art23_legislative_restriction).
+
+% ---- facade projections and what-if --------------------------------------
+test(status_projection_names_the_exception) :-
+    subject_profile(portability_public_task_relieves, Profile),
+    request_exception_status(Profile, art20_3_public_task).
+test(every_assessed_status_is_in_the_vocabulary) :-
+    request_exception_status_values(StatusValues),
+    findall(Status, (expected(Subject, _, _), gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_assess(Subject, request_exception_verdict(Status, _))), Statuses),
+    Statuses = [_|_],
+    maplist(status_in_vocabulary(StatusValues), Statuses).
+
+status_in_vocabulary(StatusValues, Status) :-
+    memberchk_free(Status, StatusValues).
+
+memberchk_free(Status, [Status|_]).
+memberchk_free(Status, [Other|Others]) :-
+    dif(Status, Other),
+    memberchk_free(Status, Others).
+
+test(decision_resolvable_on_a_fixture) :-
+    subject_profile(automated_decision_engaged_must_comply, Profile),
+    request_exception_decision_resolvable(Profile).
+test(what_if_automated_means_false_is_need_not_comply) :-
+    subject_profile(portability_engaged_must_comply, Profile),
+    findall(Comply, gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_what_if(Profile, processing_carried_out_by_automated_means, false, Comply), Answers),
+    Answers == [need_not_comply].
+test(what_if_public_task_true_flips_to_relief, fail) :-
+    subject_profile(portability_engaged_must_comply, Profile),
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_what_if(Profile, processing_necessary_for_public_task_or_official_authority, true, must_comply).
+test(what_if_public_task_true_is_need_not_comply) :-
+    subject_profile(portability_engaged_must_comply, Profile),
+    gdpr_data_subject_rights_articles_20_to_22_decision_and_exception_what_if(Profile, processing_necessary_for_public_task_or_official_authority, true, need_not_comply).
 
 :- end_module(test_public_interface).

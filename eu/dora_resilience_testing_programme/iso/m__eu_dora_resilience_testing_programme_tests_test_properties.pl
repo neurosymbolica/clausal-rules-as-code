@@ -1,0 +1,164 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_resilience_testing_programme_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [subtract/3]).
+:- use_module(m__eu_dora_resilience_testing_programme_dora_resilience_testing_programme, [resilience_testing_duties_required/3, resilience_testing_duties_complete/3, resilience_testing_duties_outstanding/3, decide_dora_resilience_testing_programme/2, dora_resilience_testing_programme_checklist/2]).
+:- use_module(m__eu_dora_resilience_testing_programme_kernel, [dora_resilience_testing_programme_input_problems/2]).
+:- use_module(m__eu_dora_resilience_testing_programme_fixtures, [dora_resilience_testing_programme_subject/1, dora_resilience_testing_programme_profile_for/2]).
+
+query_name(required).
+query_name(complete).
+query_name(outstanding).
+
+query_answers(required, Profile, Answers) :-
+    findall(Result - Citations, resilience_testing_duties_required(Profile, Result, Citations), Answers).
+query_answers(complete, Profile, Answers) :-
+    findall(Result - Citations, resilience_testing_duties_complete(Profile, Result, Citations), Answers).
+query_answers(outstanding, Profile, Answers) :-
+    findall(Result - Citations, resilience_testing_duties_outstanding(Profile, Result, Citations), Answers).
+
+allowed_citation(cite(eu_reg_2022_2554_art_24_1)).
+allowed_citation(cite(eu_reg_2022_2554_art_24_2)).
+allowed_citation(cite(eu_reg_2022_2554_art_24_3)).
+allowed_citation(cite(eu_reg_2022_2554_art_24_4)).
+allowed_citation(cite(eu_reg_2022_2554_art_24_5)).
+allowed_citation(cite(eu_reg_2022_2554_art_24_6)).
+allowed_citation(cite(eu_reg_2022_2554_art_25_1)).
+allowed_citation(cite(eu_reg_2022_2554_art_25_2)).
+allowed_citation(cite(eu_reg_2022_2554_art_25_3)).
+
+result_citation_shape(required([_|_]), [_|_]).
+result_citation_shape(complete, Citations) :-
+    length(Citations, 9).
+result_citation_shape(incomplete, Citations) :-
+    length(Citations, 9).
+result_citation_shape(none_outstanding, Citations) :-
+    length(Citations, 9).
+result_citation_shape(outstanding([_|_]), [_|_]).
+result_citation_shape(indeterminate([Key]), []) :-
+    atom(Key).
+result_citation_shape(needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(_)]), []) :-
+    atom(Key),
+    allowed_citation(cite(Citation)).
+result_citation_shape(input_problems([_|_]), []).
+
+subject_query_cases(Cases) :-
+    findall(Subject - QueryName, (dora_resilience_testing_programme_subject(Subject), query_name(QueryName)), Cases).
+
+exactly_one_answer(Subject - QueryName) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    query_answers(QueryName, Profile, [_]).
+
+answer_citations_allowed(Subject - QueryName) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    query_answers(QueryName, Profile, [_ - Citations]),
+    maplist(allowed_citation, Citations),
+    sort(Citations, DistinctCitations),
+    length(Citations, Count),
+    length(DistinctCitations, Count).
+
+answer_has_its_shape(Subject - QueryName) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    query_answers(QueryName, Profile, [Result - Citations]),
+    result_citation_shape(Result, Citations).
+
+subject_classifies(Subject) :-
+    dora_resilience_testing_programme_subject(Subject),
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    decide_dora_resilience_testing_programme(Profile, _Verdict).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, dora_resilience_testing_programme_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    SubjectSet = [_|_],
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_every_query_gives_one_answer_per_subject) :-
+    subject_query_cases(Cases),
+    Cases = [_|_],
+    maplist(exactly_one_answer, Cases).
+test(determinism_the_input_check_gives_one_answer_per_subject) :-
+    findall(Subject, dora_resilience_testing_programme_subject(Subject), Subjects),
+    maplist(one_input_check_answer, Subjects).
+test(citation_completeness_every_citation_is_canonical_and_written_once) :-
+    subject_query_cases(Cases),
+    maplist(answer_citations_allowed, Cases).
+test(every_answer_has_the_form_and_citations_of_its_result) :-
+    subject_query_cases(Cases),
+    maplist(answer_has_its_shape, Cases).
+test(a_complete_subject_has_none_outstanding) :-
+    findall(Subject, complete_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(has_none_outstanding, Subjects).
+test(an_incomplete_fully_stated_subject_has_an_outstanding_list) :-
+    findall(Subject, incomplete_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(has_an_outstanding_list, Subjects).
+test(every_outstanding_duty_is_a_required_duty) :-
+    findall(Subject, outstanding_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(outstanding_within_required, Subjects).
+test(the_checklist_has_one_row_per_duty_for_every_well_formed_subject) :-
+    findall(Subject, well_formed_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(has_eleven_rows, Subjects).
+test(a_badly_formed_subject_has_no_checklist_rows) :-
+    checklist_row_count(fact_key_given_unsure, 0).
+
+one_input_check_answer(Subject) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    findall(Problems, dora_resilience_testing_programme_input_problems(Profile, Problems), [_]).
+
+complete_subject(Subject) :-
+    dora_resilience_testing_programme_subject(Subject),
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    resilience_testing_duties_complete(Profile, complete, _).
+
+incomplete_subject(Subject) :-
+    dora_resilience_testing_programme_subject(Subject),
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    resilience_testing_duties_complete(Profile, incomplete, _).
+
+has_none_outstanding(Subject) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    resilience_testing_duties_outstanding(Profile, none_outstanding, _).
+
+has_an_outstanding_list(Subject) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    resilience_testing_duties_outstanding(Profile, outstanding([_|_]), _).
+
+outstanding_subject(Subject) :-
+    dora_resilience_testing_programme_subject(Subject),
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    resilience_testing_duties_outstanding(Profile, outstanding(_), _).
+
+outstanding_within_required(Subject) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    resilience_testing_duties_outstanding(Profile, outstanding(Outstanding), _),
+    resilience_testing_duties_required(Profile, required(Required), _),
+    subtract(Outstanding, Required, []).
+
+checklist_row_count(Subject, Count) :-
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    dora_resilience_testing_programme_checklist(Profile, Items),
+    length(Items, Count).
+
+well_formed_subject(Subject) :-
+    dora_resilience_testing_programme_subject(Subject),
+    dora_resilience_testing_programme_profile_for(Subject, Profile),
+    dora_resilience_testing_programme_input_problems(Profile, []).
+
+has_eleven_rows(Subject) :-
+    checklist_row_count(Subject, 11).
+
+cp_test_names([totality_every_subject_classifies, determinism_every_query_gives_one_answer_per_subject, determinism_the_input_check_gives_one_answer_per_subject, citation_completeness_every_citation_is_canonical_and_written_once, every_answer_has_the_form_and_citations_of_its_result, a_complete_subject_has_none_outstanding, an_incomplete_fully_stated_subject_has_an_outstanding_list, every_outstanding_duty_is_a_required_duty, the_checklist_has_one_row_per_duty_for_every_well_formed_subject, a_badly_formed_subject_has_no_checklist_rows]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

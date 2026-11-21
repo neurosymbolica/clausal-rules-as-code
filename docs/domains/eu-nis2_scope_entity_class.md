@@ -1,4 +1,4 @@
-# Directive (EU) 2022/2555 (NIS 2) Art 2 and Art 3, with the size categories of Art 2 of the Annex to Recommendation 2003/361/EC as Art 2(1) refers to it. Decides three ...
+# Directive (EU) 2022/2555 (NIS 2) Art 2(1) to (4), (7), (9) and (10) and Art 3(1) and (2), with the size ceilings of Article 2 of the Annex to Commission Recommendation ...
 
 `eu/nis2_scope_entity_class`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 268/268 | none (no provision-tracking ledger) | pass | pass | pass |
+| 242/242 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Directive (EU) 2022/2555 (NIS 2) Art 2 and Art 3, with the size categories of Art 2 of the Annex to Recommendation 2003/361/EC as Art 2(1) refers to it. Decides three questions for one entity from a profile of final figures and judgements: its size category (size_class/3), whether the Directive applies to it (scope_decision/3: the exclusions of Art 2(7), 2(9) and 2(10) first, then the thirteen grounds of Art 2(1) to 2(4)) and whether it is an essential or an important entity (entity_class/3, Art 3(1) and 3(2)). The Annex I or II type, and the open-textured points of Art 2(2)(b) to (e), are judgements of the caller: an unsure judgement that decides is handed back as needs_legal_review. Out of scope: how a Member State applies the Directive to an entity (country orders), the aggregation rules of Arts 3 to 6 of the Annex, national definitions of public administration, the Annex lists, and the obligations of Arts 21 and 23.
+Directive (EU) 2022/2555 (NIS 2) Art 2(1) to (4), (7), (9) and (10) and Art 3(1) and (2), with the size ceilings of Article 2 of the Annex to Commission Recommendation 2003/361/EC to which Art 2(1) refers. Decided here, from a profile of caller-stated facts and judgements: the size category of the entity (size_class/3), whether the Directive applies to it (scope_decision/3) and whether it is an essential or an important entity (entity_class/3). An absent fact that can change the answer is named (indeterminate, one key); an unsure judgement that decides is referred to a lawyer (needs_legal_review). Out of scope: whether an activity is of an Annex I or II type (a caller judgement), the SME aggregation rules of Arts 3 to 6 of the Annex to the Recommendation, the national definitions of public administration, the identification of critical entities under Directive (EU) 2022/2557, Member State extensions and exemptions under Art 2(5) and (8), whether national law applies the Directive (country orders), and jurisdiction and registration (sibling order).
 
 ## Pinned sources
 
@@ -32,13 +32,13 @@ Directive (EU) 2022/2555 (NIS 2) Art 2 and Art 3, with the size categories of Ar
 
 ??? info "annex_types"
 
-    **Why:** Annex I (sectors of high criticality) and Annex II (other critical sectors) list the types of entity to which the Directive applies. This order takes whether the entity is of a type in Annex I or II as the two judgement keys annex_i_type and annex_ii_type; the Annex lists are formalisable (as sector and type enumerations) but no pinnable text yet: tools/pin_statute.py cannot cut this text (--annex is not implemented for xhtml; the Recommendation fails 404 through the celex route); an extension of the pinning tool has been requested; the debt is replaced by a pin, keys and bound units when it does.
+    **Why:** Annex I (sectors of high criticality) and Annex II (other critical sectors) list the types of entity to which the Directive applies. This order takes whether the entity is of a type in Annex I or II as the two judgement keys annex_i_type and annex_ii_type; the Annex lists are formalisable (as sector and type enumerations) but no pinnable text yet: tools/pin_statute.py cannot cut this text (--annex is not implemented for xhtml; the Recommendation fails 404 through the celex route); the tool is to be extended; the debt is replaced by a pin, keys and bound units when it does.
 
     **Consequence for a user:** The answers do not say which activities are of an Annex type; the caller judges that itself.
 
 ??? info "sme_ceilings_pin"
 
-    **Why:** Art 2 of the Annex to Recommendation 2003/361/EC (the staff and financial ceilings of the size categories) is read in this order from the raw pin quoted in sources, and no citation key names it; no pinnable text yet: tools/pin_statute.py cannot cut this text (--annex is not implemented for xhtml; the Recommendation fails 404 through the celex route); an extension of the pinning tool has been requested; the debt is replaced by a pin, keys and bound units when it does.
+    **Why:** Art 2 of the Annex to Recommendation 2003/361/EC (the staff and financial ceilings of the size categories) is read in this order from the raw pin quoted in sources, and no citation key names it; no pinnable text yet: tools/pin_statute.py cannot cut this text (--annex is not implemented for xhtml; the Recommendation fails 404 through the celex route); the tool is to be extended; the debt is replaced by a pin, keys and bound units when it does.
 
     **Consequence for a user:** The size answers cite the Directive Art 2(1) that refers to the Recommendation, not the Recommendation itself.
 

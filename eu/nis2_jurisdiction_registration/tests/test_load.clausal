@@ -1,95 +1,145 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_load.clausal -- LOAD: the shared floor loads, its input check answers,
-% the result terms build and destructure, and a real citation resolves.
+% test_load.clausal -- LOAD: the shared floor of
+% eu/nis2_jurisdiction_registration loads (kernel, citations), the input
+% check the scaffold wrote answers exactly once per profile, the result
+% terms build and destructure, the verdict atoms are distinct, and real
+% citation records resolve.
 % Run: cd <corpus root> && python -m clausal.testing \
 %      eu/nis2_jurisdiction_registration/tests/test_load.clausal
 % =====================================================================
 :- module(test_load, []).
 :- use_module(eu/nis2_jurisdiction_registration/kernel, [nis2_jurisdiction_registration_input_problems/2]).
-:- use_module(eu/nis2_jurisdiction_registration/citations, [citation/2, implements/1]).
+:- use_module(eu/nis2_jurisdiction_registration/citations, [citation/2, citation_vocabulary/1, implements/1]).
 
+% ---- the input check ---------------------------------------------------
 test(an_empty_profile_has_no_problem) :-
     nis2_jurisdiction_registration_input_problems([], []).
 
 test(a_well_formed_profile_has_no_problem) :-
     nis2_jurisdiction_registration_input_problems(
-        [attribute(entity_category, general_entity),
-         attribute(established_in_union, true)],
+        [attribute(entity_category, main_establishment_provider),
+         attribute(established_in_union, true),
+         attribute(decisions_predominantly_taken_in_one_union_member_state, unsure),
+         attribute(sector_and_subsector_applicable, false)],
         []).
 
-test(an_unknown_key_is_named) :-
-    nis2_jurisdiction_registration_input_problems(
-        [attribute(not_a_contract_key, true)],
-        [unknown_key(not_a_contract_key)]).
+test(the_input_check_answers_exactly_once) :-
+    findall(Problems,
+            nis2_jurisdiction_registration_input_problems(
+                [attribute(entity_category, general_entity)],
+                Problems),
+            AllProblems),
+    AllProblems == [[]].
 
-test(a_crisp_key_given_unsure_is_a_wrong_type) :-
+test(a_term_that_is_not_a_list_is_the_wrong_type) :-
+    nis2_jurisdiction_registration_input_problems(not_a_profile, [wrong_type(profile)]).
+
+test(a_list_with_a_stray_element_is_the_wrong_type) :-
+    nis2_jurisdiction_registration_input_problems(
+        [attribute(entity_category, general_entity), stray],
+        [wrong_type(profile)]).
+
+test(a_crisp_key_given_unsure_is_the_wrong_type) :-
     nis2_jurisdiction_registration_input_problems(
         [attribute(established_in_union, unsure)],
         [wrong_type(established_in_union)]).
 
-test(a_judgement_key_may_be_unsure) :-
+test(a_judgement_key_given_unsure_is_well_formed) :-
     nis2_jurisdiction_registration_input_problems(
-        [attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)],
+        [attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure)],
         []).
 
-test(a_repeated_key_is_a_duplicate) :-
+test(a_judgement_key_given_unsure_is_not_the_wrong_type, fail) :-
     nis2_jurisdiction_registration_input_problems(
-        [attribute(established_in_union, true),
-         attribute(established_in_union, true)],
-        [duplicate_key(established_in_union)]).
+        [attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure)],
+        [wrong_type(cybersecurity_operations_carried_out_in_one_union_member_state)]).
 
-test(a_non_list_is_not_a_profile) :-
-    nis2_jurisdiction_registration_input_problems(not_a_list, [wrong_type(profile)]).
+test(an_unlisted_category_is_the_wrong_type) :-
+    nis2_jurisdiction_registration_input_problems(
+        [attribute(entity_category, bank)],
+        [wrong_type(entity_category)]).
 
-test(a_well_formed_profile_is_not_refused, fail) :-
+test(a_repeated_key_is_a_duplicate_and_not_the_wrong_type) :-
+    nis2_jurisdiction_registration_input_problems(
+        [attribute(entity_category, general_entity),
+         attribute(entity_category, bank)],
+        [duplicate_key(entity_category)]).
+
+test(a_key_outside_the_contract_is_unknown_once) :-
+    nis2_jurisdiction_registration_input_problems(
+        [attribute(colour, red),
+         attribute(colour, blue)],
+        [unknown_key(colour)]).
+
+test(contract_key_problems_come_before_unknown_keys) :-
+    nis2_jurisdiction_registration_input_problems(
+        [attribute(colour, red),
+         attribute(member_states_list_applicable, maybe),
+         attribute(entity_category, bank)],
+        [wrong_type(entity_category),
+         wrong_type(member_states_list_applicable),
+         unknown_key(colour)]).
+
+test(an_absent_key_is_not_a_problem, fail) :-
     nis2_jurisdiction_registration_input_problems(
         [attribute(entity_category, general_entity)],
         [_|_]).
 
+% ---- the result terms --------------------------------------------------
 test(the_verdict_atoms_are_distinct) :-
-    dif(eligible, ineligible).
+    dif(registration_position_settled, registration_position_open),
+    dif(registration_position_settled, no_single_member_state_jurisdiction),
+    dif(registration_position_settled, profile_rejected),
+    dif(registration_position_open, no_single_member_state_jurisdiction),
+    dif(registration_position_open, profile_rejected),
+    dif(no_single_member_state_jurisdiction, profile_rejected).
+
+test(the_basis_atoms_are_distinct) :-
+    dif(state_of_establishment, state_of_main_establishment),
+    dif(state_of_representative, no_rule_in_article_26),
+    dif(state_where_services_are_provided, state_that_established_the_entity).
 
 test(the_verdict_term_carries_status_and_citations) :-
-    Verdict = nis2_jurisdiction_registration_verdict(eligible, [cite(eu_dir_2022_2555_art_26_1)]),
+    Verdict = nis2_jurisdiction_registration_verdict(registration_position_settled,
+                                                     [cite(eu_dir_2022_2555_art_26_1)]),
     Verdict = nis2_jurisdiction_registration_verdict(Status, Citations),
-    Status == eligible,
+    Status == registration_position_settled,
     Citations == [cite(eu_dir_2022_2555_art_26_1)].
 
-test(the_review_status_builds_and_destructures) :-
-    Status = needs_legal_review(
-        open_textured(
-            decisions_predominantly_taken_in_one_union_member_state,
-            cite(eu_dir_2022_2555_art_26_2)),
+test(the_referral_term_builds_and_destructures) :-
+    Referral = needs_legal_review(
+        open_textured(decisions_predominantly_taken_in_one_union_member_state,
+                      cite(eu_dir_2022_2555_art_26_2)),
         [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-unsure])]),
-    Status = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]),
+    Referral = needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)]),
     Key == decisions_predominantly_taken_in_one_union_member_state,
-    Citation == cite(eu_dir_2022_2555_art_26_2),
+    Citation == eu_dir_2022_2555_art_26_2,
     Pairs == [decisions_predominantly_taken_in_one_union_member_state-unsure].
 
-test(the_missing_key_status_builds_and_destructures) :-
-    Status = indeterminate([entity_category]),
-    Status = indeterminate(MissingKeys),
-    MissingKeys == [entity_category].
-
-test(the_list_terms_build_and_destructure) :-
-    Item = item(entity_name, cite(eu_dir_2022_2555_art_27_2_a)),
-    Item = item(Name, ItemCitation),
+test(the_item_and_limit_terms_destructure) :-
+    item(Name, cite(ItemKey)) = item(entity_name, cite(eu_dir_2022_2555_art_27_2_a)),
     Name == entity_name,
-    ItemCitation == cite(eu_dir_2022_2555_art_27_2_a),
-    Limit = limit(registry_information, months_after_change(3), cite(eu_dir_2022_2555_art_27_3)),
-    Limit = limit(Regime, months_after_change(Months), LimitCitation),
+    ItemKey == eu_dir_2022_2555_art_27_2_a,
+    limit(Regime, months_after_change(Months), cite(LimitKey))
+        = limit(registry_information, months_after_change(3), cite(eu_dir_2022_2555_art_27_3)),
     Regime == registry_information,
     Months == 3,
-    LimitCitation == cite(eu_dir_2022_2555_art_27_3).
+    LimitKey == eu_dir_2022_2555_art_27_3.
 
-test(a_real_citation_record_resolves) :-
-    citation(eu_dir_2022_2555_art_26_1, _Record).
+test(the_indeterminate_status_names_one_key) :-
+    indeterminate([Key]) = indeterminate([entity_category]),
+    Key == entity_category.
 
-test(a_recorded_key_is_implemented) :-
+% ---- the citations -----------------------------------------------------
+test(the_main_establishment_citation_is_recorded) :-
+    citation(eu_dir_2022_2555_art_26_2, _Record).
+
+test(the_main_establishment_citation_is_result_vocabulary) :-
+    citation_vocabulary(eu_dir_2022_2555_art_26_2),
     implements(eu_dir_2022_2555_art_26_2).
 
-test(an_unrecorded_key_is_not_implemented, fail) :-
-    implements(eu_todo_primary_source).
+test(a_shortened_citation_is_not_recorded, fail) :-
+    citation(eu_dir_2022_2555_art_26, _Record).
 
 :- end_module(test_load).

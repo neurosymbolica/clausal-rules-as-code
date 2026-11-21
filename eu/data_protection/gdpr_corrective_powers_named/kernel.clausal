@@ -1,0 +1,243 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_corrective_powers_named (deontic family).
+%
+% Source: Regulation (EU) 2016/679 (GDPR), Article 58(2), the chapeau and
+% points (a) to (j), the pinned unit text of the consolidated text of 4 May
+% 2016 (02016R0679-20160504#parag_058.002 and #point_058.002_a to _j).
+% Article 58(4) to (6) are quoted for readings (1) and (15) only; no limb
+% reads them (deferred set).
+%
+% DAG root of the determination-slices layout. It holds ONLY the
+% predicates that two or more files call. The one exported predicate is
+% the order's input check gdpr_corrective_powers_named_input_problems/2,
+% written here by the scaffold from the order's typed input contract and
+% imported by the slice (step (0) of both queries), the queries module and
+% the package facade. Nothing else is shared: the measure table, the
+% addressee table, the keys each point reads and the referral citations
+% are statutory value facts of the one slice
+% gdpr_corrective_powers_named.clausal and live there.
+%
+% The input check decides no statutory condition (it is profile plumbing
+% against the typed contract), so it carries no implements/1 marker.
+%
+% Atoms and data terms need NO declaration and NO import. This block only
+% RECORDS the result terms every file builds, so each spells them alike:
+%
+%   gdpr_corrective_powers_named_verdict(Result, Citations)
+%     the facade's verdict term: Result and Citations exactly those of
+%     corrective_powers_named/3.
+%
+%   RESULT of corrective_powers_named/3 (final):
+%     powers_named(Powers, authority_discretion)
+%       Powers: a list of power(Measure, Addressees), one per point the
+%       text names for the situation, in the order of the points (a) to
+%       (j), possibly []; the second argument is ALWAYS the bare atom
+%       authority_discretion (the text states no rule of choice and no
+%       duty; this order decides neither: reading (1)).
+%   RESULT of corrective_power_named/4 (final):
+%     named(Addressees, authority_discretion) | not_named
+%       Addressees: the point's fixed list, in the order controller,
+%       processor, certification_body, possibly [] (reading (2)).
+%   Measure atoms (points (a) to (j)): warning, reprimand,
+%     order_to_comply_with_data_subject_requests,
+%     order_to_bring_processing_into_compliance,
+%     order_to_communicate_personal_data_breach,
+%     limitation_or_ban_on_processing,
+%     order_of_rectification_erasure_or_restriction,
+%     withdrawal_or_refusal_of_certification, administrative_fine,
+%     suspension_of_data_flows.
+%   Addressee atoms: controller, processor, certification_body.
+%   Statuses (never written as bare atoms):
+%     indeterminate([Key])            one missing key, the first
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%                                     Pairs: Key-Value for each present
+%                                     key of the stated keys, in
+%                                     root_exports order (THE PAIRS RULE)
+%     input_problems(Problems)        Problems: duplicate_key(Key),
+%                                     wrong_type(Key), unknown_key(Key);
+%                                     wrong_type(measure) last in
+%                                     corrective_power_named/4
+%   Citations: a set-like list of cite(Key) terms; [] for every result
+%   that is not final.
+%   Judgement value besides true and false: unsure.
+%
+% Spell every result and verdict atom exactly as the order pins it: an
+% atom spelled differently is a DIFFERENT atom, and nothing will warn you.
+% =====================================================================
+
+:- module(kernel, [gdpr_corrective_powers_named_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% gdpr_corrective_powers_named_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+gdpr_corrective_powers_named_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [intended_processing_likely_to_infringe, processing_has_infringed, data_subject_request_to_exercise_rights_made, processing_not_in_compliance, personal_data_breach_occurred, rectification_erasure_or_restriction_ground_met, certification_issued_or_applied_for, certification_requirements_not_met, data_flows_to_third_country_or_international_organisation],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(intended_processing_likely_to_infringe, judgement).
+key_type(processing_has_infringed, judgement).
+key_type(data_subject_request_to_exercise_rights_made, boolean).
+key_type(processing_not_in_compliance, judgement).
+key_type(personal_data_breach_occurred, boolean).
+key_type(rectification_erasure_or_restriction_ground_met, judgement).
+key_type(certification_issued_or_applied_for, boolean).
+key_type(certification_requirements_not_met, judgement).
+key_type(data_flows_to_third_country_or_international_organisation, boolean).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+% An attested(...) term is in no type: wrong_type(Key) (reading (14)).
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

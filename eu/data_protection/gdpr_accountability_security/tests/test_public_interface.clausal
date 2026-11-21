@@ -1,0 +1,407 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Run: python -m clausal.testing eu/data_protection/gdpr_accountability_security/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/data_protection/gdpr_accountability_security, [
+    decide_gdpr_accountability_security/2,
+    gdpr_accountability_security_status/2,
+    gdpr_accountability_security_checklist/2,
+    gdpr_accountability_security_decision_resolvable/1,
+    gdpr_accountability_security_status_values/1,
+    gdpr_accountability_security_subject/1,
+    gdpr_accountability_security_profile_for/2,
+    gdpr_accountability_security_assess/2,
+    gdpr_accountability_security_what_if/4,
+    gdpr_accountability_security_input_problems/2,
+    duty_status/5,
+    non_binding_items/3,
+    joint_controller_arrangement/3,
+    joint_controller_arrangement_content/4
+]).
+
+% ---- Expected facade status per fixture subject ----------------------
+expected_status(all_statements_true, compliant).
+expected_status(security_statement_false, not_compliant).
+expected_status(accountability_statement_absent, review_required).
+expected_status(by_default_storage_aspect_false, not_compliant).
+expected_status(by_default_all_aspects_true, compliant).
+expected_status(by_default_crisp_fact_false, not_compliant).
+expected_status(by_default_crisp_fact_true, compliant).
+expected_status(joint_arrangement_in_place, compliant).
+expected_status(joint_arrangement_missing, compliant).
+expected_status(joint_controllers_unsure, compliant).
+expected_status(not_joint_controllers, compliant).
+expected_status(joint_law_sets_responsibilities, compliant).
+expected_status(joint_law_key_absent, compliant).
+expected_status(content_requirements_met, compliant).
+expected_status(content_essence_not_available, compliant).
+expected_status(content_roles_statement_false, compliant).
+expected_status(content_roles_statement_absent, compliant).
+expected_status(duplicated_accountability_statement, input_problems([duplicate_key(accountability_demonstrated)])).
+expected_status(unknown_key_present, input_problems([unknown_key(controller_location)])).
+expected_status(wrong_type_judgement, input_problems([wrong_type(controllers_jointly_determine_purposes_and_means)])).
+
+duty_atoms([accountability, controller_measures, data_protection_policies, data_protection_by_design, data_protection_by_default, security_of_processing, processing_on_instructions]).
+
+known_citations([eu_reg_2016_679_art_5_2, eu_reg_2016_679_art_24_1, eu_reg_2016_679_art_24_2, eu_reg_2016_679_art_25_1, eu_reg_2016_679_art_25_2, eu_reg_2016_679_art_32_1, eu_reg_2016_679_art_32_2, eu_reg_2016_679_art_32_4, eu_reg_2016_679_art_26_1, eu_reg_2016_679_art_26_2]).
+
+% ---- Helpers ---------------------------------------------------------
+profile_value(Subject, Key, Value) :-
+    gdpr_accountability_security_profile_for(Subject, Profile),
+    member(attribute(Key, Value), Profile).
+
+subject_resolves(Subject) :-
+    expected_status(Subject, Expected),
+    findall(Status, gdpr_accountability_security_assess(Subject, gdpr_accountability_security_verdict(Status, _)), Statuses),
+    Statuses == [Expected].
+
+well_formed_subject(Subject) :-
+    expected_status(Subject, Status),
+    atom(Status).
+
+item_is_cited(item(_, _, cite(Key))) :-
+    atom(Key).
+
+checklist_is_cited(Subject) :-
+    gdpr_accountability_security_profile_for(Subject, Profile),
+    gdpr_accountability_security_checklist(Profile, Items),
+    length(Items, 7),
+    maplist(item_is_cited, Items).
+
+duty_answers_once(Profile, Duty) :-
+    findall(Result-Basis-Citations, duty_status(Profile, Duty, Result, Basis, Citations), Answers),
+    length(Answers, 1).
+
+answers_once(Subject) :-
+    gdpr_accountability_security_profile_for(Subject, Profile),
+    duty_atoms(Duties),
+    maplist(duty_answers_once(Profile), Duties),
+    findall(PrincipleItems, non_binding_items(Profile, accountability_principles, PrincipleItems), PrincipleAnswers),
+    length(PrincipleAnswers, 1),
+    findall(SecurityItems, non_binding_items(Profile, security_measures, SecurityItems), SecurityAnswers),
+    length(SecurityAnswers, 1),
+    findall(ArrangementResult-ArrangementCitations, joint_controller_arrangement(Profile, ArrangementResult, ArrangementCitations), ArrangementAnswers),
+    length(ArrangementAnswers, 1),
+    findall(ContentResult-ContentBasis-ContentCitations, joint_controller_arrangement_content(Profile, ContentResult, ContentBasis, ContentCitations), ContentAnswers),
+    length(ContentAnswers, 1),
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), ProblemAnswers),
+    length(ProblemAnswers, 1),
+    findall(Verdict, decide_gdpr_accountability_security(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+known_cite(Known, cite(Key)) :-
+    member(Key, Known).
+
+duty_citations_known(Profile, Duty) :-
+    duty_status(Profile, Duty, _, _, Citations),
+    known_citations(Known),
+    maplist(known_cite(Known), Citations).
+
+citations_known(Subject) :-
+    gdpr_accountability_security_profile_for(Subject, Profile),
+    duty_atoms(Duties),
+    maplist(duty_citations_known(Profile), Duties).
+
+% ---- Every subject: expected status, exactly once --------------------
+test(every_subject_resolves_to_its_expected_status_once) :-
+    findall(Subject, gdpr_accountability_security_subject(Subject), Subjects),
+    length(Subjects, 20),
+    maplist(subject_resolves, Subjects).
+
+test(every_query_answers_once_for_every_subject) :-
+    findall(Subject, gdpr_accountability_security_subject(Subject), Subjects),
+    maplist(answers_once, Subjects).
+
+test(every_well_formed_subject_has_a_cited_checklist_of_seven) :-
+    findall(Subject, well_formed_subject(Subject), Subjects),
+    length(Subjects, 17),
+    maplist(checklist_is_cited, Subjects).
+
+test(every_duty_citation_is_in_the_vocabulary) :-
+    findall(Subject, well_formed_subject(Subject), Subjects),
+    maplist(citations_known, Subjects).
+
+test(every_well_formed_status_is_a_declared_value) :-
+    gdpr_accountability_security_status_values(Values),
+    findall(Status, (well_formed_subject(Subject), expected_status(Subject, Status)), Statuses),
+    sort(Statuses, Distinct),
+    maplist(member_of(Values), Distinct).
+
+member_of(Values, Value) :-
+    member(Value, Values).
+
+% ---- Facade verdicts with near-miss controls -------------------------
+test(all_statements_true_is_compliant_with_its_citations) :-
+    gdpr_accountability_security_assess(all_statements_true, gdpr_accountability_security_verdict(compliant, Citations)),
+    sort([cite(eu_reg_2016_679_art_5_2), cite(eu_reg_2016_679_art_24_1), cite(eu_reg_2016_679_art_24_2), cite(eu_reg_2016_679_art_25_1), cite(eu_reg_2016_679_art_25_2), cite(eu_reg_2016_679_art_32_1), cite(eu_reg_2016_679_art_32_4)], Expected),
+    Citations == Expected.
+
+test(all_statements_true_is_not_not_compliant, fail) :-
+    gdpr_accountability_security_assess(all_statements_true, gdpr_accountability_security_verdict(not_compliant, _)).
+
+test(security_statement_false_is_not_compliant) :-
+    gdpr_accountability_security_assess(security_statement_false, gdpr_accountability_security_verdict(not_compliant, _)).
+
+test(security_statement_false_is_not_compliant_control, fail) :-
+    gdpr_accountability_security_assess(security_statement_false, gdpr_accountability_security_verdict(compliant, _)).
+
+test(accountability_statement_absent_is_review_required) :-
+    gdpr_accountability_security_profile_for(accountability_statement_absent, Profile),
+    gdpr_accountability_security_status(Profile, review_required),
+    gdpr_accountability_security_assess(accountability_statement_absent, gdpr_accountability_security_verdict(review_required, _)).
+
+test(an_unbound_profile_has_input_problems_status) :-
+    findall(Status, gdpr_accountability_security_status(_, Status), Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+
+test(accountability_statement_absent_is_not_compliant_control, fail) :-
+    gdpr_accountability_security_assess(accountability_statement_absent, gdpr_accountability_security_verdict(compliant, _)).
+
+test(by_default_storage_aspect_false_is_not_compliant) :-
+    gdpr_accountability_security_assess(by_default_storage_aspect_false, gdpr_accountability_security_verdict(not_compliant, _)).
+
+test(by_default_all_aspects_true_is_compliant) :-
+    gdpr_accountability_security_assess(by_default_all_aspects_true, gdpr_accountability_security_verdict(compliant, _)).
+
+test(by_default_all_aspects_true_is_not_not_compliant, fail) :-
+    gdpr_accountability_security_assess(by_default_all_aspects_true, gdpr_accountability_security_verdict(not_compliant, _)).
+
+test(by_default_crisp_fact_false_is_not_compliant) :-
+    gdpr_accountability_security_assess(by_default_crisp_fact_false, gdpr_accountability_security_verdict(not_compliant, _)).
+
+test(by_default_crisp_fact_true_is_compliant) :-
+    gdpr_accountability_security_assess(by_default_crisp_fact_true, gdpr_accountability_security_verdict(compliant, _)).
+
+test(input_problem_subjects_have_empty_citations_and_checklist) :-
+    gdpr_accountability_security_assess(duplicated_accountability_statement, gdpr_accountability_security_verdict(input_problems([duplicate_key(accountability_demonstrated)]), [])),
+    gdpr_accountability_security_profile_for(duplicated_accountability_statement, Profile),
+    gdpr_accountability_security_checklist(Profile, []).
+
+test(unknown_key_present_is_not_compliant_control, fail) :-
+    gdpr_accountability_security_assess(unknown_key_present, gdpr_accountability_security_verdict(compliant, _)).
+
+test(the_decision_is_resolvable_on_the_baseline) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    gdpr_accountability_security_decision_resolvable(Profile).
+
+% ---- duty_status/5 ---------------------------------------------------
+test(security_statement_false_duty_is_not_met_with_both_citations) :-
+    gdpr_accountability_security_profile_for(security_statement_false, Profile),
+    profile_value(security_statement_false, security_level_appropriate_to_risk, Statement),
+    findall(Result-Basis-Citations, duty_status(Profile, security_of_processing, Result, Basis, Citations), Answers),
+    Answers == [not_met-[outside_fact(security_level_appropriate_to_risk, Statement)]-[cite(eu_reg_2016_679_art_32_1), cite(eu_reg_2016_679_art_32_2)]].
+
+test(security_statement_true_duty_is_met) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    profile_value(all_statements_true, security_level_appropriate_to_risk, Statement),
+    duty_status(Profile, security_of_processing, met, [outside_fact(security_level_appropriate_to_risk, Statement)], [cite(eu_reg_2016_679_art_32_1), cite(eu_reg_2016_679_art_32_2)]).
+
+test(an_attestation_with_url_evidence_is_copied_exactly) :-
+    Statement = attested(true, attestation(host_system, attestation_time, controller_statement, url('https://example.org/statement', retrieved_time))),
+    findall(Result-Basis-Citations, duty_status([attribute(by_design_measures_implemented, Statement)], data_protection_by_design, Result, Basis, Citations), Answers),
+    Answers == [met-[outside_fact(by_design_measures_implemented, attested(true, attestation(host_system, attestation_time, controller_statement, url('https://example.org/statement', retrieved_time))))]-[cite(eu_reg_2016_679_art_25_1)]].
+
+test(an_attestation_with_document_evidence_is_copied_exactly) :-
+    Statement = attested(false, attestation(host_system, attestation_time, controller_statement, document(upload_identifier, checksum_value))),
+    findall(Result-Basis-Citations, duty_status([attribute(authorised_persons_process_only_on_instructions, Statement)], processing_on_instructions, Result, Basis, Citations), Answers),
+    Answers == [not_met-[outside_fact(authorised_persons_process_only_on_instructions, attested(false, attestation(host_system, attestation_time, controller_statement, document(upload_identifier, checksum_value))))]-[cite(eu_reg_2016_679_art_32_4)]].
+
+test(the_optional_provenance_context_item_destructures) :-
+    Context = [resolution(cite(security_level_statement), not_attempted), provenance(security_level_appropriate_to_risk, attested), inputs_relied_on([security_level_appropriate_to_risk-absent])],
+    member(provenance(Key, Kind), Context),
+    Key == security_level_appropriate_to_risk,
+    Kind == attested.
+
+test(accountability_statement_absent_refers) :-
+    gdpr_accountability_security_profile_for(accountability_statement_absent, Profile),
+    findall(Result-Basis-Citations, duty_status(Profile, accountability, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_5_2), cite(controller_compliance_demonstration)), [resolution(cite(controller_compliance_demonstration), not_attempted), inputs_relied_on([accountability_demonstrated-absent])])-[]-[]].
+
+test(accountability_statement_absent_is_not_met_control, fail) :-
+    gdpr_accountability_security_profile_for(accountability_statement_absent, Profile),
+    duty_status(Profile, accountability, met, _, _).
+
+test(by_default_false_aspect_decides_before_true_overall) :-
+    gdpr_accountability_security_profile_for(by_default_storage_aspect_false, Profile),
+    profile_value(by_default_storage_aspect_false, by_default_storage_period_limited_to_necessary, Statement),
+    findall(Result-Basis-Citations, duty_status(Profile, data_protection_by_default, Result, Basis, Citations), Answers),
+    Answers == [not_met-[outside_fact(by_default_storage_period_limited_to_necessary, Statement)]-[cite(eu_reg_2016_679_art_25_2)]].
+
+test(by_default_crisp_false_has_empty_basis) :-
+    gdpr_accountability_security_profile_for(by_default_crisp_fact_false, Profile),
+    findall(Result-Basis-Citations, duty_status(Profile, data_protection_by_default, Result, Basis, Citations), Answers),
+    Answers == [not_met-[]-[cite(eu_reg_2016_679_art_25_2)]].
+
+test(by_default_true_depth_keys_change_no_answer) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Baseline),
+    gdpr_accountability_security_profile_for(by_default_all_aspects_true, Deepened),
+    findall(Result-Basis-Citations, duty_status(Baseline, data_protection_by_default, Result, Basis, Citations), BaselineAnswers),
+    findall(Result-Basis-Citations, duty_status(Deepened, data_protection_by_default, Result, Basis, Citations), DeepenedAnswers),
+    BaselineAnswers == DeepenedAnswers,
+    BaselineAnswers = [met-_-_].
+
+test(input_problems_reach_duty_status) :-
+    gdpr_accountability_security_profile_for(wrong_type_judgement, Profile),
+    findall(Result-Basis-Citations, duty_status(Profile, accountability, Result, Basis, Citations), Answers),
+    Answers == [input_problems([wrong_type(controllers_jointly_determine_purposes_and_means)])-[]-[]].
+
+% ---- non_binding_items/3 ---------------------------------------------
+test(accountability_principles_are_the_fixed_list) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    findall(Items, non_binding_items(Profile, accountability_principles, Items), Answers),
+    Answers == [[non_binding_item(lawfulness_fairness_transparency, cite(eu_reg_2016_679_art_5_1_a)), non_binding_item(purpose_limitation, cite(eu_reg_2016_679_art_5_1_b)), non_binding_item(data_minimisation, cite(eu_reg_2016_679_art_5_1_c)), non_binding_item(accuracy, cite(eu_reg_2016_679_art_5_1_d)), non_binding_item(storage_limitation, cite(eu_reg_2016_679_art_5_1_e)), non_binding_item(integrity_and_confidentiality, cite(eu_reg_2016_679_art_5_1_f))]].
+
+test(security_measures_are_the_fixed_list) :-
+    findall(Items, non_binding_items([], security_measures, Items), Answers),
+    Answers == [[non_binding_item(pseudonymisation_and_encryption, cite(eu_reg_2016_679_art_32_1_a)), non_binding_item(confidentiality_integrity_availability_resilience, cite(eu_reg_2016_679_art_32_1_b)), non_binding_item(restore_availability_and_access, cite(eu_reg_2016_679_art_32_1_c)), non_binding_item(regular_testing_assessing_evaluating, cite(eu_reg_2016_679_art_32_1_d))]].
+
+test(non_binding_items_do_not_depend_on_the_profile) :-
+    gdpr_accountability_security_profile_for(security_statement_false, FalseProfile),
+    non_binding_items(FalseProfile, security_measures, FalseItems),
+    non_binding_items([], security_measures, EmptyItems),
+    FalseItems == EmptyItems.
+
+test(non_binding_items_report_input_problems_alone) :-
+    gdpr_accountability_security_profile_for(unknown_key_present, Profile),
+    findall(Items, non_binding_items(Profile, accountability_principles, Items), Answers),
+    Answers == [input_problems([unknown_key(controller_location)])].
+
+% ---- joint_controller_arrangement/3 ----------------------------------
+test(joint_arrangement_in_place) :-
+    gdpr_accountability_security_profile_for(joint_arrangement_in_place, Profile),
+    findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers),
+    Answers == [arrangement_in_place-[cite(eu_reg_2016_679_art_26_1)]].
+
+test(joint_arrangement_missing) :-
+    gdpr_accountability_security_profile_for(joint_arrangement_missing, Profile),
+    findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers),
+    Answers == [arrangement_missing-[cite(eu_reg_2016_679_art_26_1)]].
+
+test(joint_arrangement_missing_is_not_in_place, fail) :-
+    gdpr_accountability_security_profile_for(joint_arrangement_missing, Profile),
+    joint_controller_arrangement(Profile, arrangement_in_place, _).
+
+test(joint_controllers_unsure_goes_to_a_lawyer) :-
+    gdpr_accountability_security_profile_for(joint_controllers_unsure, Profile),
+    findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_1)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means-unsure])])-[]].
+
+test(not_joint_controllers) :-
+    gdpr_accountability_security_profile_for(not_joint_controllers, Profile),
+    findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers),
+    Answers == [not_joint_controllers-[cite(eu_reg_2016_679_art_26_1)]].
+
+test(joint_law_sets_responsibilities_needs_no_arrangement) :-
+    gdpr_accountability_security_profile_for(joint_law_sets_responsibilities, Profile),
+    findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers),
+    Answers == [arrangement_not_required-[cite(eu_reg_2016_679_art_26_1)]].
+
+test(joint_law_key_absent_is_indeterminate) :-
+    gdpr_accountability_security_profile_for(joint_law_key_absent, Profile),
+    findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([responsibilities_set_by_union_or_member_state_law])-[]].
+
+test(joint_judgement_absent_is_indeterminate) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    findall(Result-Citations, joint_controller_arrangement(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([controllers_jointly_determine_purposes_and_means])-[]].
+
+% ---- joint_controller_arrangement_content/4 --------------------------
+test(content_requirements_met) :-
+    gdpr_accountability_security_profile_for(content_requirements_met, Profile),
+    profile_value(content_requirements_met, arrangement_reflects_roles_and_relationships, Statement),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [content_requirements_met-[outside_fact(arrangement_reflects_roles_and_relationships, Statement)]-[cite(eu_reg_2016_679_art_26_2)]].
+
+test(content_requirements_met_is_not_not_met, fail) :-
+    gdpr_accountability_security_profile_for(content_requirements_met, Profile),
+    joint_controller_arrangement_content(Profile, content_requirements_not_met, _, _).
+
+test(content_essence_not_available_is_not_met_without_reading_roles) :-
+    gdpr_accountability_security_profile_for(content_essence_not_available, Profile),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [content_requirements_not_met-[]-[cite(eu_reg_2016_679_art_26_2)]].
+
+test(content_roles_statement_false_is_not_met) :-
+    gdpr_accountability_security_profile_for(content_roles_statement_false, Profile),
+    profile_value(content_roles_statement_false, arrangement_reflects_roles_and_relationships, Statement),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [content_requirements_not_met-[outside_fact(arrangement_reflects_roles_and_relationships, Statement)]-[cite(eu_reg_2016_679_art_26_2)]].
+
+test(content_roles_statement_absent_refers) :-
+    gdpr_accountability_security_profile_for(content_roles_statement_absent, Profile),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_26_2), cite(arrangement_roles_statement)), [resolution(cite(arrangement_roles_statement), not_attempted), inputs_relied_on([arrangement_reflects_roles_and_relationships-absent])])-[]-[]].
+
+test(content_essence_absent_is_indeterminate) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    findall(Result-Basis-Citations, joint_controller_arrangement_content(Profile, Result, Basis, Citations), Answers),
+    Answers == [indeterminate([essence_of_arrangement_made_available])-[]-[]].
+
+% ---- The input check -------------------------------------------------
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
+
+test(a_duplicate_key_is_never_also_wrong_type) :-
+    gdpr_accountability_security_profile_for(duplicated_accountability_statement, Profile),
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(accountability_demonstrated)]].
+
+test(an_unknown_key_is_named_once) :-
+    findall(Problems, gdpr_accountability_security_input_problems([attribute(stray, true), attribute(stray, false)], Problems), Answers),
+    Answers == [[unknown_key(stray)]].
+
+test(a_non_atom_key_is_an_unknown_key) :-
+    gdpr_accountability_security_input_problems([attribute(42, true)], [unknown_key(42)]).
+
+test(an_unbound_value_is_wrong_type) :-
+    gdpr_accountability_security_input_problems([attribute(arrangement_between_controllers_exists, _)], [wrong_type(arrangement_between_controllers_exists)]).
+
+test(an_outside_fact_without_attestation_is_wrong_type) :-
+    gdpr_accountability_security_input_problems([attribute(accountability_demonstrated, true)], [wrong_type(accountability_demonstrated)]).
+
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    gdpr_accountability_security_input_problems([attribute(essence_of_arrangement_made_available, unsure)], [wrong_type(essence_of_arrangement_made_available)]).
+
+test(a_judgement_given_unsure_is_well_formed) :-
+    gdpr_accountability_security_input_problems([attribute(controllers_jointly_determine_purposes_and_means, unsure)], []).
+
+test(a_non_list_profile_is_wrong_type) :-
+    findall(Problems, gdpr_accountability_security_input_problems(not_a_list, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unbound_profile_is_wrong_type) :-
+    findall(Problems, gdpr_accountability_security_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_list_with_a_foreign_element_is_wrong_type) :-
+    gdpr_accountability_security_input_problems([attribute(accountability_demonstrated, x), stray], [wrong_type(profile)]).
+
+% ---- What-if ---------------------------------------------------------
+test(what_if_a_false_security_statement_is_not_compliant) :-
+    gdpr_accountability_security_profile_for(all_statements_true, Profile),
+    profile_value(security_statement_false, security_level_appropriate_to_risk, FalseStatement),
+    gdpr_accountability_security_what_if(Profile, security_level_appropriate_to_risk, FalseStatement, not_compliant).
+
+test(what_if_a_true_security_statement_is_compliant) :-
+    gdpr_accountability_security_profile_for(security_statement_false, Profile),
+    profile_value(all_statements_true, security_level_appropriate_to_risk, TrueStatement),
+    gdpr_accountability_security_what_if(Profile, security_level_appropriate_to_risk, TrueStatement, compliant).
+
+test(what_if_answers_once) :-
+    gdpr_accountability_security_profile_for(security_statement_false, Profile),
+    profile_value(all_statements_true, security_level_appropriate_to_risk, TrueStatement),
+    findall(Status, gdpr_accountability_security_what_if(Profile, security_level_appropriate_to_risk, TrueStatement, Status), Statuses),
+    Statuses == [compliant].
+
+test(what_if_adding_an_absent_statement_makes_it_compliant) :-
+    gdpr_accountability_security_profile_for(accountability_statement_absent, Profile),
+    profile_value(all_statements_true, accountability_demonstrated, TrueStatement),
+    gdpr_accountability_security_what_if(Profile, accountability_demonstrated, TrueStatement, compliant).
+
+:- end_module(test_public_interface).

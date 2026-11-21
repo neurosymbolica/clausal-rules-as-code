@@ -1,0 +1,301 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dma_art_5_2_data_combination_order.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC predicate
+% it calls. Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's typed
+% input contract). Outside facts are attested(true|false, attestation(By, At,
+% Reason, Evidence)) statements, all four attestation arguments ground.
+%
+% Every route of personal_data_practice_status/4 (THE LIMBS steps 4 to 15) has a
+% positive subject AND a one-change near-miss control that lands on another
+% route; the input check has its malformed subjects; consent_request_repetition_status/6
+% has its profiles (the dates are query arguments, set in the tests at the
+% anniversary boundary: the day before it and the day itself).
+% =====================================================================
+
+:- module(fixtures, [
+    dma_art_5_2_data_combination_order_subject/1,
+    dma_art_5_2_data_combination_order_profile_for/2,
+    dma_art_5_2_data_combination_order_assess/2
+]).
+
+:- use_module(eu/dma_art_5_2_data_combination_order/dma_art_5_2_data_combination_order, [decide_dma_art_5_2_data_combination_order/2]).
+
+% ---- Subject registry ------------------------------------------------
+% step 6, with its control (consent attested false, no basis: step 8)
+dma_art_5_2_data_combination_order_subject(listed_combining_with_consent).
+dma_art_5_2_data_combination_order_subject(listed_combining_consent_refused_control).
+% step 7, with its control (basis attested false: step 8)
+dma_art_5_2_data_combination_order_subject(listed_cross_use_no_choice_legal_obligation).
+dma_art_5_2_data_combination_order_subject(listed_cross_use_no_choice_no_basis_control).
+% step 8, with its control (consent attested true: step 6)
+dma_art_5_2_data_combination_order_subject(listed_sign_in_consent_refused_no_basis).
+dma_art_5_2_data_combination_order_subject(listed_sign_in_consent_given_control).
+% step 5, with its control (a point instead of none: step 6)
+dma_art_5_2_data_combination_order_subject(listed_none_of_the_four).
+dma_art_5_2_data_combination_order_subject(listed_advertising_with_consent_control).
+% step 4, with its control (listed: step 14)
+dma_art_5_2_data_combination_order_subject(not_listed_everything_unsure).
+dma_art_5_2_data_combination_order_subject(listed_everything_unsure_control).
+% step 9
+dma_art_5_2_data_combination_order_subject(practice_missing).
+% step 10, with its control (consent attested false: step 7, the choice not named)
+dma_art_5_2_data_combination_order_subject(choice_missing).
+dma_art_5_2_data_combination_order_subject(choice_missing_consent_refused_basis_true).
+% step 11
+dma_art_5_2_data_combination_order_subject(designation_absent_complete).
+% step 12, with its control (choice false: step 8)
+dma_art_5_2_data_combination_order_subject(consent_absent).
+dma_art_5_2_data_combination_order_subject(consent_absent_choice_false_control).
+% step 13, with its control (basis attested true: step 7)
+dma_art_5_2_data_combination_order_subject(basis_absent).
+dma_art_5_2_data_combination_order_subject(basis_given_control).
+% step 14 and step 15
+dma_art_5_2_data_combination_order_subject(practice_unsure_complete).
+dma_art_5_2_data_combination_order_subject(choice_unsure_consent_true).
+% the input check
+dma_art_5_2_data_combination_order_subject(duplicate_and_unknown_keys).
+dma_art_5_2_data_combination_order_subject(unbound_attestation_reason).
+dma_art_5_2_data_combination_order_subject(partial_list_profile).
+% consent_request_repetition_status/6 profiles
+dma_art_5_2_data_combination_order_subject(repeat_listed_not_yet_repeated).
+dma_art_5_2_data_combination_order_subject(repeat_listed_already_repeated).
+dma_art_5_2_data_combination_order_subject(repeat_not_listed).
+dma_art_5_2_data_combination_order_subject(repeat_designation_absent).
+
+% ---- An attested statement, as the host supplies it ------------------
+stated(Truth, attested(Truth, attestation(host_operator, attested_on_2026_11_19, caller_statement, none))).
+
+% ---- Profiles --------------------------------------------------------
+dma_art_5_2_data_combination_order_profile_for(listed_combining_with_consent, Profile) :-
+    stated(true, Designation),
+    stated(true, Consent),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_combining_consent_refused_control, Profile) :-
+    stated(true, Designation),
+    stated(false, Consent),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_cross_use_no_choice_legal_obligation, Profile) :-
+    stated(true, Designation),
+    stated(true, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, cross_using_personal_data),
+        attribute(end_user_presented_with_specific_choice, false),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_cross_use_no_choice_no_basis_control, Profile) :-
+    stated(true, Designation),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, cross_using_personal_data),
+        attribute(end_user_presented_with_specific_choice, false),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_sign_in_consent_refused_no_basis, Profile) :-
+    stated(true, Designation),
+    stated(false, Consent),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, signing_in_end_users_to_combine_personal_data),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_sign_in_consent_given_control, Profile) :-
+    stated(true, Designation),
+    stated(true, Consent),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, signing_in_end_users_to_combine_personal_data),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_none_of_the_four, Profile) :-
+    stated(true, Designation),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, none_of_the_four_practices)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_advertising_with_consent_control, Profile) :-
+    stated(true, Designation),
+    stated(true, Consent),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, processing_for_online_advertising_services),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(end_user_consent_given, Consent)
+    ].
+dma_art_5_2_data_combination_order_profile_for(not_listed_everything_unsure, Profile) :-
+    stated(false, Designation),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, unsure),
+        attribute(end_user_presented_with_specific_choice, unsure)
+    ].
+dma_art_5_2_data_combination_order_profile_for(listed_everything_unsure_control, Profile) :-
+    stated(true, Designation),
+    stated(true, Consent),
+    stated(true, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, unsure),
+        attribute(end_user_presented_with_specific_choice, unsure),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(practice_missing, Profile) :-
+    stated(true, Designation),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation)
+    ].
+dma_art_5_2_data_combination_order_profile_for(choice_missing, Profile) :-
+    stated(true, Designation),
+    stated(true, Consent),
+    stated(true, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(choice_missing_consent_refused_basis_true, Profile) :-
+    stated(true, Designation),
+    stated(false, Consent),
+    stated(true, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(designation_absent_complete, Profile) :-
+    stated(true, Consent),
+    stated(true, OtherBasis),
+    Profile = [
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(consent_absent, Profile) :-
+    stated(true, Designation),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(consent_absent_choice_false_control, Profile) :-
+    stated(true, Designation),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, false),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(basis_absent, Profile) :-
+    stated(true, Designation),
+    stated(false, Consent),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, false),
+        attribute(end_user_consent_given, Consent)
+    ].
+dma_art_5_2_data_combination_order_profile_for(basis_given_control, Profile) :-
+    stated(true, Designation),
+    stated(false, Consent),
+    stated(true, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, false),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(practice_unsure_complete, Profile) :-
+    stated(true, Designation),
+    stated(true, Consent),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, unsure),
+        attribute(end_user_presented_with_specific_choice, true),
+        attribute(end_user_consent_given, Consent)
+    ].
+dma_art_5_2_data_combination_order_profile_for(choice_unsure_consent_true, Profile) :-
+    stated(true, Designation),
+    stated(true, Consent),
+    stated(false, OtherBasis),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(end_user_presented_with_specific_choice, unsure),
+        attribute(end_user_consent_given, Consent),
+        attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)
+    ].
+dma_art_5_2_data_combination_order_profile_for(duplicate_and_unknown_keys, Profile) :-
+    Profile = [
+        attribute(practice_under_article_5_2, combining_personal_data),
+        attribute(practice_under_article_5_2, none_of_the_four_practices),
+        attribute(colour, red)
+    ].
+dma_art_5_2_data_combination_order_profile_for(unbound_attestation_reason, Profile) :-
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service,
+                  attested(true, attestation(host_operator, attested_on_2026_11_19, _UnstatedReason, none)))
+    ].
+dma_art_5_2_data_combination_order_profile_for(partial_list_profile, Profile) :-
+    stated(true, Designation),
+    Profile = [attribute(designated_as_gatekeeper_for_core_platform_service, Designation)|_OpenTail].
+dma_art_5_2_data_combination_order_profile_for(repeat_listed_not_yet_repeated, Profile) :-
+    stated(true, Designation),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(consent_request_already_repeated_in_period, false)
+    ].
+dma_art_5_2_data_combination_order_profile_for(repeat_listed_already_repeated, Profile) :-
+    stated(true, Designation),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(consent_request_already_repeated_in_period, true)
+    ].
+dma_art_5_2_data_combination_order_profile_for(repeat_not_listed, Profile) :-
+    stated(false, Designation),
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, Designation),
+        attribute(consent_request_already_repeated_in_period, false)
+    ].
+dma_art_5_2_data_combination_order_profile_for(repeat_designation_absent, Profile) :-
+    Profile = [
+        attribute(consent_request_already_repeated_in_period, false)
+    ].
+
+% ---- Convenience wrapper ---------------------------------------------
+dma_art_5_2_data_combination_order_assess(Subject, Result) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    decide_dma_art_5_2_data_combination_order(Profile, Result).
+
+:- end_module(fixtures).

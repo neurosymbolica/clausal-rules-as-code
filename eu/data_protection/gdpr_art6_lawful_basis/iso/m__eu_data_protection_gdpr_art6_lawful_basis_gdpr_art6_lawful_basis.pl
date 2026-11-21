@@ -6,411 +6,385 @@
 :- use_module(library(dif)).
 :- use_module(library(reif), [memberd_t/3]).
 :- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
-:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_kernel, [gdpr_art6_lawful_basis_input_problems/2]).
-:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_citations, [implements/1]).
+:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_kernel, [gdpr_art6_lawful_basis_input_problems/2, gdpr_art6_lawful_basis_root_keys/1]).
+:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_citations, [implements/1, gdpr_art6_lawful_basis_outside_fact_entry/3, gdpr_art6_lawful_basis_referable/1]).
 
 gdpr_art6_lawful_basis_status_values([eligible, ineligible]).
 
-key_rank(basis_claimed, 1).
-key_rank(consent_given_and_conditions_met, 2).
-key_rank(contract_necessary, 3).
-key_rank(legal_obligation_necessary, 4).
-key_rank(legal_obligation_laid_down_by_law, 5).
-key_rank(vital_interests_necessary, 6).
-key_rank(public_interest_task_necessary, 7).
-key_rank(public_interest_task_laid_down_by_law, 8).
-key_rank(processing_by_public_authority_in_its_tasks, 9).
-key_rank(legitimate_interests_pursued, 10).
-key_rank(interests_overridden, 11).
-key_rank(child_data_subject, 12).
-key_rank(special_category, 13).
-key_rank(new_purpose_processing, 14).
-key_rank(compatible_purpose, 15).
+lawful_basis_way(way_a, consent, cite(eu_reg_2016_679_art_6_1_a)).
+lawful_basis_way(way_b, contract, cite(eu_reg_2016_679_art_6_1_b)).
+lawful_basis_way(way_c, legal_obligation, cite(eu_reg_2016_679_art_6_1_c)).
+lawful_basis_way(way_d, vital_interests, cite(eu_reg_2016_679_art_6_1_d)).
+lawful_basis_way(way_e, public_interest_task, cite(eu_reg_2016_679_art_6_1_e)).
+lawful_basis_way(way_f, legitimate_interests, cite(eu_reg_2016_679_art_6_1_f)).
 
-way_row(point_a, cite(eu_reg_2016_679_art_6_1_a), [need(consent_given_and_conditions_met, outside_fact, true)]).
-way_row(point_b, cite(eu_reg_2016_679_art_6_1_b), [need(contract_necessary, judgement, true)]).
-way_row(point_c, cite(eu_reg_2016_679_art_6_1_c), [need(legal_obligation_necessary, judgement, true), need(legal_obligation_laid_down_by_law, outside_fact, true)]).
-way_row(point_d, cite(eu_reg_2016_679_art_6_1_d), [need(vital_interests_necessary, judgement, true)]).
-way_row(point_e, cite(eu_reg_2016_679_art_6_1_e), [need(public_interest_task_necessary, judgement, true), need(public_interest_task_laid_down_by_law, outside_fact, true)]).
-way_row(point_f, cite(eu_reg_2016_679_art_6_1_f), [need(processing_by_public_authority_in_its_tasks, crisp, false), need(legitimate_interests_pursued, judgement, true), need(interests_overridden, judgement, false)]).
+lawful_basis_way_order([way_a, way_b, way_c, way_d, way_e, way_f]).
 
-basis_way(consent, point_a).
-basis_way(contract, point_b).
-basis_way(legal_obligation, point_c).
-basis_way(vital_interests, point_d).
-basis_way(public_interest_task, point_e).
-basis_way(legitimate_interests, point_f).
+way_holding_citations(way_a, [cite(eu_reg_2016_679_art_6_1_a)]).
+way_holding_citations(way_b, [cite(eu_reg_2016_679_art_6_1_b)]).
+way_holding_citations(way_c, [cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_3)]).
+way_holding_citations(way_d, [cite(eu_reg_2016_679_art_6_1_d)]).
+way_holding_citations(way_e, [cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_3)]).
+way_holding_citations(way_f, [cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]).
 
-holds_citations(point_a, [cite(eu_reg_2016_679_art_6_1_a)]).
-holds_citations(point_b, [cite(eu_reg_2016_679_art_6_1_b)]).
-holds_citations(point_c, [cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_3)]).
-holds_citations(point_d, [cite(eu_reg_2016_679_art_6_1_d)]).
-holds_citations(point_e, [cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_3)]).
-holds_citations(point_f, [cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]).
+failure_extra_citation(way_c, legal_obligation_laid_down_by_law, cite(eu_reg_2016_679_art_6_3)).
+failure_extra_citation(way_e, public_interest_task_laid_down_by_law, cite(eu_reg_2016_679_art_6_3)).
+failure_extra_citation(way_f, processing_by_public_authority_in_its_tasks, cite(eu_reg_2016_679_art_6_1_second_subpara)).
 
-outside_fact_row(consent_given_and_conditions_met, cite(eu_reg_2016_679_art_6_1_a), cite(consent_basis_statement)).
-outside_fact_row(legal_obligation_laid_down_by_law, cite(eu_reg_2016_679_art_6_3), cite(legal_obligation_law_statement)).
-outside_fact_row(public_interest_task_laid_down_by_law, cite(eu_reg_2016_679_art_6_3), cite(public_interest_task_law_statement)).
+open_textured_citation(contract_necessary, cite(eu_reg_2016_679_art_6_1_b)).
+open_textured_citation(legal_obligation_necessary, cite(eu_reg_2016_679_art_6_1_c)).
+open_textured_citation(vital_interests_necessary, cite(eu_reg_2016_679_art_6_1_d)).
+open_textured_citation(public_interest_task_necessary, cite(eu_reg_2016_679_art_6_1_e)).
+open_textured_citation(legitimate_interests_pursued, cite(eu_reg_2016_679_art_6_1_f)).
+open_textured_citation(interests_overridden, cite(eu_reg_2016_679_art_6_1_f)).
 
-judgement_citation(contract_necessary, cite(eu_reg_2016_679_art_6_1_b)).
-judgement_citation(legal_obligation_necessary, cite(eu_reg_2016_679_art_6_1_c)).
-judgement_citation(vital_interests_necessary, cite(eu_reg_2016_679_art_6_1_d)).
-judgement_citation(public_interest_task_necessary, cite(eu_reg_2016_679_art_6_1_e)).
-judgement_citation(legitimate_interests_pursued, cite(eu_reg_2016_679_art_6_1_f)).
-judgement_citation(interests_overridden, cite(eu_reg_2016_679_art_6_1_f)).
+compatibility_factor(link_between_purposes_taken_into_account, cite(eu_reg_2016_679_art_6_4_a)).
+compatibility_factor(collection_context_taken_into_account, cite(eu_reg_2016_679_art_6_4_b)).
+compatibility_factor(nature_of_data_taken_into_account, cite(eu_reg_2016_679_art_6_4_c)).
+compatibility_factor(possible_consequences_taken_into_account, cite(eu_reg_2016_679_art_6_4_d)).
+compatibility_factor(appropriate_safeguards_taken_into_account, cite(eu_reg_2016_679_art_6_4_e)).
 
-kind_class(judgement, question).
-kind_class(crisp, question).
-kind_class(outside_fact, statement).
+way_requirements(way_a, [consent_given_and_conditions_met - attested_true]) :-
+    implements(eu_reg_2016_679_art_6_1_a).
+way_requirements(way_b, [contract_necessary - true]) :-
+    implements(eu_reg_2016_679_art_6_1_b).
+way_requirements(way_c, [legal_obligation_necessary - true, legal_obligation_laid_down_by_law - attested_true]) :-
+    implements(eu_reg_2016_679_art_6_1_c),
+    implements(eu_reg_2016_679_art_6_3).
+way_requirements(way_d, [vital_interests_necessary - true]) :-
+    implements(eu_reg_2016_679_art_6_1_d).
+way_requirements(way_e, [public_interest_task_necessary - true, public_interest_task_laid_down_by_law - attested_true]) :-
+    implements(eu_reg_2016_679_art_6_1_e),
+    implements(eu_reg_2016_679_art_6_3).
+way_requirements(way_f, [processing_by_public_authority_in_its_tasks - false, legitimate_interests_pursued - true, interests_overridden - false]) :-
+    implements(eu_reg_2016_679_art_6_1_f),
+    implements(eu_reg_2016_679_art_6_1_second_subpara).
+
+needed_value_kind(true, caller_key).
+needed_value_kind(false, caller_key).
+needed_value_kind(attested_true, outside_fact).
+
+key_reading(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_reading(Profile, ProfileKey, given(Value)) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value).
+
+requirement_state(true, given(true), satisfied).
+requirement_state(true, given(false), opposed).
+requirement_state(true, given(unsure), unsure).
+requirement_state(false, given(false), satisfied).
+requirement_state(false, given(true), opposed).
+requirement_state(false, given(unsure), unsure).
+requirement_state(attested_true, given(attested(true, _)), satisfied).
+requirement_state(attested_true, given(attested(false, _)), opposed).
+requirement_state(_, absent, absent).
 
 unresolved_state(absent).
 unresolved_state(unsure).
 
-truth_state(true, true, held).
-truth_state(false, false, held).
-truth_state(true, false, opposed).
-truth_state(false, true, opposed).
+ordered_by_root(Candidates, Ordered) :-
+    gdpr_art6_lawful_basis_root_keys(RootKeys),
+    findall(RootKey, (member(RootKey, RootKeys), memberd_t(RootKey, Candidates, true)), Ordered).
 
-key_reading(Profile, Key, present(Value)) :-
-    profile_has(Profile, Key),
-    profile_get(Profile, Key, Value).
-key_reading(Profile, Key, absent) :-
-    profile_lacks(Profile, Key).
+first_in_root_order(Candidates, FirstKey) :-
+    gdpr_art6_lawful_basis_root_keys(RootKeys),
+    first_listed(RootKeys, Candidates, FirstKey).
 
-first_in_order(Keys, First) :-
-    findall(Rank - Key, (member(Key, Keys), key_rank(Key, Rank)), RankedKeys),
-    sort(RankedKeys, [_ - First|_]).
+first_listed([RootKey|RootKeys], Candidates, FirstKey) :-
+    memberd_t(RootKey, Candidates, Truth),
+    first_listed_by(Truth, RootKey, RootKeys, Candidates, FirstKey).
 
-need_state(Profile, need(Key, Kind, Needed), State) :-
+first_listed_by(true, RootKey, _, _, RootKey).
+first_listed_by(false, _, RootKeys, Candidates, FirstKey) :-
+    first_listed(RootKeys, Candidates, FirstKey).
+
+considered_ways(Profile, AllWays) :-
     implements(eu_reg_2016_679_art_6_1),
-    key_reading(Profile, Key, Reading),
-    reading_state(Kind, Needed, Reading, State).
-
-reading_state(_, _, absent, absent).
-reading_state(outside_fact, Needed, present(attested(Value, _)), State) :-
-    truth_state(Value, Needed, State).
-reading_state(crisp, Needed, present(Value), State) :-
-    truth_state(Value, Needed, State).
-reading_state(judgement, Needed, present(Value), State) :-
-    judgement_state(Value, Needed, State).
-
-judgement_state(unsure, _, unsure).
-judgement_state(true, Needed, State) :-
-    truth_state(true, Needed, State).
-judgement_state(false, Needed, State) :-
-    truth_state(false, Needed, State).
-
-way_status(Profile, Way, Status) :-
+    key_reading(Profile, basis_claimed, absent),
+    lawful_basis_way_order(AllWays).
+considered_ways(Profile, [WayIdentifier]) :-
     implements(eu_reg_2016_679_art_6_1),
-    way_row(Way, _, Needs),
-    findall(State, (member(Need, Needs), need_state(Profile, Need, State)), States),
-    memberd_t(opposed, States, HasOpposed),
-    unopposed_status(HasOpposed, States, Status).
+    key_reading(Profile, basis_claimed, given(ClaimedBasis)),
+    lawful_basis_way(WayIdentifier, ClaimedBasis, _).
 
-unopposed_status(true, _, fails).
-unopposed_status(false, States, Status) :-
-    findall(State, (member(State, States), unresolved_state(State)), Unresolved),
-    resolution_status(Unresolved, Status).
-
-resolution_status([], holds).
-resolution_status([_|_], open).
-
-way_unresolved(Profile, Way, Entries) :-
-    way_row(Way, _, Needs),
-    findall(entry(Key, Kind, State), (member(need(Key, Kind, Needed), Needs), need_state(Profile, need(Key, Kind, Needed), State), unresolved_state(State)), Entries).
-
-way_statement(Way, Key) :-
-    way_row(Way, _, Needs),
-    member(need(Key, outside_fact, _), Needs).
-
-considered_ways(Profile, ConsideredWays) :-
+way_evaluation(Profile, WayIdentifier, WayIdentifier - WayStatus) :-
     implements(eu_reg_2016_679_art_6_1),
-    key_reading(Profile, basis_claimed, Reading),
-    considered_from(Reading, ConsideredWays).
+    way_requirements(WayIdentifier, Requirements),
+    maplist(requirement_reading(Profile), Requirements, States),
+    way_status_from_states(States, WayStatus).
 
-considered_from(absent, [point_a, point_b, point_c, point_d, point_e, point_f]).
-considered_from(present(Choice), [Way]) :-
-    basis_way(Choice, Way).
+requirement_reading(Profile, ProfileKey - NeededValue, state(ProfileKey, NeededValue, KeyState)) :-
+    key_reading(Profile, ProfileKey, Reading),
+    requirement_state(NeededValue, Reading, KeyState).
 
-ways_with_status(Profile, Ways, Status, Matching) :-
-    findall(Way, (member(Way, Ways), way_status(Profile, Way, Status)), Matching).
+way_status_from_states(States, WayStatus) :-
+    findall(ProfileKey, member(state(ProfileKey, _, opposed), States), OpposedKeys),
+    findall(unresolved(ProfileKey, NeededValue, KeyState), (member(state(ProfileKey, NeededValue, KeyState), States), unresolved_state(KeyState)), Unresolved),
+    status_from_keys(OpposedKeys, Unresolved, WayStatus).
 
-lawful_basis_route(Profile, Route) :-
-    implements(eu_reg_2016_679_art_6_1),
-    considered_ways(Profile, ConsideredWays),
-    ways_with_status(Profile, ConsideredWays, holds, HoldingWays),
-    ways_with_status(Profile, ConsideredWays, open, OpenWays),
-    ways_with_status(Profile, ConsideredWays, fails, FailingWays),
-    route_from(HoldingWays, OpenWays, FailingWays, Profile, ConsideredWays, Route).
-
-route_from([FirstHolding|OtherHolding], _, _, _, _, holds([FirstHolding|OtherHolding])).
-route_from([], [], FailingWays, _, _, fails(FailingWays)).
-route_from([], [FirstOpen|OtherOpen], _, Profile, ConsideredWays, Route) :-
-    open_route(Profile, [FirstOpen|OtherOpen], ConsideredWays, Route).
-
-open_route(Profile, OpenWays, ConsideredWays, Route) :-
-    implements(eu_reg_2016_679_art_6_1),
-    findall(entry(Key, Kind), (member(Way, OpenWays), way_unresolved(Profile, Way, [entry(Key, Kind, absent)])), OneStepEntries),
-    one_step_route(OneStepEntries, Profile, OpenWays, ConsideredWays, Route).
-
-one_step_route([], Profile, OpenWays, ConsideredWays, Route) :-
-    general_route(Profile, OpenWays, ConsideredWays, Route).
-one_step_route([FirstEntry|OtherEntries], _, _, _, Route) :-
-    findall(Key, (member(entry(Key, Kind), [FirstEntry|OtherEntries]), kind_class(Kind, question)), QuestionKeys),
-    findall(Key, (member(entry(Key, Kind), [FirstEntry|OtherEntries]), kind_class(Kind, statement)), StatementKeys),
-    one_step_answer(QuestionKeys, StatementKeys, Route).
-
-one_step_answer([FirstQuestion|OtherQuestions], _, missing(Key)) :-
-    first_in_order([FirstQuestion|OtherQuestions], Key).
-one_step_answer([], [FirstStatement|OtherStatements], referral(Key)) :-
-    first_in_order([FirstStatement|OtherStatements], Key).
-
-general_route(Profile, OpenWays, ConsideredWays, Route) :-
-    implements(eu_reg_2016_679_art_6_1),
-    findall(Entry, (member(Way, OpenWays), way_unresolved(Profile, Way, Entries), member(Entry, Entries)), AllEntries),
-    findall(Key, (member(entry(Key, Kind, absent), AllEntries), kind_class(Kind, question)), QuestionKeys),
-    findall(Key, (member(entry(Key, Kind, absent), AllEntries), kind_class(Kind, statement)), StatementKeys),
-    findall(Key, member(entry(Key, judgement, unsure), AllEntries), UnsureKeys),
-    general_answer(QuestionKeys, StatementKeys, UnsureKeys, ConsideredWays, Route).
-
-general_answer([FirstQuestion|OtherQuestions], _, _, _, missing(Key)) :-
-    first_in_order([FirstQuestion|OtherQuestions], Key).
-general_answer([], [FirstStatement|OtherStatements], _, _, referral(Key)) :-
-    first_in_order([FirstStatement|OtherStatements], Key).
-general_answer([], [], [FirstUnsure|OtherUnsure], ConsideredWays, unsure(Key, ConsideredWays)) :-
-    first_in_order([FirstUnsure|OtherUnsure], Key).
-
-holding_citations(HoldingWays, Citations) :-
-    implements(eu_reg_2016_679_art_6_1),
-    findall(Citation, (member(Way, HoldingWays), holds_citations(Way, WayCitations), member(Citation, WayCitations)), Found),
-    sort([cite(eu_reg_2016_679_art_6_1)|Found], Citations).
-
-failing_citations(Profile, FailingWays, Citations) :-
-    implements(eu_reg_2016_679_art_6_1),
-    findall(Citation, (member(Way, FailingWays), fails_citations(Profile, Way, WayCitations), member(Citation, WayCitations)), Found),
-    sort([cite(eu_reg_2016_679_art_6_1)|Found], Citations).
-
-fails_citations(_, point_a, [cite(eu_reg_2016_679_art_6_1_a)]) :-
-    implements(eu_reg_2016_679_art_6_1_a).
-fails_citations(_, point_b, [cite(eu_reg_2016_679_art_6_1_b)]) :-
-    implements(eu_reg_2016_679_art_6_1_b).
-fails_citations(Profile, point_c, Citations) :-
-    implements(eu_reg_2016_679_art_6_3),
-    key_reading(Profile, legal_obligation_laid_down_by_law, Reading),
-    statement_false_citations(Reading, [cite(eu_reg_2016_679_art_6_1_c)], cite(eu_reg_2016_679_art_6_3), Citations).
-fails_citations(_, point_d, [cite(eu_reg_2016_679_art_6_1_d)]) :-
-    implements(eu_reg_2016_679_art_6_1_d).
-fails_citations(Profile, point_e, Citations) :-
-    implements(eu_reg_2016_679_art_6_3),
-    key_reading(Profile, public_interest_task_laid_down_by_law, Reading),
-    statement_false_citations(Reading, [cite(eu_reg_2016_679_art_6_1_e)], cite(eu_reg_2016_679_art_6_3), Citations).
-fails_citations(Profile, point_f, Citations) :-
-    implements(eu_reg_2016_679_art_6_1_second_subpara),
-    key_reading(Profile, processing_by_public_authority_in_its_tasks, Reading),
-    crisp_true_citations(Reading, [cite(eu_reg_2016_679_art_6_1_f)], cite(eu_reg_2016_679_art_6_1_second_subpara), Citations).
-
-statement_false_citations(present(attested(false, _)), Base, Extra, Citations) :-
-    append(Base, [Extra], Citations).
-statement_false_citations(present(attested(true, _)), Base, _, Base).
-statement_false_citations(absent, Base, _, Base).
-
-crisp_true_citations(present(true), Base, Extra, Citations) :-
-    append(Base, [Extra], Citations).
-crisp_true_citations(present(false), Base, _, Base).
-crisp_true_citations(absent, Base, _, Base).
-
-holding_basis(Profile, HoldingWays, Basis) :-
-    implements(eu_reg_2016_679_art_6_1),
-    findall(outside_fact(Key, Value), (member(Way, HoldingWays), way_statement(Way, Key), key_reading(Profile, Key, present(Value))), Statements),
-    memberd_t(point_f, HoldingWays, PointFHolds),
-    child_flag(PointFHolds, Profile, ChildItems),
-    key_reading(Profile, special_category, SpecialReading),
-    special_category_flag(SpecialReading, SpecialItems),
-    append([Statements, ChildItems, SpecialItems], Basis).
-
-child_flag(false, _, []).
-child_flag(true, Profile, Items) :-
-    implements(eu_reg_2016_679_art_6_1_f),
-    key_reading(Profile, child_data_subject, Reading),
-    attested_true_flag(Reading, child_data_subject, Items).
-
-special_category_flag(Reading, Items) :-
-    implements(eu_reg_2016_679_art_9_1),
-    attested_true_flag(Reading, special_category, Items).
-
-attested_true_flag(absent, _, []).
-attested_true_flag(present(attested(true, Attestation)), Key, [flagged(Key, attested(true, Attestation))]).
-attested_true_flag(present(attested(false, _)), _, []).
-
-failing_basis(Profile, FailingWays, Basis) :-
-    implements(eu_reg_2016_679_art_6_1),
-    findall(outside_fact(Key, attested(false, Attestation)), (member(Way, FailingWays), way_statement(Way, Key), key_reading(Profile, Key, present(attested(false, Attestation)))), Basis).
-
-relied_on_pairs(Profile, ConsideredWays, Pairs) :-
-    findall(Key, (member(Way, ConsideredWays), way_row(Way, _, Needs), member(need(Key, _, _), Needs)), WayKeys),
-    memberd_t(point_f, ConsideredWays, PointFConsidered),
-    child_candidate(PointFConsidered, ChildKeys),
-    append([[basis_claimed], WayKeys, ChildKeys], CandidateKeys),
-    findall(Key - Value, (member(Key, CandidateKeys), key_reading(Profile, Key, present(Value))), Pairs).
-
-child_candidate(true, [child_data_subject]).
-child_candidate(false, []).
+status_from_keys([], [], holds).
+status_from_keys([FirstKey|OtherKeys], _, fails([FirstKey|OtherKeys])).
+status_from_keys([], [FirstUnresolved|OtherUnresolved], open([FirstUnresolved|OtherUnresolved])).
 
 lawful_basis_status(Profile, input_problems([FirstProblem|OtherProblems]), [], []) :-
     gdpr_art6_lawful_basis_input_problems(Profile, [FirstProblem|OtherProblems]).
 lawful_basis_status(Profile, Result, Basis, Citations) :-
     gdpr_art6_lawful_basis_input_problems(Profile, []),
-    lawful_basis_decision(Profile, Result, Basis, Citations).
+    considered_ways(Profile, Considered),
+    maplist(way_evaluation(Profile), Considered, Evaluations),
+    findall(WayIdentifier, member(WayIdentifier - holds, Evaluations), Holding),
+    findall(WayIdentifier - OpposedKeys, member(WayIdentifier - fails(OpposedKeys), Evaluations), Failing),
+    findall(WayIdentifier - Unresolved, member(WayIdentifier - open(Unresolved), Evaluations), OpenWays),
+    decide_lawful_basis(Holding, Failing, OpenWays, Profile, Considered, Result, Basis, Citations).
 
-lawful_basis_decision(Profile, eligible, Basis, Citations) :-
+decide_lawful_basis([FirstWay|OtherWays], _, _, Profile, _, eligible, Basis, Citations) :-
     implements(eu_reg_2016_679_art_6_1),
-    lawful_basis_route(Profile, holds(HoldingWays)),
-    holding_citations(HoldingWays, Citations),
-    holding_basis(Profile, HoldingWays, Basis).
-lawful_basis_decision(Profile, ineligible, Basis, Citations) :-
+    eligible_citations([FirstWay|OtherWays], Citations),
+    eligible_basis([FirstWay|OtherWays], Profile, Basis).
+decide_lawful_basis([], Failing, [], Profile, _, ineligible, Basis, Citations) :-
     implements(eu_reg_2016_679_art_6_1),
-    lawful_basis_route(Profile, fails(FailingWays)),
-    failing_citations(Profile, FailingWays, Citations),
-    failing_basis(Profile, FailingWays, Basis).
-lawful_basis_decision(Profile, indeterminate([Key]), [], []) :-
+    ineligible_citations(Failing, Citations),
+    ineligible_basis(Failing, Profile, Basis).
+decide_lawful_basis([], _, [FirstOpen|OtherOpen], Profile, Considered, Result, [], []) :-
     implements(eu_reg_2016_679_art_6_1),
-    lawful_basis_route(Profile, missing(Key)).
-lawful_basis_decision(Profile, needs_legal_review(cross_reference_unresolved(Citation, Target), [resolution(Target, not_attempted), inputs_relied_on([Key - absent])]), [], []) :-
-    implements(eu_reg_2016_679_art_6_3),
-    lawful_basis_route(Profile, referral(Key)),
-    outside_fact_row(Key, Citation, Target).
-lawful_basis_decision(Profile, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]), [], []) :-
+    not_final_answer([FirstOpen|OtherOpen], Profile, Considered, Result).
+
+eligible_citations(Holding, Citations) :-
+    findall(Citation, (member(WayIdentifier, Holding), way_holding_citations(WayIdentifier, WayCitations), member(Citation, WayCitations)), HoldingCitations),
+    sort([cite(eu_reg_2016_679_art_6_1)|HoldingCitations], Citations).
+
+eligible_basis(Holding, Profile, Basis) :-
+    findall(ProfileKey, (member(WayIdentifier, Holding), way_requirements(WayIdentifier, Requirements), member(ProfileKey - attested_true, Requirements)), OutsideKeys),
+    ordered_by_root(OutsideKeys, OrderedKeys),
+    findall(outside_fact(ProfileKey, Attested), (member(ProfileKey, OrderedKeys), key_reading(Profile, ProfileKey, given(Attested))), OutsideFacts),
+    memberd_t(way_f, Holding, WayFHolds),
+    child_flag(WayFHolds, Profile, ChildFlags),
+    special_category_flag(Profile, SpecialFlags),
+    append([OutsideFacts, ChildFlags, SpecialFlags], Basis).
+
+child_flag(true, Profile, Flags) :-
+    implements(eu_reg_2016_679_art_6_1_f),
+    attested_true_flag(Profile, child_data_subject, Flags).
+child_flag(false, _, []).
+
+special_category_flag(Profile, Flags) :-
+    implements(eu_reg_2016_679_art_9_1),
+    attested_true_flag(Profile, special_category, Flags).
+
+attested_true_flag(Profile, ProfileKey, [flagged(ProfileKey, attested(true, Attestation))]) :-
+    key_reading(Profile, ProfileKey, given(attested(true, Attestation))).
+attested_true_flag(Profile, ProfileKey, []) :-
+    key_reading(Profile, ProfileKey, given(attested(false, _))).
+attested_true_flag(Profile, ProfileKey, []) :-
+    key_reading(Profile, ProfileKey, absent).
+
+ineligible_citations(Failing, Citations) :-
+    findall(Citation, (member(WayIdentifier - _, Failing), lawful_basis_way(WayIdentifier, _, Citation)), PointCitations),
+    findall(Citation, (member(WayIdentifier - OpposedKeys, Failing), member(ProfileKey, OpposedKeys), failure_extra_citation(WayIdentifier, ProfileKey, Citation)), ExtraCitations),
+    append(PointCitations, ExtraCitations, WayCitations),
+    sort([cite(eu_reg_2016_679_art_6_1)|WayCitations], Citations).
+
+ineligible_basis(Failing, Profile, Basis) :-
+    findall(ProfileKey, (member(_ - OpposedKeys, Failing), member(ProfileKey, OpposedKeys)), AllOpposedKeys),
+    ordered_by_root(AllOpposedKeys, OrderedKeys),
+    findall(outside_fact(ProfileKey, attested(false, Attestation)), (member(ProfileKey, OrderedKeys), key_reading(Profile, ProfileKey, given(attested(false, Attestation)))), Basis).
+
+not_final_answer(OpenWays, Profile, Considered, Result) :-
+    findall(unresolved(ProfileKey, NeededValue), member(_ - [unresolved(ProfileKey, NeededValue, absent)], OpenWays), OneStep),
+    findall(ProfileKey, (member(unresolved(ProfileKey, NeededValue), OneStep), needed_value_kind(NeededValue, caller_key)), OneStepCallerKeys),
+    findall(ProfileKey, (member(unresolved(ProfileKey, NeededValue), OneStep), needed_value_kind(NeededValue, outside_fact)), OneStepOutsideKeys),
+    findall(ProfileKey, (member(_ - Unresolved, OpenWays), member(unresolved(ProfileKey, NeededValue, absent), Unresolved), needed_value_kind(NeededValue, caller_key)), AbsentCallerKeys),
+    findall(ProfileKey, (member(_ - Unresolved, OpenWays), member(unresolved(ProfileKey, NeededValue, absent), Unresolved), needed_value_kind(NeededValue, outside_fact)), AbsentOutsideKeys),
+    findall(ProfileKey, (member(_ - Unresolved, OpenWays), member(unresolved(ProfileKey, _, unsure), Unresolved)), UnsureKeys),
+    not_final_step(OneStepCallerKeys, OneStepOutsideKeys, AbsentCallerKeys, AbsentOutsideKeys, UnsureKeys, Profile, Considered, Result).
+
+not_final_step([FirstKey|OtherKeys], _, _, _, _, _, _, indeterminate([NamedKey])) :-
     implements(eu_reg_2016_679_art_6_1),
-    lawful_basis_route(Profile, unsure(Key, ConsideredWays)),
-    judgement_citation(Key, Citation),
-    relied_on_pairs(Profile, ConsideredWays, Pairs).
+    first_in_root_order([FirstKey|OtherKeys], NamedKey).
+not_final_step([], [FirstKey|OtherKeys], _, _, _, _, _, Result) :-
+    implements(eu_reg_2016_679_art_6_1),
+    first_in_root_order([FirstKey|OtherKeys], ReferredKey),
+    absent_referral(ReferredKey, Result).
+not_final_step([], [], [FirstKey|OtherKeys], _, _, _, _, indeterminate([NamedKey])) :-
+    implements(eu_reg_2016_679_art_6_1),
+    first_in_root_order([FirstKey|OtherKeys], NamedKey).
+not_final_step([], [], [], [FirstKey|OtherKeys], _, _, _, Result) :-
+    implements(eu_reg_2016_679_art_6_1),
+    first_in_root_order([FirstKey|OtherKeys], ReferredKey),
+    absent_referral(ReferredKey, Result).
+not_final_step([], [], [], [], [FirstKey|OtherKeys], Profile, Considered, needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on(Pairs)])) :-
+    implements(eu_reg_2016_679_art_6_1),
+    first_in_root_order([FirstKey|OtherKeys], UnsureKey),
+    open_textured_citation(UnsureKey, Citation),
+    referral_pairs(Profile, Considered, Pairs).
+
+absent_referral(ReferredKey, needs_legal_review(cross_reference_unresolved(Citation, cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on([ReferredKey - absent])])) :-
+    implements(eu_reg_2016_679_art_6_1),
+    gdpr_art6_lawful_basis_referable(ReferredKey),
+    gdpr_art6_lawful_basis_outside_fact_entry(ReferredKey, Citation, Target).
+
+referral_pairs(Profile, Considered, Pairs) :-
+    findall(ProfileKey, (member(WayIdentifier, Considered), way_requirements(WayIdentifier, Requirements), member(ProfileKey - _, Requirements)), WayKeys),
+    memberd_t(way_f, Considered, WayFConsidered),
+    child_pair_keys(WayFConsidered, ChildKeys),
+    append([[basis_claimed], WayKeys, ChildKeys], RelevantKeys),
+    ordered_by_root(RelevantKeys, OrderedKeys),
+    findall(ProfileKey - Value, (member(ProfileKey, OrderedKeys), key_reading(Profile, ProfileKey, given(Value))), Pairs).
+
+child_pair_keys(true, [child_data_subject]).
+child_pair_keys(false, []).
 
 purpose_compatibility(Profile, input_problems([FirstProblem|OtherProblems]), [], []) :-
     gdpr_art6_lawful_basis_input_problems(Profile, [FirstProblem|OtherProblems]).
-purpose_compatibility(Profile, Result, [], Citations) :-
+purpose_compatibility(Profile, Result, Basis, Citations) :-
     gdpr_art6_lawful_basis_input_problems(Profile, []),
     key_reading(Profile, new_purpose_processing, Reading),
-    compatibility_decision(Reading, Profile, Result, Citations).
+    compatibility_from_new_purpose(Reading, Profile, Result, Basis, Citations).
 
-compatibility_decision(absent, _, indeterminate([new_purpose_processing]), []) :-
+compatibility_from_new_purpose(absent, _, indeterminate([new_purpose_processing]), [], []) :-
     implements(eu_reg_2016_679_art_6_4).
-compatibility_decision(present(false), _, compatibility_test_not_engaged, [cite(eu_reg_2016_679_art_6_4)]) :-
+compatibility_from_new_purpose(given(false), _, compatibility_test_not_engaged, [], [cite(eu_reg_2016_679_art_6_4)]) :-
     implements(eu_reg_2016_679_art_6_4).
-compatibility_decision(present(true), Profile, Result, Citations) :-
+compatibility_from_new_purpose(given(true), Profile, Result, Basis, Citations) :-
+    implements(eu_reg_2016_679_art_6_4),
+    factors_not_taken_into_account(Profile, FalseFactors),
+    compatibility_after_factors(FalseFactors, Profile, Result, Basis, Citations).
+
+factors_not_taken_into_account(Profile, FalseFactors) :-
+    implements(eu_reg_2016_679_art_6_4),
+    findall(FactorKey, (compatibility_factor(FactorKey, _), key_reading(Profile, FactorKey, given(false))), FalseFactors).
+
+compatibility_after_factors([_|_], _, compatibility_not_ascertained, [], [cite(eu_reg_2016_679_art_6_4), cite(eu_reg_2016_679_art_6_4_a), cite(eu_reg_2016_679_art_6_4_b), cite(eu_reg_2016_679_art_6_4_c), cite(eu_reg_2016_679_art_6_4_d), cite(eu_reg_2016_679_art_6_4_e)]) :-
+    implements(eu_reg_2016_679_art_6_4).
+compatibility_after_factors([], Profile, Result, Basis, Citations) :-
     implements(eu_reg_2016_679_art_6_4),
     key_reading(Profile, compatible_purpose, Reading),
-    compatible_judgement(Reading, Result, Citations).
+    compatibility_judgement(Reading, Result, Basis, Citations).
 
-compatible_judgement(present(true), purpose_compatible, [cite(eu_reg_2016_679_art_6_4)]) :-
+compatibility_judgement(given(true), purpose_compatible, [], [cite(eu_reg_2016_679_art_6_4)]) :-
     implements(eu_reg_2016_679_art_6_4).
-compatible_judgement(present(false), purpose_not_compatible, [cite(eu_reg_2016_679_art_6_4)]) :-
+compatibility_judgement(given(false), purpose_not_compatible, [], [cite(eu_reg_2016_679_art_6_4)]) :-
     implements(eu_reg_2016_679_art_6_4).
-compatible_judgement(absent, indeterminate([compatible_purpose]), []) :-
+compatibility_judgement(absent, indeterminate([compatible_purpose]), [], []) :-
     implements(eu_reg_2016_679_art_6_4).
-compatible_judgement(present(unsure), needs_legal_review(open_textured(compatible_purpose, cite(eu_reg_2016_679_art_6_4)), [inputs_relied_on([new_purpose_processing - true, compatible_purpose - unsure])]), []) :-
+compatibility_judgement(given(unsure), needs_legal_review(open_textured(compatible_purpose, cite(eu_reg_2016_679_art_6_4)), [inputs_relied_on([new_purpose_processing - true, compatible_purpose - unsure])]), [], []) :-
     implements(eu_reg_2016_679_art_6_4).
 
 decide_gdpr_art6_lawful_basis(Profile, gdpr_art6_lawful_basis_verdict(Status, Citations)) :-
-    lawful_basis_status(Profile, Status, _Basis, Citations).
+    lawful_basis_status(Profile, Status, _, Citations).
 
 gdpr_art6_lawful_basis_status(Profile, Status) :-
-    decide_gdpr_art6_lawful_basis(Profile, gdpr_art6_lawful_basis_verdict(Status, _Citations)).
+    decide_gdpr_art6_lawful_basis(Profile, gdpr_art6_lawful_basis_verdict(Status, _)).
 
-gdpr_art6_lawful_basis_checklist(Profile, [item(input_check, unmet(input_problems([FirstProblem|OtherProblems])), cite(eu_reg_2016_679_art_6_1))]) :-
+gdpr_art6_lawful_basis_checklist(Profile, [item(overall, input_problems([FirstProblem|OtherProblems]), cite(eu_reg_2016_679_art_6_1))]) :-
     gdpr_art6_lawful_basis_input_problems(Profile, [FirstProblem|OtherProblems]).
 gdpr_art6_lawful_basis_checklist(Profile, Items) :-
     gdpr_art6_lawful_basis_input_problems(Profile, []),
-    considered_ways(Profile, ConsideredWays),
-    findall(Item, (way_row(Way, Citation, _), checklist_item(Profile, ConsideredWays, Way, Citation, Item)), Items).
+    considered_ways(Profile, Considered),
+    maplist(way_evaluation(Profile), Considered, Evaluations),
+    maplist(checklist_item, Evaluations, Items).
 
-checklist_item(Profile, ConsideredWays, Way, Citation, item(Way, Status, Citation)) :-
-    memberd_t(Way, ConsideredWays, Considered),
-    way_checklist_status(Considered, Profile, Way, Status).
-
-way_checklist_status(false, _, _, inapplicable).
-way_checklist_status(true, Profile, Way, Status) :-
-    way_status(Profile, Way, WayStatus),
-    item_status(WayStatus, Profile, Way, Status).
-
-item_status(holds, _, _, met).
-item_status(fails, _, _, unmet(way_fails)).
-item_status(open, Profile, Way, unknown(Keys)) :-
-    way_unresolved(Profile, Way, Entries),
-    findall(Key, member(entry(Key, _, _), Entries), Keys).
+checklist_item(WayIdentifier - holds, item(WayIdentifier, met, Citation)) :-
+    lawful_basis_way(WayIdentifier, _, Citation).
+checklist_item(WayIdentifier - fails(OpposedKeys), item(WayIdentifier, unmet(failing_keys(OpposedKeys)), Citation)) :-
+    lawful_basis_way(WayIdentifier, _, Citation).
+checklist_item(WayIdentifier - open(Unresolved), item(WayIdentifier, unknown(UnresolvedKeys), Citation)) :-
+    lawful_basis_way(WayIdentifier, _, Citation),
+    findall(ProfileKey, member(unresolved(ProfileKey, _, _), Unresolved), UnresolvedKeys).
 
 gdpr_art6_lawful_basis_decision_resolvable(Profile) :-
-    decide_gdpr_art6_lawful_basis(Profile, _Verdict).
+    decide_gdpr_art6_lawful_basis(Profile, _).
 
-statement(Value, attested(Value, attestation(host_system, recorded_moment, stated_by_host, none))).
-
-test(contract_alone_is_eligible) :-
-    findall(Result - Basis - Citations, lawful_basis_status([attribute(contract_necessary, true)], Result, Basis, Citations), Answers),
-    Answers = [eligible - [] - Cited],
-    sort(Cited, [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)]).
-test(empty_profile_asks_for_contract_first) :-
-    findall(Result - Basis - Citations, lawful_basis_status([], Result, Basis, Citations), Answers),
-    Answers == [indeterminate([contract_necessary]) - [] - []].
+test(empty_profile_names_contract_necessary_first) :-
+    lawful_basis_status([], Result, Basis, Citations),
+    Result == indeterminate([contract_necessary]),
+    Basis == [],
+    Citations == [].
+test(empty_profile_gives_exactly_one_solution) :-
+    findall(Result, lawful_basis_status([], Result, _, _), Results),
+    length(Results, 1).
+test(contract_necessary_true_is_eligible) :-
+    lawful_basis_status([attribute(contract_necessary, true)], eligible, Basis, Citations),
+    Basis == [],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)].
 test(claimed_consent_absent_is_referred) :-
-    findall(Result, lawful_basis_status([attribute(basis_claimed, consent)], Result, [], []), Answers),
-    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_1_a), cite(consent_basis_statement)), [resolution(cite(consent_basis_statement), not_attempted), inputs_relied_on([consent_given_and_conditions_met - absent])])].
+    gdpr_art6_lawful_basis_outside_fact_entry(consent_given_and_conditions_met, Citation, Target),
+    Citation == cite(eu_reg_2016_679_art_6_1_a),
+    Target == consent_basis_statement,
+    lawful_basis_status([attribute(basis_claimed, consent)], Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(Citation, cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on([consent_given_and_conditions_met - absent])]).
 test(claimed_legal_obligation_without_law_statement_is_referred) :-
-    lawful_basis_status([attribute(basis_claimed, legal_obligation), attribute(legal_obligation_necessary, true)], needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(legal_obligation_law_statement)), _), [], []).
-test(consent_statement_attested_true_is_copied) :-
-    statement(true, Consent),
-    lawful_basis_status([attribute(consent_given_and_conditions_met, Consent)], eligible, Basis, _),
-    Basis == [outside_fact(consent_given_and_conditions_met, Consent)].
-test(one_step_statement_is_referred_before_open_ways) :-
-    statement(false, Refused),
-    Profile = [attribute(consent_given_and_conditions_met, Refused), attribute(contract_necessary, false), attribute(legal_obligation_necessary, true), attribute(vital_interests_necessary, false)],
-    lawful_basis_status(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(legal_obligation_law_statement)), _), [], []).
-test(missing_question_before_unsure) :-
-    statement(false, Refused),
-    statement(true, LawStated),
-    Profile = [attribute(consent_given_and_conditions_met, Refused), attribute(contract_necessary, false), attribute(legal_obligation_necessary, false), attribute(vital_interests_necessary, false), attribute(public_interest_task_necessary, unsure), attribute(public_interest_task_laid_down_by_law, LawStated)],
-    lawful_basis_status(Profile, indeterminate([processing_by_public_authority_in_its_tasks]), [], []).
-test(unsure_balance_goes_to_a_lawyer_with_the_child) :-
-    statement(true, Child),
-    Profile = [attribute(basis_claimed, legitimate_interests), attribute(processing_by_public_authority_in_its_tasks, false), attribute(legitimate_interests_pursued, true), attribute(interests_overridden, unsure), attribute(child_data_subject, Child)],
-    findall(Result, lawful_basis_status(Profile, Result, [], []), Answers),
-    Answers == [needs_legal_review(open_textured(interests_overridden, cite(eu_reg_2016_679_art_6_1_f)), [inputs_relied_on([basis_claimed - legitimate_interests, processing_by_public_authority_in_its_tasks - false, legitimate_interests_pursued - true, interests_overridden - unsure, child_data_subject - Child])])].
-test(public_authority_cannot_rely_on_point_f) :-
-    findall(Result - Cited, lawful_basis_status([attribute(basis_claimed, legitimate_interests), attribute(processing_by_public_authority_in_its_tasks, true)], Result, [], Cited), Answers),
-    Answers = [ineligible - Citations],
-    sort(Citations, [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]).
+    gdpr_art6_lawful_basis_outside_fact_entry(legal_obligation_laid_down_by_law, Citation, Target),
+    Citation == cite(eu_reg_2016_679_art_6_3),
+    Target == legal_obligation_law_statement,
+    lawful_basis_status([attribute(basis_claimed, legal_obligation), attribute(legal_obligation_necessary, true)], Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(Citation, cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on([legal_obligation_laid_down_by_law - absent])]).
+test(legal_obligation_with_law_statement_is_eligible) :-
+    lawful_basis_status([attribute(basis_claimed, legal_obligation), attribute(legal_obligation_necessary, true), attribute(legal_obligation_laid_down_by_law, attested(true, attestation(host, stated_at, law_named, none)))], eligible, Basis, Citations),
+    Basis == [outside_fact(legal_obligation_laid_down_by_law, attested(true, attestation(host, stated_at, law_named, none)))],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_3)].
+test(public_authority_cannot_rely_on_legitimate_interests) :-
+    lawful_basis_status([attribute(basis_claimed, legitimate_interests), attribute(processing_by_public_authority_in_its_tasks, true)], ineligible, Basis, Citations),
+    Basis == [],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)].
+test(unsure_balance_goes_to_a_lawyer_with_the_child_pair) :-
+    lawful_basis_status([attribute(basis_claimed, legitimate_interests), attribute(processing_by_public_authority_in_its_tasks, false), attribute(legitimate_interests_pursued, true), attribute(interests_overridden, unsure), attribute(child_data_subject, attested(true, attestation(host, stated_at, age_given, none)))], Result, [], []),
+    Result == needs_legal_review(open_textured(interests_overridden, cite(eu_reg_2016_679_art_6_1_f)), [inputs_relied_on([basis_claimed - legitimate_interests, processing_by_public_authority_in_its_tasks - false, legitimate_interests_pursued - true, interests_overridden - unsure, child_data_subject - attested(true, attestation(host, stated_at, age_given, none))])]).
+test(legitimate_interests_holding_flags_the_child) :-
+    lawful_basis_status([attribute(processing_by_public_authority_in_its_tasks, false), attribute(legitimate_interests_pursued, true), attribute(interests_overridden, false), attribute(child_data_subject, attested(true, attestation(host, stated_at, age_given, none)))], eligible, Basis, _),
+    Basis == [flagged(child_data_subject, attested(true, attestation(host, stated_at, age_given, none)))].
+test(consent_eligible_copies_statement_and_flags_special_category) :-
+    lawful_basis_status([attribute(consent_given_and_conditions_met, attested(true, attestation(host, stated_at, consent_package, none))), attribute(special_category, attested(true, attestation(host, stated_at, health_data, none)))], eligible, Basis, Citations),
+    Basis == [outside_fact(consent_given_and_conditions_met, attested(true, attestation(host, stated_at, consent_package, none))), flagged(special_category, attested(true, attestation(host, stated_at, health_data, none)))],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a)].
 test(every_way_failing_is_ineligible) :-
-    statement(false, Refused),
-    Profile = [attribute(consent_given_and_conditions_met, Refused), attribute(contract_necessary, false), attribute(legal_obligation_necessary, false), attribute(vital_interests_necessary, false), attribute(public_interest_task_necessary, false), attribute(processing_by_public_authority_in_its_tasks, true)],
-    lawful_basis_status(Profile, ineligible, Basis, Cited),
-    Basis == [outside_fact(consent_given_and_conditions_met, Refused)],
-    sort(Cited, Sorted),
-    sort([cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a), cite(eu_reg_2016_679_art_6_1_b), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_1_d), cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)], Sorted).
-test(point_f_holding_flags_child_and_special_category) :-
-    statement(true, Child),
-    statement(true, Special),
-    Profile = [attribute(processing_by_public_authority_in_its_tasks, false), attribute(legitimate_interests_pursued, true), attribute(interests_overridden, false), attribute(child_data_subject, Child), attribute(special_category, Special)],
-    lawful_basis_status(Profile, eligible, Basis, _),
-    Basis == [flagged(child_data_subject, Child), flagged(special_category, Special)].
-test(wrong_type_is_an_input_problem) :-
-    lawful_basis_status([attribute(contract_necessary, maybe)], input_problems([wrong_type(contract_necessary)]), [], []).
-test(compatibility_not_engaged) :-
-    findall(Result - Basis - Citations, purpose_compatibility([attribute(new_purpose_processing, false)], Result, Basis, Citations), Answers),
-    Answers == [compatibility_test_not_engaged - [] - [cite(eu_reg_2016_679_art_6_4)]].
-test(compatibility_absent_new_purpose_is_asked) :-
-    purpose_compatibility([attribute(compatible_purpose, true)], indeterminate([new_purpose_processing]), [], []).
-test(compatible_purpose_true) :-
+    lawful_basis_status([attribute(consent_given_and_conditions_met, attested(false, attestation(host, stated_at, no_consent, none))), attribute(contract_necessary, false), attribute(legal_obligation_necessary, false), attribute(vital_interests_necessary, false), attribute(public_interest_task_necessary, false), attribute(legitimate_interests_pursued, false)], ineligible, Basis, Citations),
+    Basis == [outside_fact(consent_given_and_conditions_met, attested(false, attestation(host, stated_at, no_consent, none)))],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a), cite(eu_reg_2016_679_art_6_1_b), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_1_d), cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_1_f)].
+test(one_step_outside_fact_is_referred_before_unsure) :-
+    gdpr_art6_lawful_basis_outside_fact_entry(consent_given_and_conditions_met, Citation, Target),
+    lawful_basis_status([attribute(contract_necessary, unsure), attribute(legal_obligation_necessary, true), attribute(vital_interests_necessary, false), attribute(public_interest_task_necessary, false), attribute(legitimate_interests_pursued, false)], Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(Citation, cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on([consent_given_and_conditions_met - absent])]).
+test(only_unsure_contract_left_goes_to_a_lawyer) :-
+    lawful_basis_status([attribute(consent_given_and_conditions_met, attested(false, attestation(host, stated_at, no_consent, none))), attribute(contract_necessary, unsure), attribute(legal_obligation_necessary, false), attribute(vital_interests_necessary, false), attribute(public_interest_task_necessary, false), attribute(legitimate_interests_pursued, false)], Result, [], []),
+    Result == needs_legal_review(open_textured(contract_necessary, cite(eu_reg_2016_679_art_6_1_b)), [inputs_relied_on([consent_given_and_conditions_met - attested(false, attestation(host, stated_at, no_consent, none)), contract_necessary - unsure, legal_obligation_necessary - false, vital_interests_necessary - false, public_interest_task_necessary - false, legitimate_interests_pursued - false])]).
+test(unknown_key_gives_input_problems) :-
+    lawful_basis_status([attribute(colour, blue)], Result, [], []),
+    Result == input_problems([unknown_key(colour)]).
+test(purpose_new_purpose_absent_is_named) :-
+    purpose_compatibility([], indeterminate([new_purpose_processing]), [], []).
+test(purpose_test_not_engaged) :-
+    purpose_compatibility([attribute(new_purpose_processing, false)], compatibility_test_not_engaged, [], [cite(eu_reg_2016_679_art_6_4)]).
+test(purpose_compatible_with_absent_factors) :-
     purpose_compatibility([attribute(new_purpose_processing, true), attribute(compatible_purpose, true)], purpose_compatible, [], [cite(eu_reg_2016_679_art_6_4)]).
-test(compatible_purpose_false) :-
+test(purpose_not_compatible) :-
     purpose_compatibility([attribute(new_purpose_processing, true), attribute(compatible_purpose, false)], purpose_not_compatible, [], [cite(eu_reg_2016_679_art_6_4)]).
-test(compatible_purpose_unsure_is_referred) :-
-    purpose_compatibility([attribute(new_purpose_processing, true), attribute(compatible_purpose, unsure)], needs_legal_review(open_textured(compatible_purpose, cite(eu_reg_2016_679_art_6_4)), [inputs_relied_on([new_purpose_processing - true, compatible_purpose - unsure])]), [], []).
-test(checklist_has_six_rows) :-
-    gdpr_art6_lawful_basis_checklist([attribute(contract_necessary, true)], Items),
-    length(Items, 6),
-    member(item(point_b, met, cite(eu_reg_2016_679_art_6_1_b)), Items).
+test(purpose_factor_left_out_is_not_ascertained) :-
+    purpose_compatibility([attribute(new_purpose_processing, true), attribute(compatible_purpose, true), attribute(nature_of_data_taken_into_account, false)], compatibility_not_ascertained, [], Citations),
+    length(Citations, 6).
+test(purpose_compatible_judgement_absent_is_named) :-
+    purpose_compatibility([attribute(new_purpose_processing, true), attribute(link_between_purposes_taken_into_account, true)], indeterminate([compatible_purpose]), [], []).
+test(purpose_unsure_goes_to_a_lawyer) :-
+    purpose_compatibility([attribute(new_purpose_processing, true), attribute(compatible_purpose, unsure)], Result, [], []),
+    Result == needs_legal_review(open_textured(compatible_purpose, cite(eu_reg_2016_679_art_6_4)), [inputs_relied_on([new_purpose_processing - true, compatible_purpose - unsure])]).
+test(purpose_gives_exactly_one_solution) :-
+    findall(Result, purpose_compatibility([attribute(new_purpose_processing, true)], Result, _, _), Results),
+    length(Results, 1).
+test(checklist_for_claimed_contract) :-
+    gdpr_art6_lawful_basis_checklist([attribute(basis_claimed, contract), attribute(contract_necessary, true)], Items),
+    Items == [item(way_b, met, cite(eu_reg_2016_679_art_6_1_b))].
+test(facade_projects_the_status) :-
+    gdpr_art6_lawful_basis_status([attribute(vital_interests_necessary, true)], eligible).
 
-test(contract_alone_is_not_ineligible, fail) :-
+test(contract_necessary_true_is_not_ineligible, fail) :-
     lawful_basis_status([attribute(contract_necessary, true)], ineligible, _, _).
-test(wrong_type_is_not_eligible, fail) :-
-    lawful_basis_status([attribute(contract_necessary, maybe)], eligible, _, _).
-test(compatible_purpose_false_is_not_compatible_answer, fail) :-
-    purpose_compatibility([attribute(new_purpose_processing, true), attribute(compatible_purpose, false)], purpose_compatible, _, _).
+test(public_authority_is_not_eligible_on_legitimate_interests, fail) :-
+    lawful_basis_status([attribute(basis_claimed, legitimate_interests), attribute(processing_by_public_authority_in_its_tasks, true)], eligible, _, _).
+test(purpose_factor_left_out_is_not_compatible_answer, fail) :-
+    purpose_compatibility([attribute(new_purpose_processing, true), attribute(compatible_purpose, true), attribute(nature_of_data_taken_into_account, false)], purpose_compatible, _, _).

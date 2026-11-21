@@ -2,12 +2,19 @@
 % =====================================================================
 % test_public_interface.clausal -- the package's PUBLIC surface, exercised
 % through the generated package facade (what an external caller sees).
-% Every fixture subject resolves to its concrete expected status and class;
-% near-miss controls get the opposite verdict.
+% Each fixture subject resolves to its EXPECTED answers of size_class/3,
+% scope_decision/3 and entity_class/3 (exactly ONE solution each, citations
+% compared as a set); the facade verdict agrees with entity_class/3; every
+% checklist is non-empty and cited; near-miss controls get the opposite
+% verdict.
 % Run: python -m clausal.testing eu/nis2_scope_entity_class/tests/test_public_interface.clausal
 % =====================================================================
 :- module(test_public_interface, []).
 :- use_module(eu/nis2_scope_entity_class, [
+    size_class/3,
+    scope_decision/3,
+    entity_class/3,
+    nis2_scope_entity_class_input_problems/2,
     decide_nis2_scope_entity_class/2,
     nis2_scope_entity_class_status/2,
     nis2_scope_entity_class_checklist/2,
@@ -15,304 +22,302 @@
     nis2_scope_entity_class_status_values/1,
     nis2_scope_entity_class_subject/1,
     nis2_scope_entity_class_profile_for/2,
-    nis2_scope_entity_class_assess/2,
-    nis2_scope_entity_class_what_if/4,
-    nis2_scope_entity_class_input_problems/2,
-    size_class/3,
-    scope_decision/3,
-    entity_class/3
+    nis2_scope_entity_class_assess/2
 ]).
 
-% expect(Subject, Status, Class): the facade status, the entity class and a non-empty checklist.
-expect(Subject, ExpectedStatus, ExpectedClass) :-
+% ---- the expected answers: expected(Subject, Query, Answer, Citations) ----
+negative_citations([cite(eu_dir_2022_2555_art_2_1), cite(eu_dir_2022_2555_art_2_2), cite(eu_dir_2022_2555_art_2_3), cite(eu_dir_2022_2555_art_2_4)]).
+
+% Subjects with no ground TRUE and no exclusion: out of scope, negative cites.
+negative_subject(baseline_micro_outside_annexes).
+negative_subject(size_micro_at_ceilings).
+negative_subject(size_micro_turnover_one_euro_over).
+negative_subject(size_micro_staff_one_over).
+negative_subject(size_small_at_ceiling).
+negative_subject(size_small_turnover_one_euro_over).
+negative_subject(size_small_staff_one_over).
+negative_subject(size_medium_at_turnover_ceiling).
+negative_subject(size_medium_turnover_one_euro_over).
+negative_subject(size_medium_at_balance_sheet_ceiling).
+negative_subject(size_medium_staff_one_over).
+negative_subject(size_rule_small_annex_one).
+negative_subject(size_rule_outside_union).
+negative_subject(electronic_communications_outside_annexes).
+negative_subject(qualified_trust_service_outside_annexes).
+negative_subject(sole_provider_denied_annex_one).
+negative_subject(other_public_administration_annex_one).
+
+expected_size(baseline_micro_outside_annexes, microenterprise).
+expected_size(size_micro_at_ceilings, microenterprise).
+expected_size(size_micro_turnover_one_euro_over, small_enterprise).
+expected_size(size_micro_staff_one_over, small_enterprise).
+expected_size(size_small_at_ceiling, small_enterprise).
+expected_size(size_small_turnover_one_euro_over, medium_sized_enterprise).
+expected_size(size_small_staff_one_over, medium_sized_enterprise).
+expected_size(size_medium_at_turnover_ceiling, medium_sized_enterprise).
+expected_size(size_medium_turnover_one_euro_over, large_enterprise).
+expected_size(size_medium_at_balance_sheet_ceiling, medium_sized_enterprise).
+expected_size(size_medium_staff_one_over, large_enterprise).
+expected_size(size_rule_medium_annex_one, medium_sized_enterprise).
+expected_size(size_rule_small_annex_one, small_enterprise).
+expected_size(size_rule_outside_union, medium_sized_enterprise).
+expected_size(large_annex_one_essential, large_enterprise).
+expected_size(medium_annex_one_at_turnover_ceiling, medium_sized_enterprise).
+expected_size(large_annex_two_important, large_enterprise).
+expected_size(critical_entity, microenterprise).
+expected_size(electronic_communications_medium_annex_two, medium_sized_enterprise).
+expected_size(electronic_communications_small_annex_two, small_enterprise).
+expected_size(unsure_annex_one_communications, microenterprise).
+expected_size(partial_figures_above_ceilings, large_enterprise).
+
+expected(Subject, size, Size, [cite(eu_dir_2022_2555_art_2_1)]) :-
+    expected_size(Subject, Size).
+expected(Subject, scope, out_of_scope, Citations) :-
+    negative_subject(Subject),
+    negative_citations(Citations).
+expected(Subject, class, out_of_scope, Citations) :-
+    negative_subject(Subject),
+    negative_citations(Citations).
+expected(Subject, scope, in_scope, [cite(ScopeKey)]) :-
+    expected_in_scope(Subject, ScopeKey, _, _).
+expected(Subject, class, Class, [cite(ClassKey)]) :-
+    expected_in_scope(Subject, _, Class, ClassKey).
+expected(Subject, Query, Answer, Citations) :-
+    expected_other(Subject, Query, Answer, Citations).
+
+% expected_in_scope(Subject, ScopeCitationKey, Class, ClassCitationKey)
+expected_in_scope(size_rule_medium_annex_one, eu_dir_2022_2555_art_2_1, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(large_annex_one_essential, eu_dir_2022_2555_art_2_1, essential_entity, eu_dir_2022_2555_art_3_1_a).
+expected_in_scope(medium_annex_one_at_turnover_ceiling, eu_dir_2022_2555_art_2_1, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(large_annex_two_important, eu_dir_2022_2555_art_2_1, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(critical_entity, eu_dir_2022_2555_art_2_3, essential_entity, eu_dir_2022_2555_art_3_1_f).
+expected_in_scope(domain_name_registration, eu_dir_2022_2555_art_2_4, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(electronic_communications_micro_annex_one, eu_dir_2022_2555_art_2_2_a_i, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(electronic_communications_medium_annex_two, eu_dir_2022_2555_art_2_2_a_i, essential_entity, eu_dir_2022_2555_art_3_1_c).
+expected_in_scope(electronic_communications_small_annex_two, eu_dir_2022_2555_art_2_2_a_i, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(qualified_trust_service_annex_two, eu_dir_2022_2555_art_2_2_a_ii, essential_entity, eu_dir_2022_2555_art_3_1_b).
+expected_in_scope(non_qualified_trust_service_annex_two, eu_dir_2022_2555_art_2_2_a_ii, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(top_level_domain_registry_annex_one, eu_dir_2022_2555_art_2_2_a_iii, essential_entity, eu_dir_2022_2555_art_3_1_b).
+expected_in_scope(domain_name_system_annex_two, eu_dir_2022_2555_art_2_2_a_iii, essential_entity, eu_dir_2022_2555_art_3_1_b).
+expected_in_scope(sole_provider_annex_one, eu_dir_2022_2555_art_2_2_b, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(public_safety_impact_annex_two, eu_dir_2022_2555_art_2_2_c, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(systemic_risk_annex_one, eu_dir_2022_2555_art_2_2_d, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(specific_importance_annex_two, eu_dir_2022_2555_art_2_2_e, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(central_government_annex_one, eu_dir_2022_2555_art_2_2_f_i, essential_entity, eu_dir_2022_2555_art_3_1_d).
+expected_in_scope(regional_administration_annex_one, eu_dir_2022_2555_art_2_2_f_ii, important_entity, eu_dir_2022_2555_art_3_2).
+expected_in_scope(national_security_trust_service_critical_entity, eu_dir_2022_2555_art_2_3, essential_entity, eu_dir_2022_2555_art_3_1_f).
+expected_in_scope(member_state_identified_essential_annex_one, eu_dir_2022_2555_art_2_2_b, essential_entity, eu_dir_2022_2555_art_3_1_e).
+expected_in_scope(former_operator_kept_essential_annex_one, eu_dir_2022_2555_art_2_2_b, essential_entity, eu_dir_2022_2555_art_3_1_g).
+expected_in_scope(identified_outside_annexes_registration, eu_dir_2022_2555_art_2_4, important_entity, eu_dir_2022_2555_art_3_2).
+
+unsure_annex_one_pairs([annex_i_type-unsure, annex_ii_type-false, sole_provider_of_an_essential_service_in_a_member_state-false, disruption_could_significantly_impact_public_safety_security_or_health-false, disruption_could_induce_a_significant_systemic_risk-false, critical_by_specific_national_or_regional_importance-false]).
+
+expected_other(national_security_administration_critical_entity, scope, out_of_scope, [cite(eu_dir_2022_2555_art_2_7), cite(eu_dir_2022_2555_art_2_9)]).
+expected_other(national_security_administration_critical_entity, class, out_of_scope, [cite(eu_dir_2022_2555_art_2_7), cite(eu_dir_2022_2555_art_2_9)]).
+expected_other(resilience_exempted_critical_entity, scope, out_of_scope, [cite(eu_dir_2022_2555_art_2_10)]).
+expected_other(resilience_exempted_critical_entity, class, out_of_scope, [cite(eu_dir_2022_2555_art_2_10)]).
+expected_other(partial_exempted_only, scope, out_of_scope, [cite(eu_dir_2022_2555_art_2_10)]).
+expected_other(partial_exempted_only, class, out_of_scope, [cite(eu_dir_2022_2555_art_2_10)]).
+expected_other(partial_balance_sheet_only, size, indeterminate([staff_headcount]), []).
+expected_other(partial_annex_one_only, scope, indeterminate([exempted_from_dora_scope_by_member_state]), []).
+expected_other(unsure_annex_one_communications, scope, needs_legal_review(open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)), [inputs_relied_on(Pairs)]), []) :-
+    unsure_annex_one_pairs(Pairs).
+expected_other(unsure_annex_one_communications, class, needs_legal_review(open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)), [inputs_relied_on(Pairs)]), []) :-
+    unsure_annex_one_pairs(Pairs).
+expected_other(partial_critical_entity_without_exclusions, scope, in_scope, [cite(eu_dir_2022_2555_art_2_3)]).
+expected_other(partial_critical_entity_without_exclusions, class, essential_entity, [cite(eu_dir_2022_2555_art_3_1_f)]).
+expected_other(input_unknown_key, size, input_problems([unknown_key(colour)]), []).
+expected_other(input_unknown_key, scope, input_problems([unknown_key(colour)]), []).
+expected_other(input_unknown_key, class, input_problems([unknown_key(colour)]), []).
+expected_other(input_negative_headcount, size, input_problems([wrong_type(staff_headcount)]), []).
+expected_other(input_negative_headcount, scope, input_problems([wrong_type(staff_headcount)]), []).
+expected_other(input_negative_headcount, class, input_problems([wrong_type(staff_headcount)]), []).
+
+% ---- checking helpers ----
+query_answers(size, Profile, Answers) :-
+    findall(Answer-Citations, size_class(Profile, Answer, Citations), Answers).
+query_answers(scope, Profile, Answers) :-
+    findall(Answer-Citations, scope_decision(Profile, Answer, Citations), Answers).
+query_answers(class, Profile, Answers) :-
+    findall(Answer-Citations, entity_class(Profile, Answer, Citations), Answers).
+
+same_citations(Actual, Expected) :-
+    msort(Actual, Sorted),
+    msort(Expected, Sorted).
+
+check_expectation(expectation(Subject, Query, Answer, Citations)) :-
     nis2_scope_entity_class_profile_for(Subject, Profile),
-    nis2_scope_entity_class_status(Profile, Status),
-    Status == ExpectedStatus,
-    entity_class(Profile, Class, _),
-    Class == ExpectedClass,
-    nis2_scope_entity_class_checklist(Profile, [_|_]).
+    query_answers(Query, Profile, Answers),
+    Answers = [Answer-ActualCitations],
+    same_citations(ActualCitations, Citations).
 
-expect_size(Subject, ExpectedSize) :-
+check_subject(Subject) :-
+    findall(expectation(Subject, Query, Answer, Citations), expected(Subject, Query, Answer, Citations), Expectations),
+    Expectations = [_|_],
+    maplist(check_expectation, Expectations).
+
+check_facade(expectation(Subject, class, Class, Citations)) :-
     nis2_scope_entity_class_profile_for(Subject, Profile),
-    size_class(Profile, Size, [cite(eu_dir_2022_2555_art_2_1)]),
-    Size == ExpectedSize.
+    findall(Verdict, decide_nis2_scope_entity_class(Profile, Verdict), Verdicts),
+    Verdicts = [nis2_scope_entity_class_verdict(Class, ActualCitations)],
+    same_citations(ActualCitations, Citations).
 
-all_cited([]).
-all_cited([item(_, _, cite(_))|Items]) :-
-    all_cited(Items).
+cited_item(item(_, _, cite(_))).
 
-% ---- the baseline and the facade ---------------------------------------
-test(the_public_interface_resolves_on_the_baseline_fixture) :-
-    nis2_scope_entity_class_subject(Subject),
-    nis2_scope_entity_class_assess(Subject, nis2_scope_entity_class_verdict(Status, _Citations)),
+has_cited_checklist(Subject) :-
+    nis2_scope_entity_class_profile_for(Subject, Profile),
+    nis2_scope_entity_class_decision_resolvable(Profile),
+    nis2_scope_entity_class_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(cited_item, [FirstItem|OtherItems]).
+
+final_status(Subject) :-
     nis2_scope_entity_class_status_values(StatusValues),
+    nis2_scope_entity_class_assess(Subject, nis2_scope_entity_class_verdict(Status, [_|_])),
     member(Status, StatusValues).
 
-test(baseline_is_resolvable) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_decision_resolvable(Profile).
+profile_of(Subject, Profile) :-
+    nis2_scope_entity_class_profile_for(Subject, Profile).
 
-test(empty_profile_is_not_resolvable, fail) :-
-    nis2_scope_entity_class_profile_for(empty_profile, Profile),
-    nis2_scope_entity_class_decision_resolvable(Profile).
+% A referral CONTEXT: inputs_relied_on(PAIRS), optionally followed by one
+% unscored provenance(CLAUSE, CITATIONS) element (INTERFACE - THE RESULT FORM).
+referral_context([inputs_relied_on(Pairs)]) :-
+    is_list(Pairs).
+referral_context([inputs_relied_on(Pairs), provenance(Clause, Citations)]) :-
+    is_list(Pairs),
+    atom(Clause),
+    is_list(Citations).
 
-test(empty_profile_is_indeterminate_not_resolvable_control) :-
-    nis2_scope_entity_class_profile_for(critical_entity, Profile),
-    nis2_scope_entity_class_decision_resolvable(Profile).
+% ---- the whole fixture set ----
+test(every_subject_resolves_to_its_expected_answers) :-
+    findall(Subject, nis2_scope_entity_class_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(check_subject, Subjects).
 
-test(checklist_items_all_carry_a_citation) :-
-    nis2_scope_entity_class_profile_for(critical_entity, Profile),
-    nis2_scope_entity_class_checklist(Profile, Items),
-    all_cited(Items).
+test(the_facade_verdict_agrees_with_entity_class) :-
+    findall(expectation(Subject, class, Class, Citations), expected(Subject, class, Class, Citations), Expectations),
+    Expectations = [_|_],
+    maplist(check_facade, Expectations).
 
-test(checklist_names_the_deciding_ground) :-
-    nis2_scope_entity_class_profile_for(critical_entity, Profile),
-    nis2_scope_entity_class_checklist(Profile, Items),
-    member(item(g1, met, cite(eu_dir_2022_2555_art_2_3)), Items).
+test(every_subject_has_a_non_empty_cited_checklist) :-
+    findall(Subject, nis2_scope_entity_class_subject(Subject), Subjects),
+    maplist(has_cited_checklist, Subjects).
 
-test(decide_returns_one_verdict_with_citations) :-
-    nis2_scope_entity_class_profile_for(critical_entity, Profile),
-    findall(Verdict, decide_nis2_scope_entity_class(Profile, Verdict), Verdicts),
-    Verdicts == [nis2_scope_entity_class_verdict(eligible, [cite(eu_dir_2022_2555_art_2_3)])].
+test(final_classes_are_status_values_with_citations) :-
+    maplist(final_status, [baseline_micro_outside_annexes, critical_entity, domain_name_registration, national_security_administration_critical_entity]).
 
-% ---- every route: positive case and near-miss control ------------------
-test(baseline_out_of_scope) :-
-    expect(baseline_out_of_scope, ineligible, out_of_scope).
-test(critical_entity) :-
-    expect(critical_entity, eligible, essential_entity).
-test(domain_registrar_gets_the_important_default) :-
-    expect(domain_registrar, eligible, important_entity).
-test(micro_at_ceiling) :-
-    expect(micro_at_ceiling, ineligible, out_of_scope).
-test(small_staff_at_ten) :-
-    expect(small_staff_at_ten, ineligible, out_of_scope).
-test(small_one_euro_over_micro) :-
-    expect(small_one_euro_over_micro, ineligible, out_of_scope).
-test(medium_annex_at_staff_floor) :-
-    expect(medium_annex_at_staff_floor, eligible, important_entity).
-test(small_annex_just_below) :-
-    expect(small_annex_just_below, ineligible, out_of_scope).
-test(small_annex_one_figure_over) :-
-    expect(small_annex_one_figure_over, ineligible, out_of_scope).
-test(small_annex_one_euro_over_both) :-
-    expect(small_annex_one_euro_over_both, eligible, important_entity).
-test(large_annex_by_staff) :-
-    expect(large_annex_by_staff, eligible, essential_entity).
-test(medium_annex_staff_just_below_large) :-
-    expect(medium_annex_staff_just_below_large, eligible, important_entity).
-test(large_annex_by_financials) :-
-    expect(large_annex_by_financials, eligible, essential_entity).
-test(medium_annex_one_figure_at_ceiling) :-
-    expect(medium_annex_one_figure_at_ceiling, eligible, important_entity).
-test(annex_ii_large_is_only_important) :-
-    expect(annex_ii_large, eligible, important_entity).
-test(electronic_communications_micro) :-
-    expect(electronic_communications_micro, eligible, important_entity).
-test(electronic_communications_medium) :-
-    expect(electronic_communications_medium, eligible, essential_entity).
-test(electronic_communications_not_provider) :-
-    expect(electronic_communications_not_provider, ineligible, out_of_scope).
-test(qualified_trust_provider) :-
-    expect(qualified_trust_provider, eligible, essential_entity).
-test(non_qualified_trust_provider) :-
-    expect(non_qualified_trust_provider, eligible, important_entity).
-test(tld_registry) :-
-    expect(tld_registry, eligible, essential_entity).
-test(dns_provider) :-
-    expect(dns_provider, eligible, essential_entity).
-test(sole_provider) :-
-    expect(sole_provider, eligible, important_entity).
-test(sole_provider_without_annex_type) :-
-    expect(sole_provider_without_annex_type, ineligible, out_of_scope).
-test(safety_disruption) :-
-    expect(safety_disruption, eligible, important_entity).
-test(systemic_risk) :-
-    expect(systemic_risk, eligible, important_entity).
-test(national_importance) :-
-    expect(national_importance, eligible, important_entity).
-test(central_government) :-
-    expect(central_government, eligible, essential_entity).
-test(regional_government) :-
-    expect(regional_government, eligible, important_entity).
-test(other_public_administration) :-
-    expect(other_public_administration, ineligible, out_of_scope).
-test(national_security_exclusion) :-
-    expect(national_security_exclusion, ineligible, out_of_scope).
-test(national_security_trust_provider) :-
-    expect(national_security_trust_provider, eligible, essential_entity).
-test(dora_exemption) :-
-    expect(dora_exemption, ineligible, out_of_scope).
-test(identified_essential) :-
-    expect(identified_essential, eligible, essential_entity).
-test(former_operator_essential) :-
-    expect(former_operator_essential, eligible, essential_entity).
+% ---- named routes (concrete status per subject) ----
+test(the_baseline_is_out_of_scope) :-
+    nis2_scope_entity_class_assess(baseline_micro_outside_annexes, nis2_scope_entity_class_verdict(out_of_scope, _)).
+test(a_critical_entity_is_essential) :-
+    nis2_scope_entity_class_assess(critical_entity, nis2_scope_entity_class_verdict(essential_entity, [cite(eu_dir_2022_2555_art_3_1_f)])).
+test(a_domain_name_registrar_is_important_by_default) :-
+    nis2_scope_entity_class_assess(domain_name_registration, nis2_scope_entity_class_verdict(important_entity, [cite(eu_dir_2022_2555_art_3_2)])).
+test(a_large_annex_one_entity_is_essential) :-
+    check_subject(large_annex_one_essential).
+test(a_central_government_entity_is_essential) :-
+    nis2_scope_entity_class_profile_for(central_government_annex_one, Profile),
+    nis2_scope_entity_class_status(Profile, essential_entity).
+test(the_national_security_exclusion_cites_paragraphs_seven_and_nine) :-
+    check_subject(national_security_administration_critical_entity).
+test(an_unsure_annex_type_is_referred_to_a_lawyer) :-
+    check_subject(unsure_annex_one_communications).
+test(the_input_check_reports_an_unknown_key) :-
+    profile_of(input_unknown_key, Profile),
+    nis2_scope_entity_class_input_problems(Profile, [unknown_key(colour)]).
+test(a_well_formed_fixture_has_no_input_problem) :-
+    profile_of(critical_entity, Profile),
+    nis2_scope_entity_class_input_problems(Profile, []).
 
-% ---- statuses that are not final ---------------------------------------
-test(empty_profile_names_missing_keys) :-
-    expect(empty_profile,
-        indeterminate([trust_service_provider_status, public_administration_in_national_security_defence_or_law_enforcement, exempted_from_dora_scope_by_member_state]),
-        indeterminate([trust_service_provider_status, public_administration_in_national_security_defence_or_law_enforcement, exempted_from_dora_scope_by_member_state])).
+% ---- the referral context and its optional provenance element ----
+test(a_referral_context_is_well_formed) :-
+    profile_of(unsure_annex_one_communications, Profile),
+    scope_decision(Profile, needs_legal_review(open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)), Context), []),
+    referral_context(Context).
+test(a_referral_context_may_carry_one_unscored_provenance) :-
+    referral_context([inputs_relied_on([annex_i_type-unsure]), provenance(scope_public_electronic_communications, [cite(eu_dir_2022_2555_art_2_2_a_i)])]).
+test(a_provenance_never_stands_first_in_a_context, fail) :-
+    referral_context([provenance(scope_public_electronic_communications, [cite(eu_dir_2022_2555_art_2_2_a_i)]), inputs_relied_on([annex_i_type-unsure])]).
 
-test(unsure_sole_provider_goes_to_legal_review) :-
-    Review = needs_legal_review(
-        open_textured(sole_provider_of_an_essential_service_in_a_member_state, cite(eu_dir_2022_2555_art_2_2_b)),
-        [inputs_relied_on([
-            annex_i_type-false,
-            annex_ii_type-true,
-            sole_provider_of_an_essential_service_in_a_member_state-unsure,
-            disruption_could_significantly_impact_public_safety_security_or_health-false,
-            disruption_could_induce_a_significant_systemic_risk-false,
-            critical_by_specific_national_or_regional_importance-false
-        ])]),
-    expect(unsure_sole_provider, Review, Review).
+% ---- size boundaries: at the ceiling and one unit over ----
+test(nine_persons_at_two_million_is_micro) :-
+    profile_of(size_micro_at_ceilings, Profile),
+    size_class(Profile, microenterprise, [cite(eu_dir_2022_2555_art_2_1)]).
+test(one_euro_over_the_micro_ceiling_is_small) :-
+    profile_of(size_micro_turnover_one_euro_over, Profile),
+    size_class(Profile, small_enterprise, _).
+test(one_euro_over_the_micro_ceiling_is_not_micro, fail) :-
+    profile_of(size_micro_turnover_one_euro_over, Profile),
+    size_class(Profile, microenterprise, _).
+test(ten_persons_is_not_micro, fail) :-
+    profile_of(size_micro_staff_one_over, Profile),
+    size_class(Profile, microenterprise, _).
+test(one_euro_over_the_small_ceiling_is_not_small, fail) :-
+    profile_of(size_small_turnover_one_euro_over, Profile),
+    size_class(Profile, small_enterprise, _).
+test(fifty_persons_is_not_small, fail) :-
+    profile_of(size_small_staff_one_over, Profile),
+    size_class(Profile, small_enterprise, _).
+test(at_the_medium_turnover_ceiling_is_not_large, fail) :-
+    profile_of(size_medium_at_turnover_ceiling, Profile),
+    size_class(Profile, large_enterprise, _).
+test(one_euro_over_both_medium_ceilings_is_large) :-
+    profile_of(size_medium_turnover_one_euro_over, Profile),
+    size_class(Profile, large_enterprise, _).
+test(two_hundred_and_fifty_persons_is_not_medium, fail) :-
+    profile_of(size_medium_staff_one_over, Profile),
+    size_class(Profile, medium_sized_enterprise, _).
 
-test(unsure_annex_medium_goes_to_legal_review) :-
-    Review = needs_legal_review(
-        open_textured(annex_i_type, cite(eu_dir_2022_2555_art_2_1)),
-        [inputs_relied_on([
-            annex_i_type-unsure,
-            annex_ii_type-false,
-            sole_provider_of_an_essential_service_in_a_member_state-false,
-            disruption_could_significantly_impact_public_safety_security_or_health-false,
-            disruption_could_induce_a_significant_systemic_risk-false,
-            critical_by_specific_national_or_regional_importance-false
-        ])]),
-    expect(unsure_annex_medium, Review, Review).
-
-test(unsure_annex_class_goes_to_legal_review_at_the_class_stage) :-
-    ClassReview = needs_legal_review(
-        open_textured(annex_i_type, cite(eu_dir_2022_2555_art_3_1_a)),
-        [inputs_relied_on([annex_i_type-unsure, annex_ii_type-false])]),
-    expect(unsure_annex_class, eligible, ClassReview).
-
-test(unknown_key_is_an_input_problem) :-
-    expect(unknown_key_profile,
-        input_problems([unknown_key(bogus)]),
-        input_problems([unknown_key(bogus)])).
-
-test(duplicate_key_is_an_input_problem) :-
-    expect(duplicate_key_profile,
-        input_problems([duplicate_key(staff_headcount)]),
-        input_problems([duplicate_key(staff_headcount)])).
-
-test(input_check_gives_empty_list_for_a_good_profile) :-
-    nis2_scope_entity_class_profile_for(large_annex_by_staff, Profile),
-    nis2_scope_entity_class_input_problems(Profile, Problems),
-    Problems == [].
-
-test(input_check_names_the_unknown_key) :-
-    nis2_scope_entity_class_profile_for(unknown_key_profile, Profile),
-    nis2_scope_entity_class_input_problems(Profile, Problems),
-    Problems == [unknown_key(bogus)].
-
-% ---- size categories and their boundaries ------------------------------
-test(size_baseline_is_micro) :-
-    expect_size(baseline_out_of_scope, microenterprise).
-test(size_micro_at_ceiling) :-
-    expect_size(micro_at_ceiling, microenterprise).
-test(size_staff_at_ten_is_small) :-
-    expect_size(small_staff_at_ten, small_enterprise).
-test(size_one_euro_over_micro_is_small) :-
-    expect_size(small_one_euro_over_micro, small_enterprise).
-test(size_small_at_ceiling) :-
-    expect_size(small_annex_just_below, small_enterprise).
-test(size_small_one_figure_over_stays_small) :-
-    expect_size(small_annex_one_figure_over, small_enterprise).
-test(size_one_euro_over_both_small_ceilings_is_medium) :-
-    expect_size(small_annex_one_euro_over_both, medium_sized_enterprise).
-test(size_staff_fifty_is_medium) :-
-    expect_size(medium_annex_at_staff_floor, medium_sized_enterprise).
-test(size_staff_249_is_medium) :-
-    expect_size(medium_annex_staff_just_below_large, medium_sized_enterprise).
-test(size_staff_250_is_large) :-
-    expect_size(large_annex_by_staff, large_enterprise).
-test(size_both_financial_ceilings_exceeded_is_large) :-
-    expect_size(large_annex_by_financials, large_enterprise).
-test(size_one_financial_ceiling_met_is_medium) :-
-    expect_size(medium_annex_one_figure_at_ceiling, medium_sized_enterprise).
-
-test(size_without_headcount_is_indeterminate) :-
-    size_class([], Size, Citations),
-    Size == indeterminate([staff_headcount]),
-    Citations == [].
-
-% ---- scope decision citations -----------------------------------------
-test(scope_positive_cites_the_deciding_ground) :-
-    nis2_scope_entity_class_profile_for(critical_entity, Profile),
-    scope_decision(Profile, Result, Citations),
-    Result == in_scope,
-    Citations == [cite(eu_dir_2022_2555_art_2_3)].
-
-test(scope_negative_cites_the_four_paragraphs) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    scope_decision(Profile, Result, Citations),
-    Result == out_of_scope,
-    Citations == [cite(eu_dir_2022_2555_art_2_1), cite(eu_dir_2022_2555_art_2_2), cite(eu_dir_2022_2555_art_2_3), cite(eu_dir_2022_2555_art_2_4)].
-
-test(national_security_exclusion_cites_art_2_7_and_2_9) :-
-    nis2_scope_entity_class_profile_for(national_security_exclusion, Profile),
-    scope_decision(Profile, Result, Citations),
-    Result == out_of_scope,
-    Citations == [cite(eu_dir_2022_2555_art_2_7), cite(eu_dir_2022_2555_art_2_9)].
-
-test(dora_exemption_cites_art_2_10) :-
-    nis2_scope_entity_class_profile_for(dora_exemption, Profile),
-    scope_decision(Profile, Result, Citations),
-    Result == out_of_scope,
-    Citations == [cite(eu_dir_2022_2555_art_2_10)].
-
-test(class_cites_the_essential_ground) :-
-    nis2_scope_entity_class_profile_for(large_annex_by_staff, Profile),
-    entity_class(Profile, Class, Citations),
-    Class == essential_entity,
-    Citations == [cite(eu_dir_2022_2555_art_3_1_a)].
-
-test(class_cites_the_important_residual) :-
-    nis2_scope_entity_class_profile_for(medium_annex_staff_just_below_large, Profile),
-    entity_class(Profile, Class, Citations),
-    Class == important_entity,
-    Citations == [cite(eu_dir_2022_2555_art_3_2)].
-
-% ---- near-miss controls by one-key what-if ----------------------------
-test(whatif_critical_entity_flipped_off_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(critical_entity, Profile),
-    nis2_scope_entity_class_what_if(Profile, critical_entity_under_directive_2022_2557, false, ineligible).
-test(whatif_critical_entity_flipped_on_from_baseline_is_eligible) :-
-    nis2_scope_entity_class_profile_for(baseline_out_of_scope, Profile),
-    nis2_scope_entity_class_what_if(Profile, critical_entity_under_directive_2022_2557, true, eligible).
-test(whatif_domain_registrar_flipped_off_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(domain_registrar, Profile),
-    nis2_scope_entity_class_what_if(Profile, domain_name_registration_service_entity, false, ineligible).
-test(whatif_tld_registry_flipped_off_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(tld_registry, Profile),
-    nis2_scope_entity_class_what_if(Profile, tld_name_registry, false, ineligible).
-test(whatif_dns_provider_flipped_off_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(dns_provider, Profile),
-    nis2_scope_entity_class_what_if(Profile, dns_service_provider, false, ineligible).
-test(whatif_trust_provider_made_not_a_provider_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(qualified_trust_provider, Profile),
-    nis2_scope_entity_class_what_if(Profile, trust_service_provider_status, not_a_trust_service_provider, ineligible).
-test(whatif_central_government_made_not_public_administration_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(central_government, Profile),
-    nis2_scope_entity_class_what_if(Profile, public_administration_kind, not_public_administration, ineligible).
-test(whatif_sole_provider_flipped_off_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(sole_provider, Profile),
-    nis2_scope_entity_class_what_if(Profile, sole_provider_of_an_essential_service_in_a_member_state, false, ineligible).
-test(whatif_safety_disruption_flipped_off_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(safety_disruption, Profile),
-    nis2_scope_entity_class_what_if(Profile, disruption_could_significantly_impact_public_safety_security_or_health, false, ineligible).
-test(whatif_dora_exemption_lifted_is_eligible) :-
-    nis2_scope_entity_class_profile_for(dora_exemption, Profile),
-    nis2_scope_entity_class_what_if(Profile, exempted_from_dora_scope_by_member_state, false, eligible).
-test(whatif_one_euro_under_both_small_ceilings_is_ineligible) :-
-    nis2_scope_entity_class_profile_for(small_annex_one_euro_over_both, Profile),
-    nis2_scope_entity_class_what_if(Profile, annual_balance_sheet_total_eur, 10000000, ineligible).
-
-test(near_miss_small_annex_is_not_eligible, fail) :-
-    nis2_scope_entity_class_profile_for(small_annex_just_below, Profile),
-    nis2_scope_entity_class_status(Profile, eligible).
-test(near_miss_medium_annex_is_not_ineligible, fail) :-
-    nis2_scope_entity_class_profile_for(small_annex_one_euro_over_both, Profile),
-    nis2_scope_entity_class_status(Profile, ineligible).
+% ---- near-miss controls get the opposite verdict ----
+test(a_medium_annex_one_entity_is_in_scope) :-
+    profile_of(size_rule_medium_annex_one, Profile),
+    scope_decision(Profile, in_scope, _).
+test(a_small_annex_one_control_is_not_in_scope, fail) :-
+    profile_of(size_rule_small_annex_one, Profile),
+    scope_decision(Profile, in_scope, _).
+test(an_entity_outside_the_union_is_not_in_scope, fail) :-
+    profile_of(size_rule_outside_union, Profile),
+    scope_decision(Profile, in_scope, _).
+test(a_medium_annex_one_entity_is_not_essential, fail) :-
+    profile_of(medium_annex_one_at_turnover_ceiling, Profile),
+    entity_class(Profile, essential_entity, _).
+test(a_large_annex_two_entity_is_not_essential, fail) :-
+    profile_of(large_annex_two_important, Profile),
+    entity_class(Profile, essential_entity, _).
+test(electronic_communications_outside_the_annexes_is_not_in_scope, fail) :-
+    profile_of(electronic_communications_outside_annexes, Profile),
+    scope_decision(Profile, in_scope, _).
+test(a_small_electronic_communications_provider_is_not_essential, fail) :-
+    profile_of(electronic_communications_small_annex_two, Profile),
+    entity_class(Profile, essential_entity, _).
+test(a_qualified_trust_service_outside_the_annexes_is_not_in_scope, fail) :-
+    profile_of(qualified_trust_service_outside_annexes, Profile),
+    scope_decision(Profile, in_scope, _).
+test(a_non_qualified_trust_service_is_not_essential, fail) :-
+    profile_of(non_qualified_trust_service_annex_two, Profile),
+    entity_class(Profile, essential_entity, _).
+test(an_annex_one_entity_without_a_ground_is_not_in_scope, fail) :-
+    profile_of(sole_provider_denied_annex_one, Profile),
+    scope_decision(Profile, in_scope, _).
+test(other_public_administration_is_not_in_scope, fail) :-
+    profile_of(other_public_administration_annex_one, Profile),
+    scope_decision(Profile, in_scope, _).
+test(the_excluded_administration_is_not_in_scope, fail) :-
+    profile_of(national_security_administration_critical_entity, Profile),
+    scope_decision(Profile, in_scope, _).
+test(a_trust_service_administration_is_not_excluded, fail) :-
+    profile_of(national_security_trust_service_critical_entity, Profile),
+    scope_decision(Profile, out_of_scope, _).
+test(an_exempted_critical_entity_is_not_essential, fail) :-
+    profile_of(resilience_exempted_critical_entity, Profile),
+    entity_class(Profile, essential_entity, _).
+test(identification_without_an_annex_type_is_not_essential, fail) :-
+    profile_of(identified_outside_annexes_registration, Profile),
+    entity_class(Profile, essential_entity, _).
+test(an_unsure_annex_type_is_not_a_final_class, fail) :-
+    profile_of(unsure_annex_one_communications, Profile),
+    entity_class(Profile, important_entity, _).
+test(an_input_problem_profile_gets_no_final_class, fail) :-
+    profile_of(input_unknown_key, Profile),
+    entity_class(Profile, out_of_scope, _).
 
 :- end_module(test_public_interface).

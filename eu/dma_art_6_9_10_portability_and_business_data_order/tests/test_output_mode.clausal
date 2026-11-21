@@ -1,0 +1,263 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: every step of THE LIMBS read
+% out with findall, the WHOLE answer list compared (so a duplicate answer
+% is caught), RESULT, BASIS and CITATIONS together.
+% Run: python -m clausal.testing eu/dma_art_6_9_10_portability_and_business_data_order/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/dma_art_6_9_10_portability_and_business_data_order/dma_art_6_9_10_portability_and_business_data_order, [
+    article_6_application_status/4,
+    end_user_data_portability_status/4,
+    business_user_data_access_status/4,
+    decide_dma_art_6_9_10_portability_and_business_data_order/2,
+    dma_art_6_9_10_portability_and_business_data_order_status/2,
+    dma_art_6_9_10_portability_and_business_data_order_status_values/1
+]).
+:- use_module(eu/dma_art_6_9_10_portability_and_business_data_order/fixtures, [dma_art_6_9_10_portability_and_business_data_order_profile_for/2]).
+
+listed_statement(attested(true, attestation(host_operator, '2026-11-19T10:00:00Z', listed_in_designation_decision, none))).
+not_listed_statement(attested(false, attestation(host_operator, '2026-11-19T10:00:00Z', not_listed_in_designation_decision, none))).
+consent_given_statement(attested(true, attestation(host_operator, '2026-11-19T10:00:00Z', end_users_opted_in, none))).
+
+application_citations([cite(eu_reg_2022_1925_art_6_1)]).
+portability_citations([cite(eu_reg_2022_1925_art_6_1), cite(eu_reg_2022_1925_art_6_9)]).
+business_citations([cite(eu_reg_2022_1925_art_6_1), cite(eu_reg_2022_1925_art_6_10)]).
+personal_data_citations([cite(eu_reg_2022_1925_art_6_1), cite(eu_reg_2022_1925_art_6_10), cite(eu_reg_2022_1925_art_2_25), cite(eu_reg_2022_1925_art_2_32)]).
+
+listed_basis([outside_fact(designated_as_gatekeeper_for_core_platform_service, Listed)]) :-
+    listed_statement(Listed).
+
+application_answers(Subject, Answers) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+    findall(Result-Basis-Citations, article_6_application_status(Profile, Result, Basis, Citations), Answers).
+
+portability_answers(Subject, Answers) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+    findall(Result-Basis-Citations, end_user_data_portability_status(Profile, Result, Basis, Citations), Answers).
+
+business_answers(Subject, Answers) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(Subject, Profile),
+    findall(Result-Basis-Citations, business_user_data_access_status(Profile, Result, Basis, Citations), Answers).
+
+% ---- article_6_application_status: steps 1 to 3 ------------------------
+test(step_1_listed_applies) :-
+    listed_basis(Basis),
+    application_citations(Citations),
+    application_answers(application_listed, Answers),
+    Answers == [article_6_obligations_apply-Basis-Citations].
+
+test(step_2_not_listed_does_not_apply) :-
+    not_listed_statement(NotListed),
+    application_citations(Citations),
+    application_answers(application_not_listed, Answers),
+    Answers == [article_6_obligations_do_not_apply-[outside_fact(designated_as_gatekeeper_for_core_platform_service, NotListed)]-Citations].
+
+test(step_3_designation_absent_referred) :-
+    application_answers(application_designation_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_6_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service-absent])])-[]-[]].
+
+% ---- end_user_data_portability_status: steps 4 to 14 -------------------
+test(step_4_not_listed_whatever_else) :-
+    not_listed_statement(NotListed),
+    application_citations(Citations),
+    portability_answers(portability_not_listed, Answers),
+    Answers == [article_6_obligations_do_not_apply-[outside_fact(designated_as_gatekeeper_for_core_platform_service, NotListed)]-Citations].
+
+test(step_5_not_requested) :-
+    listed_basis(Basis),
+    portability_citations(Citations),
+    portability_answers(portability_not_requested_subject, Answers),
+    Answers == [portability_not_requested-Basis-Citations].
+
+test(step_6_data_outside) :-
+    listed_basis(Basis),
+    portability_citations(Citations),
+    portability_answers(portability_data_outside, Answers),
+    Answers == [data_outside_article_6_9-Basis-Citations].
+
+test(step_7_duty_met) :-
+    listed_basis(Basis),
+    portability_citations(Citations),
+    portability_answers(portability_duty_met_subject, Answers),
+    Answers == [portability_duty_met-Basis-Citations].
+
+test(step_8_tools_lacking_not_met) :-
+    listed_basis(Basis),
+    portability_citations(Citations),
+    portability_answers(portability_tools_lacking, Answers),
+    Answers == [portability_duty_not_met-Basis-Citations].
+
+test(step_8_charged_not_met_whatever_the_others) :-
+    listed_basis(Basis),
+    portability_citations(Citations),
+    portability_answers(portability_charged_with_other_elements_open, Answers),
+    Answers == [portability_duty_not_met-Basis-Citations].
+
+test(step_9_request_absent) :-
+    portability_answers(portability_request_absent, Answers),
+    Answers == [indeterminate([portability_requested_by_end_user_or_authorised_third_party])-[]-[]].
+
+test(step_10_scope_absent) :-
+    portability_answers(portability_scope_absent, Answers),
+    Answers == [indeterminate([data_provided_by_or_generated_through_activity_of_end_user])-[]-[]].
+
+test(step_11_first_absent_element) :-
+    portability_answers(portability_effective_absent, Answers),
+    Answers == [indeterminate([end_user_data_portability_effective])-[]-[]].
+
+test(step_12_designation_absent_referred) :-
+    portability_answers(portability_designation_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_6_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service-absent, portability_requested_by_end_user_or_authorised_third_party-true, data_provided_by_or_generated_through_activity_of_end_user-true, end_user_data_portability_free_of_charge-true, end_user_data_portability_effective-true, end_user_data_portability_tools_provided-true, end_user_data_continuous_real_time_access_provided-true])])-[]-[]].
+
+test(step_13_scope_unsure) :-
+    portability_answers(portability_scope_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(data_provided_by_or_generated_through_activity_of_end_user, cite(eu_reg_2022_1925_art_6_9)), [inputs_relied_on([portability_requested_by_end_user_or_authorised_third_party-true, data_provided_by_or_generated_through_activity_of_end_user-unsure, end_user_data_portability_free_of_charge-true, end_user_data_portability_effective-true, end_user_data_portability_tools_provided-true, end_user_data_continuous_real_time_access_provided-true])])-[]-[]].
+
+test(step_14_tools_unsure) :-
+    portability_answers(portability_tools_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(end_user_data_portability_tools_provided, cite(eu_reg_2022_1925_art_6_9)), [inputs_relied_on([portability_requested_by_end_user_or_authorised_third_party-true, data_provided_by_or_generated_through_activity_of_end_user-true, end_user_data_portability_free_of_charge-true, end_user_data_portability_effective-true, end_user_data_portability_tools_provided-unsure, end_user_data_continuous_real_time_access_provided-true])])-[]-[]].
+
+% ---- business_user_data_access_status: steps 15 to 33 ------------------
+test(step_15_not_listed_whatever_else) :-
+    not_listed_statement(NotListed),
+    application_citations(Citations),
+    business_answers(business_not_listed, Answers),
+    Answers == [article_6_obligations_do_not_apply-[outside_fact(designated_as_gatekeeper_for_core_platform_service, NotListed)]-Citations].
+
+test(step_16_not_requested) :-
+    listed_basis(Basis),
+    business_citations(Citations),
+    business_answers(business_not_requested, Answers),
+    Answers == [data_access_not_requested-Basis-Citations].
+
+test(step_17_data_outside) :-
+    listed_basis(Basis),
+    business_citations(Citations),
+    business_answers(business_data_outside, Answers),
+    Answers == [data_outside_article_6_10-Basis-Citations].
+
+test(step_18_consent_refused_not_required_without_consent_basis) :-
+    listed_basis(Basis),
+    personal_data_citations(Citations),
+    business_answers(business_consent_refused, Answers),
+    Answers == [personal_data_access_not_required-Basis-Citations].
+
+test(step_18_not_directly_connected_not_required) :-
+    listed_basis(Basis),
+    personal_data_citations(Citations),
+    business_answers(business_not_directly_connected, Answers),
+    Answers == [personal_data_access_not_required-Basis-Citations].
+
+test(step_19_personal_met_copies_consent) :-
+    listed_statement(Listed),
+    consent_given_statement(Consent),
+    personal_data_citations(Citations),
+    business_answers(business_personal_met, Answers),
+    Answers == [personal_data_access_duty_met-[outside_fact(designated_as_gatekeeper_for_core_platform_service, Listed), outside_fact(end_users_opted_in_to_sharing_by_consent, Consent)]-Citations].
+
+test(step_20_personal_real_time_lacking) :-
+    listed_statement(Listed),
+    consent_given_statement(Consent),
+    personal_data_citations(Citations),
+    business_answers(business_personal_real_time_lacking, Answers),
+    Answers == [personal_data_access_duty_not_met-[outside_fact(designated_as_gatekeeper_for_core_platform_service, Listed), outside_fact(end_users_opted_in_to_sharing_by_consent, Consent)]-Citations].
+
+test(step_21_non_personal_met) :-
+    listed_basis(Basis),
+    business_citations(Citations),
+    business_answers(business_non_personal_met, Answers),
+    Answers == [data_access_duty_met-Basis-Citations].
+
+test(step_22_non_personal_charged) :-
+    listed_basis(Basis),
+    business_citations(Citations),
+    business_answers(business_non_personal_charged, Answers),
+    Answers == [data_access_duty_not_met-Basis-Citations].
+
+test(step_23_request_absent) :-
+    business_answers(business_request_absent, Answers),
+    Answers == [indeterminate([data_access_requested_by_business_user_or_authorised_third_party])-[]-[]].
+
+test(step_25_personal_absent) :-
+    business_answers(business_personal_absent, Answers),
+    Answers == [indeterminate([requested_business_user_data_are_personal_data])-[]-[]].
+
+test(step_26_connection_absent) :-
+    business_answers(business_connection_absent, Answers),
+    Answers == [indeterminate([personal_data_directly_connected_with_end_user_use_of_business_user_offer])-[]-[]].
+
+test(step_27_first_absent_element) :-
+    business_answers(business_element_absent, Answers),
+    Answers == [indeterminate([business_user_data_access_and_use_effective_and_high_quality])-[]-[]].
+
+test(step_28_designation_absent_referred) :-
+    business_answers(business_designation_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_6_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service-absent, data_access_requested_by_business_user_or_authorised_third_party-true, data_provided_or_generated_in_use_by_business_user_and_its_end_users-true, requested_business_user_data_are_personal_data-false, business_user_data_access_free_of_charge-true, business_user_data_access_and_use_effective_and_high_quality-true, business_user_data_access_continuous_and_real_time-true])])-[]-[]].
+
+test(step_29_consent_absent_referred) :-
+    business_answers(business_consent_absent, Answers),
+    Answers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_6_10), cite(digital_markets_business_user_data_sharing_consent_statement)), [resolution(cite(digital_markets_business_user_data_sharing_consent_statement), not_attempted), inputs_relied_on([data_access_requested_by_business_user_or_authorised_third_party-true, data_provided_or_generated_in_use_by_business_user_and_its_end_users-true, requested_business_user_data_are_personal_data-true, personal_data_directly_connected_with_end_user_use_of_business_user_offer-true, end_users_opted_in_to_sharing_by_consent-absent, business_user_data_access_free_of_charge-true, business_user_data_access_and_use_effective_and_high_quality-true, business_user_data_access_continuous_and_real_time-true])])-[]-[]].
+
+test(step_31_personal_unsure) :-
+    business_answers(business_personal_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(requested_business_user_data_are_personal_data, cite(eu_reg_2022_1925_art_6_10)), [inputs_relied_on([data_access_requested_by_business_user_or_authorised_third_party-true, data_provided_or_generated_in_use_by_business_user_and_its_end_users-true, requested_business_user_data_are_personal_data-unsure, personal_data_directly_connected_with_end_user_use_of_business_user_offer-true, business_user_data_access_free_of_charge-true, business_user_data_access_and_use_effective_and_high_quality-true, business_user_data_access_continuous_and_real_time-true])])-[]-[]].
+
+test(step_33_effective_unsure) :-
+    business_answers(business_effective_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(business_user_data_access_and_use_effective_and_high_quality, cite(eu_reg_2022_1925_art_6_10)), [inputs_relied_on([data_access_requested_by_business_user_or_authorised_third_party-true, data_provided_or_generated_in_use_by_business_user_and_its_end_users-true, requested_business_user_data_are_personal_data-false, business_user_data_access_free_of_charge-true, business_user_data_access_and_use_effective_and_high_quality-unsure, business_user_data_access_continuous_and_real_time-true])])-[]-[]].
+
+% ---- step 0: input problems in every query ------------------------------
+test(step_0_unknown_key_in_every_query) :-
+    application_answers(input_unknown_key, ApplicationAnswers),
+    portability_answers(input_unknown_key, PortabilityAnswers),
+    business_answers(input_unknown_key, BusinessAnswers),
+    ApplicationAnswers == [input_problems([unknown_key(colour)])-[]-[]],
+    PortabilityAnswers == [input_problems([unknown_key(colour)])-[]-[]],
+    BusinessAnswers == [input_problems([unknown_key(colour)])-[]-[]].
+
+test(step_0_duplicate_key) :-
+    portability_answers(input_duplicate_key, Answers),
+    Answers == [input_problems([duplicate_key(portability_requested_by_end_user_or_authorised_third_party)])-[]-[]].
+
+test(step_0_crisp_key_unsure) :-
+    business_answers(input_crisp_key_unsure, Answers),
+    Answers == [input_problems([wrong_type(end_user_data_portability_free_of_charge)])-[]-[]].
+
+% ---- facade -------------------------------------------------------------
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(todo_baseline_subject, Profile),
+    findall(Status, dma_art_6_9_10_portability_and_business_data_order_status(Profile, Status), Statuses),
+    Statuses = [_].
+
+test(the_verdict_carries_a_citation) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(todo_baseline_subject, Profile),
+    decide_dma_art_6_9_10_portability_and_business_data_order(Profile, dma_art_6_9_10_portability_and_business_data_order_verdict(_Status, [_FirstCitation|_OtherCitations])).
+
+% ---- the status table against the baseline ------------------------------
+test(the_status_table_has_a_near_miss_atom) :-
+    dma_art_6_9_10_portability_and_business_data_order_status_values(StatusValues),
+    member(portability_duty_met, StatusValues),
+    member(portability_duty_not_met, StatusValues),
+    dif(portability_duty_met, portability_duty_not_met).
+
+test(the_baseline_profile_yields_no_other_table_status) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(todo_baseline_subject, Profile),
+    end_user_data_portability_status(Profile, Result, _, _),
+    Result == portability_duty_met,
+    dma_art_6_9_10_portability_and_business_data_order_status_values(StatusValues),
+    exclude(==(Result), StatusValues, OtherValues),
+    length(StatusValues, StatusCount),
+    OtherCount is StatusCount - 1,
+    length(OtherValues, OtherCount).
+
+test(every_other_bound_status_is_rejected) :-
+    dma_art_6_9_10_portability_and_business_data_order_profile_for(todo_baseline_subject, Profile),
+    dma_art_6_9_10_portability_and_business_data_order_status_values(StatusValues),
+    findall(Value,
+            ( member(Value, StatusValues),
+              end_user_data_portability_status(Profile, Value, _, _) ),
+            Accepted),
+    Accepted == [portability_duty_met].
+
+:- end_module(test_output_mode).

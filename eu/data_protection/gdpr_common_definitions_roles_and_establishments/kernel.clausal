@@ -1,37 +1,45 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_common_definitions_roles_and_establishments (classification family).
+% Source: Regulation (EU) 2016/679 (GDPR) Art 4, points (7), (8), (13)-(16),
+% (18), (19) and (22)-(24), consolidated text 02016R0679-20160504 with the
+% 2018 corrigendum; point (1) is quoted for reasoning only.
+%
 % DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL -- possibly none, which is why
-% the export list below starts empty.
-% Exception: the scaffold writes the order's input check gdpr_common_definitions_roles_and_establishments_input_problems/2 here, exported, for every slice to import.
-% STATUS is the domain's terminal verdict vocabulary -- replace the placeholder pair with the real one.
+% PREDICATES that two or more files CALL. This domain has ONE determination
+% slice (gdpr_common_definitions_roles_and_establishments.clausal), so no
+% domain predicate is shared and nothing else is exported.
+% Exception: the scaffold writes the order's input check
+% gdpr_common_definitions_roles_and_establishments_input_problems/2 here,
+% exported, for every slice to import.
 %
-% Atoms and data terms need NO declaration and NO import: a slice writes
-% `eligible` or `widget_verdict(Status, Citations)` directly. So nothing
-% vocabulary-shaped lives here; the comment block below only RECORDS the
-% result terms so every file spells them alike.
+% Atoms and data terms need NO declaration and NO import. The comment block
+% below only RECORDS the result terms so every file spells them alike.
 %
-% NOTHING SINGLE-CALLER LIVES HERE. A predicate only ONE file calls is
-% defined in THAT file. Move a predicate here the moment a SECOND file
-% calls it, and only then; export it as `name/arity` and import it where
-% it is called:
-%   :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/kernel, [shared_predicate/2]).
-%
-% Spell every result and verdict atom exactly as REQUIRED PUBLIC
-% PREDICATES and the order pin it: an atom spelled differently is a
-% DIFFERENT atom, and nothing will warn you.
-%
-% Result terms -- one per determination slice. `status` is the slice's
-% verdict atom (its pinned vocabulary is the `<slice>_status_values/1`
-% table in the slice file), `citations` a list of cite(Key) terms:
-%   gdpr_common_definitions_roles_and_establishments_verdict(status, citations)
-% Shared across the slices: the checklist row id `overall` and the
-% profile key `as_of_date` (atoms -- nothing to export).
-%
-% TODO: add the predicates two or more slices genuinely share (names
-% spelled out in full dictionary words -- no abbreviations, C6).
-% Source: TODO (instrument + article).
+% Result term of every definition relation (INTERFACE - THE ANSWERS):
+%   definition_answer(Status, Ground, Citations)
+%   - Status: the bare atom met or not_met; or the compound
+%     indeterminate(MissingKeys) (the bare atom indeterminate is NEVER
+%     written); or needs_legal_review(Reason, Context) with Reason
+%     open_textured(Input, cite(Key)) or
+%     cross_reference_unresolved(cite(Citation), cite(Target)) and Context
+%     [resolution(cite(Target), not_attempted), inputs_relied_on(Pairs)] or
+%     [inputs_relied_on(Pairs)]; or input_problems(Problems).
+%   - Ground: a bare atom from the relation's ground vocabulary
+%     (determines_purposes_and_means, provided_for_by_law,
+%     central_administration, establishment_taking_decisions,
+%     establishment_of_main_processing_activities,
+%     not_established_in_more_than_one_member_state,
+%     no_main_establishment_identified, point_a, point_b, point_c) or none.
+%   - Citations: a list of cite(Key) terms in citation vocabulary order,
+%     [] only with input_problems.
+% Outside facts relation: a list [outside_fact(Key, Attested)] with Attested
+% the attested(Value, attestation(By, At, Reason, Evidence)) term as given or
+% the atom absent; or input_problems(Problems).
+% Input problems: unknown_key(Key), wrong_type(Key), duplicate_key(Key).
+% Slice verdict (the facade):
+%   gdpr_common_definitions_roles_and_establishments_verdict(Definitions, Citations)
+% with Definitions a list of defined_term(Name, Answer) terms.
 % =====================================================================
 
 :- module(kernel, [gdpr_common_definitions_roles_and_establishments_input_problems/2]).
@@ -41,20 +49,18 @@
 % ---- input checks: the problems a profile has, if any -----------
 % gdpr_common_definitions_roles_and_establishments_input_problems(Profile, Problems): Problems = [] means the profile can be
 % judged. Written from the order's typed input contract
-% (input_contract.types.profile: attribute_list).
-% Each public query calls this check first: it gives its normal answer only when
-% Problems = [], and when Problems is not [] it gives the answer the order states for
-% a profile with input problems.
-% It gives exactly one answer for every Profile, and the answer is ground:
-% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
-%   Key in every item gives [wrong_type(profile)];
+% (input_contract.types.profile: attribute_list) and INTERFACE - THE INPUT CHECK.
+% It gives exactly one answer for every Profile:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives
+%   [wrong_type(profile)]; each Key is a ground term or an unbound variable, and a
+%   Key that is any other non-ground term makes the Profile not an attribute list;
 % - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
-%   the key occurs more than once in Profile (whatever its values: none of them is read,
-%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
-%   outside its type; then unknown_key(Key) for each key outside the contract, in the
-%   order of its first occurrence in Profile. Each key is named once. An absent key is
-%   not a problem.
-% Every step is complementary clauses: exactly one clause holds for each input.
+%   the key occurs more than once (none of its values is read), else wrong_type(Key)
+%   when its one value is outside its type; then unknown_key(Key) for each key outside
+%   the contract, in the order of its first occurrence, once per distinct key. An
+%   unbound Key is reported as unknown_key(Key) with that same variable, once per
+%   distinct variable (keys are compared by identity, ==, never unified).
+%   An absent key is not a problem.
 gdpr_common_definitions_roles_and_establishments_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
     profile_problems(IsAttributeList, Profile, Problems).
@@ -94,7 +100,8 @@ key_type(objection_concerns_infringement_or_envisaged_action, boolean).
 key_type(objection_demonstrates_significance_of_risks, judgement).
 
 % attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
-% items, each Key ground; false for anything else, an unbound Term included.
+% items, each Key ground or an unbound variable; false for anything else, an unbound
+% Term included.
 attribute_list_t(Term, false) :-
     var(Term).
 attribute_list_t(Term, true) :-
@@ -115,19 +122,36 @@ attribute_t(Element, false) :-
 attribute_t(Element, T) :-
     nonvar(Element),
     Element = attribute(Key, _),
-    term_variables(Key, Variables),
-    no_variables_t(Variables, T).
+    key_shape_t(Key, T).
 attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
+% key_shape_t(Key, T): an unbound Key is allowed (it is an unknown key); a bound Key
+% must be ground.
+key_shape_t(Key, true) :-
+    var(Key).
+key_shape_t(Key, T) :-
+    nonvar(Key),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, T).
+
 no_variables_t([], true).
 no_variables_t([_|_], false).
+
+% identical_member_t(Term, List, T): T is true when Term is identical (==) to an
+% element of List. Nothing is unified, so an unbound key is never bound.
+identical_member_t(_, [], false).
+identical_member_t(Term, [Element|_], true) :-
+    Term == Element.
+identical_member_t(Term, [Element|Elements], T) :-
+    Term \== Element,
+    identical_member_t(Term, Elements, T).
 
 % Unknown keys, in profile order, each once: Known grows by each key named.
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    identical_member_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
@@ -237,5 +261,24 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(an_empty_profile_has_no_problem) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([], []).
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, controller), attribute(data_are_personal_data, unsure), attribute(party_provided_for_as_controller_by_law, attested(true, attestation(host, now, reason, none)))], []).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems(_, [wrong_type(profile)]).
+test(a_non_ground_compound_key_is_not_an_attribute_list) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(foo(_), true)], [wrong_type(profile)]).
+test(an_unbound_key_is_one_unknown_key) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(Key, first), attribute(Key, second)], Problems),
+    Problems = [unknown_key(Reported)],
+    Reported == Key.
+test(a_repeated_contract_key_is_a_duplicate_only) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, controller), attribute(party_role, bogus)], [duplicate_key(party_role)]).
+test(unsure_is_wrong_for_a_crisp_key) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(complaint_lodged_with_authority, unsure)], [wrong_type(complaint_lodged_with_authority)]).
+test(contract_problems_come_before_unknown_keys) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(stray, 1), attribute(party_role, other), attribute(stray, 2)], [wrong_type(party_role), unknown_key(stray)]).
 
 :- end_module(kernel).

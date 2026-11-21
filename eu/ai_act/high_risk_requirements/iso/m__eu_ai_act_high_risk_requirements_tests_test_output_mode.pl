@@ -1,0 +1,132 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_high_risk_requirements_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_ai_act_high_risk_requirements_high_risk_requirements, [decide_high_risk_requirements/2, high_risk_requirements_status/2, high_risk_requirements_checklist/2]).
+:- use_module(m__eu_ai_act_high_risk_requirements_fixtures, [high_risk_requirements_subject/1, high_risk_requirements_profile_for/2, high_risk_requirements_assess/2]).
+
+expected_result(annex_iii_on_application_date, requirement_applies).
+expected_result(annex_iii_day_before_application_date, not_applicable_on_date).
+expected_result(annex_i_only_on_application_date, requirement_applies).
+expected_result(annex_i_only_day_before_application_date, not_applicable_on_date).
+expected_result(dual_route_on_annex_iii_application_date, requirement_applies).
+expected_result(not_a_high_risk_system, not_a_high_risk_ai_system).
+expected_result(annex_i_system_after_application_date, requirement_applies).
+expected_result(point_one_a_system_logging, requirement_applies).
+expected_result(other_annex_iii_system_logging, requirement_does_not_apply).
+expected_result(verification_exception_both_conditions, requirement_does_not_apply).
+expected_result(verification_purposes_without_law_view, requirement_applies).
+expected_result(annex_x_component_day_before_deadline, compliance_required_by_31_december_2030).
+expected_result(annex_x_component_on_deadline, requirement_applies).
+expected_result(existing_system_without_changes, existing_system_without_significant_changes_not_covered).
+expected_result(existing_system_with_changes, requirement_applies).
+expected_result(public_authority_system_day_before_deadline, compliance_required_by_2_august_2030).
+expected_result(public_authority_system_on_deadline, requirement_applies).
+expected_result(system_without_training_data, requirement_applies_to_testing_data_sets_only).
+expected_result(system_with_training_data, requirement_applies).
+expected_result(small_enterprise_provider_documentation, requirement_applies_and_the_simplified_form_may_be_used).
+expected_result(large_provider_documentation, requirement_applies).
+expected_result(component_photographs_not_a_component, element_not_required).
+expected_result(component_photographs_component, element_required).
+expected_result(annex_i_section_a_information_unrelated, element_not_required).
+expected_result(annex_i_section_a_information_related, element_required).
+expected_result(pre_determined_changes_absent, element_not_required).
+expected_result(pre_determined_changes_present, element_required).
+expected_result(log_mechanisms_open_element, element_required_subject_to_an_open_condition).
+expected_result(instructions_for_use_element, element_required).
+expected_result(missing_annex_iii_classification, indeterminate([system_is_a_high_risk_ai_system_listed_in_annex_iii])).
+expected_result(unsure_design_changes, needs_legal_review(open_textured(significant_changes_in_design_as_from_the_chapter_iii_date, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_as_from_the_chapter_iii_date - unsure, intended_to_be_used_by_public_authorities - false])])).
+expected_result(malformed_classification_value, input_problems([wrong_type(system_is_a_high_risk_ai_system_listed_in_annex_iii)])).
+
+expected_citations(annex_iii_on_application_date, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_9_1)]).
+expected_citations(annex_iii_day_before_application_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]).
+expected_citations(annex_i_only_day_before_application_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]).
+expected_citations(annex_i_only_on_application_date, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_14_1)]).
+expected_citations(not_a_high_risk_system, [cite(eu_reg_2024_1689_art_8_1)]).
+expected_citations(point_one_a_system_logging, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_12_3)]).
+expected_citations(other_annex_iii_system_logging, [cite(eu_reg_2024_1689_art_12_3)]).
+expected_citations(verification_exception_both_conditions, [cite(eu_reg_2024_1689_art_14_5)]).
+expected_citations(verification_purposes_without_law_view, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_14_5)]).
+expected_citations(annex_x_component_day_before_deadline, [cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_9_1)]).
+expected_citations(existing_system_without_changes, [cite(eu_reg_2024_1689_art_111_2)]).
+expected_citations(public_authority_system_day_before_deadline, [cite(eu_reg_2024_1689_art_111_2), cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_12_1)]).
+expected_citations(system_without_training_data, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_10_6)]).
+expected_citations(system_with_training_data, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_10_1)]).
+expected_citations(small_enterprise_provider_documentation, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_11_1)]).
+expected_citations(component_photographs_not_a_component, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_f)]).
+expected_citations(annex_i_section_a_information_unrelated, [cite(eu_reg_2024_1689_art_11_2)]).
+expected_citations(pre_determined_changes_absent, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_f)]).
+expected_citations(log_mechanisms_open_element, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_f)]).
+expected_citations(instructions_for_use_element, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_h)]).
+expected_citations(missing_annex_iii_classification, []).
+expected_citations(unsure_design_changes, []).
+expected_citations(malformed_classification_value, []).
+
+result_matches(Subject) :-
+    expected_result(Subject, Expected),
+    high_risk_requirements_assess(Subject, high_risk_requirements_verdict(Result, _)),
+    Result == Expected.
+
+citations_match(Subject) :-
+    expected_citations(Subject, Expected),
+    high_risk_requirements_assess(Subject, high_risk_requirements_verdict(_, Citations)),
+    sort(Citations, Got),
+    sort(Expected, Want),
+    Got == Want.
+
+test(every_fixture_subject_has_an_expected_result) :-
+    findall(Subject, high_risk_requirements_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, expected_result(Subject, _), ExpectedSubjects),
+    sort(ExpectedSubjects, ExpectedSet),
+    SubjectSet == ExpectedSet.
+test(every_subject_gets_its_expected_result) :-
+    findall(Subject, expected_result(Subject, _), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, result_matches(Subject), Matched),
+    sort(Matched, MatchedSet),
+    MatchedSet == SubjectSet.
+test(every_route_gets_its_expected_citations) :-
+    findall(Subject, expected_citations(Subject, _), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, citations_match(Subject), Matched),
+    sort(Matched, MatchedSet),
+    MatchedSet == SubjectSet.
+test(the_decision_yields_exactly_one_verdict) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    findall(Verdict, decide_high_risk_requirements(requirement_case(Profile, human_oversight, date(2028, 1, 1)), Verdict), Verdicts),
+    length(Verdicts, 1).
+test(the_verdict_carries_a_citation) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    decide_high_risk_requirements(requirement_case(Profile, human_oversight, date(2028, 1, 1)), high_risk_requirements_verdict(requirement_applies, [_|_])).
+test(the_status_projection_reads_out_the_open_element) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_status(element_case(Profile, annex_iv_point_1_b), Status),
+    Status == element_required_subject_to_an_open_condition.
+test(the_requirement_checklist_lists_the_nine_requirements_in_order) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_checklist(requirement_case(Profile, risk_management_system, date(2028, 1, 1)), Items),
+    findall(Requirement, member(item(Requirement, _, _), Items), Requirements),
+    Requirements == [risk_management_system, data_and_data_governance, technical_documentation, record_keeping, minimum_logging_capabilities_for_point_1_a_systems, transparency_and_instructions_for_use, human_oversight, separate_verification_by_at_least_two_natural_persons, accuracy_robustness_and_cybersecurity].
+test(every_checklist_item_carries_its_provenance) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_checklist(requirement_case(Profile, risk_management_system, date(2028, 1, 1)), Items),
+    findall(Requirement, member(item(Requirement, _, [cite(_)|_]), Items), Cited),
+    length(Cited, 9).
+test(the_element_checklist_has_seven_open_elements) :-
+    high_risk_requirements_profile_for(annex_iii_on_application_date, Profile),
+    high_risk_requirements_checklist(element_case(Profile, annex_iv_point_1_a), Items),
+    length(Items, 37),
+    findall(Element, member(item(Element, element_required_subject_to_an_open_condition, _), Items), Open),
+    Open == [annex_iv_point_1_b, annex_iv_point_2_d, article_13_3_point_b_iv, article_13_3_point_b_v, article_13_3_point_b_vi, article_13_3_point_b_vii, article_13_3_point_f].
+
+cp_test_names([every_fixture_subject_has_an_expected_result, every_subject_gets_its_expected_result, every_route_gets_its_expected_citations, the_decision_yields_exactly_one_verdict, the_verdict_carries_a_citation, the_status_projection_reads_out_the_open_element, the_requirement_checklist_lists_the_nine_requirements_in_order, every_checklist_item_carries_its_provenance, the_element_checklist_has_seven_open_elements]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

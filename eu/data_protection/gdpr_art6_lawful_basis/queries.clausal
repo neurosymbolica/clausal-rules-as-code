@@ -4,30 +4,36 @@
 % A TOP-LAYER consumer: it imports the determination slice's PUBLIC
 % predicates it calls, and nothing else.
 %
-% Regulation (EU) 2016/679 (GDPR) Art 6(1), Art 6(3) first sentence and
-% Art 6(4) first words; pinned consolidated English Formex text
-% 02016R0679-20160504. The query types this order serves are answered by
-% the determination slice itself:
-%   #2 eligibility           lawful_basis_status/4, decide_gdpr_art6_lawful_basis/2
-%   #3 status determination  purpose_compatibility/4, gdpr_art6_lawful_basis_status/2
-%   #7 justification         CITATIONS and BASIS of lawful_basis_status/4 and
-%                            gdpr_art6_lawful_basis_checklist/2 (cite per item)
+% Source: Regulation (EU) 2016/679 (GDPR) Art 6(1), Art 6(3) first sentence
+% and Art 6(4); pinned consolidated English Formex text 02016R0679-20160504.
+%
+% The declared query types are served by the slice
+% gdpr_art6_lawful_basis.clausal and re-exported by the package facade:
+%   #2 eligibility          -- lawful_basis_status/4 and
+%                              decide_gdpr_art6_lawful_basis/2 (eligible |
+%                              ineligible | indeterminate([Key]) |
+%                              needs_legal_review/2 | input_problems/1), with
+%                              cited CITATIONS;
+%   #3 status_determination -- purpose_compatibility/4 (Art 6(4)) and
+%                              gdpr_art6_lawful_basis_status/2;
+%   #7 justification        -- gdpr_art6_lawful_basis_checklist/2, one
+%                              item(Way, Status, cite(Point)) per considered way.
 % This layer adds:
-%   gdpr_art6_lawful_basis_what_if/4      (#16 what-if): override one key -> re-evaluate
+%   gdpr_art6_lawful_basis_what_if/4      (#16 what-if): replace one key -> re-evaluate
 %   gdpr_art6_lawful_basis_profile_keys/1: top-level profile key schema
 %   gdpr_art6_lawful_basis_input_problems/2: the problems a profile has ([] = none),
 %     re-exported from the kernel as the scaffold wrote it.
-%   The RESULT CONSTRUCTORS of the called contract (eligible/0, ...,
-%     duplicate_key/1): exported so the package root serves them. The
-%     compound constructors are DATA and have no clauses; their fields are
-%     named by the constructors/1 declaration below.
+%   The order's own result atoms (eligible/0, ..., compatibility_not_ascertained/0)
+%   and its result constructors (indeterminate/1, ..., duplicate_key/1). The
+%   constructors are DATA: they are exported and declared below, and have no
+%   clauses.
 %
-% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override is
-% list plumbing written here (every attribute of the key is dropped, then the
-% new attribute appended); kit/query_combinators' override_key/4 works on a
-% dict and is not used. A profile that is not a proper list is passed on
-% unchanged, so the input check answers for it. No statutory condition is
-% decided here, so no clause carries an implements/1 marker.
+% The what-if works on the ATTRIBUTE LIST the order types (not a dict, so the
+% kit's dict-based override_key/4 does not apply): every entry of the key is
+% removed, then one entry with the new value is added, so no duplicate is
+% created; the value atom absent only removes the key. A term that is not an
+% attribute list is evaluated as given (it answers input_problems). Exactly one
+% solution for every input. List plumbing only: no statutory marker.
 % =====================================================================
 
 :- module(queries, [
@@ -39,6 +45,7 @@
     purpose_compatible/0,
     purpose_not_compatible/0,
     compatibility_test_not_engaged/0,
+    compatibility_not_ascertained/0,
     indeterminate/1,
     needs_legal_review/2,
     open_textured/2,
@@ -61,95 +68,86 @@
 :- use_module(eu/data_protection/gdpr_art6_lawful_basis/kernel, [gdpr_art6_lawful_basis_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_art6_lawful_basis/gdpr_art6_lawful_basis, [gdpr_art6_lawful_basis_status/2]).
 
-% ---- result constructors of the called contract (data shapes only) ---------
-% The compound constructors: data terms with named fields, no clauses.
+% ---- the order's result constructors (INPUT CONTRACT, RESULT CONSTRUCTORS) --
+% Exported, never called as queries: data, with no clauses.
 :- constructors([
     indeterminate(missing_keys),
     needs_legal_review(reason, context),
     open_textured(key, citation),
     cross_reference_unresolved(citation, target),
-    resolution(target, resolution_status),
+    resolution(target, status),
     inputs_relied_on(pairs),
     provenance(clause, citations),
     outside_fact(key, attested),
     flagged(key, attested),
-    attested(attested_value, attestation),
-    attestation(attested_by, attested_at, reason, evidence),
-    url(location, retrieved_at),
-    document(upload_identifier, digest_value),
     input_problems(problems),
     unknown_key(key),
     wrong_type(key),
     duplicate_key(key)
 ]).
 
-% The five result atoms of this order.
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_art6_lawful_basis_profile_keys([basis_claimed, consent_given_and_conditions_met, contract_necessary, legal_obligation_necessary, legal_obligation_laid_down_by_law, vital_interests_necessary, public_interest_task_necessary, public_interest_task_laid_down_by_law, processing_by_public_authority_in_its_tasks, legitimate_interests_pursued, interests_overridden, child_data_subject, special_category, new_purpose_processing, compatible_purpose, link_between_purposes_taken_into_account, collection_context_taken_into_account, nature_of_data_taken_into_account, possible_consequences_taken_into_account, appropriate_safeguards_taken_into_account]).
+
+% #16 what-if: re-evaluate lawful_basis_status/4 with one key hypothetically replaced
+gdpr_art6_lawful_basis_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    gdpr_art6_lawful_basis_input_problems(Profile, Problems),
+    what_if_by_shape(Problems, Profile, OverriddenKey, NewValue, NewStatus).
+
+% A term that is not an attribute list cannot be edited: it is evaluated as given.
+what_if_by_shape([wrong_type(profile)], Profile, _, _, NewStatus) :-
+    gdpr_art6_lawful_basis_status(Profile, NewStatus).
+what_if_by_shape(Problems, Profile, OverriddenKey, NewValue, NewStatus) :-
+    dif(Problems, [wrong_type(profile)]),
+    without_key(Profile, OverriddenKey, Remaining),
+    with_value(NewValue, OverriddenKey, Remaining, Hypothesis),
+    gdpr_art6_lawful_basis_status(Hypothesis, NewStatus).
+
+% Every entry of the key is removed (keys compared by identity, never unified).
+without_key([], _, []).
+without_key([attribute(ElementKey, _)|Elements], OverriddenKey, Remaining) :-
+    ElementKey == OverriddenKey,
+    without_key(Elements, OverriddenKey, Remaining).
+without_key([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, [attribute(ElementKey, ElementValue)|Remaining]) :-
+    ElementKey \== OverriddenKey,
+    without_key(Elements, OverriddenKey, Remaining).
+
+% The atom absent removes the key; any other value is added once.
+with_value(NewValue, _, Remaining, Remaining) :-
+    NewValue == absent.
+with_value(NewValue, OverriddenKey, Remaining, Hypothesis) :-
+    NewValue \== absent,
+    append(Remaining, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+% ---- the order's own result atoms (INTERFACE - THE CALLED CONTRACT) ------
+% Data only: each is a result atom the queries return; nothing calls these.
 eligible.
 ineligible.
 purpose_compatible.
 purpose_not_compatible.
 compatibility_test_not_engaged.
+compatibility_not_ascertained.
 
-% schema of top-level profile keys: the keys of the order's typed input contract, in its order
-gdpr_art6_lawful_basis_profile_keys([basis_claimed, consent_given_and_conditions_met, contract_necessary, legal_obligation_necessary, legal_obligation_laid_down_by_law, vital_interests_necessary, public_interest_task_necessary, public_interest_task_laid_down_by_law, processing_by_public_authority_in_its_tasks, legitimate_interests_pursued, interests_overridden, child_data_subject, special_category, new_purpose_processing, compatible_purpose]).
-
-% #16 what-if: re-evaluate with one key hypothetically overridden.
-gdpr_art6_lawful_basis_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    proper_list_t(Profile, IsProperList),
-    hypothesis(IsProperList, Profile, OverriddenKey, NewValue, Hypothesis),
-    gdpr_art6_lawful_basis_status(Hypothesis, NewStatus).
-
-% A profile that is not a proper list is left as it is: the input check refuses it.
-hypothesis(false, Profile, _, _, Profile).
-hypothesis(true, Profile, OverriddenKey, NewValue, Hypothesis) :-
-    exclude(attribute_for_key(OverriddenKey), Profile, Remaining),
-    append(Remaining, [attribute(OverriddenKey, NewValue)], Hypothesis).
-
-attribute_for_key(OverriddenKey, attribute(ElementKey, _)) :-
-    ElementKey == OverriddenKey.
-
-% proper_list_t(Term, Truth): Truth is true for a proper list, false otherwise
-% (an unbound term or a partial list included).
-proper_list_t(Term, false) :-
-    var(Term).
-proper_list_t(Term, true) :-
-    Term == [].
-proper_list_t(Term, Truth) :-
-    nonvar(Term),
-    Term = [_|Tail],
-    proper_list_t(Tail, Truth).
-proper_list_t(Term, false) :-
-    nonvar(Term),
-    Term \== [],
-    Term \= [_|_].
-
-% ---- tests -------------------------------------------------------------------
-
-test(profile_keys_are_the_fifteen_contract_keys) :-
+test(profile_keys_are_twenty) :-
     gdpr_art6_lawful_basis_profile_keys(ProfileKeys),
-    length(ProfileKeys, 15).
-
-test(what_if_supplies_a_missing_judgement) :-
-    findall(Status, gdpr_art6_lawful_basis_what_if([], contract_necessary, true, Status), Answers),
-    Answers == [eligible].
-
-test(what_if_replaces_a_stated_judgement) :-
+    length(ProfileKeys, 20).
+test(what_if_makes_contract_necessary) :-
     gdpr_art6_lawful_basis_what_if([attribute(basis_claimed, contract), attribute(contract_necessary, false)], contract_necessary, true, eligible).
-
-test(what_if_replaced_judgement_is_not_ineligible, fail) :-
-    gdpr_art6_lawful_basis_what_if([attribute(basis_claimed, contract), attribute(contract_necessary, false)], contract_necessary, true, ineligible).
-
-test(what_if_can_turn_eligible_into_ineligible) :-
-    gdpr_art6_lawful_basis_what_if([attribute(basis_claimed, contract), attribute(contract_necessary, true)], contract_necessary, false, ineligible).
-
-test(what_if_leaves_an_improper_list_refused) :-
-    gdpr_art6_lawful_basis_what_if([attribute(contract_necessary, false)|not_a_list], contract_necessary, true, input_problems([wrong_type(profile)])).
-
-test(result_atoms_are_served) :-
+test(what_if_absent_removes_the_key) :-
+    gdpr_art6_lawful_basis_what_if([attribute(basis_claimed, contract), attribute(contract_necessary, true)], contract_necessary, absent, indeterminate([contract_necessary])).
+test(what_if_replaces_a_duplicated_key) :-
+    gdpr_art6_lawful_basis_what_if([attribute(contract_necessary, true), attribute(contract_necessary, false)], contract_necessary, true, eligible).
+test(what_if_on_a_partial_list_reports_the_profile) :-
+    gdpr_art6_lawful_basis_what_if([attribute(contract_necessary, true)|_], contract_necessary, true, input_problems([wrong_type(profile)])).
+test(what_if_gives_exactly_one_solution) :-
+    findall(NewStatus, gdpr_art6_lawful_basis_what_if([], vital_interests_necessary, true, NewStatus), Statuses),
+    Statuses == [eligible].
+test(result_atoms_are_defined) :-
     eligible,
     ineligible,
     purpose_compatible,
     purpose_not_compatible,
-    compatibility_test_not_engaged.
+    compatibility_test_not_engaged,
+    compatibility_not_ascertained.
 
 :- end_module(queries).

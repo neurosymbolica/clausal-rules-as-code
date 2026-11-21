@@ -1,0 +1,1551 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: us/colorado_cpa
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "colorado_cpa"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The answer atoms, result constructors, profile key
+# atoms, enumeration atoms and the judgement value unsure are listed as /0
+# and /N because the scorer reads them as package-root attributes.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- colorado_cpa.clausal --
+  - "decide_colorado_cpa/2"
+  - "colorado_cpa_status/2"
+  - "colorado_cpa_checklist/2"
+  - "colorado_cpa_decision_resolvable/1"
+  - "colorado_cpa_status_values/1"
+  - "applicability_status/3"
+  - "minors_duties_applicability/3"
+  - "response_deadline/4"
+  - "extended_response_deadline/4"
+  - "appeal_response_deadline/4"
+  - "extended_appeal_response_deadline/4"
+  - "cure_period_last_day/4"
+  - "attorney_general_action_status/5"
+  - "universal_opt_out_recognition_date/4"
+  - "in_scope/0"
+  - "biometric_only_scope/0"
+  - "out_of_scope/0"
+  - "exempt_entity/0"
+  - "no_extension_available/0"
+  - "cure_provision_not_in_force/0"
+  - "cure_requirement_not_applicable/0"
+  - "notice_not_yet_received/0"
+  - "cure_period_running/0"
+  - "action_may_be_brought/0"
+  - "no_action_for_cured_violation/0"
+  - "no_recognition_duty/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "colorado_cpa_profile_keys/1"
+  - "colorado_cpa_input_problems/2"
+  - "colorado_cpa_what_if/4"
+  - "colorado_cpa_consumer_threshold/3"
+  - "entity_category/0"
+  - "colorado_link_for_general_duties/0"
+  - "consumer_count/0"
+  - "revenue_or_discount_from_sale/0"
+  - "processes_biometric_data/0"
+  - "colorado_link_for_minors_duties/0"
+  - "extension_reasonably_necessary/0"
+  - "extension_notice_given_within_initial_period/0"
+  - "appeal_extension_reasonably_necessary/0"
+  - "appeal_extension_notice_given_within_initial_period/0"
+  - "action_enforces_minors_duties/0"
+  - "cure_deemed_possible/0"
+  - "cured_within_cure_period/0"
+  - "processes_for_targeted_advertising_or_sale/0"
+  - "financial_institution_or_affiliate_subject_to_glba/0"
+  - "air_carrier/0"
+  - "national_securities_association/0"
+  - "none_of_the_exempt_categories/0"
+  - "unsure/0"
+  # -- fixtures.clausal --
+  - "colorado_cpa_subject/1"
+  - "colorado_cpa_profile_for/2"
+  - "colorado_cpa_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/query_combinators, kit/deadline_lib), no shared backbone package.
+uses: []
+
+scope: "Who [quotation omitted] to 6-1-1315) covers and when
+  certain of its duties fall due. Decided here: whether part 13, other than the
+  minors' sections, applies to a controller ([quotation omitted]) and the exempt
+  persons of 6-1-1304(2)(l), (m), (q)); whether the minors' [quotation omitted]
+  [quotation omitted] (6-1-1304(1)(b), (2)); the last day
+  to inform a consumer of action on a request, with the extension (6-1-1306(2)(a),
+  (b)); the last day to answer an appeal, with the extension (6-1-1306(3)(b)); the
+  last day of the sixty-day cure period for the minors' sections and how that
+  provision bears on an action on a given day (6-1-1311(1)(d)(II), read as in
+  force from 1 October 2025 to 30 December 2026); and the first day a controller
+  must recognise a universal opt-out mechanism on the public list
+  (6-1-1306(1)(a)(IV)(B); 4 CCR 904-3, Rules 5.07(F), 5.08(A), 5.08(A)(3)).
+  Out of scope: whether a duty was broken or met, the consumer rights and their
+  exceptions, the data exemptions of 6-1-1304(2), penalties (C.R.S. 6-1-112, not
+  pinned), the computation-of-time statute (C.R.S. 2-4-108, not pinned) and every
+  other rule of 4 CCR 904-3 (see deferred_set). The open-textured business links
+  and the reasonable necessity of an extension are handed to a lawyer as
+  needs_legal_review."
+
+sources:
+  - "[quotation omitted] to 6-1-1315 (part 13 of article 1 of title
+    6), secondary copy from a browser save of the Colorado Legal Resources (Lexis
+    Advance) section pages made on 2026-11-16, current through the Second Regular
+    Session of the Seventy-fifth General Assembly (2026); document
+    co-crs-6-1-1301-1315-2026-11-16-save, sha256
+    ff763b24e90b7cf2149bc10953dda706b1c45efbdb27b844bf7041752f65a8c3; sections
+    6-1-1304(1)(a), (1)(a)(I)(A), (1)(a)(I)(B), (1)(a)(II), (1)(b), (2)(l), (2)(m),
+    (2)(q); 6-1-1306(1)(a)(IV)(B), (2)(a), (2)(b), (3)(b); 6-1-1311(1)(d)(II)"
+  - "[quotation omitted] version 12259, in force from
+    2025-12-01, Colorado Secretary of State PDF; document co-ccr-904-3-v12259, sha256
+    58a420766c48437ba48debf17156e146392e5af5e7daa3398fec39f9808b3ce5; Rules 5.07(F),
+    5.08(A), 5.08(A)(3)"
+
+query_interface:
+  2: "colorado_cpa_status/2"                     # facade status verdict
+  3: "applicability_status/3"                    # status_determination
+  6: "colorado_cpa_consumer_threshold/3"         # threshold flip point of 6-1-1304(1)(a)(I)(B)
+  7: "colorado_cpa_checklist/2"                  # justification: cite(...) per item
+  15: "response_deadline/4"                      # deadline
+  16: "colorado_cpa_what_if/4"                   # what_if: re-evaluate under an overridden key
+  23: "universal_opt_out_recognition_date/4"     # calculation: the computed first day
+
+deferred_set:
+- what: statute_section_headings_and_empty_labels
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1301
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1310
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1312
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_1dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17dot4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_1_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_i
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_d_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_8
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_6
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_6_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_1_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_3
+  reason: 'The eighteen section units of C.R.S. 6-1-1301 to 6-1-1315 hold only the
+    section number and heading, and the label units (for example ''(2)'' or ''(IV)'')
+    hold only a subdivision label: their text is in the child units the limbs cite
+    or the other deferred rows list. None states a rule. Deferred so every unit of
+    the pinned extract is accounted for.'
+  consequence: 'None for a caller: no rule is in these units.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: statute_source_lines_and_editors_notes
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1301_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1310_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1312_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_history
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_editors_note
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_editors_note
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_editors_note
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_editors_note
+  reason: The eighteen Source lines list the acts that enacted and amended each section
+    (the publisher's history notes); the four Editor's notes explain renumbering,
+    harmonisation and repeal dates. They are notes of the publisher, not text of the
+    law. They were all read for reading (1) (the only 2026 act named is HB 26-1426,
+    which added 6-1-1315) and the notes of 6-1-1311 give the dates of reading (9)
+    (open questions Q4 and Q17); the order cites none of them.
+  consequence: No answer cites a note; the start date of the cure provision and the
+    version of the text rest on them (reading (1), (9)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: statute_repealed_clauses
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_IV_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_1_d_I
+  reason: 'These units hold only a label and the word ''Repealed.'': 6-1-1303(17.5),
+    [quotation omitted] 6-1-1311(1)(d)(I). The last was the general sixty-day
+    cure period; reading (9) states that it is not in force and that no other cure
+    period is in the pinned statute. No rule is left in these units.'
+  consequence: 'No answer gives the general cure period: it is repealed (reading (9)).'
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: definitions_the_keys_use
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_6
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_6_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_6_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b_V
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b_V_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_23_b_V_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot4_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot4_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot4_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot4_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot4_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot5_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot5_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot5_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot5_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot5_e
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_7
+  reason: The definitions of 'consumer' (6-1-1303(6)), 'sale' with its exclusions
+    (6-1-1303(23)), 'biometric data' (6-1-1303(2.4)), 'biometric identifier' (6-1-1303(2.5))
+    and 'controller' (6-1-1303(7)) give the meaning of consumer_count, revenue_or_discount_from_sale,
+    processes_biometric_data and of the person the applicability queries speak of.
+    The caller applies them when it states those facts (reading (3)); the order does
+    not test them.
+  consequence: The caller counts consumers, classifies revenue as from a sale and
+    states whether it handles biometric data under these definitions; the answers
+    do not check that it did.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: other_definitions
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_1dot5_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_1dot5_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_1dot5_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_1dot5_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_1dot5_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_2dot2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_5_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_5_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_5_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_8
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_9
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_10
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_11
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_11_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_11_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_11_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_12
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_13
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_14
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_14dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_14dot5_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_14dot5_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_14dot5_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_14dot5_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_15
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot7
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot8
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot8_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot8_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot8_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot8_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_16dot8_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17dot4_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17dot4_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17dot4_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17dot4_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_17dot4_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_18
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_19
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_20
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_21
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_22
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_24
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_24_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_24_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_24_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_24_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_24_e
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_25
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_25_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_25_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_25_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_25_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_25_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_25_b_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1303_26
+  reason: The lead-in of 6-1-1303 and its other definitions (adult, affiliate, authenticate,
+    biological data, child, consent, dark pattern, minor, personal data, processing,
+    processor, sensitive data, targeted advertising and the rest) are used by duties
+    this order does not formalise, or by the caller's premises (that the recipient
+    of a request is a controller, that a request is authenticated, that the processing
+    is for targeted advertising).
+  consequence: No answer reads these definitions; the caller's premises rest on them.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: short_title_and_legislative_declaration
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_a_V
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_c_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_c_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_c_II_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_c_II_Adot5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_c_II_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1302_1_c_II_C
+  reason: 6-1-1301 gives the short title and 6-1-1302 the general assembly's findings,
+    determinations and declarations, including that part 13 addresses minors' data.
+    They state purposes, not a rule with a date or a figure.
+  consequence: No answer rests on the declaration.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: applicability_lead_in_and_data_exemptions
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_e
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_f
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_g
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_g_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_g_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_h
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_h_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_h_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_h_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_i_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_i_I_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_i_I_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_i_I_C
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_i_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_j
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_j_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_j_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_j_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_j_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_j_V
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_k
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_n
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_o
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_2_p
+  reason: 6-1-1304(1) opens with '[quotation omitted]',
+    which reading (3) applies by putting the person exemptions first; the lead-in
+    of 6-1-1304(2) says 'This part 13 does not apply to:'. Clauses (a) to (k), (n),
+    (o) and (p) of 6-1-1304(2) exempt kinds of information and data (protected health
+    information, research data, credit reporting activity, data under GLBA, DPPA,
+    COPPA and FERPA, employment records, public utility customer data, data of public
+    bodies and state institutions of higher education used for noncommercial purposes,
+    and others), not a person; only the person clauses (l), (m) and (q) are formalised.
+  consequence: in_scope does not say that part 13 reaches every piece of data the
+    controller holds; the data exemptions are the caller's to apply (reading (3),
+    (12)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: applicability_limits_and_burden
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_V
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_VI
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_VII
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_VIII
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_IX
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_X
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_XI
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_XI_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_XI_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_a_XII
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_e
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_f
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_3_g
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_4_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_4_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1304_5
+  reason: 6-1-1304(3) says what the obligations do not restrict (compliance with law,
+    legal claims, security, internal operations and the rest, age verification, free
+    speech); (4) limits processing under an exception; (5) puts the burden of showing
+    an exemption on the controller. They limit duties, not coverage or a date.
+  consequence: No answer says whether a limit of 6-1-1304(3) excuses a response or
+    other duty (reading (12)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: consumer_rights_request_methods_fees_and_authentication
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_I_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_I_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_I_C
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_a_IV_C
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_1_e
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_2_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_2_d
+  reason: 6-1-1306(1) grants the consumer rights (opt out of targeted advertising,
+    sale and profiling; access; correction; deletion; portability, at most twice per
+    calendar year) and sets the request methods, authorised agents, the opt-out method
+    and the consent after a universal opt-out (6-1-1306(1)(a)(IV)(C)); only the date
+    and the controllers of 6-1-1306(1)(a)(IV)(B) are formalised (reading (10)). 6-1-1306(2)
+    is a heading unit; (2)(c) makes the information free of charge except [quotation omitted]
+    [quotation omitted], for which a charge calculated
+    under C.R.S. 24-72-205(5)(a) (not pinned) may be made; (2)(d) relieves a controller
+    that cannot authenticate the request. This order takes the request as given and
+    formalises its deadlines only.
+  consequence: The deadline answers never say whether the right exists, whether a
+    charge may be made, or whether authentication failed (reading (5), (12)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: appeal_process_and_attorney_general_contact
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_3_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1306_3_c
+  reason: 6-1-1306(3)(a) requires an internal appeal process available within a reasonable
+    period after the consumer receives the notice of no action, [quotation omitted]
+    [quotation omitted] request process; (3)(c) requires the controller to tell
+    the consumer of the ability to contact the Attorney General. Only the periods
+    of (3)(b) are formalised (reading (7)).
+  consequence: No answer says whether an appeal was in time or whether the appeal
+    process is adequate (reading (7)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: enforcement_authority_deceptive_practice_and_receipts
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_1_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1311_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1310_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1310_2
+  reason: 6-1-1311(1)(a) gives the Attorney General and district attorneys exclusive
+    authority to enforce part 13; (1)(b) and 6-1-1310(1) exclude a private right of
+    action; (1)(c) makes a violation a deceptive trade practice for their enforcement;
+    6-1-1311(2) sends civil penalty receipts to the state treasurer; 6-1-1310(2) allocates
+    liability by comparative fault. None states a date or a figure; the penalty figures
+    are in the unpinned C.R.S. 6-1-112 (see the row on it).
+  consequence: attorney_general_action_status speaks of the cure provision only; no
+    answer names a penalty amount or speaks of an action by anyone but the Attorney
+    General or a district attorney (reading (9), (11)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: controller_processor_minors_assessment_and_other_duties
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_2_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_2_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_2_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_3_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_3_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_d_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_d_II_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_5_d_II_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_6
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_7
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_8_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305_8_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1305dot5_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_b_I_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_b_I_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_1_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1307_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_a_V
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_c_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_c_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_1_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_6
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308_7
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_a_I_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_a_I_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_a_I_C
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_c_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_c_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_2_c_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_a_II_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_a_II_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_b_I_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_b_I_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_b_II_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_3_b_II_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1308dot5_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_2_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309_6
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_1_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_1_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_1_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_1_b_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_2_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_2_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_2_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_2_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_6_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_6_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_6_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_6_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_6_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1309dot5_7
+  reason: 6-1-1305 (controller and processor duties and contracts), 6-1-1305.5 (duties
+    toward minors), 6-1-1307 (processing de-identified or pseudonymous data; exceptions
+    to the rights), 6-1-1308 (controller duties, privacy notice, purpose specification,
+    minimisation, care, sensitive data), 6-1-1308.5 (minors' consent duties), 6-1-1309
+    and 6-1-1309.5 (data protection assessments, including for minors) and 6-1-1312
+    (preemption of local law) set duties and limits outside this order's dated-duties
+    slice. Their own dates are not formalised.
+  consequence: The answers never say whether a controller or processor met these duties
+    (reading (8), (12)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: rulemaking_opinion_letters_and_advisory_council
+  units:
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_2_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_2_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_2_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_2_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_2_e
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_2_f
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1313_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_1_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_1_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_1_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_a_III_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_a_III_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_a_III_C
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_2_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_3
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_b_II_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_b_II_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_b_II_C
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_b_II_D
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_c_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_c_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_c_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_4_e
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_b_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_b_I_A
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_b_I_B
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_b_I_C
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_b_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_5_b_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_a_III
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_a_IV
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_d
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_d_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_6_d_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1314_7
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_1
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_1_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_1_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_1_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_2
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_3_a
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_3_a_I
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_3_a_II
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_3_b
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_3_c
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_4
+  - co-crs-6-1-1301-1315-2026-11-16-save#s6_1_1315_5
+  reason: '6-1-1313 lets the Attorney General make rules, required universal opt-out
+    rules by July 1, 2023 and allowed opinion-letter rules by January 1, 2025, effective
+    by July 1, 2025: dates for the Attorney General, not for a controller. 6-1-1314
+    (added by HB 24-1130) governs opinion letters on biometric data. 6-1-1315 (added
+    by HB 26-1426, effective August 12, 2026: the only 2026 change in the pinned Source
+    lines) creates the Colorado privacy act advisory council of three members, with
+    terms, meetings at least twice a year and a repeal on September 1, 2032. None
+    sets a dated duty of a controller.'
+  consequence: No answer speaks of the Attorney General's rulemaking dates, opinion
+    letters or the advisory council (reading (1), (12)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: rules_history_and_effective_date
+  units:
+  - co-ccr-904-3-v12259#history
+  - co-ccr-904-3-v12259#rule_1_03
+  reason: The History note of 4 CCR 904-3 lists the effective dates of the rules (new
+    rules effective 07/01/2023; amendments effective 01/30/2025 and 12/01/2025); Rule
+    1.03 makes the rules effective on the date the Secretary of State publishes, save
+    for delayed effective dates. They fix the version of the rules, read for reading
+    (1) (open question Q17); Rules 5.07 and 5.08 carry their own dates.
+  consequence: No answer gives the effective date of a rule; the version question
+    stays open (reading (1)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: rules_universal_opt_out_other
+  units:
+  - co-ccr-904-3-v12259#rule_5_07_A
+  - co-ccr-904-3-v12259#rule_5_08_C
+  - co-ccr-904-3-v12259#rule_5_01
+  - co-ccr-904-3-v12259#rule_5_01_A
+  - co-ccr-904-3-v12259#rule_5_02
+  - co-ccr-904-3-v12259#rule_5_02_A
+  - co-ccr-904-3-v12259#rule_5_02_B
+  - co-ccr-904-3-v12259#rule_5_02_C
+  - co-ccr-904-3-v12259#rule_5_02_C_1
+  - co-ccr-904-3-v12259#rule_5_02_C_2
+  - co-ccr-904-3-v12259#rule_5_03
+  - co-ccr-904-3-v12259#rule_5_03_A
+  - co-ccr-904-3-v12259#rule_5_03_A_1
+  - co-ccr-904-3-v12259#rule_5_03_A_2
+  - co-ccr-904-3-v12259#rule_5_03_A_3
+  - co-ccr-904-3-v12259#rule_5_03_A_3_a
+  - co-ccr-904-3-v12259#rule_5_03_A_3_b
+  - co-ccr-904-3-v12259#rule_5_03_A_4
+  - co-ccr-904-3-v12259#rule_5_03_A_4_a
+  - co-ccr-904-3-v12259#rule_5_03_B
+  - co-ccr-904-3-v12259#rule_5_03_C
+  - co-ccr-904-3-v12259#rule_5_04
+  - co-ccr-904-3-v12259#rule_5_04_A
+  - co-ccr-904-3-v12259#rule_5_04_A_1
+  - co-ccr-904-3-v12259#rule_5_04_A_2
+  - co-ccr-904-3-v12259#rule_5_04_B
+  - co-ccr-904-3-v12259#rule_5_04_B_1
+  - co-ccr-904-3-v12259#rule_5_05
+  - co-ccr-904-3-v12259#rule_5_05_A
+  - co-ccr-904-3-v12259#rule_5_05_B
+  - co-ccr-904-3-v12259#rule_5_05_B_1
+  - co-ccr-904-3-v12259#rule_5_05_C
+  - co-ccr-904-3-v12259#rule_5_05_D
+  - co-ccr-904-3-v12259#rule_5_06
+  - co-ccr-904-3-v12259#rule_5_06_A
+  - co-ccr-904-3-v12259#rule_5_06_A_1
+  - co-ccr-904-3-v12259#rule_5_06_B
+  - co-ccr-904-3-v12259#rule_5_06_B_1
+  - co-ccr-904-3-v12259#rule_5_06_C
+  - co-ccr-904-3-v12259#rule_5_06_D
+  - co-ccr-904-3-v12259#rule_5_06_D_1
+  - co-ccr-904-3-v12259#rule_5_06_D_2
+  - co-ccr-904-3-v12259#rule_5_06_E
+  - co-ccr-904-3-v12259#rule_5_07
+  - co-ccr-904-3-v12259#rule_5_07_B
+  - co-ccr-904-3-v12259#rule_5_07_C
+  - co-ccr-904-3-v12259#rule_5_07_C_1
+  - co-ccr-904-3-v12259#rule_5_07_C_2
+  - co-ccr-904-3-v12259#rule_5_07_D
+  - co-ccr-904-3-v12259#rule_5_07_D_1
+  - co-ccr-904-3-v12259#rule_5_07_D_2
+  - co-ccr-904-3-v12259#rule_5_07_D_3
+  - co-ccr-904-3-v12259#rule_5_07_D_4
+  - co-ccr-904-3-v12259#rule_5_07_E
+  - co-ccr-904-3-v12259#rule_5_08
+  - co-ccr-904-3-v12259#rule_5_08_A_1
+  - co-ccr-904-3-v12259#rule_5_08_A_2
+  - co-ccr-904-3-v12259#rule_5_08_B
+  - co-ccr-904-3-v12259#rule_5_08_D
+  - co-ccr-904-3-v12259#rule_5_08_E
+  - co-ccr-904-3-v12259#rule_5_08_F
+  - co-ccr-904-3-v12259#rule_5_09
+  - co-ccr-904-3-v12259#rule_5_09_A
+  - co-ccr-904-3-v12259#rule_5_09_B
+  reason: 'Rule 5 sets the rights exercised through a universal opt-out mechanism,
+    notice and choice, default settings, personal data use limits, the technical specification
+    (5.06), the public list and its criteria (5.07(A) to (E): the initial list to
+    [quotation omitted]), recognition of unlisted mechanisms
+    (5.08(B)), the choice to honour a mechanism before July 1, 2024 (5.08(C)), authentication
+    and display (5.08(D) to (F)) and consent after an opt-out (5.09). Only the six-month
+    period of 5.07(F) and the duty and date of 5.08(A) and 5.08(A)(3) are formalised
+    (reading (10)).'
+  consequence: No answer says which mechanisms are listed or whether a mechanism meets
+    the specification (reading (10)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: rules_consumer_rights_and_responses
+  units:
+  - co-ccr-904-3-v12259#rule_4_01
+  - co-ccr-904-3-v12259#rule_4_01_A
+  - co-ccr-904-3-v12259#rule_4_02
+  - co-ccr-904-3-v12259#rule_4_02_A
+  - co-ccr-904-3-v12259#rule_4_02_B
+  - co-ccr-904-3-v12259#rule_4_02_B_1
+  - co-ccr-904-3-v12259#rule_4_02_B_1_a
+  - co-ccr-904-3-v12259#rule_4_02_B_1_b
+  - co-ccr-904-3-v12259#rule_4_02_B_1_c
+  - co-ccr-904-3-v12259#rule_4_02_B_2
+  - co-ccr-904-3-v12259#rule_4_02_B_3
+  - co-ccr-904-3-v12259#rule_4_02_B_4
+  - co-ccr-904-3-v12259#rule_4_02_B_5
+  - co-ccr-904-3-v12259#rule_4_02_C
+  - co-ccr-904-3-v12259#rule_4_02_C_1
+  - co-ccr-904-3-v12259#rule_4_02_C_2
+  - co-ccr-904-3-v12259#rule_4_02_C_3
+  - co-ccr-904-3-v12259#rule_4_02_C_4
+  - co-ccr-904-3-v12259#rule_4_02_D
+  - co-ccr-904-3-v12259#rule_4_02_E
+  - co-ccr-904-3-v12259#rule_4_03
+  - co-ccr-904-3-v12259#rule_4_03_A
+  - co-ccr-904-3-v12259#rule_4_03_A_1
+  - co-ccr-904-3-v12259#rule_4_03_A_1_a
+  - co-ccr-904-3-v12259#rule_4_03_A_1_b
+  - co-ccr-904-3-v12259#rule_4_03_A_2
+  - co-ccr-904-3-v12259#rule_4_03_A_3
+  - co-ccr-904-3-v12259#rule_4_03_B
+  - co-ccr-904-3-v12259#rule_4_03_B_1
+  - co-ccr-904-3-v12259#rule_4_03_B_1_a
+  - co-ccr-904-3-v12259#rule_4_03_B_2
+  - co-ccr-904-3-v12259#rule_4_03_B_3
+  - co-ccr-904-3-v12259#rule_4_03_C
+  - co-ccr-904-3-v12259#rule_4_03_D
+  - co-ccr-904-3-v12259#rule_4_04
+  - co-ccr-904-3-v12259#rule_4_04_A
+  - co-ccr-904-3-v12259#rule_4_04_A_1
+  - co-ccr-904-3-v12259#rule_4_04_B
+  - co-ccr-904-3-v12259#rule_4_04_C
+  - co-ccr-904-3-v12259#rule_4_04_C_1
+  - co-ccr-904-3-v12259#rule_4_04_C_2
+  - co-ccr-904-3-v12259#rule_4_04_C_3
+  - co-ccr-904-3-v12259#rule_4_04_C_4
+  - co-ccr-904-3-v12259#rule_4_04_D
+  - co-ccr-904-3-v12259#rule_4_04_E
+  - co-ccr-904-3-v12259#rule_4_04_F
+  - co-ccr-904-3-v12259#rule_4_05
+  - co-ccr-904-3-v12259#rule_4_05_A
+  - co-ccr-904-3-v12259#rule_4_05_B
+  - co-ccr-904-3-v12259#rule_4_05_C
+  - co-ccr-904-3-v12259#rule_4_05_D
+  - co-ccr-904-3-v12259#rule_4_05_D_1
+  - co-ccr-904-3-v12259#rule_4_05_D_2
+  - co-ccr-904-3-v12259#rule_4_05_D_3
+  - co-ccr-904-3-v12259#rule_4_05_D_4
+  - co-ccr-904-3-v12259#rule_4_05_E
+  - co-ccr-904-3-v12259#rule_4_05_E_1
+  - co-ccr-904-3-v12259#rule_4_05_E_2
+  - co-ccr-904-3-v12259#rule_4_05_E_3
+  - co-ccr-904-3-v12259#rule_4_05_E_4
+  - co-ccr-904-3-v12259#rule_4_05_E_5
+  - co-ccr-904-3-v12259#rule_4_05_E_5_a
+  - co-ccr-904-3-v12259#rule_4_06
+  - co-ccr-904-3-v12259#rule_4_06_A
+  - co-ccr-904-3-v12259#rule_4_06_A_1
+  - co-ccr-904-3-v12259#rule_4_06_A_2
+  - co-ccr-904-3-v12259#rule_4_06_B
+  - co-ccr-904-3-v12259#rule_4_06_C
+  - co-ccr-904-3-v12259#rule_4_06_D
+  - co-ccr-904-3-v12259#rule_4_06_E
+  - co-ccr-904-3-v12259#rule_4_07
+  - co-ccr-904-3-v12259#rule_4_07_A
+  - co-ccr-904-3-v12259#rule_4_07_B
+  - co-ccr-904-3-v12259#rule_4_07_B_1
+  - co-ccr-904-3-v12259#rule_4_08
+  - co-ccr-904-3-v12259#rule_4_08_A
+  - co-ccr-904-3-v12259#rule_4_08_A_1
+  - co-ccr-904-3-v12259#rule_4_08_B
+  - co-ccr-904-3-v12259#rule_4_08_C
+  - co-ccr-904-3-v12259#rule_4_08_D
+  - co-ccr-904-3-v12259#rule_4_08_E
+  - co-ccr-904-3-v12259#rule_4_08_F
+  - co-ccr-904-3-v12259#rule_4_09
+  - co-ccr-904-3-v12259#rule_4_09_A
+  - co-ccr-904-3-v12259#rule_4_09_B
+  - co-ccr-904-3-v12259#rule_4_09_C
+  - co-ccr-904-3-v12259#rule_4_09_C_1
+  - co-ccr-904-3-v12259#rule_4_09_C_2
+  - co-ccr-904-3-v12259#rule_4_09_D
+  - co-ccr-904-3-v12259#rule_4_09_E
+  - co-ccr-904-3-v12259#rule_4_09_F
+  reason: Rule 4 sets how requests are submitted and how each right is honoured (opt-out
+    as soon as feasibly possible, access, correction, deletion, portability), authentication
+    (4.08) and responses (4.09); Rule 4.09(A) points back to the timing [quotation omitted]
+    [quotation omitted] (b) and adds no period; Rule 4.09(C) lists what a denial must
+    state. This order formalises the statute's periods only (reading (5)).
+  consequence: No answer says whether a response met Rule 4; the deadlines are the
+    statute's (reading (5), (12)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: rules_other_parts
+  units:
+  - co-ccr-904-3-v12259#rule_1_01
+  - co-ccr-904-3-v12259#rule_1_02
+  - co-ccr-904-3-v12259#rule_1_04
+  - co-ccr-904-3-v12259#rule_2_01
+  - co-ccr-904-3-v12259#rule_2_01_A
+  - co-ccr-904-3-v12259#rule_2_02
+  - co-ccr-904-3-v12259#rule_2_02_authorized_agent
+  - co-ccr-904-3-v12259#rule_2_02_biometric_data
+  - co-ccr-904-3-v12259#rule_2_02_biometric_identifier
+  - co-ccr-904-3-v12259#rule_2_02_biometric_identifier_notice
+  - co-ccr-904-3-v12259#rule_2_02_bona_fide_loyalty_program
+  - co-ccr-904-3-v12259#rule_2_02_bona_fide_loyalty_program_benefit
+  - co-ccr-904-3-v12259#rule_2_02_bona_fide_loyalty_program_partner
+  - co-ccr-904-3-v12259#rule_2_02_child
+  - co-ccr-904-3-v12259#rule_2_02_commercial_product_or_service
+  - co-ccr-904-3-v12259#rule_2_02_controller
+  - co-ccr-904-3-v12259#rule_2_02_human_reviewed_automated_processing
+  - co-ccr-904-3-v12259#rule_2_02_human_reviewed_automated_processing_1
+  - co-ccr-904-3-v12259#rule_2_02_human_reviewed_automated_processing_2
+  - co-ccr-904-3-v12259#rule_2_02_human_reviewed_automated_processing_3
+  - co-ccr-904-3-v12259#rule_2_02_human_reviewed_automated_processing_4
+  - co-ccr-904-3-v12259#rule_2_02_interpretive_guidance
+  - co-ccr-904-3-v12259#rule_2_02_intimate_image
+  - co-ccr-904-3-v12259#rule_2_02_media
+  - co-ccr-904-3-v12259#rule_2_02_minor
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose_1
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose_2
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose_3
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose_4
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose_5
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose_6
+  - co-ccr-904-3-v12259#rule_2_02_noncommercial_purpose_7
+  - co-ccr-904-3-v12259#rule_2_02_opinion_letter
+  - co-ccr-904-3-v12259#rule_2_02_processor
+  - co-ccr-904-3-v12259#rule_2_02_profiling
+  - co-ccr-904-3-v12259#rule_2_02_publicly_available_information
+  - co-ccr-904-3-v12259#rule_2_02_publicly_available_information_1
+  - co-ccr-904-3-v12259#rule_2_02_publicly_available_information_2
+  - co-ccr-904-3-v12259#rule_2_02_publicly_available_information_3
+  - co-ccr-904-3-v12259#rule_2_02_publicly_available_information_4
+  - co-ccr-904-3-v12259#rule_2_02_revealing
+  - co-ccr-904-3-v12259#rule_2_02_revealing_1
+  - co-ccr-904-3-v12259#rule_2_02_solely_automated_processing
+  - co-ccr-904-3-v12259#rule_3_01
+  - co-ccr-904-3-v12259#rule_3_01_A
+  - co-ccr-904-3-v12259#rule_3_02
+  - co-ccr-904-3-v12259#rule_3_02_A
+  - co-ccr-904-3-v12259#rule_3_02_A_1
+  - co-ccr-904-3-v12259#rule_3_02_A_2
+  - co-ccr-904-3-v12259#rule_3_02_A_3
+  - co-ccr-904-3-v12259#rule_3_02_A_4
+  - co-ccr-904-3-v12259#rule_3_02_A_5
+  - co-ccr-904-3-v12259#rule_3_02_A_6
+  - co-ccr-904-3-v12259#rule_3_02_A_7
+  - co-ccr-904-3-v12259#rule_3_02_B
+  - co-ccr-904-3-v12259#rule_6_01
+  - co-ccr-904-3-v12259#rule_6_01_A
+  - co-ccr-904-3-v12259#rule_6_02
+  - co-ccr-904-3-v12259#rule_6_02_A
+  - co-ccr-904-3-v12259#rule_6_02_B
+  - co-ccr-904-3-v12259#rule_6_02_C
+  - co-ccr-904-3-v12259#rule_6_02_D
+  - co-ccr-904-3-v12259#rule_6_02_D_1
+  - co-ccr-904-3-v12259#rule_6_02_D_2
+  - co-ccr-904-3-v12259#rule_6_02_E
+  - co-ccr-904-3-v12259#rule_6_02_E_1
+  - co-ccr-904-3-v12259#rule_6_02_E_1_a
+  - co-ccr-904-3-v12259#rule_6_02_F
+  - co-ccr-904-3-v12259#rule_6_03
+  - co-ccr-904-3-v12259#rule_6_03_A
+  - co-ccr-904-3-v12259#rule_6_03_A_1
+  - co-ccr-904-3-v12259#rule_6_03_A_1_a
+  - co-ccr-904-3-v12259#rule_6_03_A_1_a_i
+  - co-ccr-904-3-v12259#rule_6_03_A_1_b
+  - co-ccr-904-3-v12259#rule_6_03_A_1_c
+  - co-ccr-904-3-v12259#rule_6_03_A_1_d
+  - co-ccr-904-3-v12259#rule_6_03_A_1_e
+  - co-ccr-904-3-v12259#rule_6_03_A_1_e_i
+  - co-ccr-904-3-v12259#rule_6_03_A_2
+  - co-ccr-904-3-v12259#rule_6_03_A_3
+  - co-ccr-904-3-v12259#rule_6_03_A_4
+  - co-ccr-904-3-v12259#rule_6_03_A_4_a
+  - co-ccr-904-3-v12259#rule_6_03_A_4_b
+  - co-ccr-904-3-v12259#rule_6_03_A_4_c
+  - co-ccr-904-3-v12259#rule_6_03_A_4_d
+  - co-ccr-904-3-v12259#rule_6_03_A_4_e
+  - co-ccr-904-3-v12259#rule_6_03_A_5
+  - co-ccr-904-3-v12259#rule_6_03_A_6
+  - co-ccr-904-3-v12259#rule_6_03_A_7
+  - co-ccr-904-3-v12259#rule_6_03_A_8
+  - co-ccr-904-3-v12259#rule_6_04
+  - co-ccr-904-3-v12259#rule_6_04_A
+  - co-ccr-904-3-v12259#rule_6_04_A_1
+  - co-ccr-904-3-v12259#rule_6_04_B
+  - co-ccr-904-3-v12259#rule_6_05
+  - co-ccr-904-3-v12259#rule_6_05_A
+  - co-ccr-904-3-v12259#rule_6_05_B
+  - co-ccr-904-3-v12259#rule_6_05_C
+  - co-ccr-904-3-v12259#rule_6_05_C_1
+  - co-ccr-904-3-v12259#rule_6_05_C_2
+  - co-ccr-904-3-v12259#rule_6_05_D
+  - co-ccr-904-3-v12259#rule_6_05_E
+  - co-ccr-904-3-v12259#rule_6_05_F
+  - co-ccr-904-3-v12259#rule_6_05_F_1
+  - co-ccr-904-3-v12259#rule_6_05_F_1_a
+  - co-ccr-904-3-v12259#rule_6_05_F_1_b
+  - co-ccr-904-3-v12259#rule_6_05_F_1_c
+  - co-ccr-904-3-v12259#rule_6_05_F_1_d
+  - co-ccr-904-3-v12259#rule_6_05_F_1_e
+  - co-ccr-904-3-v12259#rule_6_05_F_2
+  - co-ccr-904-3-v12259#rule_6_05_G
+  - co-ccr-904-3-v12259#rule_6_05_H
+  - co-ccr-904-3-v12259#rule_6_05_I
+  - co-ccr-904-3-v12259#rule_6_05_J
+  - co-ccr-904-3-v12259#rule_6_06
+  - co-ccr-904-3-v12259#rule_6_06_A
+  - co-ccr-904-3-v12259#rule_6_06_B
+  - co-ccr-904-3-v12259#rule_6_06_C
+  - co-ccr-904-3-v12259#rule_6_06_C_1
+  - co-ccr-904-3-v12259#rule_6_06_C_2
+  - co-ccr-904-3-v12259#rule_6_06_C_3
+  - co-ccr-904-3-v12259#rule_6_06_D
+  - co-ccr-904-3-v12259#rule_6_07
+  - co-ccr-904-3-v12259#rule_6_07_A
+  - co-ccr-904-3-v12259#rule_6_07_B
+  - co-ccr-904-3-v12259#rule_6_07_B_1
+  - co-ccr-904-3-v12259#rule_6_07_B_2
+  - co-ccr-904-3-v12259#rule_6_07_B_3
+  - co-ccr-904-3-v12259#rule_6_07_C
+  - co-ccr-904-3-v12259#rule_6_08
+  - co-ccr-904-3-v12259#rule_6_08_A
+  - co-ccr-904-3-v12259#rule_6_08_B
+  - co-ccr-904-3-v12259#rule_6_08_C
+  - co-ccr-904-3-v12259#rule_6_08_C_1
+  - co-ccr-904-3-v12259#rule_6_08_C_2
+  - co-ccr-904-3-v12259#rule_6_08_C_3
+  - co-ccr-904-3-v12259#rule_6_08_C_4
+  - co-ccr-904-3-v12259#rule_6_08_C_5
+  - co-ccr-904-3-v12259#rule_6_08_C_6
+  - co-ccr-904-3-v12259#rule_6_08_C_7
+  - co-ccr-904-3-v12259#rule_6_09
+  - co-ccr-904-3-v12259#rule_6_09_A
+  - co-ccr-904-3-v12259#rule_6_09_B
+  - co-ccr-904-3-v12259#rule_6_09_B_1
+  - co-ccr-904-3-v12259#rule_6_09_B_2
+  - co-ccr-904-3-v12259#rule_6_09_B_3
+  - co-ccr-904-3-v12259#rule_6_09_B_4
+  - co-ccr-904-3-v12259#rule_6_09_B_5
+  - co-ccr-904-3-v12259#rule_6_09_B_6
+  - co-ccr-904-3-v12259#rule_6_09_C
+  - co-ccr-904-3-v12259#rule_6_09_C_1
+  - co-ccr-904-3-v12259#rule_6_09_C_2
+  - co-ccr-904-3-v12259#rule_6_09_C_3
+  - co-ccr-904-3-v12259#rule_6_09_C_4
+  - co-ccr-904-3-v12259#rule_6_09_D
+  - co-ccr-904-3-v12259#rule_6_10
+  - co-ccr-904-3-v12259#rule_6_10_A
+  - co-ccr-904-3-v12259#rule_6_10_B
+  - co-ccr-904-3-v12259#rule_6_10_B_1
+  - co-ccr-904-3-v12259#rule_6_10_B_2
+  - co-ccr-904-3-v12259#rule_6_10_B_3
+  - co-ccr-904-3-v12259#rule_6_10_B_4
+  - co-ccr-904-3-v12259#rule_6_10_C
+  - co-ccr-904-3-v12259#rule_6_11
+  - co-ccr-904-3-v12259#rule_6_11_A
+  - co-ccr-904-3-v12259#rule_6_11_A_1
+  - co-ccr-904-3-v12259#rule_6_11_A_2
+  - co-ccr-904-3-v12259#rule_6_11_A_3
+  - co-ccr-904-3-v12259#rule_6_11_A_4
+  - co-ccr-904-3-v12259#rule_6_11_A_5
+  - co-ccr-904-3-v12259#rule_6_11_A_6
+  - co-ccr-904-3-v12259#rule_6_11_B
+  - co-ccr-904-3-v12259#rule_6_11_C
+  - co-ccr-904-3-v12259#rule_6_11_D
+  - co-ccr-904-3-v12259#rule_6_11_E
+  - co-ccr-904-3-v12259#rule_6_11_F
+  - co-ccr-904-3-v12259#rule_6_11_G
+  - co-ccr-904-3-v12259#rule_6_11_H
+  - co-ccr-904-3-v12259#rule_6_12
+  - co-ccr-904-3-v12259#rule_6_12_A
+  - co-ccr-904-3-v12259#rule_6_12_B
+  - co-ccr-904-3-v12259#rule_6_12_C
+  - co-ccr-904-3-v12259#rule_6_12_C_1
+  - co-ccr-904-3-v12259#rule_6_12_C_2
+  - co-ccr-904-3-v12259#rule_6_12_D
+  - co-ccr-904-3-v12259#rule_6_12_D_1
+  - co-ccr-904-3-v12259#rule_6_12_D_2
+  - co-ccr-904-3-v12259#rule_6_12_D_2_a
+  - co-ccr-904-3-v12259#rule_6_12_D_2_b
+  - co-ccr-904-3-v12259#rule_6_12_E
+  - co-ccr-904-3-v12259#rule_6_13
+  - co-ccr-904-3-v12259#rule_6_13_A
+  - co-ccr-904-3-v12259#rule_6_13_A_1
+  - co-ccr-904-3-v12259#rule_6_13_A_1_a
+  - co-ccr-904-3-v12259#rule_6_13_A_1_b
+  - co-ccr-904-3-v12259#rule_6_13_A_1_c
+  - co-ccr-904-3-v12259#rule_6_13_A_1_d
+  - co-ccr-904-3-v12259#rule_6_13_A_1_e
+  - co-ccr-904-3-v12259#rule_6_13_A_2
+  - co-ccr-904-3-v12259#rule_6_13_A_2_a
+  - co-ccr-904-3-v12259#rule_6_13_A_2_b
+  - co-ccr-904-3-v12259#rule_6_13_A_3
+  - co-ccr-904-3-v12259#rule_6_13_A_3_a
+  - co-ccr-904-3-v12259#rule_6_13_B
+  - co-ccr-904-3-v12259#rule_6_13_C
+  - co-ccr-904-3-v12259#rule_6_13_D
+  - co-ccr-904-3-v12259#rule_6_14
+  - co-ccr-904-3-v12259#rule_6_14_A
+  - co-ccr-904-3-v12259#rule_6_14_A_1
+  - co-ccr-904-3-v12259#rule_6_14_A_2
+  - co-ccr-904-3-v12259#rule_6_14_A_3
+  - co-ccr-904-3-v12259#rule_6_14_B
+  - co-ccr-904-3-v12259#rule_6_14_B_1
+  - co-ccr-904-3-v12259#rule_6_14_B_2
+  - co-ccr-904-3-v12259#rule_6_14_B_3
+  - co-ccr-904-3-v12259#rule_6_14_B_4
+  - co-ccr-904-3-v12259#rule_6_14_B_5
+  - co-ccr-904-3-v12259#rule_6_14_B_6
+  - co-ccr-904-3-v12259#rule_6_14_B_7
+  - co-ccr-904-3-v12259#rule_6_14_C
+  - co-ccr-904-3-v12259#rule_6_14_D
+  - co-ccr-904-3-v12259#rule_6_14_E
+  - co-ccr-904-3-v12259#rule_6_14_F
+  - co-ccr-904-3-v12259#rule_7_01
+  - co-ccr-904-3-v12259#rule_7_01_A
+  - co-ccr-904-3-v12259#rule_7_02
+  - co-ccr-904-3-v12259#rule_7_02_A
+  - co-ccr-904-3-v12259#rule_7_02_A_1
+  - co-ccr-904-3-v12259#rule_7_02_A_2
+  - co-ccr-904-3-v12259#rule_7_02_A_3
+  - co-ccr-904-3-v12259#rule_7_02_A_4
+  - co-ccr-904-3-v12259#rule_7_02_A_5
+  - co-ccr-904-3-v12259#rule_7_02_A_6
+  - co-ccr-904-3-v12259#rule_7_02_A_7
+  - co-ccr-904-3-v12259#rule_7_02_B
+  - co-ccr-904-3-v12259#rule_7_02_B_1
+  - co-ccr-904-3-v12259#rule_7_02_B_2
+  - co-ccr-904-3-v12259#rule_7_02_C
+  - co-ccr-904-3-v12259#rule_7_03
+  - co-ccr-904-3-v12259#rule_7_03_A
+  - co-ccr-904-3-v12259#rule_7_03_B
+  - co-ccr-904-3-v12259#rule_7_03_B_1
+  - co-ccr-904-3-v12259#rule_7_03_B_2
+  - co-ccr-904-3-v12259#rule_7_03_B_3
+  - co-ccr-904-3-v12259#rule_7_03_C
+  - co-ccr-904-3-v12259#rule_7_03_C_1
+  - co-ccr-904-3-v12259#rule_7_03_C_2
+  - co-ccr-904-3-v12259#rule_7_03_C_2_a
+  - co-ccr-904-3-v12259#rule_7_03_C_2_b
+  - co-ccr-904-3-v12259#rule_7_03_C_2_c
+  - co-ccr-904-3-v12259#rule_7_03_C_2_c_i
+  - co-ccr-904-3-v12259#rule_7_03_C_2_c_ii
+  - co-ccr-904-3-v12259#rule_7_03_C_3
+  - co-ccr-904-3-v12259#rule_7_03_D
+  - co-ccr-904-3-v12259#rule_7_03_D_1
+  - co-ccr-904-3-v12259#rule_7_03_D_1_a
+  - co-ccr-904-3-v12259#rule_7_03_D_2
+  - co-ccr-904-3-v12259#rule_7_03_D_3
+  - co-ccr-904-3-v12259#rule_7_03_D_3_a
+  - co-ccr-904-3-v12259#rule_7_03_D_3_b
+  - co-ccr-904-3-v12259#rule_7_03_E
+  - co-ccr-904-3-v12259#rule_7_03_E_1
+  - co-ccr-904-3-v12259#rule_7_03_E_1_a
+  - co-ccr-904-3-v12259#rule_7_03_E_1_b
+  - co-ccr-904-3-v12259#rule_7_03_E_1_c
+  - co-ccr-904-3-v12259#rule_7_03_E_1_d
+  - co-ccr-904-3-v12259#rule_7_03_E_1_e
+  - co-ccr-904-3-v12259#rule_7_03_E_1_f
+  - co-ccr-904-3-v12259#rule_7_03_E_1_g
+  - co-ccr-904-3-v12259#rule_7_03_F
+  - co-ccr-904-3-v12259#rule_7_04
+  - co-ccr-904-3-v12259#rule_7_04_A
+  - co-ccr-904-3-v12259#rule_7_04_B
+  - co-ccr-904-3-v12259#rule_7_04_C
+  - co-ccr-904-3-v12259#rule_7_04_D
+  - co-ccr-904-3-v12259#rule_7_04_E
+  - co-ccr-904-3-v12259#rule_7_04_E_1
+  - co-ccr-904-3-v12259#rule_7_04_E_2
+  - co-ccr-904-3-v12259#rule_7_05
+  - co-ccr-904-3-v12259#rule_7_05_A
+  - co-ccr-904-3-v12259#rule_7_05_B
+  - co-ccr-904-3-v12259#rule_7_05_B_1
+  - co-ccr-904-3-v12259#rule_7_05_B_2
+  - co-ccr-904-3-v12259#rule_7_05_C
+  - co-ccr-904-3-v12259#rule_7_05_D
+  - co-ccr-904-3-v12259#rule_7_05_E
+  - co-ccr-904-3-v12259#rule_7_05_F
+  - co-ccr-904-3-v12259#rule_7_06
+  - co-ccr-904-3-v12259#rule_7_06_A
+  - co-ccr-904-3-v12259#rule_7_06_B
+  - co-ccr-904-3-v12259#rule_7_06_C
+  - co-ccr-904-3-v12259#rule_7_06_C_1
+  - co-ccr-904-3-v12259#rule_7_06_C_2
+  - co-ccr-904-3-v12259#rule_7_06_C_3
+  - co-ccr-904-3-v12259#rule_7_06_C_4
+  - co-ccr-904-3-v12259#rule_7_06_C_5
+  - co-ccr-904-3-v12259#rule_7_06_D
+  - co-ccr-904-3-v12259#rule_7_07
+  - co-ccr-904-3-v12259#rule_7_07_A
+  - co-ccr-904-3-v12259#rule_7_07_B
+  - co-ccr-904-3-v12259#rule_7_07_C
+  - co-ccr-904-3-v12259#rule_7_07_D
+  - co-ccr-904-3-v12259#rule_7_07_D_1
+  - co-ccr-904-3-v12259#rule_7_07_E
+  - co-ccr-904-3-v12259#rule_7_08
+  - co-ccr-904-3-v12259#rule_7_08_A
+  - co-ccr-904-3-v12259#rule_7_08_A_1
+  - co-ccr-904-3-v12259#rule_7_08_A_2
+  - co-ccr-904-3-v12259#rule_7_08_B
+  - co-ccr-904-3-v12259#rule_7_08_C
+  - co-ccr-904-3-v12259#rule_7_08_D
+  - co-ccr-904-3-v12259#rule_7_08_D_1
+  - co-ccr-904-3-v12259#rule_7_08_D_1_a
+  - co-ccr-904-3-v12259#rule_7_08_D_1_b
+  - co-ccr-904-3-v12259#rule_7_08_D_2
+  - co-ccr-904-3-v12259#rule_7_09
+  - co-ccr-904-3-v12259#rule_7_09_A
+  - co-ccr-904-3-v12259#rule_7_09_B
+  - co-ccr-904-3-v12259#rule_7_09_C
+  - co-ccr-904-3-v12259#rule_7_10
+  - co-ccr-904-3-v12259#rule_7_10_A
+  - co-ccr-904-3-v12259#rule_7_10_A_1
+  - co-ccr-904-3-v12259#rule_7_10_A_1_a
+  - co-ccr-904-3-v12259#rule_7_10_A_1_b
+  - co-ccr-904-3-v12259#rule_7_10_A_2
+  - co-ccr-904-3-v12259#rule_7_10_A_2_a
+  - co-ccr-904-3-v12259#rule_7_10_A_2_b
+  - co-ccr-904-3-v12259#rule_7_10_A_3
+  - co-ccr-904-3-v12259#rule_7_10_A_3_a
+  - co-ccr-904-3-v12259#rule_7_10_A_3_b
+  - co-ccr-904-3-v12259#rule_7_10_A_3_c
+  - co-ccr-904-3-v12259#rule_7_10_A_4
+  - co-ccr-904-3-v12259#rule_7_10_A_4_a
+  - co-ccr-904-3-v12259#rule_7_10_A_5
+  - co-ccr-904-3-v12259#rule_7_10_A_5_a
+  - co-ccr-904-3-v12259#rule_7_10_A_5_b
+  - co-ccr-904-3-v12259#rule_7_10_A_6
+  - co-ccr-904-3-v12259#rule_7_10_A_6_a
+  - co-ccr-904-3-v12259#rule_7_10_A_6_b
+  - co-ccr-904-3-v12259#rule_7_10_A_6_c
+  - co-ccr-904-3-v12259#rule_7_10_A_7
+  - co-ccr-904-3-v12259#rule_7_10_A_7_a
+  - co-ccr-904-3-v12259#rule_7_10_A_7_b
+  - co-ccr-904-3-v12259#rule_7_10_A_7_c
+  - co-ccr-904-3-v12259#rule_7_10_A_7_d
+  - co-ccr-904-3-v12259#rule_7_10_A_8
+  - co-ccr-904-3-v12259#rule_7_10_A_8_a
+  - co-ccr-904-3-v12259#rule_7_10_A_8_b
+  - co-ccr-904-3-v12259#rule_7_10_A_9
+  - co-ccr-904-3-v12259#rule_7_10_A_9_a
+  - co-ccr-904-3-v12259#rule_7_10_B
+  - co-ccr-904-3-v12259#rule_7_10_C
+  - co-ccr-904-3-v12259#rule_7_10_C_1
+  - co-ccr-904-3-v12259#rule_7_10_D
+  - co-ccr-904-3-v12259#rule_7_10_E
+  - co-ccr-904-3-v12259#rule_7_10_F
+  - co-ccr-904-3-v12259#rule_8_01
+  - co-ccr-904-3-v12259#rule_8_01_A
+  - co-ccr-904-3-v12259#rule_8_02
+  - co-ccr-904-3-v12259#rule_8_02_A
+  - co-ccr-904-3-v12259#rule_8_02_B
+  - co-ccr-904-3-v12259#rule_8_02_B_1
+  - co-ccr-904-3-v12259#rule_8_02_C
+  - co-ccr-904-3-v12259#rule_8_02_D
+  - co-ccr-904-3-v12259#rule_8_02_D_1
+  - co-ccr-904-3-v12259#rule_8_03
+  - co-ccr-904-3-v12259#rule_8_03_A
+  - co-ccr-904-3-v12259#rule_8_04
+  - co-ccr-904-3-v12259#rule_8_04_A
+  - co-ccr-904-3-v12259#rule_8_04_A_1
+  - co-ccr-904-3-v12259#rule_8_04_A_2
+  - co-ccr-904-3-v12259#rule_8_04_A_3
+  - co-ccr-904-3-v12259#rule_8_04_A_4
+  - co-ccr-904-3-v12259#rule_8_04_A_4_a
+  - co-ccr-904-3-v12259#rule_8_04_A_4_b
+  - co-ccr-904-3-v12259#rule_8_04_A_4_c
+  - co-ccr-904-3-v12259#rule_8_04_A_4_d
+  - co-ccr-904-3-v12259#rule_8_04_A_4_e
+  - co-ccr-904-3-v12259#rule_8_04_A_5
+  - co-ccr-904-3-v12259#rule_8_04_A_6
+  - co-ccr-904-3-v12259#rule_8_04_A_6_a
+  - co-ccr-904-3-v12259#rule_8_04_A_6_b
+  - co-ccr-904-3-v12259#rule_8_04_A_6_c
+  - co-ccr-904-3-v12259#rule_8_04_A_6_d
+  - co-ccr-904-3-v12259#rule_8_04_A_6_e
+  - co-ccr-904-3-v12259#rule_8_04_A_6_f
+  - co-ccr-904-3-v12259#rule_8_04_A_6_g
+  - co-ccr-904-3-v12259#rule_8_04_A_6_h
+  - co-ccr-904-3-v12259#rule_8_04_A_6_i
+  - co-ccr-904-3-v12259#rule_8_04_A_6_j
+  - co-ccr-904-3-v12259#rule_8_04_A_6_k
+  - co-ccr-904-3-v12259#rule_8_04_A_7
+  - co-ccr-904-3-v12259#rule_8_04_A_7_a
+  - co-ccr-904-3-v12259#rule_8_04_A_7_b
+  - co-ccr-904-3-v12259#rule_8_04_A_7_c
+  - co-ccr-904-3-v12259#rule_8_04_A_8
+  - co-ccr-904-3-v12259#rule_8_04_A_8_a
+  - co-ccr-904-3-v12259#rule_8_04_A_8_b
+  - co-ccr-904-3-v12259#rule_8_04_A_9
+  - co-ccr-904-3-v12259#rule_8_04_A_10
+  - co-ccr-904-3-v12259#rule_8_04_A_11
+  - co-ccr-904-3-v12259#rule_8_04_A_12
+  - co-ccr-904-3-v12259#rule_8_04_A_13
+  - co-ccr-904-3-v12259#rule_8_05
+  - co-ccr-904-3-v12259#rule_8_05_A
+  - co-ccr-904-3-v12259#rule_8_05_B
+  - co-ccr-904-3-v12259#rule_8_05_C
+  - co-ccr-904-3-v12259#rule_8_05_D
+  - co-ccr-904-3-v12259#rule_8_05_D_1
+  - co-ccr-904-3-v12259#rule_8_05_D_1_a
+  - co-ccr-904-3-v12259#rule_8_05_D_1_b
+  - co-ccr-904-3-v12259#rule_8_05_D_1_c
+  - co-ccr-904-3-v12259#rule_8_05_D_1_d
+  - co-ccr-904-3-v12259#rule_8_05_D_1_e
+  - co-ccr-904-3-v12259#rule_8_05_D_1_f
+  - co-ccr-904-3-v12259#rule_8_05_D_1_g
+  - co-ccr-904-3-v12259#rule_8_05_D_1_h
+  - co-ccr-904-3-v12259#rule_8_05_E
+  - co-ccr-904-3-v12259#rule_8_05_F
+  - co-ccr-904-3-v12259#rule_8_05_G
+  - co-ccr-904-3-v12259#rule_8_06
+  - co-ccr-904-3-v12259#rule_8_06_A
+  - co-ccr-904-3-v12259#rule_9_01
+  - co-ccr-904-3-v12259#rule_9_01_A
+  - co-ccr-904-3-v12259#rule_9_02
+  - co-ccr-904-3-v12259#rule_9_02_A
+  - co-ccr-904-3-v12259#rule_9_02_B
+  - co-ccr-904-3-v12259#rule_9_02_C
+  - co-ccr-904-3-v12259#rule_9_03
+  - co-ccr-904-3-v12259#rule_9_03_A
+  - co-ccr-904-3-v12259#rule_9_03_A_1
+  - co-ccr-904-3-v12259#rule_9_03_A_2
+  - co-ccr-904-3-v12259#rule_9_03_A_3
+  - co-ccr-904-3-v12259#rule_9_03_A_4
+  - co-ccr-904-3-v12259#rule_9_03_A_5
+  - co-ccr-904-3-v12259#rule_9_03_A_6
+  - co-ccr-904-3-v12259#rule_9_03_A_7
+  - co-ccr-904-3-v12259#rule_9_03_B
+  - co-ccr-904-3-v12259#rule_9_04
+  - co-ccr-904-3-v12259#rule_9_04_A
+  - co-ccr-904-3-v12259#rule_9_04_B
+  - co-ccr-904-3-v12259#rule_9_04_C
+  - co-ccr-904-3-v12259#rule_9_04_C_1
+  - co-ccr-904-3-v12259#rule_9_04_C_2
+  - co-ccr-904-3-v12259#rule_9_04_C_3
+  - co-ccr-904-3-v12259#rule_9_04_C_4
+  - co-ccr-904-3-v12259#rule_9_04_C_5
+  - co-ccr-904-3-v12259#rule_9_04_C_6
+  - co-ccr-904-3-v12259#rule_9_04_C_7
+  - co-ccr-904-3-v12259#rule_9_04_D
+  - co-ccr-904-3-v12259#rule_9_04_E
+  - co-ccr-904-3-v12259#rule_9_05
+  - co-ccr-904-3-v12259#rule_9_05_A
+  - co-ccr-904-3-v12259#rule_9_05_B
+  - co-ccr-904-3-v12259#rule_9_05_C
+  - co-ccr-904-3-v12259#rule_9_05_C_1
+  - co-ccr-904-3-v12259#rule_9_05_C_2
+  - co-ccr-904-3-v12259#rule_9_05_C_3
+  - co-ccr-904-3-v12259#rule_9_05_C_4
+  - co-ccr-904-3-v12259#rule_9_05_C_5
+  - co-ccr-904-3-v12259#rule_9_05_C_6
+  - co-ccr-904-3-v12259#rule_9_05_C_7
+  - co-ccr-904-3-v12259#rule_9_05_D
+  - co-ccr-904-3-v12259#rule_9_06
+  - co-ccr-904-3-v12259#rule_9_06_A
+  - co-ccr-904-3-v12259#rule_9_06_A_1
+  - co-ccr-904-3-v12259#rule_9_06_A_2
+  - co-ccr-904-3-v12259#rule_9_06_A_3
+  - co-ccr-904-3-v12259#rule_9_06_A_4
+  - co-ccr-904-3-v12259#rule_9_06_B
+  - co-ccr-904-3-v12259#rule_9_06_C
+  - co-ccr-904-3-v12259#rule_9_06_D
+  - co-ccr-904-3-v12259#rule_9_06_E
+  - co-ccr-904-3-v12259#rule_9_06_F
+  - co-ccr-904-3-v12259#rule_9_06_F_1
+  - co-ccr-904-3-v12259#rule_9_06_F_2
+  - co-ccr-904-3-v12259#rule_9_06_F_3
+  - co-ccr-904-3-v12259#rule_9_06_F_4
+  - co-ccr-904-3-v12259#rule_9_06_F_5
+  - co-ccr-904-3-v12259#rule_9_06_F_6
+  - co-ccr-904-3-v12259#rule_9_06_F_7
+  - co-ccr-904-3-v12259#rule_9_06_F_8
+  - co-ccr-904-3-v12259#rule_9_06_F_9
+  - co-ccr-904-3-v12259#rule_9_06_F_10
+  - co-ccr-904-3-v12259#rule_9_06_F_11
+  - co-ccr-904-3-v12259#rule_9_06_F_12
+  - co-ccr-904-3-v12259#rule_9_06_G
+  - co-ccr-904-3-v12259#rule_10_01
+  - co-ccr-904-3-v12259#rule_10_01_A
+  - co-ccr-904-3-v12259#rule_10_02
+  - co-ccr-904-3-v12259#rule_10_02_A
+  - co-ccr-904-3-v12259#rule_10_02_B
+  - co-ccr-904-3-v12259#rule_10_02_C
+  - co-ccr-904-3-v12259#rule_10_02_C_1
+  - co-ccr-904-3-v12259#rule_10_02_C_2
+  - co-ccr-904-3-v12259#rule_10_02_C_3
+  - co-ccr-904-3-v12259#rule_10_02_D
+  - co-ccr-904-3-v12259#rule_10_02_D_1
+  - co-ccr-904-3-v12259#rule_10_02_E
+  - co-ccr-904-3-v12259#rule_10_02_F
+  - co-ccr-904-3-v12259#rule_10_02_G
+  - co-ccr-904-3-v12259#rule_10_03
+  - co-ccr-904-3-v12259#rule_10_03_A
+  - co-ccr-904-3-v12259#rule_10_03_B
+  - co-ccr-904-3-v12259#rule_10_03_C
+  - co-ccr-904-3-v12259#rule_10_03_D
+  - co-ccr-904-3-v12259#rule_10_03_E
+  - co-ccr-904-3-v12259#rule_10_03_E_1
+  - co-ccr-904-3-v12259#rule_10_03_E_2
+  - co-ccr-904-3-v12259#rule_10_03_E_3
+  - co-ccr-904-3-v12259#rule_10_03_E_3_a
+  - co-ccr-904-3-v12259#rule_10_03_E_3_b
+  - co-ccr-904-3-v12259#rule_10_03_E_3_c
+  - co-ccr-904-3-v12259#rule_10_03_E_3_d
+  - co-ccr-904-3-v12259#rule_10_03_E_3_e
+  - co-ccr-904-3-v12259#rule_10_03_E_3_f
+  - co-ccr-904-3-v12259#rule_10_03_F
+  - co-ccr-904-3-v12259#rule_10_03_G
+  - co-ccr-904-3-v12259#rule_10_03_H
+  - co-ccr-904-3-v12259#rule_10_04
+  - co-ccr-904-3-v12259#rule_10_04_A
+  - co-ccr-904-3-v12259#rule_10_05
+  - co-ccr-904-3-v12259#rule_10_05_A
+  - co-ccr-904-3-v12259#rule_10_05_B
+  - co-ccr-904-3-v12259#rule_10_05_C
+  - co-ccr-904-3-v12259#rule_10_05_D
+  - co-ccr-904-3-v12259#rule_10_06
+  - co-ccr-904-3-v12259#rule_10_06_A
+  - co-ccr-904-3-v12259#rule_10_06_B
+  - co-ccr-904-3-v12259#rule_11_01
+  - co-ccr-904-3-v12259#rule_11_01_A
+  - co-ccr-904-3-v12259#rule_11_02
+  - co-ccr-904-3-v12259#rule_11_02_A
+  - co-ccr-904-3-v12259#rule_12_01
+  - co-ccr-904-3-v12259#rule_12_01_A
+  - co-ccr-904-3-v12259#rule_12_02
+  - co-ccr-904-3-v12259#rule_12_02_A
+  - co-ccr-904-3-v12259#rule_12_02_B
+  - co-ccr-904-3-v12259#rule_12_02_C
+  - co-ccr-904-3-v12259#rule_12_02_D
+  reason: Rules 1 (basis, severability, exemptions), 2 (definitions), 3 (disclosures),
+    6 (privacy notices and duties of controllers, including the minors' duties of
+    6.13 and 6.14), 7 (consent), 8 (data protection assessments), 9 (profiling), 10
+    (opinion letters and interpretive guidance), 11 (enforcement considerations) and
+    12 (the incorporated accessibility guidelines) set duties and procedures outside
+    this order's dated-duties slice.
+  consequence: No answer reads these rules (reading (12)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: computing_time_statute_not_pinned
+  units: []
+  instrument: C.R.S. 2-4-108 (computation of time; not pinned)
+  reason: The general Colorado statute on computing time is not pinned. This order
+    counts calendar days from the event, the day of the event not counted, and moves
+    no last day for a Saturday, Sunday or legal holiday (reading (4); open question
+    Q2). If that statute applies to the periods of 6-1-1306 and 6-1-1311, a last day
+    may move.
+  consequence: A date this order gives that falls on a Saturday, Sunday or legal holiday
+    is given unmoved; the caller or a lawyer checks whether a later day applies.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: deceptive_trade_practice_penalties_not_pinned
+  units: []
+  instrument: C.R.S. 6-1-112 (civil penalties for deceptive trade practices; not pinned)
+  reason: 6-1-1311(1)(c) makes a violation of part 13 a deceptive trade practice;
+    the civil penalty amounts for deceptive trade practices are in C.R.S. 6-1-112,
+    which is not pinned. The pinned text of part 13 states no penalty figure, so this
+    order gives none (reading (11)).
+  consequence: No answer gives a penalty amount; a caller needs the penalty section
+    itself.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.

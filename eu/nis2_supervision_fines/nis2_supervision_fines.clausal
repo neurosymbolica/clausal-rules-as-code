@@ -1,32 +1,42 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% nis2_supervision_fines.clausal -- the nis2_supervision_fines DETERMINATION for
+% nis2_supervision_fines.clausal -- the "nis2_supervision_fines" DETERMINATION for
 % eu/nis2_supervision_fines, self-contained top to bottom: its statutory VALUE
-% facts, its derived arithmetic, its per-rule tests, its checklist and its
-% verdict assembly.
-% Source: Directive (EU) 2022/2555 (NIS 2 Directive), Articles 32(2), 32(4),
-% 32(5), 33(2), 33(4), 34(4), 34(5) and 35(1) to (3) (OJ L 333, 27.12.2022).
+% facts, its derived arithmetic, its five contracted queries, its per-rule
+% tests, its checklist and its verdict assembly.
 %
-% Deontic family: every answer is what a Member State MUST provide (a floor of
-% the national maximum fine, the minimum powers, the duties to inform) or
-% whether a conditional power or bar is engaged; never a fine for a case.
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022,
+% CELEX 32022L2555: Art 32(2), 32(4), 32(5) (powers over essential entities),
+% Art 33(2), 33(4) (powers over important entities), Art 34(4), 34(5) (the
+% floors of the national maximum fine) and Art 35(1) to (3) (infringements
+% entailing a personal data breach).
 %
-% Contract queries (each yields exactly ONE solution):
-%   fine_ceiling_floor(Profile, Ceiling, Citations)
-%   minimum_powers(Profile, Powers)
-%   escalation_powers_exercisable(Profile, Result, Citations)
-%   fine_barred_by_gdpr_fine(Profile, Result, Citations)
-%   data_protection_authority_information(Profile, Duty)
-% Every query runs the input check first (kernel), then its limbs in order.
-% A missing key is reported before an unsure judgement; an unsure judgement
-% is handed to the user as needs_legal_review(open_textured(...), ...).
+% Readings (the order's, drafter's readings, not a lawyer's):
+%  (1) the Art 34 figures are FLOORS of the national maximum, never a fine;
+%  (2) the least maximum is the higher of the fixed amount and the turnover
+%      share, the share rounded UP to a whole euro, a tie giving fixed_amount;
+%  (3) the floors apply to an infringement of Article 21 or 23 only;
+%  (4) the listed powers are minimum powers ('at least');
+%  (5) Art 32(5) powers are removed for a public administration entity;
+%  (6) Art 32(5) escalation needs four conditions; the first failing one
+%      settles not_exercisable;
+%  (7) a GDPR Art 58(2)(i) fine for the same conduct bars the NIS2 fine only;
+%  (8) the duty to inform under Art 35(1), plus Art 35(3) IN ADDITION.
+% A missing key is reported before an unsure judgement; only the first
+% needed absent key is named.
 %
-% Facade (eligibility, query types #2 and #7): eligible when the Art 32(5)
-% escalation powers are exercisable, ineligible when not; the checklist has
-% one cited row per condition of Art 32(5).
+% Facade: the eligibility verdict of this slice is whether the Art 32(5)
+% escalation powers are exercisable (eligible), not exercisable (ineligible),
+% open (indeterminate) or the profile is badly formed (invalid_profile); its
+% checklist has one cited row per condition of Art 32(5).
 % =====================================================================
 
 :- module(nis2_supervision_fines, [
+    decide_nis2_supervision_fines/2,
+    nis2_supervision_fines_status/2,
+    nis2_supervision_fines_checklist/2,
+    nis2_supervision_fines_decision_resolvable/1,
+    nis2_supervision_fines_status_values/1,
     fine_ceiling_floor/3,
     minimum_powers/2,
     escalation_powers_exercisable/3,
@@ -51,522 +61,616 @@
     power/3,
     not_exercisable/1,
     inform_gdpr_supervisory_authorities/1,
-    inform_supervisory_authority_in_own_member_state/1,
-    decide_nis2_supervision_fines/2,
-    nis2_supervision_fines_status/2,
-    nis2_supervision_fines_checklist/2,
-    nis2_supervision_fines_decision_resolvable/1,
-    nis2_supervision_fines_status_values/1
+    inform_supervisory_authority_in_own_member_state/1
 ]).
 
 :- use_module(library(clpz)).
-:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
-:- use_module(eu/nis2_supervision_fines/kernel, [nis2_supervision_fines_input_problems/2, nis2_supervision_fines_pairs/3, nis2_supervision_fines_missing_in_order/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2, eval_requirements/4]).
+:- use_module(eu/nis2_supervision_fines/kernel, [nis2_supervision_fines_input_problems/2, nis2_supervision_fines_relied_pairs/3]).
 :- use_module(eu/nis2_supervision_fines/citations, [implements/1]).
 
 % ---- statutory VALUE facts owned by this determination ---------------
-% Art 34(4): essential entities, EUR 10 000 000 or 2 % (2/100) of turnover.
+% Art 34(4): EUR 10 000 000 or 2 % (20 per thousand) for essential entities.
+% Art 34(5): EUR 7 000 000 or 1,4 % (14 per thousand) for important entities.
 :- constant_value(essential_fixed_floor_eur, 10000000).
-:- constant_value(essential_turnover_numerator, 2).
-:- constant_value(essential_turnover_denominator, 100).
-% Art 34(5): important entities, EUR 7 000 000 or 1,4 % (14/1000) of turnover.
+:- constant_value(essential_turnover_share_per_thousand, 20).
 :- constant_value(important_fixed_floor_eur, 7000000).
-:- constant_value(important_turnover_numerator, 14).
-:- constant_value(important_turnover_denominator, 1000).
+:- constant_value(important_turnover_share_per_thousand, 14).
+:- constant_value(turnover_share_denominator, 1000).
 
-% The citation of the floor for each entity class.
-fine_floor_citation(essential, cite(eu_dir_2022_2555_art_34_4)).
-fine_floor_citation(important, cite(eu_dir_2022_2555_art_34_5)).
+% The facade verdict vocabulary as a ground table (used by the property tests).
+nis2_supervision_fines_status_values([eligible, ineligible, indeterminate, invalid_profile]).
 
-% Art 34(4), 34(5): the floors apply where the entity infringes Article 21 or 23.
-infringement_with_union_floor(art_21, cite(eu_dir_2022_2555_art_34_4)).
-infringement_with_union_floor(art_23, cite(eu_dir_2022_2555_art_34_4)).
+% The infringed provisions the Art 34 floors and Art 35 read ('Article 21 or 23').
+article_21_or_23(art_21).
+article_21_or_23(art_23).
 
-% The verdict vocabulary of the facade as a ground table.
-nis2_supervision_fines_status_values([eligible, ineligible]).
+% Art 33(2) and 33(4): the minimum powers over important entities, article order.
+important_power(supervision, on_site_inspections_and_off_site_ex_post_supervision, cite(eu_dir_2022_2555_art_33_2_a)).
+important_power(supervision, targeted_security_audits, cite(eu_dir_2022_2555_art_33_2_b)).
+important_power(supervision, security_scans, cite(eu_dir_2022_2555_art_33_2_c)).
+important_power(supervision, information_requests, cite(eu_dir_2022_2555_art_33_2_d)).
+important_power(supervision, data_access_requests, cite(eu_dir_2022_2555_art_33_2_e)).
+important_power(supervision, implementation_evidence_requests, cite(eu_dir_2022_2555_art_33_2_f)).
+important_power(enforcement, warnings, cite(eu_dir_2022_2555_art_33_4_a)).
+important_power(enforcement, binding_instructions_or_remedy_orders, cite(eu_dir_2022_2555_art_33_4_b)).
+important_power(enforcement, cease_and_desist_orders, cite(eu_dir_2022_2555_art_33_4_c)).
+important_power(enforcement, compliance_orders, cite(eu_dir_2022_2555_art_33_4_d)).
+important_power(enforcement, inform_affected_persons_orders, cite(eu_dir_2022_2555_art_33_4_e)).
+important_power(enforcement, audit_recommendation_orders, cite(eu_dir_2022_2555_art_33_4_f)).
+important_power(enforcement, publication_orders, cite(eu_dir_2022_2555_art_33_4_g)).
+important_power(enforcement, administrative_fine, cite(eu_dir_2022_2555_art_33_4_h)).
 
-% ---- the minimum powers, in article order ------------------------------
-% listed_power(EntityClass, Kind, Measure, Citation).
-% Art 33(2) and 33(4): important entities.
-listed_power(important, supervision, on_site_inspections_and_off_site_ex_post_supervision, cite(eu_dir_2022_2555_art_33_2_a)).
-listed_power(important, supervision, targeted_security_audits, cite(eu_dir_2022_2555_art_33_2_b)).
-listed_power(important, supervision, security_scans, cite(eu_dir_2022_2555_art_33_2_c)).
-listed_power(important, supervision, information_requests, cite(eu_dir_2022_2555_art_33_2_d)).
-listed_power(important, supervision, data_access_requests, cite(eu_dir_2022_2555_art_33_2_e)).
-listed_power(important, supervision, implementation_evidence_requests, cite(eu_dir_2022_2555_art_33_2_f)).
-listed_power(important, enforcement, warnings, cite(eu_dir_2022_2555_art_33_4_a)).
-listed_power(important, enforcement, binding_instructions_or_remedy_orders, cite(eu_dir_2022_2555_art_33_4_b)).
-listed_power(important, enforcement, cease_and_desist_orders, cite(eu_dir_2022_2555_art_33_4_c)).
-listed_power(important, enforcement, compliance_orders, cite(eu_dir_2022_2555_art_33_4_d)).
-listed_power(important, enforcement, inform_affected_persons_orders, cite(eu_dir_2022_2555_art_33_4_e)).
-listed_power(important, enforcement, audit_recommendation_orders, cite(eu_dir_2022_2555_art_33_4_f)).
-listed_power(important, enforcement, publication_orders, cite(eu_dir_2022_2555_art_33_4_g)).
-listed_power(important, enforcement, administrative_fine, cite(eu_dir_2022_2555_art_33_4_h)).
-% Art 32(2) and 32(4): essential entities.
-listed_power(essential, supervision, on_site_inspections_and_off_site_supervision, cite(eu_dir_2022_2555_art_32_2_a)).
-listed_power(essential, supervision, regular_and_targeted_security_audits, cite(eu_dir_2022_2555_art_32_2_b)).
-listed_power(essential, supervision, ad_hoc_audits, cite(eu_dir_2022_2555_art_32_2_c)).
-listed_power(essential, supervision, security_scans, cite(eu_dir_2022_2555_art_32_2_d)).
-listed_power(essential, supervision, information_requests, cite(eu_dir_2022_2555_art_32_2_e)).
-listed_power(essential, supervision, data_access_requests, cite(eu_dir_2022_2555_art_32_2_f)).
-listed_power(essential, supervision, implementation_evidence_requests, cite(eu_dir_2022_2555_art_32_2_g)).
-listed_power(essential, enforcement, warnings, cite(eu_dir_2022_2555_art_32_4_a)).
-listed_power(essential, enforcement, binding_instructions_or_remedy_orders, cite(eu_dir_2022_2555_art_32_4_b)).
-listed_power(essential, enforcement, cease_and_desist_orders, cite(eu_dir_2022_2555_art_32_4_c)).
-listed_power(essential, enforcement, compliance_orders, cite(eu_dir_2022_2555_art_32_4_d)).
-listed_power(essential, enforcement, inform_affected_persons_orders, cite(eu_dir_2022_2555_art_32_4_e)).
-listed_power(essential, enforcement, audit_recommendation_orders, cite(eu_dir_2022_2555_art_32_4_f)).
-listed_power(essential, enforcement, monitoring_officer, cite(eu_dir_2022_2555_art_32_4_g)).
-listed_power(essential, enforcement, publication_orders, cite(eu_dir_2022_2555_art_32_4_h)).
-listed_power(essential, enforcement, administrative_fine, cite(eu_dir_2022_2555_art_32_4_i)).
+% Art 32(2) and 32(4): the minimum powers over essential entities, article order.
+essential_power(supervision, on_site_inspections_and_off_site_supervision, cite(eu_dir_2022_2555_art_32_2_a)).
+essential_power(supervision, regular_and_targeted_security_audits, cite(eu_dir_2022_2555_art_32_2_b)).
+essential_power(supervision, ad_hoc_audits, cite(eu_dir_2022_2555_art_32_2_c)).
+essential_power(supervision, security_scans, cite(eu_dir_2022_2555_art_32_2_d)).
+essential_power(supervision, information_requests, cite(eu_dir_2022_2555_art_32_2_e)).
+essential_power(supervision, data_access_requests, cite(eu_dir_2022_2555_art_32_2_f)).
+essential_power(supervision, implementation_evidence_requests, cite(eu_dir_2022_2555_art_32_2_g)).
+essential_power(enforcement, warnings, cite(eu_dir_2022_2555_art_32_4_a)).
+essential_power(enforcement, binding_instructions_or_remedy_orders, cite(eu_dir_2022_2555_art_32_4_b)).
+essential_power(enforcement, cease_and_desist_orders, cite(eu_dir_2022_2555_art_32_4_c)).
+essential_power(enforcement, compliance_orders, cite(eu_dir_2022_2555_art_32_4_d)).
+essential_power(enforcement, inform_affected_persons_orders, cite(eu_dir_2022_2555_art_32_4_e)).
+essential_power(enforcement, audit_recommendation_orders, cite(eu_dir_2022_2555_art_32_4_f)).
+essential_power(enforcement, monitoring_officer, cite(eu_dir_2022_2555_art_32_4_g)).
+essential_power(enforcement, publication_orders, cite(eu_dir_2022_2555_art_32_4_h)).
+essential_power(enforcement, administrative_fine, cite(eu_dir_2022_2555_art_32_4_i)).
 
-% Art 32(5): the escalation powers, essential entities that are not public
-% administration entities only.
-escalation_power(escalation, suspend_certification_or_authorisation, cite(eu_dir_2022_2555_art_32_5_a)).
-escalation_power(escalation, request_temporary_management_ban, cite(eu_dir_2022_2555_art_32_5_b)).
+% Art 32(5)(a) and (b): the escalation powers over essential entities.
+essential_escalation_power(escalation, suspend_certification_or_authorisation, cite(eu_dir_2022_2555_art_32_5_a)).
+essential_escalation_power(escalation, request_temporary_management_ban, cite(eu_dir_2022_2555_art_32_5_b)).
 
-% ---- condition tables ----------------------------------------------------
-% escalation_condition(ItemId, Key, FailingValue, Reason): Art 32(5), in order.
-escalation_condition(not_public_administration_entity, entity_is_public_administration, true, public_administration_entity).
-escalation_condition(earlier_measures_found_ineffective, earlier_measures_ineffective, false, measures_not_ineffective).
-escalation_condition(deadline_set, deadline_set_for_necessary_action, false, no_deadline_set).
-escalation_condition(action_not_taken_within_deadline, required_action_taken_within_deadline, true, action_taken_within_deadline).
+% Art 32(5): the four conditions, in order (checklist row id, reason when it
+% fails, profile key, the value under which the condition holds).
+escalation_condition(not_public_administration, public_administration_entity, entity_is_public_administration, false, cite(eu_dir_2022_2555_art_32_5)).
+escalation_condition(earlier_measures_ineffective, measures_not_ineffective, earlier_measures_ineffective, true, cite(eu_dir_2022_2555_art_32_5)).
+escalation_condition(deadline_set, no_deadline_set, deadline_set_for_necessary_action, true, cite(eu_dir_2022_2555_art_32_5)).
+escalation_condition(action_not_taken_within_deadline, action_taken_within_deadline, required_action_taken_within_deadline, false, cite(eu_dir_2022_2555_art_32_5)).
 
-% data_protection_fine_bar_condition(Key, FailingValue, Reason): Art 35(2), root order.
-data_protection_fine_bar_condition(infringement_may_entail_notifiable_personal_data_breach, false, no_notifiable_personal_data_breach).
-data_protection_fine_bar_condition(gdpr_fine_imposed_under_art_58_2_i, false, no_data_protection_fine_imposed).
-data_protection_fine_bar_condition(gdpr_fine_for_same_conduct, false, not_same_conduct).
+% Art 35(2): the three conditions of the GDPR bar, root_exports order, each
+% with the citation of its open-textured referral.
+gdpr_bar_condition(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)).
+gdpr_bar_condition(gdpr_fine_imposed_under_art_58_2_i, cite(eu_dir_2022_2555_art_35_2)).
+gdpr_bar_condition(gdpr_fine_for_same_conduct, cite(eu_dir_2022_2555_art_35_2)).
 
-% The citation an unsure judgement of the Art 35(2) bar refers with.
-data_protection_fine_bar_referral(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)).
-data_protection_fine_bar_referral(gdpr_fine_for_same_conduct, cite(eu_dir_2022_2555_art_35_2)).
+% Art 35(1): the two conditions of the duty to inform, root_exports order.
+information_duty_condition(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)).
+information_duty_condition(authority_became_aware_in_supervision_or_enforcement, cite(eu_dir_2022_2555_art_35_1)).
 
-% information_condition(Key, FailingValue, Reason): Art 35(1), root order.
-information_condition(infringement_may_entail_notifiable_personal_data_breach, false, no_notifiable_personal_data_breach).
-information_condition(authority_became_aware_in_supervision_or_enforcement, false, not_aware_in_supervision_or_enforcement).
-
-% ---- result constructors (recognisers; never called as queries) ---------
+% ---- result constructors (exported; never called as queries) ---------
 exercisable.
 fine_barred.
 fine_not_barred.
 no_union_minimum.
 fixed_amount.
 turnover_percentage.
-indeterminate([_|_]).
-needs_legal_review(open_textured(_, cite(_)), [_|_]).
-open_textured(_, cite(_)).
-inputs_relied_on(Pairs) :-
-    is_list(Pairs).
-provenance(_, Citations) :-
+
+indeterminate(MissingKeys) :-
+    is_list(MissingKeys).
+
+needs_legal_review(Reason, Context) :-
+    compound(Reason),
+    is_list(Context).
+
+open_textured(InputKey, cite(CitationKey)) :-
+    atom(InputKey),
+    atom(CitationKey).
+
+inputs_relied_on(ReliedPairs) :-
+    is_list(ReliedPairs).
+
+provenance(DecidingClause, Citations) :-
+    nonvar(DecidingClause),
     is_list(Citations).
-input_problems([_|_]).
-unknown_key(Key) :-
-    atom(Key).
-wrong_type(Key) :-
-    atom(Key).
-duplicate_key(Key) :-
-    atom(Key).
-minimum_national_maximum(AmountEur, fixed_amount) :-
-    integer(AmountEur).
-minimum_national_maximum(AmountEur, turnover_percentage) :-
-    integer(AmountEur).
-power(supervision, Measure, cite(Key)) :-
+
+input_problems(Problems) :-
+    is_list(Problems).
+
+unknown_key(ProfileKey) :-
+    atom(ProfileKey).
+
+wrong_type(ProfileKey) :-
+    atom(ProfileKey).
+
+duplicate_key(ProfileKey) :-
+    atom(ProfileKey).
+
+minimum_national_maximum(AmountEur, Basis) :-
+    integer(AmountEur),
+    ceiling_basis(Basis).
+
+ceiling_basis(fixed_amount).
+ceiling_basis(turnover_percentage).
+
+power(Kind, Measure, cite(CitationKey)) :-
+    power_kind(Kind),
     atom(Measure),
-    atom(Key).
-power(enforcement, Measure, cite(Key)) :-
-    atom(Measure),
-    atom(Key).
-power(escalation, Measure, cite(Key)) :-
-    atom(Measure),
-    atom(Key).
-not_exercisable(important_entity).
-not_exercisable(public_administration_entity).
-not_exercisable(measures_not_ineffective).
-not_exercisable(no_deadline_set).
-not_exercisable(action_taken_within_deadline).
-inform_gdpr_supervisory_authorities(cite(_)).
-inform_supervisory_authority_in_own_member_state(cite(_)).
+    atom(CitationKey).
 
-% ---- plumbing: the state of one key ---------------------------------------
-% Called only after the input check gave [], so a present key has one value.
-key_state(Profile, Key, present(Value)) :-
-    profile_get(Profile, Key, Value).
-key_state(Profile, Key, absent) :-
-    profile_lacks(Profile, Key).
+power_kind(supervision).
+power_kind(enforcement).
+power_kind(escalation).
 
-% ---- plumbing: conditions and their resolution ---------------------------
-% condition_states(Profile, Conditions, States): one state per condition(Key,
-% FailingValue, Reason): holds, fails(Reason), missing(Key) or open(Key).
-condition_states(Profile, Conditions, States) :-
-    maplist(condition_state_of(Profile), Conditions, States).
+not_exercisable(Reason) :-
+    escalation_reason(Reason).
 
-condition_state_of(Profile, condition(Key, FailingValue, Reason), State) :-
-    key_state(Profile, Key, KeyState),
-    condition_state(KeyState, Key, FailingValue, Reason, State).
+escalation_reason(important_entity).
+escalation_reason(public_administration_entity).
+escalation_reason(measures_not_ineffective).
+escalation_reason(no_deadline_set).
+escalation_reason(action_taken_within_deadline).
 
-condition_state(absent, Key, _, _, missing(Key)).
-condition_state(present(FailingValue), _, FailingValue, Reason, fails(Reason)).
-condition_state(present(unsure), Key, _, _, open(Key)).
-condition_state(present(Value), _, FailingValue, _, holds) :-
-    dif(Value, FailingValue),
-    dif(Value, unsure).
+inform_gdpr_supervisory_authorities(cite(CitationKey)) :-
+    atom(CitationKey).
 
-% resolve_conditions(States, Outcome): a failing condition settles first; then
-% every missing key (in the given order); then the first open judgement; else
-% all hold.
-resolve_conditions(States, failure(Reason)) :-
-    first_failure(States, failure(Reason)).
-resolve_conditions(States, Outcome) :-
-    first_failure(States, none),
-    findall(Key, member(missing(Key), States), MissingKeys),
-    missing_outcome(MissingKeys, States, Outcome).
+inform_supervisory_authority_in_own_member_state(cite(CitationKey)) :-
+    atom(CitationKey).
 
-first_failure([], none).
-first_failure([fails(Reason)|_], failure(Reason)).
-first_failure([State|States], Result) :-
-    non_failing(State),
-    first_failure(States, Result).
+% ---- profile plumbing (decides nothing statutory) --------------------
+% key_state(Profile, ProfileKey, KeyState): absent, or present(GivenValue).
+% Called only on a profile the input check passed (each key at most once).
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, present(GivenValue)) :-
+    profile_get(Profile, ProfileKey, GivenValue).
 
-non_failing(holds).
-non_failing(missing(_)).
-non_failing(open(_)).
+% condition_outcome(ProfileKey, KeyState, HoldingValue, Outcome): holds, fails,
+% absent(ProfileKey) or unsure(ProfileKey). Exactly one clause per input.
+condition_outcome(ProfileKey, absent, _, absent(ProfileKey)).
+condition_outcome(ProfileKey, present(unsure), _, unsure(ProfileKey)).
+condition_outcome(_, present(HoldingValue), HoldingValue, holds).
+condition_outcome(_, present(GivenValue), HoldingValue, fails) :-
+    opposite_truth(HoldingValue, GivenValue).
 
-missing_outcome([MissingKey|MissingKeys], _, missing([MissingKey|MissingKeys])).
-missing_outcome([], States, Outcome) :-
-    findall(Key, member(open(Key), States), OpenKeys),
-    open_outcome(OpenKeys, Outcome).
+opposite_truth(true, false).
+opposite_truth(false, true).
 
-open_outcome([Key|_], open(Key)).
-open_outcome([], all_hold).
+% first_failure(Conditions, Failure): failure(ConditionName) for the first
+% condition that fails, in order; else no_failure.
+first_failure([], no_failure).
+first_failure([condition(ConditionName, fails)|_], failure(ConditionName)).
+first_failure([condition(_, Outcome)|Conditions], Failure) :-
+    outcome_other_than_fails(Outcome),
+    first_failure(Conditions, Failure).
+
+outcome_other_than_fails(holds).
+outcome_other_than_fails(absent(_)).
+outcome_other_than_fails(unsure(_)).
+
+% first_absent(Conditions, Absence): absent_key(ProfileKey) for the first absent
+% key, in order; else no_absent_key.
+first_absent([], no_absent_key).
+first_absent([condition(_, absent(ProfileKey))|_], absent_key(ProfileKey)).
+first_absent([condition(_, Outcome)|Conditions], Absence) :-
+    outcome_present(Outcome),
+    first_absent(Conditions, Absence).
+
+outcome_present(holds).
+outcome_present(fails).
+outcome_present(unsure(_)).
+
+% first_unsure(Conditions, Unsure): unsure_key(ProfileKey) for the first unsure
+% judgement, in order; else no_unsure_key.
+first_unsure([], no_unsure_key).
+first_unsure([condition(_, unsure(ProfileKey))|_], unsure_key(ProfileKey)).
+first_unsure([condition(_, Outcome)|Conditions], Unsure) :-
+    outcome_decided(Outcome),
+    first_unsure(Conditions, Unsure).
+
+outcome_decided(holds).
+outcome_decided(fails).
+outcome_decided(absent(_)).
 
 % =====================================================================
-% FINE_CEILING_FLOOR -- Art 34(4), 34(5): the least maximum a Member State
-% must provide (a floor of the national ceiling), never a fine.
+% (A) fine_ceiling_floor(Profile, Ceiling, Citations) -- Art 34(4), 34(5)
 % =====================================================================
-fine_ceiling_floor(Profile, input_problems([Problem|Problems]), []) :-
-    nis2_supervision_fines_input_problems(Profile, [Problem|Problems]).
 fine_ceiling_floor(Profile, Ceiling, Citations) :-
-    nis2_supervision_fines_input_problems(Profile, []),
+    nis2_supervision_fines_input_problems(Profile, Problems),
+    fine_ceiling_checked(Problems, Profile, Ceiling, Citations).
+
+fine_ceiling_checked([FirstProblem|MoreProblems], _, input_problems([FirstProblem|MoreProblems]), []).
+fine_ceiling_checked([], Profile, Ceiling, Citations) :-
     key_state(Profile, infringed_provision, ProvisionState),
-    ceiling_by_provision(ProvisionState, Profile, Ceiling, Citations).
+    fine_ceiling_provision(ProvisionState, Profile, Ceiling, Citations).
 
-ceiling_by_provision(absent, _, indeterminate([infringed_provision]), []).
-ceiling_by_provision(present(other), _, no_union_minimum, [cite(eu_dir_2022_2555_art_34_4), cite(eu_dir_2022_2555_art_34_5)]) :-
+% Step (1): the infringed provision is read first.
+fine_ceiling_provision(absent, _, indeterminate([infringed_provision]), []).
+% Step (2): no Union minimum for a provision other than Article 21 or 23.
+fine_ceiling_provision(present(other), _, no_union_minimum, [cite(eu_dir_2022_2555_art_34_4), cite(eu_dir_2022_2555_art_34_5)]) :-
+    implements(eu_dir_2022_2555_art_34_4).
+% Steps (3) and (4): Article 21 or 23.
+fine_ceiling_provision(present(Provision), Profile, Ceiling, Citations) :-
     implements(eu_dir_2022_2555_art_34_4),
-    implements(eu_dir_2022_2555_art_34_5).
-ceiling_by_provision(present(Provision), Profile, Ceiling, Citations) :-
-    implements(eu_dir_2022_2555_art_34_4),
-    implements(eu_dir_2022_2555_art_34_5),
-    infringement_with_union_floor(Provision, _),
-    nis2_supervision_fines_missing_in_order(Profile, [entity_class, worldwide_annual_turnover_eur], MissingKeys),
-    ceiling_for_missing(MissingKeys, Profile, Ceiling, Citations).
+    article_21_or_23(Provision),
+    key_state(Profile, entity_class, ClassState),
+    key_state(Profile, worldwide_annual_turnover_eur, TurnoverState),
+    fine_ceiling_inputs(ClassState, TurnoverState, Ceiling, Citations).
 
-ceiling_for_missing([MissingKey|MissingKeys], _, indeterminate([MissingKey|MissingKeys]), []).
-ceiling_for_missing([], Profile, minimum_national_maximum(AmountEur, Basis), [Citation]) :-
-    profile_get(Profile, entity_class, EntityClass),
-    profile_get(Profile, worldwide_annual_turnover_eur, TurnoverEur),
-    fine_floor_citation(EntityClass, Citation),
-    fine_floor_amounts(EntityClass, TurnoverEur, FixedEur, PercentageAmountEur),
-    least_maximum(EntityClass, FixedEur, PercentageAmountEur, AmountEur, Basis).
+fine_ceiling_inputs(absent, _, indeterminate([entity_class]), []).
+fine_ceiling_inputs(present(_), absent, indeterminate([worldwide_annual_turnover_eur]), []).
+fine_ceiling_inputs(present(EntityClass), present(TurnoverEur), minimum_national_maximum(AmountEur, Basis), Citations) :-
+    fine_floor_amount(EntityClass, TurnoverEur, AmountEur, Basis, Citations).
 
-% The fixed amount and the percentage amount, the latter rounded UP to a whole
-% euro (reading (2)).
-fine_floor_amounts(essential, TurnoverEur, FixedEur, PercentageAmountEur) :-
+% The least national maximum: the share is rounded UP to a whole euro.
+fine_floor_amount(essential, TurnoverEur, AmountEur, Basis, [cite(eu_dir_2022_2555_art_34_4)]) :-
     implements(eu_dir_2022_2555_art_34_4),
     FixedEur #= constant(essential_fixed_floor_eur),
-    PercentageAmountEur #= (TurnoverEur * constant(essential_turnover_numerator) + constant(essential_turnover_denominator) - 1) // constant(essential_turnover_denominator).
-fine_floor_amounts(important, TurnoverEur, FixedEur, PercentageAmountEur) :-
+    ShareAmountEur #= (TurnoverEur * constant(essential_turnover_share_per_thousand) + constant(turnover_share_denominator) - 1) // constant(turnover_share_denominator),
+    whichever_is_higher(FixedEur, ShareAmountEur, AmountEur, Basis).
+fine_floor_amount(important, TurnoverEur, AmountEur, Basis, [cite(eu_dir_2022_2555_art_34_5)]) :-
     implements(eu_dir_2022_2555_art_34_5),
     FixedEur #= constant(important_fixed_floor_eur),
-    PercentageAmountEur #= (TurnoverEur * constant(important_turnover_numerator) + constant(important_turnover_denominator) - 1) // constant(important_turnover_denominator).
+    ShareAmountEur #= (TurnoverEur * constant(important_turnover_share_per_thousand) + constant(turnover_share_denominator) - 1) // constant(turnover_share_denominator),
+    whichever_is_higher(FixedEur, ShareAmountEur, AmountEur, Basis).
 
-% whichever is higher; on a tie the basis is the fixed amount.
-least_maximum(essential, FixedEur, PercentageAmountEur, FixedEur, fixed_amount) :-
-    implements(eu_dir_2022_2555_art_34_4),
-    FixedEur #>= PercentageAmountEur.
-least_maximum(essential, FixedEur, PercentageAmountEur, PercentageAmountEur, turnover_percentage) :-
-    implements(eu_dir_2022_2555_art_34_4),
-    FixedEur #< PercentageAmountEur.
-least_maximum(important, FixedEur, PercentageAmountEur, FixedEur, fixed_amount) :-
-    implements(eu_dir_2022_2555_art_34_5),
-    FixedEur #>= PercentageAmountEur.
-least_maximum(important, FixedEur, PercentageAmountEur, PercentageAmountEur, turnover_percentage) :-
-    implements(eu_dir_2022_2555_art_34_5),
-    FixedEur #< PercentageAmountEur.
+% 'whichever is higher'; a tie gives fixed_amount (open question Q10).
+% Arithmetic plumbing for the callers above, which carry the provenance markers.
+whichever_is_higher(FixedEur, ShareAmountEur, FixedEur, fixed_amount) :-
+    FixedEur #>= ShareAmountEur.
+whichever_is_higher(FixedEur, ShareAmountEur, ShareAmountEur, turnover_percentage) :-
+    FixedEur #< ShareAmountEur.
 
 % =====================================================================
-% MINIMUM_POWERS -- Art 32(2), 32(4), 32(5) and Art 33(2), 33(4).
+% (B) minimum_powers(Profile, Powers) -- Art 32(2), (4), (5); 33(2), (4)
 % =====================================================================
-minimum_powers(Profile, input_problems([Problem|Problems])) :-
-    nis2_supervision_fines_input_problems(Profile, [Problem|Problems]).
 minimum_powers(Profile, Powers) :-
-    nis2_supervision_fines_input_problems(Profile, []),
-    key_state(Profile, entity_class, ClassState),
-    powers_by_class(ClassState, Profile, Powers).
+    nis2_supervision_fines_input_problems(Profile, Problems),
+    minimum_powers_checked(Problems, Profile, Powers).
 
-powers_by_class(absent, _, indeterminate([entity_class])).
-powers_by_class(present(important), _, Powers) :-
-    implements(eu_dir_2022_2555_art_33_2_a),
-    implements(eu_dir_2022_2555_art_33_4_a),
-    findall(power(Kind, Measure, Citation), listed_power(important, Kind, Measure, Citation), Powers).
-powers_by_class(present(essential), Profile, Powers) :-
-    implements(eu_dir_2022_2555_art_32_2_a),
-    implements(eu_dir_2022_2555_art_32_4_a),
+minimum_powers_checked([FirstProblem|MoreProblems], _, input_problems([FirstProblem|MoreProblems])).
+minimum_powers_checked([], Profile, Powers) :-
+    key_state(Profile, entity_class, ClassState),
+    minimum_powers_class(ClassState, Profile, Powers).
+
+% Step (5).
+minimum_powers_class(absent, _, indeterminate([entity_class])).
+% Step (6).
+minimum_powers_class(present(important), _, Powers) :-
+    implements(eu_dir_2022_2555_art_33_2),
+    implements(eu_dir_2022_2555_art_33_4),
+    findall(power(Kind, Measure, Citation), important_power(Kind, Measure, Citation), Powers).
+% Step (7).
+minimum_powers_class(present(essential), Profile, Powers) :-
     key_state(Profile, entity_is_public_administration, AdministrationState),
     essential_powers(AdministrationState, Powers).
 
 essential_powers(absent, indeterminate([entity_is_public_administration])).
+% Art 32(5) last sentence: no escalation powers for a public administration entity.
 essential_powers(present(true), Powers) :-
     implements(eu_dir_2022_2555_art_32_5),
-    findall(power(Kind, Measure, Citation), listed_power(essential, Kind, Measure, Citation), Powers).
+    implements(eu_dir_2022_2555_art_32_2),
+    implements(eu_dir_2022_2555_art_32_4),
+    findall(power(Kind, Measure, Citation), essential_power(Kind, Measure, Citation), Powers).
 essential_powers(present(false), Powers) :-
     implements(eu_dir_2022_2555_art_32_5),
-    findall(power(Kind, Measure, Citation), listed_power(essential, Kind, Measure, Citation), ListedPowers),
-    findall(power(Kind, Measure, Citation), escalation_power(Kind, Measure, Citation), EscalationPowers),
-    append(ListedPowers, EscalationPowers, Powers).
+    implements(eu_dir_2022_2555_art_32_2),
+    implements(eu_dir_2022_2555_art_32_4),
+    findall(power(Kind, Measure, Citation), essential_power(Kind, Measure, Citation), BasePowers),
+    findall(power(Kind, Measure, Citation), essential_escalation_power(Kind, Measure, Citation), EscalationPowers),
+    append(BasePowers, EscalationPowers, Powers).
 
 % =====================================================================
-% ESCALATION_POWERS_EXERCISABLE -- Art 32(5).
+% (C) escalation_powers_exercisable(Profile, Result, Citations) -- Art 32(5)
 % =====================================================================
-escalation_powers_exercisable(Profile, input_problems([Problem|Problems]), []) :-
-    nis2_supervision_fines_input_problems(Profile, [Problem|Problems]).
 escalation_powers_exercisable(Profile, Result, Citations) :-
-    nis2_supervision_fines_input_problems(Profile, []),
+    nis2_supervision_fines_input_problems(Profile, Problems),
+    escalation_checked(Problems, Profile, Result, Citations).
+
+escalation_checked([FirstProblem|MoreProblems], _, input_problems([FirstProblem|MoreProblems]), []).
+escalation_checked([], Profile, Result, Citations) :-
     key_state(Profile, entity_class, ClassState),
-    escalation_by_class(ClassState, Profile, Result, Citations).
+    escalation_class(ClassState, Profile, Result, Citations).
 
-escalation_by_class(absent, _, indeterminate([entity_class]), []).
-escalation_by_class(present(important), _, not_exercisable(important_entity), [cite(eu_dir_2022_2555_art_32_5)]) :-
+% Step (8): Art 33 gives no such power for important entities.
+escalation_class(present(important), _, not_exercisable(important_entity), [cite(eu_dir_2022_2555_art_32_5)]) :-
     implements(eu_dir_2022_2555_art_32_5).
-escalation_by_class(present(essential), Profile, Result, Citations) :-
+% Step (9): essential, or class absent.
+escalation_class(present(essential), Profile, Result, Citations) :-
+    escalation_conditions(Profile, class_known, Result, Citations).
+escalation_class(absent, Profile, Result, Citations) :-
+    escalation_conditions(Profile, class_absent, Result, Citations).
+
+escalation_condition_outcome(Profile, Reason, Outcome) :-
     implements(eu_dir_2022_2555_art_32_5),
-    escalation_conditions(Conditions),
-    condition_states(Profile, Conditions, States),
-    resolve_conditions(States, Outcome),
-    escalation_outcome(Outcome, Profile, Result, Citations).
+    escalation_condition(_, Reason, ProfileKey, HoldingValue, _),
+    key_state(Profile, ProfileKey, KeyState),
+    condition_outcome(ProfileKey, KeyState, HoldingValue, Outcome).
 
-escalation_conditions(Conditions) :-
-    findall(condition(Key, FailingValue, Reason), escalation_condition(_, Key, FailingValue, Reason), Conditions).
+escalation_conditions(Profile, ClassFlag, Result, Citations) :-
+    findall(condition(Reason, Outcome), escalation_condition_outcome(Profile, Reason, Outcome), Outcomes),
+    first_failure(Outcomes, Failure),
+    escalation_outcome(Failure, ClassFlag, Outcomes, Profile, Result, Citations).
 
-escalation_outcome(failure(Reason), _, not_exercisable(Reason), [cite(eu_dir_2022_2555_art_32_5)]) :-
+% A failing condition settles the answer before any absent or unsure key.
+escalation_outcome(failure(Reason), _, _, _, not_exercisable(Reason), [cite(eu_dir_2022_2555_art_32_5)]) :-
     implements(eu_dir_2022_2555_art_32_5).
-escalation_outcome(missing(MissingKeys), _, indeterminate(MissingKeys), []).
-escalation_outcome(open(Key), Profile, needs_legal_review(open_textured(Key, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on(Pairs)]), []) :-
-    nis2_supervision_fines_pairs(Profile, [earlier_measures_ineffective], Pairs).
-escalation_outcome(all_hold, _, exercisable, [cite(eu_dir_2022_2555_art_32_5)]) :-
+escalation_outcome(no_failure, class_absent, _, _, indeterminate([entity_class]), []).
+escalation_outcome(no_failure, class_known, Outcomes, Profile, Result, Citations) :-
+    first_absent(Outcomes, Absence),
+    escalation_open(Absence, Outcomes, Profile, Result, Citations).
+
+escalation_open(absent_key(ProfileKey), _, _, indeterminate([ProfileKey]), []).
+escalation_open(no_absent_key, Outcomes, Profile, Result, Citations) :-
+    first_unsure(Outcomes, Unsure),
+    escalation_settled(Unsure, Profile, Result, Citations).
+
+escalation_settled(unsure_key(ProfileKey), Profile, needs_legal_review(open_textured(ProfileKey, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on(ReliedPairs)]), []) :-
+    implements(eu_dir_2022_2555_art_32_5),
+    nis2_supervision_fines_relied_pairs(Profile, [earlier_measures_ineffective], ReliedPairs).
+escalation_settled(no_unsure_key, _, exercisable, [cite(eu_dir_2022_2555_art_32_5)]) :-
     implements(eu_dir_2022_2555_art_32_5).
 
 % =====================================================================
-% FINE_BARRED_BY_GDPR_FINE -- Art 35(2): bars the NIS2 fine only.
+% (D) fine_barred_by_gdpr_fine(Profile, Result, Citations) -- Art 35(2)
 % =====================================================================
-fine_barred_by_gdpr_fine(Profile, input_problems([Problem|Problems]), []) :-
-    nis2_supervision_fines_input_problems(Profile, [Problem|Problems]).
 fine_barred_by_gdpr_fine(Profile, Result, Citations) :-
-    nis2_supervision_fines_input_problems(Profile, []),
-    key_state(Profile, infringed_provision, ProvisionState),
-    fine_bar_by_provision(ProvisionState, Profile, Result, Citations).
+    nis2_supervision_fines_input_problems(Profile, Problems),
+    gdpr_bar_checked(Problems, Profile, Result, Citations).
 
-fine_bar_by_provision(absent, _, indeterminate([infringed_provision]), []).
-fine_bar_by_provision(present(other), _, fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]) :-
-    implements(eu_dir_2022_2555_art_35_2).
-fine_bar_by_provision(present(Provision), Profile, Result, Citations) :-
+gdpr_bar_checked([FirstProblem|MoreProblems], _, input_problems([FirstProblem|MoreProblems]), []).
+gdpr_bar_checked([], Profile, Result, Citations) :-
+    findall(condition(ProfileKey, Outcome), gdpr_bar_outcome(Profile, ProfileKey, Outcome), Outcomes),
+    first_failure(Outcomes, Failure),
+    key_state(Profile, infringed_provision, ProvisionState),
+    gdpr_bar_after_conditions(Failure, ProvisionState, Outcomes, Profile, Result, Citations).
+
+gdpr_bar_outcome(Profile, ProfileKey, Outcome) :-
     implements(eu_dir_2022_2555_art_35_2),
-    infringement_with_union_floor(Provision, _),
-    findall(condition(Key, FailingValue, Reason), data_protection_fine_bar_condition(Key, FailingValue, Reason), Conditions),
-    condition_states(Profile, Conditions, States),
-    resolve_conditions(States, Outcome),
-    fine_bar_outcome(Outcome, Profile, Result, Citations).
+    gdpr_bar_condition(ProfileKey, _),
+    key_state(Profile, ProfileKey, KeyState),
+    condition_outcome(ProfileKey, KeyState, true, Outcome).
 
-fine_bar_outcome(failure(_), _, fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]) :-
+% Step (10): a false condition settles fine_not_barred first.
+gdpr_bar_after_conditions(failure(_), _, _, _, fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]) :-
     implements(eu_dir_2022_2555_art_35_2).
-fine_bar_outcome(missing(MissingKeys), _, indeterminate(MissingKeys), []).
-fine_bar_outcome(open(Key), Profile, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]), []) :-
-    data_protection_fine_bar_referral(Key, Citation),
-    nis2_supervision_fines_pairs(Profile, [infringement_may_entail_notifiable_personal_data_breach, gdpr_fine_for_same_conduct], Pairs).
-fine_bar_outcome(all_hold, _, fine_barred, [cite(eu_dir_2022_2555_art_35_2)]) :-
+% Step (10a).
+gdpr_bar_after_conditions(no_failure, present(other), _, _, fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]) :-
+    implements(eu_dir_2022_2555_art_35_2).
+% Step (10b).
+gdpr_bar_after_conditions(no_failure, absent, _, _, indeterminate([infringed_provision]), []).
+% Step (11).
+gdpr_bar_after_conditions(no_failure, present(Provision), Outcomes, Profile, Result, Citations) :-
+    implements(eu_dir_2022_2555_art_35_1),
+    article_21_or_23(Provision),
+    first_absent(Outcomes, Absence),
+    gdpr_bar_open(Absence, Outcomes, Profile, Result, Citations).
+
+gdpr_bar_open(absent_key(ProfileKey), _, _, indeterminate([ProfileKey]), []).
+gdpr_bar_open(no_absent_key, Outcomes, Profile, Result, Citations) :-
+    first_unsure(Outcomes, Unsure),
+    gdpr_bar_settled(Unsure, Profile, Result, Citations).
+
+gdpr_bar_settled(unsure_key(ProfileKey), Profile, needs_legal_review(open_textured(ProfileKey, Citation), [inputs_relied_on(ReliedPairs)]), []) :-
+    implements(eu_dir_2022_2555_art_35_2),
+    gdpr_bar_condition(ProfileKey, Citation),
+    nis2_supervision_fines_relied_pairs(Profile, [infringement_may_entail_notifiable_personal_data_breach, gdpr_fine_for_same_conduct], ReliedPairs).
+gdpr_bar_settled(no_unsure_key, _, fine_barred, [cite(eu_dir_2022_2555_art_35_2)]) :-
     implements(eu_dir_2022_2555_art_35_2).
 
 % =====================================================================
-% DATA_PROTECTION_AUTHORITY_INFORMATION -- Art 35(1) and 35(3).
+% (E) data_protection_authority_information(Profile, Duty) -- Art 35(1), (3)
 % =====================================================================
-data_protection_authority_information(Profile, input_problems([Problem|Problems])) :-
-    nis2_supervision_fines_input_problems(Profile, [Problem|Problems]).
-data_protection_authority_information(Profile, Duty) :-
-    nis2_supervision_fines_input_problems(Profile, []),
+data_protection_authority_information(Profile, DutyList) :-
+    nis2_supervision_fines_input_problems(Profile, Problems),
+    information_duty_checked(Problems, Profile, DutyList).
+
+information_duty_checked([FirstProblem|MoreProblems], _, input_problems([FirstProblem|MoreProblems])).
+information_duty_checked([], Profile, DutyList) :-
+    findall(condition(ProfileKey, Outcome), information_duty_outcome(Profile, ProfileKey, Outcome), Outcomes),
+    first_failure(Outcomes, Failure),
     key_state(Profile, infringed_provision, ProvisionState),
-    information_by_provision(ProvisionState, Profile, Duty).
+    information_duty_after_conditions(Failure, ProvisionState, Outcomes, Profile, DutyList).
 
-information_by_provision(absent, _, indeterminate([infringed_provision])).
-information_by_provision(present(other), _, []) :-
-    implements(eu_dir_2022_2555_art_35_1).
-information_by_provision(present(Provision), Profile, Duty) :-
+information_duty_outcome(Profile, ProfileKey, Outcome) :-
     implements(eu_dir_2022_2555_art_35_1),
-    infringement_with_union_floor(Provision, _),
-    findall(condition(Key, FailingValue, Reason), information_condition(Key, FailingValue, Reason), Conditions),
-    condition_states(Profile, Conditions, States),
-    resolve_conditions(States, Outcome),
-    information_outcome(Outcome, Profile, Duty).
+    information_duty_condition(ProfileKey, _),
+    key_state(Profile, ProfileKey, KeyState),
+    condition_outcome(ProfileKey, KeyState, true, Outcome).
 
-information_outcome(failure(_), _, []) :-
+% Step (12): a false condition settles the empty list first.
+information_duty_after_conditions(failure(_), _, _, _, []) :-
     implements(eu_dir_2022_2555_art_35_1).
-information_outcome(missing(MissingKeys), _, indeterminate(MissingKeys)).
-information_outcome(open(Key), Profile, needs_legal_review(open_textured(Key, cite(eu_dir_2022_2555_art_35_1)), [inputs_relied_on(Pairs)])) :-
-    nis2_supervision_fines_pairs(Profile, [infringement_may_entail_notifiable_personal_data_breach], Pairs).
-information_outcome(all_hold, Profile, Duty) :-
-    implements(eu_dir_2022_2555_art_35_3),
-    key_state(Profile, data_protection_authority_in_other_member_state, LocationState),
-    duty_by_location(LocationState, Duty).
-
-duty_by_location(absent, indeterminate([data_protection_authority_in_other_member_state])).
-duty_by_location(present(false), [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1))]) :-
+% Step (12a).
+information_duty_after_conditions(no_failure, present(other), _, _, []) :-
     implements(eu_dir_2022_2555_art_35_1).
-duty_by_location(present(true), [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1)), inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))]) :-
+% Step (12b).
+information_duty_after_conditions(no_failure, absent, _, _, indeterminate([infringed_provision])).
+% Steps (13) and (14).
+information_duty_after_conditions(no_failure, present(Provision), Outcomes, Profile, DutyList) :-
     implements(eu_dir_2022_2555_art_35_1),
+    article_21_or_23(Provision),
+    first_absent(Outcomes, Absence),
+    information_duty_open(Absence, Outcomes, Profile, DutyList).
+
+information_duty_open(absent_key(ProfileKey), _, _, indeterminate([ProfileKey])).
+information_duty_open(no_absent_key, Outcomes, Profile, DutyList) :-
+    first_unsure(Outcomes, Unsure),
+    key_state(Profile, data_protection_authority_in_other_member_state, OtherStateState),
+    information_duty_settled(Unsure, OtherStateState, Profile, DutyList).
+
+% The other-Member-State key is named before the referral (reading (10)).
+information_duty_settled(_, absent, _, indeterminate([data_protection_authority_in_other_member_state])).
+information_duty_settled(unsure_key(ProfileKey), present(_), Profile, needs_legal_review(open_textured(ProfileKey, cite(eu_dir_2022_2555_art_35_1)), [inputs_relied_on(ReliedPairs)])) :-
+    implements(eu_dir_2022_2555_art_35_1),
+    nis2_supervision_fines_relied_pairs(Profile, [infringement_may_entail_notifiable_personal_data_breach], ReliedPairs).
+information_duty_settled(no_unsure_key, present(false), _, [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1))]) :-
+    implements(eu_dir_2022_2555_art_35_1).
+% Art 35(3) read as IN ADDITION to Art 35(1) (open question Q9).
+information_duty_settled(no_unsure_key, present(true), _, [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1)), inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))]) :-
     implements(eu_dir_2022_2555_art_35_3).
 
 % =====================================================================
-% FACADE -- eligibility of the Art 32(5) escalation powers.
+% FACADE -- the eligibility verdict (escalation under Art 32(5))
 % =====================================================================
-decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(Status, Citations)) :-
-    escalation_powers_exercisable(Profile, Result, Citations),
-    facade_status(Result, Status).
-
-facade_status(exercisable, eligible).
-facade_status(not_exercisable(_), ineligible).
-facade_status(indeterminate(MissingKeys), indeterminate(MissingKeys)).
-facade_status(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
-facade_status(input_problems(Problems), input_problems(Problems)).
+decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(eligible, Citations)) :-
+    escalation_powers_exercisable(Profile, exercisable, Citations).
+decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(ineligible, Citations)) :-
+    escalation_powers_exercisable(Profile, not_exercisable(_), Citations).
+decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(indeterminate, [cite(eu_dir_2022_2555_art_32_5)])) :-
+    escalation_powers_exercisable(Profile, indeterminate(_), _).
+decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(indeterminate, [cite(eu_dir_2022_2555_art_32_5)])) :-
+    escalation_powers_exercisable(Profile, needs_legal_review(_, _), _).
+decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(invalid_profile, [])) :-
+    escalation_powers_exercisable(Profile, input_problems(_), _).
 
 % ---- projection: Status only ------------------------------------------
 nis2_supervision_fines_status(Profile, Status) :-
     decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(Status, _Citations)).
 
-% ---- checklist: one cited row per condition of Art 32(5) --------------
-nis2_supervision_fines_checklist(Profile, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_dir_2022_2555_art_32_5))]) :-
-    nis2_supervision_fines_input_problems(Profile, [Problem|Problems]).
-nis2_supervision_fines_checklist(Profile, [EntityItem|ConditionItems]) :-
-    nis2_supervision_fines_input_problems(Profile, []),
+% ---- checklist: one cited row per requirement of Art 32(5) -------------
+escalation_checklist_ids([essential_entity, not_public_administration, earlier_measures_ineffective, deadline_set, action_not_taken_within_deadline]).
+
+nis2_supervision_fines_checklist(Profile, Items) :-
+    nis2_supervision_fines_input_problems(Profile, Problems),
+    checklist_checked(Problems, Profile, Items).
+
+checklist_checked([FirstProblem|MoreProblems], _, [item(input_check, unmet(input_problems([FirstProblem|MoreProblems])), cite(eu_dir_2022_2555_art_32_5))]).
+checklist_checked([], Profile, Items) :-
+    escalation_checklist_ids(RequirementIds),
+    eval_requirements(RequirementIds, Profile, escalation_requirement, Items).
+
+% escalation_requirement(RequirementId, Profile, Status, Citation): the kit's order.
+escalation_requirement(essential_entity, Profile, Status, cite(eu_dir_2022_2555_art_32_5)) :-
+    implements(eu_dir_2022_2555_art_32_5),
     key_state(Profile, entity_class, ClassState),
-    entity_class_item(ClassState, EntityItem),
-    escalation_conditions(Conditions),
-    findall(ItemId, escalation_condition(ItemId, _, _, _), ItemIds),
-    condition_states(Profile, Conditions, States),
-    maplist(condition_item, ItemIds, States, ConditionItems).
+    class_requirement_status(ClassState, Status).
+escalation_requirement(RequirementId, Profile, Status, Citation) :-
+    implements(eu_dir_2022_2555_art_32_5),
+    escalation_condition(RequirementId, Reason, ProfileKey, HoldingValue, Citation),
+    key_state(Profile, ProfileKey, KeyState),
+    condition_outcome(ProfileKey, KeyState, HoldingValue, Outcome),
+    outcome_status(Outcome, Reason, Status).
 
-entity_class_item(absent, item(essential_entity, unknown([entity_class]), cite(eu_dir_2022_2555_art_32_5))).
-entity_class_item(present(essential), item(essential_entity, met, cite(eu_dir_2022_2555_art_32_5))) :-
-    implements(eu_dir_2022_2555_art_32_5).
-entity_class_item(present(important), item(essential_entity, unmet(important_entity), cite(eu_dir_2022_2555_art_32_5))) :-
-    implements(eu_dir_2022_2555_art_32_5).
+class_requirement_status(absent, unknown([entity_class])).
+class_requirement_status(present(essential), met).
+class_requirement_status(present(important), unmet(important_entity)).
 
-condition_item(ItemId, holds, item(ItemId, met, cite(eu_dir_2022_2555_art_32_5))).
-condition_item(ItemId, fails(Reason), item(ItemId, unmet(Reason), cite(eu_dir_2022_2555_art_32_5))).
-condition_item(ItemId, missing(Key), item(ItemId, unknown([Key]), cite(eu_dir_2022_2555_art_32_5))).
-condition_item(ItemId, open(Key), item(ItemId, unknown([Key]), cite(eu_dir_2022_2555_art_32_5))).
+outcome_status(holds, _, met).
+outcome_status(fails, Reason, unmet(Reason)).
+outcome_status(absent(ProfileKey), _, unknown([ProfileKey])).
+outcome_status(unsure(ProfileKey), _, unknown([ProfileKey])).
 
 nis2_supervision_fines_decision_resolvable(Profile) :-
     decide_nis2_supervision_fines(Profile, _Verdict).
 
-% =====================================================================
-% TESTS
-% =====================================================================
-% ---- fine_ceiling_floor ----
-test(essential_zero_turnover_gives_the_fixed_floor) :-
-    findall(Ceiling-Citations, fine_ceiling_floor([attribute(entity_class, essential), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, 0)], Ceiling, Citations), Answers),
-    Answers == [minimum_national_maximum(10000000, fixed_amount)-[cite(eu_dir_2022_2555_art_34_4)]].
-test(essential_tie_takes_the_fixed_basis) :-
-    fine_ceiling_floor([attribute(entity_class, essential), attribute(infringed_provision, art_23), attribute(worldwide_annual_turnover_eur, 500000000)], minimum_national_maximum(10000000, fixed_amount), [cite(eu_dir_2022_2555_art_34_4)]).
-test(essential_percentage_rounds_up) :-
-    fine_ceiling_floor([attribute(entity_class, essential), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, 500000001)], minimum_national_maximum(10000001, turnover_percentage), [cite(eu_dir_2022_2555_art_34_4)]).
-test(important_percentage_above_fixed) :-
-    fine_ceiling_floor([attribute(entity_class, important), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, 1000000000)], minimum_national_maximum(14000000, turnover_percentage), [cite(eu_dir_2022_2555_art_34_5)]).
-test(important_tie_takes_the_fixed_basis) :-
-    fine_ceiling_floor([attribute(entity_class, important), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, 500000000)], minimum_national_maximum(7000000, fixed_amount), [cite(eu_dir_2022_2555_art_34_5)]).
-test(important_tie_is_not_turnover_percentage, fail) :-
-    fine_ceiling_floor([attribute(entity_class, important), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, 500000000)], minimum_national_maximum(_, turnover_percentage), _).
-test(other_infringement_has_no_union_minimum) :-
-    findall(Ceiling, fine_ceiling_floor([attribute(infringed_provision, other)], Ceiling, _), Answers),
-    Answers == [no_union_minimum].
-test(absent_provision_is_indeterminate) :-
+% ---- tests -----------------------------------------------------------
+% fine_ceiling_floor
+test(essential_turnover_share_above_the_fixed_amount) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_21), attribute(entity_class, essential), attribute(worldwide_annual_turnover_eur, 1000000000)], minimum_national_maximum(20000000, turnover_percentage), [cite(eu_dir_2022_2555_art_34_4)]).
+test(essential_tie_gives_the_fixed_amount) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_23), attribute(entity_class, essential), attribute(worldwide_annual_turnover_eur, 500000000)], minimum_national_maximum(10000000, fixed_amount), [cite(eu_dir_2022_2555_art_34_4)]).
+test(essential_tie_is_not_turnover_percentage, fail) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_23), attribute(entity_class, essential), attribute(worldwide_annual_turnover_eur, 500000000)], minimum_national_maximum(_, turnover_percentage), _).
+test(important_share_is_rounded_up) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_21), attribute(entity_class, important), attribute(worldwide_annual_turnover_eur, 1000000001)], minimum_national_maximum(14000001, turnover_percentage), [cite(eu_dir_2022_2555_art_34_5)]).
+test(important_zero_turnover_gives_the_fixed_amount) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_21), attribute(entity_class, important), attribute(worldwide_annual_turnover_eur, 0)], minimum_national_maximum(7000000, fixed_amount), [cite(eu_dir_2022_2555_art_34_5)]).
+test(other_provision_has_no_union_minimum) :-
+    findall(Ceiling-Citations, fine_ceiling_floor([attribute(infringed_provision, other)], Ceiling, Citations), Answers),
+    Answers == [no_union_minimum-[cite(eu_dir_2022_2555_art_34_4), cite(eu_dir_2022_2555_art_34_5)]].
+test(absent_provision_is_named_first) :-
     fine_ceiling_floor([attribute(entity_class, essential)], indeterminate([infringed_provision]), []).
-test(absent_class_and_turnover_are_named_in_order) :-
-    fine_ceiling_floor([attribute(infringed_provision, art_21)], indeterminate([entity_class, worldwide_annual_turnover_eur]), []).
-test(input_problems_come_first) :-
-    fine_ceiling_floor([attribute(entity_class, banana), attribute(infringed_provision, other)], input_problems([wrong_type(entity_class)]), []).
+test(absent_class_is_named_before_turnover) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_23)], indeterminate([entity_class]), []).
+test(absent_turnover_is_named) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_23), attribute(entity_class, important)], indeterminate([worldwide_annual_turnover_eur]), []).
+test(bad_input_gives_input_problems) :-
+    fine_ceiling_floor([attribute(entity_class, big)], input_problems([wrong_type(entity_class)]), []).
 
-% ---- minimum_powers ----
-test(important_has_fourteen_powers_once) :-
+% minimum_powers
+test(important_powers_are_fourteen_in_order) :-
     findall(Powers, minimum_powers([attribute(entity_class, important)], Powers), [Powers]),
     length(Powers, 14),
-    Powers = [power(supervision, on_site_inspections_and_off_site_ex_post_supervision, cite(eu_dir_2022_2555_art_33_2_a))|_].
-test(essential_not_public_administration_has_eighteen_powers) :-
-    findall(Powers, minimum_powers([attribute(entity_class, essential), attribute(entity_is_public_administration, false)], Powers), [Powers]),
+    Powers = [power(supervision, on_site_inspections_and_off_site_ex_post_supervision, cite(eu_dir_2022_2555_art_33_2_a))|_],
+    last(Powers, power(enforcement, administrative_fine, cite(eu_dir_2022_2555_art_33_4_h))).
+test(essential_private_powers_include_escalation) :-
+    minimum_powers([attribute(entity_class, essential), attribute(entity_is_public_administration, false)], Powers),
     length(Powers, 18),
     last(Powers, power(escalation, request_temporary_management_ban, cite(eu_dir_2022_2555_art_32_5_b))).
-test(essential_public_administration_has_sixteen_powers) :-
+test(essential_public_administration_powers_exclude_escalation) :-
     minimum_powers([attribute(entity_class, essential), attribute(entity_is_public_administration, true)], Powers),
     length(Powers, 16),
     last(Powers, power(enforcement, administrative_fine, cite(eu_dir_2022_2555_art_32_4_i))).
-test(essential_needs_the_public_administration_key) :-
+test(essential_needs_public_administration_key) :-
     minimum_powers([attribute(entity_class, essential)], indeterminate([entity_is_public_administration])).
-test(powers_need_the_entity_class) :-
+test(powers_need_entity_class) :-
     minimum_powers([], indeterminate([entity_class])).
 
-% ---- escalation_powers_exercisable ----
-test(escalation_all_conditions_hold) :-
-    findall(Result-Citations, escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], Result, Citations), Answers),
-    Answers == [exercisable-[cite(eu_dir_2022_2555_art_32_5)]].
-test(escalation_important_entity) :-
+% escalation_powers_exercisable
+test(important_entity_has_no_escalation) :-
     escalation_powers_exercisable([attribute(entity_class, important)], not_exercisable(important_entity), [cite(eu_dir_2022_2555_art_32_5)]).
-test(escalation_public_administration_settles_before_missing_keys) :-
-    escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, true)], not_exercisable(public_administration_entity), [cite(eu_dir_2022_2555_art_32_5)]).
-test(escalation_action_taken_within_deadline) :-
-    escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, true)], not_exercisable(action_taken_within_deadline), _).
-test(escalation_missing_key_before_unsure) :-
-    escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, unsure)], indeterminate([deadline_set_for_necessary_action, required_action_taken_within_deadline]), []).
-test(escalation_unsure_refers) :-
+test(all_conditions_met_is_exercisable) :-
+    findall(Result, escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], Result, _), Results),
+    Results == [exercisable].
+test(failing_condition_settles_before_absent_class) :-
+    escalation_powers_exercisable([attribute(deadline_set_for_necessary_action, false)], not_exercisable(no_deadline_set), [cite(eu_dir_2022_2555_art_32_5)]).
+test(failing_condition_settles_before_absent_earlier_condition) :-
+    escalation_powers_exercisable([attribute(entity_class, essential), attribute(earlier_measures_ineffective, false)], not_exercisable(measures_not_ineffective), _).
+test(absent_class_named_when_no_condition_fails) :-
+    escalation_powers_exercisable([attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], indeterminate([entity_class]), []).
+test(absent_condition_named_before_unsure_judgement) :-
+    escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, unsure), attribute(required_action_taken_within_deadline, false)], indeterminate([deadline_set_for_necessary_action]), []).
+test(unsure_ineffectiveness_goes_to_a_lawyer) :-
     escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, unsure), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], needs_legal_review(open_textured(earlier_measures_ineffective, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on([earlier_measures_ineffective-unsure])]), []).
-test(escalation_unsure_is_not_exercisable, fail) :-
+test(unsure_ineffectiveness_is_not_exercisable_outright, fail) :-
     escalation_powers_exercisable([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, unsure), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], exercisable, _).
 
-% ---- fine_barred_by_gdpr_fine ----
-test(fine_barred_when_all_hold) :-
-    findall(Result-Citations, fine_barred_by_gdpr_fine([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(gdpr_fine_imposed_under_art_58_2_i, true), attribute(gdpr_fine_for_same_conduct, true)], Result, Citations), Answers),
-    Answers == [fine_barred-[cite(eu_dir_2022_2555_art_35_2)]].
-test(a_false_condition_settles_not_barred) :-
-    fine_barred_by_gdpr_fine([attribute(infringed_provision, art_23), attribute(infringement_may_entail_notifiable_personal_data_breach, unsure), attribute(gdpr_fine_imposed_under_art_58_2_i, false)], fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]).
-test(fine_bar_missing_keys_before_unsure) :-
-    fine_barred_by_gdpr_fine([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, unsure)], indeterminate([gdpr_fine_imposed_under_art_58_2_i, gdpr_fine_for_same_conduct]), []).
-test(fine_bar_same_conduct_unsure_refers) :-
-    fine_barred_by_gdpr_fine([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(gdpr_fine_imposed_under_art_58_2_i, true), attribute(gdpr_fine_for_same_conduct, unsure)], needs_legal_review(open_textured(gdpr_fine_for_same_conduct, cite(eu_dir_2022_2555_art_35_2)), [inputs_relied_on([infringement_may_entail_notifiable_personal_data_breach-true, gdpr_fine_for_same_conduct-unsure])]), []).
-test(fine_bar_other_infringement_not_barred) :-
+% fine_barred_by_gdpr_fine
+test(false_condition_settles_before_absent_provision) :-
+    fine_barred_by_gdpr_fine([attribute(gdpr_fine_imposed_under_art_58_2_i, false)], fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]).
+test(all_conditions_true_bar_the_fine) :-
+    findall(Result, fine_barred_by_gdpr_fine([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(gdpr_fine_imposed_under_art_58_2_i, true), attribute(gdpr_fine_for_same_conduct, true)], Result, _), Results),
+    Results == [fine_barred].
+test(other_provision_is_not_barred) :-
     fine_barred_by_gdpr_fine([attribute(infringed_provision, other)], fine_not_barred, [cite(eu_dir_2022_2555_art_35_2)]).
+test(absent_provision_named_before_condition_keys) :-
+    fine_barred_by_gdpr_fine([attribute(gdpr_fine_for_same_conduct, unsure)], indeterminate([infringed_provision]), []).
+test(absent_condition_named_before_unsure_breach) :-
+    fine_barred_by_gdpr_fine([attribute(infringed_provision, art_23), attribute(infringement_may_entail_notifiable_personal_data_breach, unsure), attribute(gdpr_fine_imposed_under_art_58_2_i, true)], indeterminate([gdpr_fine_for_same_conduct]), []).
+test(unsure_same_conduct_goes_to_a_lawyer) :-
+    fine_barred_by_gdpr_fine([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(gdpr_fine_imposed_under_art_58_2_i, true), attribute(gdpr_fine_for_same_conduct, unsure)], needs_legal_review(open_textured(gdpr_fine_for_same_conduct, cite(eu_dir_2022_2555_art_35_2)), [inputs_relied_on([infringement_may_entail_notifiable_personal_data_breach-true, gdpr_fine_for_same_conduct-unsure])]), []).
+test(unsure_breach_cites_article_35_1) :-
+    fine_barred_by_gdpr_fine([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, unsure), attribute(gdpr_fine_imposed_under_art_58_2_i, true), attribute(gdpr_fine_for_same_conduct, unsure)], needs_legal_review(open_textured(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)), _), []).
 
-% ---- data_protection_authority_information ----
-test(information_duty_in_own_member_state_only) :-
-    findall(Duty, data_protection_authority_information([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(authority_became_aware_in_supervision_or_enforcement, true), attribute(data_protection_authority_in_other_member_state, false)], Duty), Answers),
-    Answers == [[inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1))]].
-test(information_duty_with_other_member_state) :-
-    data_protection_authority_information([attribute(infringed_provision, art_23), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(authority_became_aware_in_supervision_or_enforcement, true), attribute(data_protection_authority_in_other_member_state, true)], [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1)), inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))]).
-test(information_no_duty_when_not_aware) :-
-    data_protection_authority_information([attribute(infringed_provision, art_21), attribute(authority_became_aware_in_supervision_or_enforcement, false)], []).
-test(information_unsure_breach_refers) :-
-    data_protection_authority_information([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, unsure), attribute(authority_became_aware_in_supervision_or_enforcement, true)], needs_legal_review(open_textured(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)), [inputs_relied_on([infringement_may_entail_notifiable_personal_data_breach-unsure])])).
-test(information_location_key_needed) :-
-    data_protection_authority_information([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(authority_became_aware_in_supervision_or_enforcement, true)], indeterminate([data_protection_authority_in_other_member_state])).
-test(information_input_problems) :-
-    data_protection_authority_information(not_a_profile, input_problems([wrong_type(profile)])).
+% data_protection_authority_information
+test(no_awareness_means_no_duty) :-
+    data_protection_authority_information([attribute(authority_became_aware_in_supervision_or_enforcement, false)], []).
+test(other_provision_means_no_duty) :-
+    data_protection_authority_information([attribute(infringed_provision, other)], []).
+test(duty_in_own_member_state_only) :-
+    data_protection_authority_information([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(authority_became_aware_in_supervision_or_enforcement, true), attribute(data_protection_authority_in_other_member_state, false)], [inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1))]).
+test(duty_lists_both_when_authority_elsewhere) :-
+    findall(DutyList, data_protection_authority_information([attribute(infringed_provision, art_23), attribute(infringement_may_entail_notifiable_personal_data_breach, true), attribute(authority_became_aware_in_supervision_or_enforcement, true), attribute(data_protection_authority_in_other_member_state, true)], DutyList), Answers),
+    Answers == [[inform_gdpr_supervisory_authorities(cite(eu_dir_2022_2555_art_35_1)), inform_supervisory_authority_in_own_member_state(cite(eu_dir_2022_2555_art_35_3))]].
+test(other_member_state_named_before_referral) :-
+    data_protection_authority_information([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, unsure), attribute(authority_became_aware_in_supervision_or_enforcement, true)], indeterminate([data_protection_authority_in_other_member_state])).
+test(unsure_breach_goes_to_a_lawyer_for_the_duty) :-
+    data_protection_authority_information([attribute(infringed_provision, art_21), attribute(infringement_may_entail_notifiable_personal_data_breach, unsure), attribute(authority_became_aware_in_supervision_or_enforcement, true), attribute(data_protection_authority_in_other_member_state, false)], needs_legal_review(open_textured(infringement_may_entail_notifiable_personal_data_breach, cite(eu_dir_2022_2555_art_35_1)), [inputs_relied_on([infringement_may_entail_notifiable_personal_data_breach-unsure])])).
+test(absent_breach_named_before_awareness) :-
+    data_protection_authority_information([attribute(infringed_provision, art_21)], indeterminate([infringement_may_entail_notifiable_personal_data_breach])).
 
-% ---- facade ----
-test(facade_eligible_with_cited_checklist) :-
-    Profile = [attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)],
-    decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(eligible, [cite(eu_dir_2022_2555_art_32_5)])),
-    nis2_supervision_fines_checklist(Profile, Items),
-    length(Items, 5),
-    member(item(deadline_set, met, cite(eu_dir_2022_2555_art_32_5)), Items).
-test(facade_ineligible_for_important) :-
+% facade and checklist
+test(facade_eligible_when_exercisable) :-
+    decide_nis2_supervision_fines([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], nis2_supervision_fines_verdict(eligible, [cite(eu_dir_2022_2555_art_32_5)])).
+test(facade_ineligible_for_important_entity) :-
     nis2_supervision_fines_status([attribute(entity_class, important)], ineligible).
-test(facade_important_is_not_eligible, fail) :-
+test(facade_important_entity_is_not_eligible, fail) :-
     nis2_supervision_fines_status([attribute(entity_class, important)], eligible).
+test(facade_invalid_profile) :-
+    findall(Status, nis2_supervision_fines_status(not_a_list, Status), Statuses),
+    Statuses == [invalid_profile].
+test(checklist_rows_all_met) :-
+    nis2_supervision_fines_checklist([attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], Items),
+    Items == [item(essential_entity, met, cite(eu_dir_2022_2555_art_32_5)), item(not_public_administration, met, cite(eu_dir_2022_2555_art_32_5)), item(earlier_measures_ineffective, met, cite(eu_dir_2022_2555_art_32_5)), item(deadline_set, met, cite(eu_dir_2022_2555_art_32_5)), item(action_not_taken_within_deadline, met, cite(eu_dir_2022_2555_art_32_5))].
+test(checklist_marks_unsure_as_unknown) :-
+    nis2_supervision_fines_checklist([attribute(entity_class, essential), attribute(earlier_measures_ineffective, unsure)], Items),
+    member(item(earlier_measures_ineffective, unknown([earlier_measures_ineffective]), cite(eu_dir_2022_2555_art_32_5)), Items).
+test(constructors_recognise_their_shapes) :-
+    power(escalation, request_temporary_management_ban, cite(eu_dir_2022_2555_art_32_5_b)),
+    not_exercisable(no_deadline_set),
+    minimum_national_maximum(7000000, fixed_amount).
 
 :- end_module(nis2_supervision_fines).

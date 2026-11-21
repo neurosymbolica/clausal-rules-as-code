@@ -1,8 +1,32 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% fixtures.clausal -- representative profiles (attribute lists) for
-% eu/data_protection/gdpr_common_definitions_data_and_processing.
-% Each positive case has a near-miss control.
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_common_definitions_data_and_processing.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Every route of every definition has a positive
+% subject and a one-unit near-miss control that flips exactly one key:
+%   personal data       identified_customer_record / unrelated_statistics,
+%                       pseudonymous_device_identifier / anonymous_aggregate
+%   processing          customer_record_consulted / customer_record_untouched
+%   restriction         restricted_stored_record / unmarked_stored_record
+%   profiling           partially_automated_profiling / manual_evaluation
+%   pseudonymisation    pseudonymised_research_set / research_set_key_held_together
+%   filing system       paper_card_index / loose_correspondence
+%   recipient           disclosure_to_service_provider / inquiry_authority
+%   third party         independent_marketing_partner / processor_receiving_body
+%   consent             clear_affirmative_agreement / default_ticked_box
+%   breach              stolen_laptop_breach / blocked_intrusion_attempt
+%   information society attested_online_marketplace / attested_in_person_service
+%   international       treaty_body, attested_organisation /
+%                       organisation_attested_not_governed
+% Open routes: empty_profile (indeterminate, cross reference),
+% identifiability_unsure and loosely_sorted_bundle (open textured),
+% body_not_treaty_unattested (cross reference).
+% Input-check routes: duplicate_key_profile, wrong_type_profile,
+% unknown_and_unbound_key_profile, not_a_list_profile.
+% The expected answers are asserted in tests/test_public_interface.clausal.
 % =====================================================================
 
 :- module(fixtures, [
@@ -14,50 +38,237 @@
 :- use_module(eu/data_protection/gdpr_common_definitions_data_and_processing/gdpr_common_definitions_data_and_processing, [decide_gdpr_common_definitions_data_and_processing/2]).
 
 % ---- Subject registry ------------------------------------------------
-gdpr_common_definitions_data_and_processing_subject(person_identified).
-gdpr_common_definitions_data_and_processing_subject(not_about_a_person).
+gdpr_common_definitions_data_and_processing_subject(identified_customer_record).
+gdpr_common_definitions_data_and_processing_subject(unrelated_statistics).
+gdpr_common_definitions_data_and_processing_subject(pseudonymous_device_identifier).
+gdpr_common_definitions_data_and_processing_subject(anonymous_aggregate).
 gdpr_common_definitions_data_and_processing_subject(identifiability_unsure).
-gdpr_common_definitions_data_and_processing_subject(operation_missing).
-gdpr_common_definitions_data_and_processing_subject(automated_evaluation).
+gdpr_common_definitions_data_and_processing_subject(empty_profile).
+gdpr_common_definitions_data_and_processing_subject(customer_record_consulted).
+gdpr_common_definitions_data_and_processing_subject(customer_record_untouched).
+gdpr_common_definitions_data_and_processing_subject(restricted_stored_record).
+gdpr_common_definitions_data_and_processing_subject(unmarked_stored_record).
+gdpr_common_definitions_data_and_processing_subject(partially_automated_profiling).
 gdpr_common_definitions_data_and_processing_subject(manual_evaluation).
-gdpr_common_definitions_data_and_processing_subject(pseudonymised_data).
-gdpr_common_definitions_data_and_processing_subject(attribution_without_measures).
-gdpr_common_definitions_data_and_processing_subject(full_consent).
-gdpr_common_definitions_data_and_processing_subject(consent_without_specificity).
-gdpr_common_definitions_data_and_processing_subject(disclosed_to_other_body).
+gdpr_common_definitions_data_and_processing_subject(pseudonymised_research_set).
+gdpr_common_definitions_data_and_processing_subject(research_set_key_held_together).
+gdpr_common_definitions_data_and_processing_subject(paper_card_index).
+gdpr_common_definitions_data_and_processing_subject(loose_correspondence).
+gdpr_common_definitions_data_and_processing_subject(loosely_sorted_bundle).
+gdpr_common_definitions_data_and_processing_subject(disclosure_to_service_provider).
 gdpr_common_definitions_data_and_processing_subject(inquiry_authority).
-gdpr_common_definitions_data_and_processing_subject(own_processor).
-gdpr_common_definitions_data_and_processing_subject(breach_of_personal_data).
-gdpr_common_definitions_data_and_processing_subject(attested_service).
-gdpr_common_definitions_data_and_processing_subject(ordinary_service).
-gdpr_common_definitions_data_and_processing_subject(unattested_service).
-gdpr_common_definitions_data_and_processing_subject(public_international_organisation).
-gdpr_common_definitions_data_and_processing_subject(set_up_by_agreement).
-gdpr_common_definitions_data_and_processing_subject(unattested_organisation).
-gdpr_common_definitions_data_and_processing_subject(malformed_profile).
+gdpr_common_definitions_data_and_processing_subject(independent_marketing_partner).
+gdpr_common_definitions_data_and_processing_subject(processor_receiving_body).
+gdpr_common_definitions_data_and_processing_subject(clear_affirmative_agreement).
+gdpr_common_definitions_data_and_processing_subject(default_ticked_box).
+gdpr_common_definitions_data_and_processing_subject(stolen_laptop_breach).
+gdpr_common_definitions_data_and_processing_subject(blocked_intrusion_attempt).
+gdpr_common_definitions_data_and_processing_subject(attested_online_marketplace).
+gdpr_common_definitions_data_and_processing_subject(attested_in_person_service).
+gdpr_common_definitions_data_and_processing_subject(treaty_body).
+gdpr_common_definitions_data_and_processing_subject(attested_organisation).
+gdpr_common_definitions_data_and_processing_subject(body_not_treaty_unattested).
+gdpr_common_definitions_data_and_processing_subject(organisation_attested_not_governed).
+gdpr_common_definitions_data_and_processing_subject(duplicate_key_profile).
+gdpr_common_definitions_data_and_processing_subject(wrong_type_profile).
+gdpr_common_definitions_data_and_processing_subject(unknown_and_unbound_key_profile).
+gdpr_common_definitions_data_and_processing_subject(not_a_list_profile).
 
 % ---- Profiles --------------------------------------------------------
-gdpr_common_definitions_data_and_processing_profile_for(person_identified, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(operation_performed_on_the_data, true), attribute(stored_data_marked_to_limit_future_processing, true), attribute(structured_set_accessible_by_specific_criteria, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(not_about_a_person, [attribute(information_relates_to_natural_person, false), attribute(natural_person_identified, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(identifiability_unsure, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, false), attribute(natural_person_identifiable, unsure)]).
-gdpr_common_definitions_data_and_processing_profile_for(operation_missing, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(automated_evaluation, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(operation_performed_on_the_data, true), attribute(processing_automated, true), attribute(evaluates_personal_aspects_of_natural_person, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(manual_evaluation, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(operation_performed_on_the_data, true), attribute(processing_automated, false), attribute(evaluates_personal_aspects_of_natural_person, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(pseudonymised_data, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(operation_performed_on_the_data, true), attribute(attribution_needs_additional_information, true), attribute(additional_information_kept_separately, true), attribute(measures_prevent_attribution, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(attribution_without_measures, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(operation_performed_on_the_data, true), attribute(attribution_needs_additional_information, true), attribute(additional_information_kept_separately, true), attribute(measures_prevent_attribution, false)]).
-gdpr_common_definitions_data_and_processing_profile_for(full_consent, [attribute(indication_freely_given, true), attribute(indication_specific, true), attribute(indication_informed, true), attribute(indication_unambiguous, true), attribute(agreement_by_statement_or_clear_affirmative_action, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(consent_without_specificity, [attribute(indication_freely_given, true), attribute(indication_specific, false), attribute(indication_informed, true), attribute(indication_unambiguous, false), attribute(agreement_by_statement_or_clear_affirmative_action, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(disclosed_to_other_body, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(data_disclosed_to_receiving_body, true), attribute(receiving_body_public_authority_in_particular_inquiry, false), attribute(receiving_body_is_data_subject, false), attribute(receiving_body_is_controller_or_processor, false), attribute(receiving_body_authorised_under_direct_authority, false)]).
-gdpr_common_definitions_data_and_processing_profile_for(inquiry_authority, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(data_disclosed_to_receiving_body, true), attribute(receiving_body_public_authority_in_particular_inquiry, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(own_processor, [attribute(receiving_body_is_data_subject, false), attribute(receiving_body_is_controller_or_processor, true), attribute(receiving_body_authorised_under_direct_authority, false)]).
-gdpr_common_definitions_data_and_processing_profile_for(breach_of_personal_data, [attribute(information_relates_to_natural_person, true), attribute(natural_person_identified, true), attribute(operation_performed_on_the_data, true), attribute(breach_of_security, true), attribute(breach_led_to_listed_outcome, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(attested_service, [attribute(service_is_information_society_service, attested(true, attestation(fixture_host, fixture_clock, fixture_reason, none)))]).
-gdpr_common_definitions_data_and_processing_profile_for(ordinary_service, [attribute(service_is_information_society_service, attested(false, attestation(fixture_host, fixture_clock, fixture_reason, none)))]).
-gdpr_common_definitions_data_and_processing_profile_for(unattested_service, []).
-gdpr_common_definitions_data_and_processing_profile_for(public_international_organisation, [attribute(organisation_governed_by_public_international_law, attested(true, attestation(fixture_host, fixture_clock, fixture_reason, none))), attribute(body_set_up_by_agreement_between_countries, false)]).
-gdpr_common_definitions_data_and_processing_profile_for(set_up_by_agreement, [attribute(body_set_up_by_agreement_between_countries, true)]).
-gdpr_common_definitions_data_and_processing_profile_for(unattested_organisation, [attribute(body_set_up_by_agreement_between_countries, false)]).
-gdpr_common_definitions_data_and_processing_profile_for(malformed_profile, [attribute(natural_person_identified, unsure)]).
+% 4(1): identified (crisp) route and its near miss (not relating).
+gdpr_common_definitions_data_and_processing_profile_for(identified_customer_record, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(unrelated_statistics, [
+    attribute(information_relates_to_natural_person, false),
+    attribute(natural_person_identified, true)
+]).
+% 4(1): identifiable (judgement) route and its near miss.
+gdpr_common_definitions_data_and_processing_profile_for(pseudonymous_device_identifier, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, false),
+    attribute(natural_person_identifiable, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(anonymous_aggregate, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, false),
+    attribute(natural_person_identifiable, false)
+]).
+% An unsure identifiability that decides: referred to a lawyer (4(1)).
+gdpr_common_definitions_data_and_processing_profile_for(identifiability_unsure, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, false),
+    attribute(natural_person_identifiable, unsure),
+    attribute(operation_performed_on_the_data, true),
+    attribute(processing_automated, true),
+    attribute(evaluates_personal_aspects_of_natural_person, true)
+]).
+% Nothing established: missing keys and an unresolved cross reference.
+gdpr_common_definitions_data_and_processing_profile_for(empty_profile, []).
+% 4(2).
+gdpr_common_definitions_data_and_processing_profile_for(customer_record_consulted, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(operation_performed_on_the_data, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(customer_record_untouched, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(operation_performed_on_the_data, false)
+]).
+% 4(3).
+gdpr_common_definitions_data_and_processing_profile_for(restricted_stored_record, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(stored_data_marked_to_limit_future_processing, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(unmarked_stored_record, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(stored_data_marked_to_limit_future_processing, false)
+]).
+% 4(4): partial automation counts ('any form'); the near miss is manual,
+% and its unsure evaluation does not reopen a settled not_met.
+gdpr_common_definitions_data_and_processing_profile_for(partially_automated_profiling, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(operation_performed_on_the_data, true),
+    attribute(processing_automated, true),
+    attribute(evaluates_personal_aspects_of_natural_person, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(manual_evaluation, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(operation_performed_on_the_data, true),
+    attribute(processing_automated, false),
+    attribute(evaluates_personal_aspects_of_natural_person, unsure)
+]).
+% 4(5).
+gdpr_common_definitions_data_and_processing_profile_for(pseudonymised_research_set, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, false),
+    attribute(natural_person_identifiable, true),
+    attribute(operation_performed_on_the_data, true),
+    attribute(attribution_needs_additional_information, true),
+    attribute(additional_information_kept_separately, true),
+    attribute(measures_prevent_attribution, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(research_set_key_held_together, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, false),
+    attribute(natural_person_identifiable, true),
+    attribute(operation_performed_on_the_data, true),
+    attribute(attribution_needs_additional_information, true),
+    attribute(additional_information_kept_separately, false),
+    attribute(measures_prevent_attribution, true)
+]).
+% 4(6).
+gdpr_common_definitions_data_and_processing_profile_for(paper_card_index, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(structured_set_accessible_by_specific_criteria, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(loose_correspondence, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(structured_set_accessible_by_specific_criteria, false)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(loosely_sorted_bundle, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(structured_set_accessible_by_specific_criteria, unsure)
+]).
+% 4(9): the inquiry exception defeats the recipient rule.
+gdpr_common_definitions_data_and_processing_profile_for(disclosure_to_service_provider, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(data_disclosed_to_receiving_body, true),
+    attribute(receiving_body_public_authority_in_particular_inquiry, false)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(inquiry_authority, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(data_disclosed_to_receiving_body, true),
+    attribute(receiving_body_public_authority_in_particular_inquiry, true)
+]).
+% 4(10).
+gdpr_common_definitions_data_and_processing_profile_for(independent_marketing_partner, [
+    attribute(receiving_body_is_data_subject, false),
+    attribute(receiving_body_is_controller_or_processor, false),
+    attribute(receiving_body_authorised_under_direct_authority, false)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(processor_receiving_body, [
+    attribute(receiving_body_is_data_subject, false),
+    attribute(receiving_body_is_controller_or_processor, true),
+    attribute(receiving_body_authorised_under_direct_authority, false)
+]).
+% 4(11).
+gdpr_common_definitions_data_and_processing_profile_for(clear_affirmative_agreement, [
+    attribute(indication_freely_given, true),
+    attribute(indication_specific, true),
+    attribute(indication_informed, true),
+    attribute(indication_unambiguous, true),
+    attribute(agreement_by_statement_or_clear_affirmative_action, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(default_ticked_box, [
+    attribute(indication_freely_given, true),
+    attribute(indication_specific, true),
+    attribute(indication_informed, true),
+    attribute(indication_unambiguous, false),
+    attribute(agreement_by_statement_or_clear_affirmative_action, false)
+]).
+% 4(12).
+gdpr_common_definitions_data_and_processing_profile_for(stolen_laptop_breach, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(operation_performed_on_the_data, true),
+    attribute(breach_of_security, true),
+    attribute(breach_led_to_listed_outcome, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(blocked_intrusion_attempt, [
+    attribute(information_relates_to_natural_person, true),
+    attribute(natural_person_identified, true),
+    attribute(operation_performed_on_the_data, true),
+    attribute(breach_of_security, true),
+    attribute(breach_led_to_listed_outcome, false)
+]).
+% 4(25): the attested outside fact.
+gdpr_common_definitions_data_and_processing_profile_for(attested_online_marketplace, [
+    attribute(service_is_information_society_service, attested(true, attestation(host, moment, reason, none)))
+]).
+gdpr_common_definitions_data_and_processing_profile_for(attested_in_person_service, [
+    attribute(service_is_information_society_service, attested(false, attestation(host, moment, reason, none)))
+]).
+% 4(26): the two disjuncts and the referral.
+gdpr_common_definitions_data_and_processing_profile_for(treaty_body, [
+    attribute(body_set_up_by_agreement_between_countries, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(attested_organisation, [
+    attribute(organisation_governed_by_public_international_law, attested(true, attestation(host, moment, reason, none))),
+    attribute(body_set_up_by_agreement_between_countries, false)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(body_not_treaty_unattested, [
+    attribute(body_set_up_by_agreement_between_countries, false)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(organisation_attested_not_governed, [
+    attribute(organisation_governed_by_public_international_law, attested(false, attestation(host, moment, reason, none))),
+    attribute(body_set_up_by_agreement_between_countries, false)
+]).
+% The input check.
+gdpr_common_definitions_data_and_processing_profile_for(duplicate_key_profile, [
+    attribute(processing_automated, true),
+    attribute(processing_automated, true)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(wrong_type_profile, [
+    attribute(natural_person_identified, unsure)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(unknown_and_unbound_key_profile, [
+    attribute(customer_loyalty_tier, true),
+    attribute(UnboundKey, first),
+    attribute(UnboundKey, second)
+]).
+gdpr_common_definitions_data_and_processing_profile_for(not_a_list_profile, nothing).
 
 % ---- Convenience wrapper ---------------------------------------------
 gdpr_common_definitions_data_and_processing_assess(Subject, Result) :-

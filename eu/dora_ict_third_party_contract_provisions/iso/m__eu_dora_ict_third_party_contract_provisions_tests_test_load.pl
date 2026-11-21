@@ -1,0 +1,93 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_third_party_contract_provisions_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_kernel, [dora_ict_third_party_contract_provisions_input_problems/2]).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_citations, [citation/2, implements/1]).
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, dora_ict_third_party_contract_provisions_input_problems([], Problems), Answers),
+    Answers == [[]].
+test(a_well_formed_profile_has_no_problem) :-
+    findall(Problems, dora_ict_third_party_contract_provisions_input_problems([attribute(supports_critical_or_important_function, unsure), attribute(financial_entity_is_microenterprise, true), attribute(contract_is_single_written_document, false)], Problems), Answers),
+    Answers == [[]].
+test(a_term_that_is_not_a_list_is_wrong_type_profile) :-
+    findall(Problems, dora_ict_third_party_contract_provisions_input_problems(not_a_profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_unbound_profile_is_wrong_type_profile) :-
+    findall(Problems, dora_ict_third_party_contract_provisions_input_problems(_Unbound, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_item_that_is_not_an_attribute_is_wrong_type_profile) :-
+    findall(Problems, dora_ict_third_party_contract_provisions_input_problems([attribute(contract_is_single_written_document, true), loose_item], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_key_outside_the_contract_is_unknown) :-
+    dora_ict_third_party_contract_provisions_input_problems([attribute(contract_is_signed, true)], Problems),
+    Problems == [unknown_key(contract_is_signed)].
+test(unsure_is_wrong_type_for_the_microenterprise_fact) :-
+    dora_ict_third_party_contract_provisions_input_problems([attribute(financial_entity_is_microenterprise, unsure)], Problems),
+    Problems == [wrong_type(financial_entity_is_microenterprise)].
+test(unsure_is_in_type_for_a_judgement_key) :-
+    dora_ict_third_party_contract_provisions_input_problems([attribute(contract_provides_delegated_access_inspection_and_audit, unsure)], Problems),
+    Problems == [].
+test(a_repeated_key_is_a_duplicate_and_never_wrong_type) :-
+    dora_ict_third_party_contract_provisions_input_problems([attribute(supports_critical_or_important_function, true), attribute(supports_critical_or_important_function, maybe)], Problems),
+    Problems == [duplicate_key(supports_critical_or_important_function)].
+test(contract_key_problems_come_before_unknown_keys) :-
+    dora_ict_third_party_contract_provisions_input_problems([attribute(contract_is_signed, true), attribute(contract_is_single_written_document, maybe), attribute(contract_is_signed, false)], Problems),
+    Problems == [wrong_type(contract_is_single_written_document), unknown_key(contract_is_signed)].
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = dora_ict_third_party_contract_provisions_verdict(sufficient, [cite(eu_reg_2022_2554_art_28_7), cite(eu_reg_2022_2554_art_30_1), cite(eu_reg_2022_2554_art_30_2), cite(eu_reg_2022_2554_art_30_3)]),
+    Verdict = dora_ict_third_party_contract_provisions_verdict(Status, Citations),
+    Status == sufficient,
+    length(Citations, 4).
+test(the_required_term_destructures_to_its_elements) :-
+    Result = required([termination_for_significant_breach, single_written_document]),
+    Result = required(Elements),
+    Elements == [termination_for_significant_breach, single_written_document].
+test(the_missing_term_destructures_to_its_elements) :-
+    Result = missing([monitoring_rights_of_the_financial_entity_or_delegated_assurance]),
+    Result = missing([Element]),
+    Element == monitoring_rights_of_the_financial_entity_or_delegated_assurance.
+test(the_referral_term_destructures) :-
+    Result = needs_legal_review(open_textured(supports_critical_or_important_function, cite(eu_reg_2022_2554_art_30_3)), [inputs_relied_on([supports_critical_or_important_function - unsure, financial_entity_is_microenterprise - false])]),
+    Result = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == supports_critical_or_important_function,
+    CitationKey == eu_reg_2022_2554_art_30_3,
+    length(Pairs, 2).
+test(the_indeterminate_term_holds_one_key) :-
+    Result = indeterminate([supports_critical_or_important_function]),
+    Result = indeterminate([Key]),
+    Key == supports_critical_or_important_function.
+test(the_verdict_atoms_are_distinct) :-
+    dif(sufficient, insufficient),
+    dif(sufficient, none_missing),
+    dif(insufficient, none_missing),
+    dif(monitoring_rights_of_the_financial_entity, monitoring_rights_of_the_financial_entity_or_delegated_assurance).
+test(the_paragraph_citations_are_recorded) :-
+    citation(eu_reg_2022_2554_art_28_7, _Record287),
+    citation(eu_reg_2022_2554_art_30_1, _Record301),
+    citation(eu_reg_2022_2554_art_30_2, _Record302),
+    citation(eu_reg_2022_2554_art_30_3, _Record303).
+test(the_monitoring_point_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_30_3_e, Record),
+    Record = [label - _, ref - _, verbatim - _].
+test(the_provenance_marker_accepts_a_recorded_key) :-
+    implements(eu_reg_2022_2554_art_30_2_h).
+
+test(a_well_formed_profile_is_not_reported_as_a_problem, fail) :-
+    dora_ict_third_party_contract_provisions_input_problems([attribute(supports_critical_or_important_function, true)], [_|_]).
+test(sufficient_is_not_insufficient, fail) :-
+    sufficient = insufficient.
+test(the_provenance_marker_refuses_an_unrecorded_key, fail) :-
+    implements(eu_reg_2022_2554_art_30_9).
+
+cp_test_names([an_empty_profile_has_no_problem, a_well_formed_profile_has_no_problem, a_term_that_is_not_a_list_is_wrong_type_profile, an_unbound_profile_is_wrong_type_profile, an_item_that_is_not_an_attribute_is_wrong_type_profile, a_key_outside_the_contract_is_unknown, unsure_is_wrong_type_for_the_microenterprise_fact, unsure_is_in_type_for_a_judgement_key, a_repeated_key_is_a_duplicate_and_never_wrong_type, contract_key_problems_come_before_unknown_keys, the_verdict_term_carries_status_and_citations, the_required_term_destructures_to_its_elements, the_missing_term_destructures_to_its_elements, the_referral_term_destructures, the_indeterminate_term_holds_one_key, the_verdict_atoms_are_distinct, the_paragraph_citations_are_recorded, the_monitoring_point_citation_is_recorded, the_provenance_marker_accepts_a_recorded_key]).
+cp_test_fail_names([a_well_formed_profile_is_not_reported_as_a_problem, sufficient_is_not_insufficient, the_provenance_marker_refuses_an_unrecorded_key]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

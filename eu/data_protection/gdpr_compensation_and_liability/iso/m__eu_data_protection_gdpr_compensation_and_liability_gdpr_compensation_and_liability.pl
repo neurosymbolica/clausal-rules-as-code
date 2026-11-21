@@ -1,360 +1,259 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_compensation_and_liability_gdpr_compensation_and_liability, [compensation_liability/4, decide_gdpr_compensation_and_liability/2, gdpr_compensation_and_liability_status/2, gdpr_compensation_and_liability_checklist/2, gdpr_compensation_and_liability_decision_resolvable/1, gdpr_compensation_and_liability_status_values/1, right_not_established/0, not_liable_for_damage/0, exempt_from_liability/0, liable_for_damage/0, indeterminate/1, needs_legal_review/2, open_textured/2, cross_reference_unresolved/2, resolution/2, inputs_relied_on/1, provenance/2, outside_fact/2, attested/2, input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1, party_role/0, involved_in_the_processing/0, processor_breached_obligations_directed_to_processors/0, processor_acted_outside_or_contrary_to_lawful_instructions/0, damage_suffered/0, infringement_of_the_regulation_occurred/0, damage_resulted_from_the_infringement/0, not_in_any_way_responsible_for_the_event/0, controller/0, processor/0, unsure/0, absent/0, not_attempted/0]).
+:- module(m__eu_data_protection_gdpr_compensation_and_liability_gdpr_compensation_and_liability, [compensation_liability/4, decide_gdpr_compensation_and_liability/2, gdpr_compensation_and_liability_status/2, gdpr_compensation_and_liability_checklist/2, gdpr_compensation_and_liability_decision_resolvable/1, gdpr_compensation_and_liability_status_values/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_lists_extra, [is_list/1]).
-:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(library(pairs), [pairs_values/2]).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_keys/2]).
 :- use_module(m__eu_data_protection_gdpr_compensation_and_liability_kernel, [gdpr_compensation_and_liability_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_compensation_and_liability_citations, [implements/1]).
 
-article_82_1_condition(damage_suffered, cite(eu_reg_2016_679_art_82_1)).
-article_82_1_condition(infringement_of_the_regulation_occurred, cite(eu_reg_2016_679_art_82_1)).
-article_82_1_condition(damage_resulted_from_the_infringement, cite(eu_reg_2016_679_art_82_1)).
-
-deferred_provision(joint_liability_for_the_entire_damage, cite(eu_reg_2016_679_art_82_4)).
-deferred_provision(recourse_between_those_involved, cite(eu_reg_2016_679_art_82_5)).
-deferred_provision(courts_competent_for_the_proceedings, cite(eu_reg_2016_679_art_82_6)).
-
 gdpr_compensation_and_liability_status_values([right_not_established, not_liable_for_damage, exempt_from_liability, liable_for_damage]).
 
-right_not_established.
+deferred_provision(cite(eu_reg_2016_679_art_82_4), joint_liability_for_the_entire_damage).
+deferred_provision(cite(eu_reg_2016_679_art_82_5), recourse_between_those_involved).
+deferred_provision(cite(eu_reg_2016_679_art_82_6), courts_competent_for_the_proceedings).
 
-not_liable_for_damage.
+key_state(Profile, ProfileKey, KeyState) :-
+    profile_keys(Profile, PresentKeys),
+    memberd_t(ProfileKey, PresentKeys, Present),
+    present_state(Present, Profile, ProfileKey, KeyState).
 
-exempt_from_liability.
+present_state(false, _, _, absent).
+present_state(true, Profile, ProfileKey, present(Value)) :-
+    profile_get(Profile, ProfileKey, Value).
 
-liable_for_damage.
+first_with(_, [], none).
+first_with(Wanted, [ProfileKey - KeyState|_], found(ProfileKey)) :-
+    KeyState == Wanted.
+first_with(Wanted, [_ - KeyState|Remaining], Found) :-
+    KeyState \== Wanted,
+    first_with(Wanted, Remaining, Found).
 
-indeterminate(MissingKeys) :-
-    MissingKeys = [_|_].
-
-needs_legal_review(Reason, Context) :-
-    compound(Reason),
-    is_list(Context).
-
-open_textured(Key, cite(_Citation)) :-
-    atom(Key).
-
-cross_reference_unresolved(cite(_Citation), cite(_Target)).
-
-resolution(cite(_Target), not_attempted).
-
-inputs_relied_on(Pairs) :-
-    is_list(Pairs).
-
-provenance(_Source, Detail) :-
-    nonvar(Detail).
-provenance(_Source, Detail) :-
-    var(Detail),
-    Detail = unstated.
-
-outside_fact(Key, Attested) :-
-    atom(Key),
-    nonvar(Attested),
-    Attested = attested(_Value, _Attestation).
-outside_fact(Key, Attested) :-
-    atom(Key),
-    var(Attested),
-    Attested = attested(unstated, attestation(unstated, unstated, unstated, none)).
-
-attested(true, Attestation) :-
-    nonvar(Attestation),
-    Attestation = attestation(_By, _At, _Reason, _Evidence).
-attested(true, Attestation) :-
-    var(Attestation),
-    Attestation = attestation(unstated, unstated, unstated, none).
-attested(false, Attestation) :-
-    nonvar(Attestation),
-    Attestation = attestation(_By, _At, _Reason, _Evidence).
-attested(false, Attestation) :-
-    var(Attestation),
-    Attestation = attestation(unstated, unstated, unstated, none).
-
-input_problems(Problems) :-
-    Problems = [_|_].
-
-unknown_key(Key) :-
-    nonvar(Key).
-
-wrong_type(Key) :-
-    atom(Key).
-
-duplicate_key(Key) :-
-    atom(Key).
-
-party_role.
-
-involved_in_the_processing.
-
-processor_breached_obligations_directed_to_processors.
-
-processor_acted_outside_or_contrary_to_lawful_instructions.
-
-damage_suffered.
-
-infringement_of_the_regulation_occurred.
-
-damage_resulted_from_the_infringement.
-
-not_in_any_way_responsible_for_the_event.
-
-controller.
-
-processor.
-
-unsure.
-
-absent.
-
-not_attempted.
-
-compensation_liability(Profile, input_problems([Problem|Problems]), [], []) :-
-    gdpr_compensation_and_liability_input_problems(Profile, [Problem|Problems]).
-compensation_liability(Profile, Result, Basis, Citations) :-
-    gdpr_compensation_and_liability_input_problems(Profile, []),
-    judgement_states(Profile, JudgementStates),
-    judgement_outcome(JudgementStates, Outcome),
-    caller_position_of(Profile, Position),
-    key_state(Profile, not_in_any_way_responsible_for_the_event, FactState),
-    liability_route(Outcome, Position, FactState, JudgementStates, Result, Basis, Citations).
-
-key_state(Profile, Key, absent) :-
-    profile_lacks(Profile, Key).
-key_state(Profile, Key, present(Value)) :-
-    profile_has(Profile, Key),
-    profile_get(Profile, Key, Value).
-
-judgement_states(Profile, [damage_suffered - DamageState, infringement_of_the_regulation_occurred - InfringementState, damage_resulted_from_the_infringement - CausationState]) :-
+judgement_key_states(Profile, [damage_suffered - DamageState, infringement_of_the_regulation_occurred - InfringementState, damage_resulted_from_the_infringement - CausationState]) :-
     key_state(Profile, damage_suffered, DamageState),
     key_state(Profile, infringement_of_the_regulation_occurred, InfringementState),
     key_state(Profile, damage_resulted_from_the_infringement, CausationState).
 
-judgement_false_t([], false).
-judgement_false_t([_ - present(false)|_], true).
-judgement_false_t([_ - present(Value)|States], Truth) :-
-    dif(Value, false),
-    judgement_false_t(States, Truth).
-judgement_false_t([_ - absent|States], Truth) :-
-    judgement_false_t(States, Truth).
-
-first_absent_judgement([], none).
-first_absent_judgement([Key - absent|_], key(Key)).
-first_absent_judgement([_ - present(_)|States], First) :-
-    first_absent_judgement(States, First).
-
-first_unsure_judgement([], none).
-first_unsure_judgement([Key - present(unsure)|_], key(Key)).
-first_unsure_judgement([_ - present(Value)|States], First) :-
-    dif(Value, unsure),
-    first_unsure_judgement(States, First).
-
-relied_on_pairs([], []).
-relied_on_pairs([Key - present(Value)|States], [Key - Value|Pairs]) :-
-    relied_on_pairs(States, Pairs).
-
-judgement_outcome(States, refuted) :-
+judgement_summary(Profile, Summary) :-
     implements(eu_reg_2016_679_art_82_1),
-    judgement_false_t(States, true).
-judgement_outcome(States, missing(Key)) :-
-    implements(eu_reg_2016_679_art_82_1),
-    judgement_false_t(States, false),
-    first_absent_judgement(States, key(Key)).
-judgement_outcome(States, settled(FirstUnsure)) :-
-    implements(eu_reg_2016_679_art_82_1),
-    judgement_false_t(States, false),
-    first_absent_judgement(States, none),
-    first_unsure_judgement(States, FirstUnsure).
+    judgement_key_states(Profile, KeyStates),
+    pairs_values(KeyStates, StateValues),
+    memberd_t(present(false), StateValues, HasFalse),
+    summary_after_false(HasFalse, KeyStates, Summary).
 
-caller_position_of(Profile, Position) :-
+summary_after_false(true, _, some_false).
+summary_after_false(false, KeyStates, Summary) :-
+    first_with(absent, KeyStates, FirstAbsent),
+    summary_after_absent(FirstAbsent, KeyStates, Summary).
+
+summary_after_absent(found(JudgementKey), _, judgement_absent(JudgementKey)).
+summary_after_absent(none, KeyStates, Summary) :-
+    first_with(present(unsure), KeyStates, FirstUnsure),
+    summary_after_unsure(FirstUnsure, Summary).
+
+summary_after_unsure(found(JudgementKey), judgement_unsure(JudgementKey)).
+summary_after_unsure(none, all_true).
+
+position_readable(all_true).
+position_readable(judgement_unsure(_)).
+
+judgement_pairs(Profile, [damage_suffered - DamageValue, infringement_of_the_regulation_occurred - InfringementValue, damage_resulted_from_the_infringement - CausationValue]) :-
+    profile_get(Profile, damage_suffered, DamageValue),
+    profile_get(Profile, infringement_of_the_regulation_occurred, InfringementValue),
+    profile_get(Profile, damage_resulted_from_the_infringement, CausationValue).
+
+caller_position(Profile, Position) :-
+    implements(eu_reg_2016_679_art_82_2),
     key_state(Profile, party_role, RoleState),
+    role_position(RoleState, Profile, Position).
+
+role_position(absent, _, undecided(party_role)).
+role_position(present(controller), Profile, Position) :-
+    implements(eu_reg_2016_679_art_82_2),
     key_state(Profile, involved_in_the_processing, InvolvedState),
-    key_state(Profile, processor_breached_obligations_directed_to_processors, BreachState),
-    key_state(Profile, processor_acted_outside_or_contrary_to_lawful_instructions, InstructionsState),
-    caller_position(RoleState, InvolvedState, BreachState, InstructionsState, Position).
-
-caller_position(absent, _, _, _, undecided(party_role)) :-
-    implements(eu_reg_2016_679_art_82_2).
-caller_position(present(controller), InvolvedState, _, _, Position) :-
-    implements(eu_reg_2016_679_art_82_2),
     controller_position(InvolvedState, Position).
-caller_position(present(processor), _, BreachState, InstructionsState, Position) :-
+role_position(present(processor), Profile, Position) :-
     implements(eu_reg_2016_679_art_82_2),
-    processor_position(BreachState, InstructionsState, Position).
+    key_state(Profile, processor_breached_obligations_directed_to_processors, BreachState),
+    key_state(Profile, processor_acted_outside_or_contrary_to_lawful_instructions, InstructionState),
+    memberd_t(present(true), [BreachState, InstructionState], AnyTrue),
+    processor_position(AnyTrue, [processor_breached_obligations_directed_to_processors - BreachState, processor_acted_outside_or_contrary_to_lawful_instructions - InstructionState], Position).
 
-controller_position(absent, undecided(involved_in_the_processing)) :-
-    implements(eu_reg_2016_679_art_82_2).
+controller_position(absent, undecided(involved_in_the_processing)).
 controller_position(present(true), inside) :-
     implements(eu_reg_2016_679_art_82_2).
 controller_position(present(false), outside) :-
     implements(eu_reg_2016_679_art_82_2).
 
-processor_position(present(true), _, inside) :-
+processor_position(true, _, inside) :-
     implements(eu_reg_2016_679_art_82_2).
-processor_position(present(false), present(true), inside) :-
-    implements(eu_reg_2016_679_art_82_2).
-processor_position(absent, present(true), inside) :-
-    implements(eu_reg_2016_679_art_82_2).
-processor_position(present(false), present(false), outside) :-
-    implements(eu_reg_2016_679_art_82_2).
-processor_position(absent, present(false), undecided(processor_breached_obligations_directed_to_processors)) :-
-    implements(eu_reg_2016_679_art_82_2).
-processor_position(absent, absent, undecided(processor_breached_obligations_directed_to_processors)) :-
-    implements(eu_reg_2016_679_art_82_2).
-processor_position(present(false), absent, undecided(processor_acted_outside_or_contrary_to_lawful_instructions)) :-
-    implements(eu_reg_2016_679_art_82_2).
+processor_position(false, ProcessorStates, Position) :-
+    implements(eu_reg_2016_679_art_82_2),
+    first_with(absent, ProcessorStates, FirstAbsent),
+    processor_undecided(FirstAbsent, Position).
 
-liability_route(refuted, _, _, _, right_not_established, [], [cite(eu_reg_2016_679_art_82_1)]) :-
-    implements(eu_reg_2016_679_art_82_1).
-liability_route(missing(Key), _, _, _, indeterminate([Key]), [], []) :-
-    implements(eu_reg_2016_679_art_82_1).
-liability_route(settled(_), undecided(Key), _, _, indeterminate([Key]), [], []) :-
-    implements(eu_reg_2016_679_art_82_2).
-liability_route(settled(none), outside, _, _, not_liable_for_damage, [], [cite(eu_reg_2016_679_art_82_2)]) :-
-    implements(eu_reg_2016_679_art_82_2).
-liability_route(settled(key(Key)), outside, _, States, needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on(Pairs)]), [], []) :-
+processor_undecided(found(ProcessorKey), undecided(ProcessorKey)).
+processor_undecided(none, outside).
+
+outside_fact_state(Profile, OutsideFactState) :-
+    key_state(Profile, not_in_any_way_responsible_for_the_event, OutsideFactState).
+
+compensation_liability(Profile, input_problems([Problem|Problems]), [], []) :-
+    gdpr_compensation_and_liability_input_problems(Profile, [Problem|Problems]).
+compensation_liability(Profile, right_not_established, [], [cite(eu_reg_2016_679_art_82_1)]) :-
     implements(eu_reg_2016_679_art_82_1),
-    relied_on_pairs(States, Pairs).
-liability_route(settled(_), inside, absent, States, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_3), cite(non_responsibility_statement)), [resolution(cite(non_responsibility_statement), not_attempted), inputs_relied_on(Pairs)]), [], []) :-
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, some_false).
+compensation_liability(Profile, indeterminate([JudgementKey]), [], []) :-
+    implements(eu_reg_2016_679_art_82_1),
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, judgement_absent(JudgementKey)).
+compensation_liability(Profile, indeterminate([LimbKey]), [], []) :-
+    implements(eu_reg_2016_679_art_82_2),
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, Summary),
+    position_readable(Summary),
+    caller_position(Profile, undecided(LimbKey)).
+compensation_liability(Profile, not_liable_for_damage, [], [cite(eu_reg_2016_679_art_82_2)]) :-
+    implements(eu_reg_2016_679_art_82_2),
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, all_true),
+    caller_position(Profile, outside).
+compensation_liability(Profile, needs_legal_review(open_textured(JudgementKey, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on(JudgementPairs)]), [], []) :-
+    implements(eu_reg_2016_679_art_82_1),
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, judgement_unsure(JudgementKey)),
+    caller_position(Profile, outside),
+    judgement_pairs(Profile, JudgementPairs).
+compensation_liability(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_3), cite(non_responsibility_statement)), [resolution(cite(non_responsibility_statement), not_attempted), inputs_relied_on(ReliedPairs)]), [], []) :-
     implements(eu_reg_2016_679_art_82_3),
-    relied_on_pairs(States, JudgementPairs),
-    append(JudgementPairs, [not_in_any_way_responsible_for_the_event - absent], Pairs).
-liability_route(settled(key(Key)), inside, present(_), States, needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on(Pairs)]), [], []) :-
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, Summary),
+    position_readable(Summary),
+    caller_position(Profile, inside),
+    outside_fact_state(Profile, absent),
+    judgement_pairs(Profile, JudgementPairs),
+    append(JudgementPairs, [not_in_any_way_responsible_for_the_event - absent], ReliedPairs).
+compensation_liability(Profile, needs_legal_review(open_textured(JudgementKey, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on(JudgementPairs)]), [], []) :-
     implements(eu_reg_2016_679_art_82_1),
-    relied_on_pairs(States, Pairs).
-liability_route(settled(none), inside, present(attested(true, Attestation)), _, exempt_from_liability, [outside_fact(not_in_any_way_responsible_for_the_event, attested(true, Attestation))], [cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]) :-
-    implements(eu_reg_2016_679_art_82_3).
-liability_route(settled(none), inside, present(attested(false, Attestation)), _, liable_for_damage, [outside_fact(not_in_any_way_responsible_for_the_event, attested(false, Attestation))], [cite(eu_reg_2016_679_art_82_1), cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]) :-
-    implements(eu_reg_2016_679_art_82_2).
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, judgement_unsure(JudgementKey)),
+    caller_position(Profile, inside),
+    outside_fact_state(Profile, present(_)),
+    judgement_pairs(Profile, JudgementPairs).
+compensation_liability(Profile, exempt_from_liability, [outside_fact(not_in_any_way_responsible_for_the_event, Attested)], [cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]) :-
+    implements(eu_reg_2016_679_art_82_3),
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, all_true),
+    caller_position(Profile, inside),
+    outside_fact_state(Profile, present(Attested)),
+    Attested = attested(true, _).
+compensation_liability(Profile, liable_for_damage, [outside_fact(not_in_any_way_responsible_for_the_event, Attested)], [cite(eu_reg_2016_679_art_82_1), cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]) :-
+    implements(eu_reg_2016_679_art_82_1),
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_summary(Profile, all_true),
+    caller_position(Profile, inside),
+    outside_fact_state(Profile, present(Attested)),
+    Attested = attested(false, _).
 
-decide_gdpr_compensation_and_liability(Profile, gdpr_compensation_and_liability_verdict(Status, Citations)) :-
-    compensation_liability(Profile, Status, _Basis, Citations).
+decide_gdpr_compensation_and_liability(Profile, gdpr_compensation_and_liability_verdict(Result, Citations)) :-
+    compensation_liability(Profile, Result, _Basis, Citations).
 
 gdpr_compensation_and_liability_status(Profile, Status) :-
     decide_gdpr_compensation_and_liability(Profile, gdpr_compensation_and_liability_verdict(Status, _Citations)).
 
-gdpr_compensation_and_liability_checklist(Profile, Items) :-
-    gdpr_compensation_and_liability_input_problems(Profile, []),
-    judgement_states(Profile, States),
-    maplist(judgement_item, States, JudgementItems),
-    caller_position_of(Profile, Position),
-    key_state(Profile, not_in_any_way_responsible_for_the_event, FactState),
-    limb_item(Position, LimbItem),
-    exemption_item(Position, FactState, ExemptionItem),
-    append(JudgementItems, [LimbItem, ExemptionItem], Items).
-
-judgement_item(Key - State, item(Key, Status, Citation)) :-
-    implements(eu_reg_2016_679_art_82_1),
-    article_82_1_condition(Key, Citation),
-    judgement_item_status(State, Key, Status).
-
-judgement_item_status(present(true), _, met).
-judgement_item_status(present(false), _, unmet(judged_false)).
-judgement_item_status(present(unsure), Key, unknown([Key])).
-judgement_item_status(absent, Key, unknown([Key])).
-
-limb_item(inside, item(liability_limb_of_article_82_2, met, cite(eu_reg_2016_679_art_82_2))) :-
-    implements(eu_reg_2016_679_art_82_2).
-limb_item(outside, item(liability_limb_of_article_82_2, unmet(caller_outside_article_82_2), cite(eu_reg_2016_679_art_82_2))) :-
-    implements(eu_reg_2016_679_art_82_2).
-limb_item(undecided(Key), item(liability_limb_of_article_82_2, unknown([Key]), cite(eu_reg_2016_679_art_82_2))) :-
-    implements(eu_reg_2016_679_art_82_2).
-
-exemption_item(outside, _, item(exemption_under_article_82_3_not_proved, inapplicable, cite(eu_reg_2016_679_art_82_3))) :-
-    implements(eu_reg_2016_679_art_82_3).
-exemption_item(undecided(Key), _, item(exemption_under_article_82_3_not_proved, unknown([Key]), cite(eu_reg_2016_679_art_82_3))) :-
-    implements(eu_reg_2016_679_art_82_3).
-exemption_item(inside, absent, item(exemption_under_article_82_3_not_proved, unknown([not_in_any_way_responsible_for_the_event]), cite(eu_reg_2016_679_art_82_3))) :-
-    implements(eu_reg_2016_679_art_82_3).
-exemption_item(inside, present(attested(false, _)), item(exemption_under_article_82_3_not_proved, met, cite(eu_reg_2016_679_art_82_3))) :-
-    implements(eu_reg_2016_679_art_82_3).
-exemption_item(inside, present(attested(true, _)), item(exemption_under_article_82_3_not_proved, unmet(not_in_any_way_responsible_for_the_event), cite(eu_reg_2016_679_art_82_3))) :-
-    implements(eu_reg_2016_679_art_82_3).
-
 gdpr_compensation_and_liability_decision_resolvable(Profile) :-
     decide_gdpr_compensation_and_liability(Profile, _Verdict).
 
-test(controller_attested_false_is_liable) :-
-    findall(Result - Basis - Citations, compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host_operator, recorded_at, reason_given, none)))], Result, Basis, Citations), Answers),
-    Answers == [liable_for_damage - [outside_fact(not_in_any_way_responsible_for_the_event, attested(false, attestation(host_operator, recorded_at, reason_given, none)))] - [cite(eu_reg_2016_679_art_82_1), cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]].
-test(controller_attested_true_is_exempt) :-
-    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(true, attestation(host_operator, recorded_at, reason_given, none)))], exempt_from_liability, [outside_fact(not_in_any_way_responsible_for_the_event, attested(true, attestation(host_operator, recorded_at, reason_given, none)))], [cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]).
-test(a_false_damage_judgement_decides_alone) :-
-    findall(Result, compensation_liability([attribute(damage_suffered, false)], Result, _, _), Results),
-    Results == [right_not_established].
-test(a_false_judgement_beats_an_outside_controller) :-
-    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, false), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, unsure), attribute(damage_resulted_from_the_infringement, false)], right_not_established, [], [cite(eu_reg_2016_679_art_82_1)]).
-test(an_empty_profile_names_damage_first) :-
-    findall(Result, compensation_liability([], Result, _, _), Results),
-    Results == [indeterminate([damage_suffered])].
-test(a_missing_role_is_named) :-
+gdpr_compensation_and_liability_checklist(Profile, [item(damage_suffered, DamageStatus, cite(eu_reg_2016_679_art_82_1)), item(infringement_of_the_regulation_occurred, InfringementStatus, cite(eu_reg_2016_679_art_82_1)), item(damage_resulted_from_the_infringement, CausationStatus, cite(eu_reg_2016_679_art_82_1)), item(liability_limb_of_article_82_2, LimbStatus, cite(eu_reg_2016_679_art_82_2)), item(no_exemption_under_article_82_3, ExemptionStatus, cite(eu_reg_2016_679_art_82_3))]) :-
+    gdpr_compensation_and_liability_input_problems(Profile, []),
+    judgement_requirement(Profile, damage_suffered, damage_not_suffered, DamageStatus),
+    judgement_requirement(Profile, infringement_of_the_regulation_occurred, no_infringement, InfringementStatus),
+    judgement_requirement(Profile, damage_resulted_from_the_infringement, damage_not_resulting_from_the_infringement, CausationStatus),
+    limb_requirement(Profile, LimbStatus),
+    exemption_requirement(Profile, ExemptionStatus).
+
+judgement_requirement(Profile, JudgementKey, Reason, Status) :-
+    implements(eu_reg_2016_679_art_82_1),
+    key_state(Profile, JudgementKey, KeyState),
+    judgement_item_status(KeyState, JudgementKey, Reason, Status).
+
+judgement_item_status(present(true), _, _, met).
+judgement_item_status(present(false), _, Reason, unmet(Reason)).
+judgement_item_status(present(unsure), JudgementKey, _, unknown([JudgementKey])).
+judgement_item_status(absent, JudgementKey, _, unknown([JudgementKey])).
+
+limb_requirement(Profile, Status) :-
+    implements(eu_reg_2016_679_art_82_2),
+    caller_position(Profile, Position),
+    limb_item_status(Position, Status).
+
+limb_item_status(inside, met).
+limb_item_status(outside, unmet(outside_article_82_2)).
+limb_item_status(undecided(LimbKey), unknown([LimbKey])).
+
+exemption_requirement(Profile, Status) :-
+    implements(eu_reg_2016_679_art_82_3),
+    outside_fact_state(Profile, OutsideFactState),
+    exemption_item_status(OutsideFactState, Status).
+
+exemption_item_status(absent, unknown([not_in_any_way_responsible_for_the_event])).
+exemption_item_status(present(attested(false, _)), met).
+exemption_item_status(present(attested(true, _)), unmet(exempt_on_attested_statement)).
+
+test(the_deferred_provisions_are_recorded) :-
+    findall(Citation, deferred_provision(Citation, _Deferral), Citations),
+    Citations == [cite(eu_reg_2016_679_art_82_4), cite(eu_reg_2016_679_art_82_5), cite(eu_reg_2016_679_art_82_6)].
+test(a_false_damage_judgement_alone_is_right_not_established) :-
+    compensation_liability([attribute(damage_suffered, false)], right_not_established, [], [cite(eu_reg_2016_679_art_82_1)]).
+test(a_false_infringement_beats_an_absent_damage) :-
+    compensation_liability([attribute(infringement_of_the_regulation_occurred, false)], right_not_established, [], _).
+test(a_false_causation_beats_an_outside_processor) :-
+    compensation_liability([attribute(party_role, processor), attribute(processor_breached_obligations_directed_to_processors, false), attribute(processor_acted_outside_or_contrary_to_lawful_instructions, false), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, false)], right_not_established, [], _).
+test(an_empty_profile_names_damage_suffered) :-
+    compensation_liability([], indeterminate([damage_suffered]), [], []).
+test(the_first_absent_judgement_is_named) :-
+    compensation_liability([attribute(damage_suffered, true), attribute(damage_resulted_from_the_infringement, unsure)], indeterminate([infringement_of_the_regulation_occurred]), [], []).
+test(an_absent_role_is_named) :-
     compensation_liability([attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], indeterminate([party_role]), [], []).
+test(a_controller_without_involvement_names_it) :-
+    compensation_liability([attribute(party_role, controller), attribute(processor_breached_obligations_directed_to_processors, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, unsure), attribute(damage_resulted_from_the_infringement, true)], indeterminate([involved_in_the_processing]), [], []).
+test(a_processor_with_one_false_ground_names_the_other) :-
+    compensation_liability([attribute(party_role, processor), attribute(processor_breached_obligations_directed_to_processors, false), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], indeterminate([processor_acted_outside_or_contrary_to_lawful_instructions]), [], []).
+test(a_processor_with_one_true_ground_needs_not_the_other) :-
+    compensation_liability([attribute(party_role, processor), attribute(processor_acted_outside_or_contrary_to_lawful_instructions, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host, at, reason, none)))], liable_for_damage, [outside_fact(not_in_any_way_responsible_for_the_event, attested(false, attestation(host, at, reason, none)))], _).
 test(an_uninvolved_controller_is_not_liable) :-
     compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, false), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], not_liable_for_damage, [], [cite(eu_reg_2016_679_art_82_2)]).
 test(an_uninvolved_controller_with_an_unsure_judgement_is_referred) :-
-    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, false), attribute(damage_suffered, unsure), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], needs_legal_review(open_textured(damage_suffered, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on([damage_suffered - unsure, infringement_of_the_regulation_occurred - true, damage_resulted_from_the_infringement - true])]), [], []).
+    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, false), attribute(damage_suffered, unsure), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, unsure)], needs_legal_review(open_textured(damage_suffered, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on([damage_suffered - unsure, infringement_of_the_regulation_occurred - true, damage_resulted_from_the_infringement - unsure])]), [], []).
 test(an_absent_statement_refers_before_an_unsure_judgement) :-
     compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, unsure), attribute(damage_resulted_from_the_infringement, true)], needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_82_3), cite(non_responsibility_statement)), [resolution(cite(non_responsibility_statement), not_attempted), inputs_relied_on([damage_suffered - true, infringement_of_the_regulation_occurred - unsure, damage_resulted_from_the_infringement - true, not_in_any_way_responsible_for_the_event - absent])]), [], []).
 test(a_present_statement_with_an_unsure_judgement_is_referred) :-
-    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, unsure), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host_operator, recorded_at, reason_given, none)))], needs_legal_review(open_textured(damage_resulted_from_the_infringement, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on([damage_suffered - true, infringement_of_the_regulation_occurred - true, damage_resulted_from_the_infringement - unsure])]), [], []).
-test(a_processor_with_one_breach_is_liable) :-
-    compensation_liability([attribute(party_role, processor), attribute(processor_acted_outside_or_contrary_to_lawful_instructions, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host_operator, recorded_at, reason_given, none)))], liable_for_damage, _, _).
-test(a_processor_without_breach_keys_names_the_first) :-
-    compensation_liability([attribute(party_role, processor), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], indeterminate([processor_breached_obligations_directed_to_processors]), [], []).
-test(a_processor_with_neither_breach_is_not_liable) :-
-    compensation_liability([attribute(party_role, processor), attribute(processor_breached_obligations_directed_to_processors, false), attribute(processor_acted_outside_or_contrary_to_lawful_instructions, false), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], not_liable_for_damage, [], [cite(eu_reg_2016_679_art_82_2)]).
+    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, unsure), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host, at, reason, none)))], needs_legal_review(open_textured(infringement_of_the_regulation_occurred, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on([damage_suffered - true, infringement_of_the_regulation_occurred - unsure, damage_resulted_from_the_infringement - true])]), [], []).
+test(an_attested_true_statement_exempts) :-
+    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(true, attestation(host, at, reason, url(address, retrieved))))], exempt_from_liability, [outside_fact(not_in_any_way_responsible_for_the_event, attested(true, attestation(host, at, reason, url(address, retrieved))))], [cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]).
+test(an_attested_false_statement_is_liable) :-
+    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host, at, reason, none)))], liable_for_damage, _, [cite(eu_reg_2016_679_art_82_1), cite(eu_reg_2016_679_art_82_2), cite(eu_reg_2016_679_art_82_3)]).
 test(an_unknown_key_is_an_input_problem) :-
-    compensation_liability([attribute(colour, red)], input_problems([unknown_key(colour)]), [], []).
-test(the_checklist_cites_every_row) :-
-    gdpr_compensation_and_liability_checklist([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], Items),
-    length(Items, 5),
-    member(item(liability_limb_of_article_82_2, met, cite(eu_reg_2016_679_art_82_2)), Items).
-test(the_status_projection) :-
+    compensation_liability([attribute(colour, blue)], input_problems([unknown_key(colour)]), [], []).
+test(each_profile_has_exactly_one_answer) :-
+    findall(Result - Basis - Citations, compensation_liability([attribute(party_role, processor), attribute(processor_breached_obligations_directed_to_processors, true), attribute(processor_acted_outside_or_contrary_to_lawful_instructions, true), attribute(damage_suffered, false), attribute(infringement_of_the_regulation_occurred, false)], Result, Basis, Citations), Answers),
+    length(Answers, 1).
+test(the_status_projection_reads_the_result) :-
     gdpr_compensation_and_liability_status([attribute(damage_suffered, false)], right_not_established).
-test(an_attested_constructor_with_a_free_attestation_is_ground) :-
-    attested(true, Attestation),
-    ground(Attestation).
-test(an_attested_constructor_accepts_url_evidence) :-
-    attested(false, attestation(host_operator, recorded_at, reason_given, url(evidence_address, retrieved_at))).
-test(a_provenance_constructor_with_a_free_detail_is_ground) :-
-    provenance(non_responsibility_statement, Detail),
-    ground(Detail).
-test(an_outside_fact_constructor_with_a_free_statement_is_ground) :-
-    outside_fact(not_in_any_way_responsible_for_the_event, Attested),
-    ground(Attested).
-test(the_deferred_provisions_are_recorded) :-
-    deferred_provision(joint_liability_for_the_entire_damage, cite(eu_reg_2016_679_art_82_4)),
-    deferred_provision(recourse_between_those_involved, cite(eu_reg_2016_679_art_82_5)),
-    deferred_provision(courts_competent_for_the_proceedings, cite(eu_reg_2016_679_art_82_6)).
-test(the_indeterminate_constructor_holds_for_one_key) :-
-    indeterminate([damage_suffered]).
-test(the_needs_legal_review_constructor_holds_for_a_referral) :-
-    needs_legal_review(open_textured(damage_suffered, cite(eu_reg_2016_679_art_82_1)), [inputs_relied_on([damage_suffered - unsure, infringement_of_the_regulation_occurred - true, damage_resulted_from_the_infringement - true])]).
-test(the_outside_fact_constructor_holds_for_an_attested_statement) :-
-    outside_fact(not_in_any_way_responsible_for_the_event, attested(false, attestation(host_operator, recorded_at, reason_given, none))).
-test(the_input_problems_constructor_holds_for_a_problem_list) :-
-    input_problems([unknown_key(colour)]).
-test(the_unknown_key_constructor_holds_for_a_key) :-
-    unknown_key(colour).
-test(the_wrong_type_constructor_holds_for_a_key) :-
-    wrong_type(party_role).
-test(the_duplicate_key_constructor_holds_for_a_key) :-
-    duplicate_key(damage_suffered).
+test(the_checklist_cites_each_ground) :-
+    gdpr_compensation_and_liability_checklist([attribute(party_role, controller), attribute(involved_in_the_processing, false), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, unsure)], [item(damage_suffered, met, cite(eu_reg_2016_679_art_82_1)), item(infringement_of_the_regulation_occurred, unknown([infringement_of_the_regulation_occurred]), cite(eu_reg_2016_679_art_82_1)), item(damage_resulted_from_the_infringement, unknown([damage_resulted_from_the_infringement]), cite(eu_reg_2016_679_art_82_1)), item(liability_limb_of_article_82_2, unmet(outside_article_82_2), cite(eu_reg_2016_679_art_82_2)), item(no_exemption_under_article_82_3, unknown([not_in_any_way_responsible_for_the_event]), cite(eu_reg_2016_679_art_82_3))]).
 
-test(controller_attested_false_is_not_exempt, fail) :-
-    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(false, attestation(host_operator, recorded_at, reason_given, none)))], exempt_from_liability, _, _).
-test(an_input_problem_gives_no_final_answer, fail) :-
-    compensation_liability([attribute(colour, red)], right_not_established, _, _).
-test(the_indeterminate_constructor_refuses_an_empty_list, fail) :-
-    indeterminate([]).
-test(the_needs_legal_review_constructor_refuses_a_bare_reason, fail) :-
-    needs_legal_review(no_reason_given, []).
-test(the_outside_fact_constructor_refuses_a_bare_value, fail) :-
-    outside_fact(not_in_any_way_responsible_for_the_event, true).
-test(the_input_problems_constructor_refuses_an_empty_list, fail) :-
-    input_problems([]).
-test(the_wrong_type_constructor_refuses_a_number, fail) :-
-    wrong_type(42).
-test(the_duplicate_key_constructor_refuses_a_compound, fail) :-
-    duplicate_key(colour(red)).
+test(a_deferred_provision_is_never_a_liability_citation, fail) :-
+    deferred_provision(cite(eu_reg_2016_679_art_82_1), _Deferral).
+test(a_false_causation_is_not_not_liable, fail) :-
+    compensation_liability([attribute(party_role, processor), attribute(processor_breached_obligations_directed_to_processors, false), attribute(processor_acted_outside_or_contrary_to_lawful_instructions, false), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, false)], not_liable_for_damage, _, _).
+test(an_uninvolved_controller_with_an_unsure_judgement_is_not_not_liable, fail) :-
+    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, false), attribute(damage_suffered, unsure), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true)], not_liable_for_damage, _, _).
+test(an_attested_true_statement_is_not_liable_for_damage, fail) :-
+    compensation_liability([attribute(party_role, controller), attribute(involved_in_the_processing, true), attribute(damage_suffered, true), attribute(infringement_of_the_regulation_occurred, true), attribute(damage_resulted_from_the_infringement, true), attribute(not_in_any_way_responsible_for_the_event, attested(true, attestation(host, at, reason, none)))], liable_for_damage, _, _).
+test(a_profile_with_an_input_problem_gets_no_final_answer, fail) :-
+    compensation_liability([attribute(colour, blue), attribute(damage_suffered, false)], right_not_established, _, _).

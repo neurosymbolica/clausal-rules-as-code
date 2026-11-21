@@ -1,0 +1,72 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_third_party_contract_provisions___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_kernel, [dora_ict_third_party_contract_provisions_input_problems/2]).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_citations, [citation/2, implements/1]).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_dora_ict_third_party_contract_provisions, [contract_provisions_missing/3, contract_provisions_required/3, contract_provisions_sufficient/3, decide_dora_ict_third_party_contract_provisions/2, dora_ict_third_party_contract_provisions_checklist/2, dora_ict_third_party_contract_provisions_decision_resolvable/1, dora_ict_third_party_contract_provisions_status/2, dora_ict_third_party_contract_provisions_status_values/1, insufficient/0, none_missing/0, sufficient/0]).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_queries, [dora_ict_third_party_contract_provisions_profile_keys/1, dora_ict_third_party_contract_provisions_what_if/4]).
+:- use_module(m__eu_dora_ict_third_party_contract_provisions_fixtures, [dora_ict_third_party_contract_provisions_assess/2, dora_ict_third_party_contract_provisions_profile_for/2, dora_ict_third_party_contract_provisions_subject/1]).
+
+root_export(contingency_plans_and_security_measures).
+root_export(contract_is_single_written_document).
+root_export(contract_provides_contingency_plans_and_security_measures).
+root_export(contract_provides_cooperation_with_authorities).
+root_export(contract_provides_data_access_recovery_and_return).
+root_export(contract_provides_data_protection_provisions).
+root_export(contract_provides_delegated_access_inspection_and_audit).
+root_export(contract_provides_description_of_functions_services_and_subcontracting).
+root_export(contract_provides_exit_strategy_and_transition_period).
+root_export(contract_provides_full_service_levels_with_performance_targets).
+root_export(contract_provides_incident_assistance).
+root_export(contract_provides_monitoring_rights_of_the_authorities).
+root_export(contract_provides_monitoring_rights_of_the_financial_entity).
+root_export(contract_provides_notice_periods_and_reporting_obligations).
+root_export(contract_provides_security_awareness_and_training_participation).
+root_export(contract_provides_service_and_data_locations).
+root_export(contract_provides_service_level_descriptions).
+root_export(contract_provides_termination_for_circumstances_altering_performance).
+root_export(contract_provides_termination_for_risk_management_weaknesses).
+root_export(contract_provides_termination_for_significant_breach).
+root_export(contract_provides_termination_rights_and_notice_periods).
+root_export(contract_provides_termination_where_supervision_impeded).
+root_export(contract_provides_threat_led_penetration_testing_participation).
+root_export(cooperation_with_authorities).
+root_export(data_access_recovery_and_return).
+root_export(data_protection_provisions).
+root_export(description_of_functions_services_and_subcontracting).
+root_export(duplicate_key).
+root_export(exit_strategy_and_transition_period).
+root_export(financial_entity_is_microenterprise).
+root_export(full_service_levels_with_performance_targets).
+root_export(incident_assistance).
+root_export(indeterminate).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(insufficient).
+root_export(missing).
+root_export(monitoring_rights_of_the_authorities).
+root_export(monitoring_rights_of_the_financial_entity).
+root_export(monitoring_rights_of_the_financial_entity_or_delegated_assurance).
+root_export(needs_legal_review).
+root_export(none_missing).
+root_export(notice_periods_and_reporting_obligations).
+root_export(open_textured).
+root_export(required).
+root_export(security_awareness_and_training_participation).
+root_export(service_and_data_locations).
+root_export(service_level_descriptions).
+root_export(single_written_document).
+root_export(sufficient).
+root_export(supports_critical_or_important_function).
+root_export(termination_for_circumstances_altering_performance).
+root_export(termination_for_risk_management_weaknesses).
+root_export(termination_for_significant_breach).
+root_export(termination_rights_and_notice_periods).
+root_export(termination_where_supervision_impeded).
+root_export(threat_led_penetration_testing_participation).
+root_export(unknown_key).
+root_export(unsure).
+root_export(wrong_type).

@@ -1,0 +1,86 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_labour_night_work_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_labour_night_work_night_work, [night_work_average_status/7, hazardous_night_work_status/7, night_work_status/2, night_work_status_values/1]).
+:- use_module(m__eu_labour_night_work_kernel, [night_work_input_problems/2]).
+:- use_module(m__eu_labour_night_work_fixtures, [night_work_profile_for/2]).
+
+stated_profile([attribute(on_call_on_site_counts_as_working_time, true), attribute(on_call_standby_counts_as_working_time, false), attribute(night_time_start, 1320), attribute(night_time_end, 300), attribute(night_work_reference_period_days, 7), attribute(worker_category, other_worker), attribute(night_worker, true), attribute(special_hazards_or_heavy_strain, true), attribute(derogation_from_article_8, no_derogation)]).
+
+long_night_of(Worker, [shift(Worker, date_time(2026, 3, 2, 21, 59), date_time(2026, 3, 3, 6, 0), work)]).
+
+test(a_bound_kept_status_holds) :-
+    night_work_profile_for(average_at_the_limit_kept, Case),
+    night_work_status(Case, average_night_hours_kept).
+test(a_bound_result_and_citations_hold_together) :-
+    stated_profile(Profile),
+    long_night_of(worker_1, Shifts),
+    hazardous_night_work_status(Profile, worker_1, Shifts, date(2026, 3, 2), date(2026, 3, 2), hazardous_night_work_hours_exceeded, [cite(eu_dir_2003_88_art_2_1), cite(eu_dir_2003_88_art_2_3), cite(eu_dir_2003_88_art_2_4), cite(eu_dir_2003_88_art_8), cite(eu_dir_2003_88_art_8_b), cite(eu_dir_2003_88_art_8_final_subpara)]).
+test(a_bound_empty_problem_list_holds_for_a_good_profile) :-
+    stated_profile(Profile),
+    night_work_input_problems(Profile, []).
+test(an_unbound_profile_is_one_input_problem) :-
+    night_work_average_status(_, worker_1, [], date(2026, 3, 2), date(2026, 3, 8), input_problems([wrong_type(profile)]), []).
+test(a_list_with_a_non_attribute_is_not_a_profile) :-
+    night_work_input_problems([attribute(night_worker, true), colour], [wrong_type(profile)]).
+test(a_partial_profile_list_is_not_a_profile) :-
+    night_work_input_problems([attribute(night_worker, true)|_], [wrong_type(profile)]).
+test(a_compound_key_is_an_unknown_key_as_given) :-
+    night_work_input_problems([attribute(key(1), value)], [unknown_key(key(1))]).
+test(an_unbound_key_is_reported_as_that_variable) :-
+    night_work_input_problems([attribute(Key, value)], [unknown_key(Reported)]),
+    Reported == Key.
+test(equal_repeated_values_are_one_duplicate) :-
+    night_work_input_problems([attribute(night_worker, true), attribute(night_worker, true)], [duplicate_key(night_worker)]).
+test(a_float_night_time_start_is_wrong_type) :-
+    night_work_input_problems([attribute(night_time_start, 1320.0)], [wrong_type(night_time_start)]).
+test(an_unknown_key_repeated_is_named_once) :-
+    night_work_input_problems([attribute(colour, red), attribute(colour, blue)], [unknown_key(colour)]).
+test(a_partial_shift_list_is_wrong_type) :-
+    night_work_average_status([], worker_1, [shift(worker_1, date_time(2026, 3, 2, 22, 0), date_time(2026, 3, 3, 6, 0), work)|_], date(2026, 3, 2), date(2026, 3, 8), input_problems([wrong_type(shifts)]), []).
+test(an_unknown_shift_kind_is_wrong_type) :-
+    hazardous_night_work_status([], worker_1, [shift(worker_1, date_time(2026, 3, 2, 22, 0), date_time(2026, 3, 3, 6, 0), overtime)], date(2026, 3, 2), date(2026, 3, 2), input_problems([wrong_type(shifts)]), []).
+test(a_shift_ending_before_it_starts_is_wrong_type) :-
+    hazardous_night_work_status([], worker_1, [shift(worker_1, date_time(2026, 3, 3, 6, 0), date_time(2026, 3, 2, 22, 0), work)], date(2026, 3, 2), date(2026, 3, 2), input_problems([wrong_type(shifts)]), []).
+test(february_29_of_a_common_year_is_not_a_day) :-
+    hazardous_night_work_status([], worker_1, [], date(2026, 2, 29), date(2026, 3, 1), input_problems([wrong_type(period_start)]), []).
+test(an_unbound_worker_is_wrong_type_for_the_hazardous_query) :-
+    hazardous_night_work_status([], _, [], date(2026, 3, 2), date(2026, 3, 2), input_problems([wrong_type(worker)]), []).
+test(an_integer_worker_reads_its_own_rows) :-
+    stated_profile(Profile),
+    long_night_of(7, Shifts),
+    hazardous_night_work_status(Profile, 7, Shifts, date(2026, 3, 2), date(2026, 3, 2), hazardous_night_work_hours_exceeded, _).
+test(an_atom_worker_does_not_read_integer_rows) :-
+    stated_profile(Profile),
+    long_night_of(7, Shifts),
+    hazardous_night_work_status(Profile, '7', Shifts, date(2026, 3, 2), date(2026, 3, 2), hazardous_night_work_hours_kept, _).
+test(shifts_of_another_worker_are_not_read) :-
+    stated_profile(Profile),
+    long_night_of(worker_2, Shifts),
+    hazardous_night_work_status(Profile, worker_1, Shifts, date(2026, 3, 2), date(2026, 3, 2), hazardous_night_work_hours_kept, _).
+
+test(a_bound_exceeded_status_is_rejected_for_a_kept_rota, fail) :-
+    night_work_profile_for(average_at_the_limit_kept, Case),
+    night_work_status(Case, average_night_hours_exceeded).
+test(every_other_bound_status_is_rejected, fail) :-
+    night_work_profile_for(average_at_the_limit_kept, Case),
+    night_work_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, average_night_hours_kept),
+    night_work_status(Case, Other).
+test(a_bound_kept_result_is_rejected_for_a_long_night, fail) :-
+    stated_profile(Profile),
+    long_night_of(worker_1, Shifts),
+    hazardous_night_work_status(Profile, worker_1, Shifts, date(2026, 3, 2), date(2026, 3, 2), hazardous_night_work_hours_kept, _).
+
+cp_test_names([a_bound_kept_status_holds, a_bound_result_and_citations_hold_together, a_bound_empty_problem_list_holds_for_a_good_profile, an_unbound_profile_is_one_input_problem, a_list_with_a_non_attribute_is_not_a_profile, a_partial_profile_list_is_not_a_profile, a_compound_key_is_an_unknown_key_as_given, an_unbound_key_is_reported_as_that_variable, equal_repeated_values_are_one_duplicate, a_float_night_time_start_is_wrong_type, an_unknown_key_repeated_is_named_once, a_partial_shift_list_is_wrong_type, an_unknown_shift_kind_is_wrong_type, a_shift_ending_before_it_starts_is_wrong_type, february_29_of_a_common_year_is_not_a_day, an_unbound_worker_is_wrong_type_for_the_hazardous_query, an_integer_worker_reads_its_own_rows, an_atom_worker_does_not_read_integer_rows, shifts_of_another_worker_are_not_read]).
+cp_test_fail_names([a_bound_exceeded_status_is_rejected_for_a_kept_rota, every_other_bound_status_is_rejected, a_bound_kept_result_is_rejected_for_a_long_night]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

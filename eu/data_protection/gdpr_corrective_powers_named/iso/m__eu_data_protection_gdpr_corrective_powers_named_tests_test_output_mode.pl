@@ -1,0 +1,91 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_corrective_powers_named_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_data_protection_gdpr_corrective_powers_named_gdpr_corrective_powers_named, [corrective_powers_named/3, corrective_power_named/4, decide_gdpr_corrective_powers_named/2, gdpr_corrective_powers_named_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_corrective_powers_named_fixtures, [gdpr_corrective_powers_named_profile_for/2]).
+
+expected_result(all_false, powers_named([], authority_discretion)).
+expected_result(intended_infringement, powers_named([power(warning, [controller, processor]), power(limitation_or_ban_on_processing, [])], authority_discretion)).
+expected_result(past_infringement, powers_named([power(reprimand, [controller, processor]), power(limitation_or_ban_on_processing, []), power(administrative_fine, [])], authority_discretion)).
+expected_result(non_compliance_only, powers_named([power(order_to_bring_processing_into_compliance, [controller, processor]), power(limitation_or_ban_on_processing, [])], authority_discretion)).
+expected_result(breach_and_request, powers_named([power(order_to_comply_with_data_subject_requests, [controller, processor]), power(order_to_communicate_personal_data_breach, [controller])], authority_discretion)).
+expected_result(breach_stated_plainly, powers_named([power(order_to_communicate_personal_data_breach, [controller])], authority_discretion)).
+expected_result(certification_failing, powers_named([power(withdrawal_or_refusal_of_certification, [certification_body])], authority_discretion)).
+expected_result(certification_requirements_met, powers_named([], authority_discretion)).
+expected_result(certification_not_held, powers_named([], authority_discretion)).
+expected_result(third_country_flows, powers_named([power(suspension_of_data_flows, [])], authority_discretion)).
+expected_result(everything_true, powers_named([power(warning, [controller, processor]), power(reprimand, [controller, processor]), power(order_to_comply_with_data_subject_requests, [controller, processor]), power(order_to_bring_processing_into_compliance, [controller, processor]), power(order_to_communicate_personal_data_breach, [controller]), power(limitation_or_ban_on_processing, []), power(order_of_rectification_erasure_or_restriction, []), power(withdrawal_or_refusal_of_certification, [certification_body]), power(administrative_fine, []), power(suspension_of_data_flows, [])], authority_discretion)).
+expected_result(missing_flows, indeterminate([data_flows_to_third_country_or_international_organisation])).
+expected_result(missing_certification_key, indeterminate([certification_issued_or_applied_for])).
+expected_result(unsure_infringement, needs_legal_review(open_textured(processing_has_infringed, cite(eu_reg_2016_679_art_58_2_b)), [inputs_relied_on([intended_processing_likely_to_infringe - false, processing_has_infringed - unsure, data_subject_request_to_exercise_rights_made - false, processing_not_in_compliance - false, personal_data_breach_occurred - false, rectification_erasure_or_restriction_ground_met - false, certification_issued_or_applied_for - false, certification_requirements_not_met - false, data_flows_to_third_country_or_international_organisation - false])])).
+expected_result(unsure_requirements, needs_legal_review(open_textured(certification_requirements_not_met, cite(eu_reg_2016_679_art_58_2_h)), [inputs_relied_on([intended_processing_likely_to_infringe - false, processing_has_infringed - false, data_subject_request_to_exercise_rights_made - false, processing_not_in_compliance - false, personal_data_breach_occurred - false, rectification_erasure_or_restriction_ground_met - false, certification_issued_or_applied_for - true, certification_requirements_not_met - unsure, data_flows_to_third_country_or_international_organisation - false])])).
+expected_result(attested_value, input_problems([wrong_type(personal_data_breach_occurred)])).
+expected_result(duplicate_and_unknown, input_problems([duplicate_key(processing_has_infringed), unknown_key(fine_amount)])).
+
+measure_atom(warning).
+measure_atom(reprimand).
+measure_atom(order_to_comply_with_data_subject_requests).
+measure_atom(order_to_bring_processing_into_compliance).
+measure_atom(order_to_communicate_personal_data_breach).
+measure_atom(limitation_or_ban_on_processing).
+measure_atom(order_of_rectification_erasure_or_restriction).
+measure_atom(withdrawal_or_refusal_of_certification).
+measure_atom(administrative_fine).
+measure_atom(suspension_of_data_flows).
+
+test(every_fixture_gives_its_expected_result) :-
+    findall(Subject - Result, (expected_result(Subject, _), gdpr_corrective_powers_named_profile_for(Subject, Profile), corrective_powers_named(Profile, Result, _Citations)), Got),
+    findall(Subject - Result, expected_result(Subject, Result), Wanted),
+    Got == Wanted.
+test(the_list_answer_carries_the_eleven_citations) :-
+    gdpr_corrective_powers_named_profile_for(all_false, Profile),
+    corrective_powers_named(Profile, _Result, Citations),
+    clausal_msort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2016_679_art_58_2), cite(eu_reg_2016_679_art_58_2_a), cite(eu_reg_2016_679_art_58_2_b), cite(eu_reg_2016_679_art_58_2_c), cite(eu_reg_2016_679_art_58_2_d), cite(eu_reg_2016_679_art_58_2_e), cite(eu_reg_2016_679_art_58_2_f), cite(eu_reg_2016_679_art_58_2_g), cite(eu_reg_2016_679_art_58_2_h), cite(eu_reg_2016_679_art_58_2_i), cite(eu_reg_2016_679_art_58_2_j)].
+test(a_status_carries_no_citation) :-
+    gdpr_corrective_powers_named_profile_for(unsure_infringement, Profile),
+    corrective_powers_named(Profile, _Result, Citations),
+    Citations == [].
+test(the_lookup_enumerates_every_named_measure) :-
+    gdpr_corrective_powers_named_profile_for(everything_true, Profile),
+    findall(Measure, (measure_atom(Measure), corrective_power_named(Profile, Measure, named(_Addressees, authority_discretion), _Citations)), Named),
+    findall(Measure, measure_atom(Measure), Measures),
+    Named == Measures.
+test(the_lookup_reads_out_the_point_citation) :-
+    gdpr_corrective_powers_named_profile_for(third_country_flows, Profile),
+    findall(Result - Citations, corrective_power_named(Profile, suspension_of_data_flows, Result, Citations), Answers),
+    Answers == [named([], authority_discretion) - [cite(eu_reg_2016_679_art_58_2), cite(eu_reg_2016_679_art_58_2_j)]].
+test(the_lookup_reads_out_a_referral_on_its_point_keys) :-
+    gdpr_corrective_powers_named_profile_for(unsure_infringement, Profile),
+    findall(Result - Citations, corrective_power_named(Profile, limitation_or_ban_on_processing, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(processing_has_infringed, cite(eu_reg_2016_679_art_58_2_b)), [inputs_relied_on([intended_processing_likely_to_infringe - false, processing_has_infringed - unsure, processing_not_in_compliance - false])]) - []].
+test(the_lookup_names_the_waiting_certification_key) :-
+    gdpr_corrective_powers_named_profile_for(missing_certification_key, Profile),
+    findall(Result - Citations, corrective_power_named(Profile, withdrawal_or_refusal_of_certification, Result, Citations), Answers),
+    Answers == [indeterminate([certification_issued_or_applied_for]) - []].
+test(the_verdict_carries_the_list_citations) :-
+    gdpr_corrective_powers_named_profile_for(past_infringement, Profile),
+    decide_gdpr_corrective_powers_named(Profile, gdpr_corrective_powers_named_verdict(_Result, [_FirstCitation|_OtherCitations])).
+test(the_checklist_justifies_every_point_with_a_citation) :-
+    gdpr_corrective_powers_named_profile_for(everything_true, Profile),
+    gdpr_corrective_powers_named_checklist(Profile, Items),
+    findall(Measure, member(item(Measure, met, cite(_Key)), Items), Met),
+    length(Met, 10).
+test(the_checklist_marks_points_not_named) :-
+    gdpr_corrective_powers_named_profile_for(all_false, Profile),
+    gdpr_corrective_powers_named_checklist(Profile, Items),
+    findall(Measure, member(item(Measure, unmet(not_named), cite(_Key)), Items), Unmet),
+    length(Unmet, 10).
+
+cp_test_names([every_fixture_gives_its_expected_result, the_list_answer_carries_the_eleven_citations, a_status_carries_no_citation, the_lookup_enumerates_every_named_measure, the_lookup_reads_out_the_point_citation, the_lookup_reads_out_a_referral_on_its_point_keys, the_lookup_names_the_waiting_certification_key, the_verdict_carries_the_list_citations, the_checklist_justifies_every_point_with_a_citation, the_checklist_marks_points_not_named]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,8 +1,11 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_load.clausal -- LOAD: the shared floor (kernel, citations) loads, the
-% result terms build and destructure, the verdict atoms are distinct, and a
-% real citation record resolves.
+% test_load.clausal -- LOAD: the shared floor of eu/nis2_domain_name_data
+% loads, its one shared predicate (the input check) answers once per
+% profile, the result terms the order pins build and destructure, the
+% verdict atoms are distinct, and a real citation record resolves.
+% Self-contained: it imports only from kernel and citations, because the
+% determination slices are not authored yet.
 % Run: cd <corpus root> && python -m clausal.testing \
 %      eu/nis2_domain_name_data/tests/test_load.clausal
 % =====================================================================
@@ -10,49 +13,151 @@
 :- use_module(eu/nis2_domain_name_data/kernel, [nis2_domain_name_data_input_problems/2]).
 :- use_module(eu/nis2_domain_name_data/citations, [citation/2, implements/1]).
 
-test(the_empty_profile_has_no_input_problem) :-
-    nis2_domain_name_data_input_problems([], Problems),
-    Problems == [].
+% ---- the input check (kernel) ----------------------------------------
 
-test(a_non_list_profile_is_a_wrong_type) :-
-    nis2_domain_name_data_input_problems(not_a_profile, Problems),
-    Problems == [wrong_type(profile)].
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, nis2_domain_name_data_input_problems([], Problems), Answers),
+    Answers == [[]].
 
-test(the_publication_verdict_atoms_are_distinct) :-
+test(a_well_formed_profile_has_no_problem) :-
+    findall(
+        Problems,
+        nis2_domain_name_data_input_problems(
+            [attribute(provider_type, tld_name_registry),
+             attribute(point_of_contact_email_address_differs_from_registrant, true),
+             attribute(point_of_contact_telephone_number_differs_from_registrant, false),
+             attribute(registration_data_is_personal_data, unsure),
+             attribute(requester_is_legitimate_access_seeker, true),
+             attribute(request_is_lawful_and_duly_substantiated, false),
+             attribute(reply_without_undue_delay, unsure)],
+            Problems),
+        Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_is_not_reported_as_wrong, fail) :-
+    nis2_domain_name_data_input_problems([attribute(provider_type, other)], [_|_]).
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, nis2_domain_name_data_input_problems([attribute(colour, blue)], Problems), Answers),
+    Answers == [[unknown_key(colour)]].
+
+test(a_value_outside_its_type_is_wrong_type) :-
+    findall(Problems, nis2_domain_name_data_input_problems([attribute(provider_type, registrar)], Problems), Answers),
+    Answers == [[wrong_type(provider_type)]].
+
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    findall(
+        Problems,
+        nis2_domain_name_data_input_problems(
+            [attribute(point_of_contact_telephone_number_differs_from_registrant, unsure)],
+            Problems),
+        Answers),
+    Answers == [[wrong_type(point_of_contact_telephone_number_differs_from_registrant)]].
+
+test(a_repeated_key_is_duplicate_key_only) :-
+    findall(
+        Problems,
+        nis2_domain_name_data_input_problems(
+            [attribute(registration_data_is_personal_data, banana),
+             attribute(registration_data_is_personal_data, true)],
+            Problems),
+        Answers),
+    Answers == [[duplicate_key(registration_data_is_personal_data)]].
+
+test(contract_key_problems_come_before_unknown_keys) :-
+    findall(
+        Problems,
+        nis2_domain_name_data_input_problems(
+            [attribute(colour, blue),
+             attribute(reply_without_undue_delay, maybe),
+             attribute(colour, red),
+             attribute(provider_type, registrar)],
+            Problems),
+        Answers),
+    Answers == [[wrong_type(provider_type), wrong_type(reply_without_undue_delay), unknown_key(colour)]].
+
+test(a_list_with_a_non_attribute_element_is_wrong_type_profile) :-
+    findall(
+        Problems,
+        nis2_domain_name_data_input_problems([attribute(provider_type, other), provider_type], Problems),
+        Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_non_list_is_wrong_type_profile) :-
+    findall(Problems, nis2_domain_name_data_input_problems(profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+% ---- the result terms build and destructure --------------------------
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = nis2_domain_name_data_verdict(addressed_provider, [cite(eu_dir_2022_2555_art_28_1)]),
+    Verdict = nis2_domain_name_data_verdict(Status, Citations),
+    Status == addressed_provider,
+    Citations == [cite(eu_dir_2022_2555_art_28_1)].
+
+test(the_duty_term_destructures) :-
+    Duty = duty(reply_to_access_requests_within_72_hours, cite(eu_dir_2022_2555_art_28_5)),
+    Duty = duty(DutyName, cite(Key)),
+    DutyName == reply_to_access_requests_within_72_hours,
+    Key == eu_dir_2022_2555_art_28_5.
+
+test(the_field_term_destructures) :-
+    Field = field(point_of_contact_contact_email_address, cite(eu_dir_2022_2555_art_28_2_d)),
+    Field = field(FieldName, cite(Key)),
+    FieldName == point_of_contact_contact_email_address,
+    Key == eu_dir_2022_2555_art_28_2_d.
+
+test(the_indeterminate_status_names_one_key) :-
+    Status = indeterminate([provider_type]),
+    Status = indeterminate([MissingKey]),
+    MissingKey == provider_type.
+
+test(the_referral_status_destructures) :-
+    Status = needs_legal_review(
+        open_textured(reply_without_undue_delay, cite(eu_dir_2022_2555_art_28_5)),
+        [inputs_relied_on([reply_without_undue_delay-unsure])]),
+    Status = needs_legal_review(open_textured(Input, cite(Key)), [inputs_relied_on(Pairs)]),
+    Input == reply_without_undue_delay,
+    Key == eu_dir_2022_2555_art_28_5,
+    Pairs == [reply_without_undue_delay-unsure].
+
+test(the_late_result_carries_its_requirement) :-
+    Result = late(hour_limit),
+    Result = late(Requirement),
+    Requirement == hour_limit.
+
+% ---- the verdict atoms are distinct ----------------------------------
+
+test(the_publication_atoms_are_distinct) :-
     dif(must_publish_without_undue_delay, no_publication_duty).
 
-test(the_access_verdict_atoms_are_distinct) :-
+test(the_access_atoms_are_distinct) :-
     dif(must_provide_access, no_duty_to_provide_access).
 
-test(the_timeliness_atoms_are_distinct) :-
-    dif(on_time, late(hour_limit)),
-    dif(late(hour_limit), late(without_undue_delay)).
+test(the_late_requirements_are_distinct) :-
+    dif(hour_limit, without_undue_delay).
 
-test(the_duty_term_builds_and_destructures) :-
-    Duty = duty(reply_to_access_requests_within_72_hours, cite(eu_dir_2022_2555_art_28_5)),
-    Duty = duty(Name, Citation),
-    Name == reply_to_access_requests_within_72_hours,
-    Citation == cite(eu_dir_2022_2555_art_28_5).
+test(the_provider_types_are_distinct) :-
+    dif(tld_name_registry, domain_name_registration_service_entity),
+    dif(tld_name_registry, other),
+    dif(domain_name_registration_service_entity, other).
 
-test(the_referral_term_builds_and_destructures) :-
-    Result = needs_legal_review(open_textured(registration_data_is_personal_data, cite(eu_dir_2022_2555_art_28_4)), [inputs_relied_on([registration_data_is_personal_data-unsure])]),
-    Result = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]),
-    Key == registration_data_is_personal_data,
-    Citation == cite(eu_dir_2022_2555_art_28_4),
-    Pairs == [registration_data_is_personal_data-unsure].
+test(on_time_is_not_late) :-
+    dif(on_time, late(hour_limit)).
 
-test(the_indeterminate_term_names_missing_keys) :-
-    Result = indeterminate([provider_type]),
-    Result = indeterminate(MissingKeys),
-    MissingKeys == [provider_type].
+% ---- a real citation record resolves ---------------------------------
 
-test(a_real_citation_record_resolves) :-
-    citation(eu_dir_2022_2555_art_28_5, _Record).
+test(the_access_citation_is_recorded) :-
+    citation(eu_dir_2022_2555_art_28_5, Record),
+    Record = [label-_, ref-_, verbatim-_].
 
-test(the_implements_marker_succeeds_for_a_recorded_key) :-
+test(the_point_of_contact_citation_is_recorded) :-
+    citation(eu_dir_2022_2555_art_28_2_d, _).
+
+test(the_provenance_marker_accepts_a_recorded_key) :-
     implements(eu_dir_2022_2555_art_28_4).
 
-test(the_implements_marker_fails_for_an_unrecorded_key, fail) :-
-    implements(eu_dir_2022_2555_art_28_99).
+test(the_provenance_marker_refuses_a_shortened_key, fail) :-
+    implements(art_28_5).
 
 :- end_module(test_load).

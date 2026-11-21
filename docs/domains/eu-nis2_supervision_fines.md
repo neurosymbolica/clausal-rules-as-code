@@ -1,4 +1,4 @@
-# Directive (EU) 2022/2555 (NIS 2), Articles 32(2), 32(4), 32(5), 33(2), 33(4), 34(4), 34(5) and 35(1) to (3): for an essential or important entity, (a) the least national ...
+# Directive (EU) 2022/2555 (NIS 2), Arts 32(2), 32(4), 32(5), 33(2), 33(4), 34(4), 34(5) and 35(1) to (3): for an essential or important entity, (A) the least national ...
 
 `eu/nis2_supervision_fines`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 179/179 | none (no provision-tracking ledger) | pass | pass | pass |
+| 191/191 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Directive (EU) 2022/2555 (NIS 2), Articles 32(2), 32(4), 32(5), 33(2), 33(4), 34(4), 34(5) and 35(1) to (3): for an essential or important entity, (a) the least national maximum fine a Member State must provide for an infringement of Article 21 or 23 (the higher of EUR 10 000 000 or 2 percent of worldwide turnover for essential, EUR 7 000 000 or 1,4 percent for important, a floor and never a fine), (b) the minimum supervisory, enforcement and escalation powers the competent authority must have, (c) whether the Art 32(5) escalation powers are exercisable, (d) whether a GDPR fine bars the NIS2 fine under Art 35(2), and (e) the duties to inform data protection authorities under Art 35(1) and (3). Open-textured judgements (ineffective measures, a notifiable breach, the same conduct) are handed to the user. Out of scope: the actual national maximum and penalties (Art 36, country orders), the entity class and public administration status (sibling scope order), whether Article 21 or 23 was infringed (sibling orders), proportionality and the factors of Art 32(7), and the deferred paragraphs listed below.
+Directive (EU) 2022/2555 (NIS 2), Arts 32(2), 32(4), 32(5), 33(2), 33(4), 34(4), 34(5) and 35(1) to (3): for an essential or important entity, (A) the least national maximum fine a Member State must provide for an infringement of Article 21 or 23 (a floor of the national ceiling, never a fine; no Union minimum for any other provision); (B) the minimum supervisory, enforcement and escalation powers a Member State must give its competent authorities, in article order, without the Art 32(5) powers for a public administration entity; (C) whether the Art 32(5) escalation powers are exercisable (four conditions; the eligibility verdict of the facade, with a cited checklist); (D) whether a GDPR Art 58(2)(i) fine for the same conduct bars the NIS2 fine (Art 35(2)); (E) the duty to inform the data protection supervisory authorities (Art 35(1), (3)). Open-textured judgements (ineffective earlier measures, a possible notifiable personal data breach, the same conduct) are handed to the user or a lawyer, never decided by a crisp test. Out of scope: the actual national maximum and penalties (Art 36, country orders), the choice of measure or fine amount (Art 32(7) factors), entity classification ...
 
 ## Pinned sources
 
@@ -58,7 +58,7 @@ Directive (EU) 2022/2555 (NIS 2), Articles 32(2), 32(4), 32(5), 33(2), 33(4), 34
 
 ??? info "supervisory_power_lead_ins_and_targeted_audit_rules"
 
-    **Why:** Art 32(2) and 33(2) open the list of supervisory powers with a lead-in, whose points minimum_powers answers, and close it with rules on targeted security audits - they rest on risk assessments by the authority or the audited entity or on other risk-related information, their results are made available to the competent authority, and the costs of an audit by an independent body are paid by the audited entity unless the authority decides otherwise in duly substantiated cases.
+    **Why:** Art 32(2) and 33(2) open the list of supervisory powers with a lead-in, whose points minimum_powers answers and whose words at least reading (4) reads, and close it with rules on targeted security audits - they rest on risk assessments by the authority or the audited entity or on other risk-related information, their results are made available to the competent authority, and the costs of an audit by an independent body are paid by the audited entity unless the authority decides otherwise in duly substantiated cases.
 
     **Consequence for a user:** The answers do not say on what basis an audit is carried out, who receives its results or who pays for it; the caller reads the Directive text for that.
 

@@ -1,9 +1,8 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% test_queries.clausal -- PROPERTY tests for the query layer: one test per
-% query-taxonomy predicate registered in manifest.yaml query_interface
-% (#2 decide, #7 checklist, #16 what-if) plus the re-exported input check
-% and the root-export atoms.
+% test_queries.clausal -- tests for the query layer (queries.clausal):
+% the profile key schema, the root-export atoms, the input check it
+% re-exports and the #16 what-if combinator.
 % Run: python -m clausal.testing eu/nis2_supervision_fines/tests/test_queries.clausal
 % =====================================================================
 :- module(test_queries, []).
@@ -12,12 +11,10 @@
     nis2_supervision_fines_input_problems/2,
     nis2_supervision_fines_what_if/4,
     entity_class/0,
-    unsure/0,
-    essential/0
-]).
-:- use_module(eu/nis2_supervision_fines/nis2_supervision_fines, [
-    decide_nis2_supervision_fines/2,
-    nis2_supervision_fines_checklist/2
+    essential/0,
+    important/0,
+    other/0,
+    unsure/0
 ]).
 :- use_module(eu/nis2_supervision_fines/fixtures, [nis2_supervision_fines_profile_for/2]).
 
@@ -25,47 +22,48 @@ test(profile_keys_are_the_contract_keys) :-
     nis2_supervision_fines_profile_keys(ProfileKeys),
     ProfileKeys == [entity_class, infringed_provision, worldwide_annual_turnover_eur, entity_is_public_administration, earlier_measures_ineffective, deadline_set_for_necessary_action, required_action_taken_within_deadline, infringement_may_entail_notifiable_personal_data_breach, authority_became_aware_in_supervision_or_enforcement, data_protection_authority_in_other_member_state, gdpr_fine_imposed_under_art_58_2_i, gdpr_fine_for_same_conduct].
 
-test(eligibility_query_two) :-
-    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
-    findall(Verdict, decide_nis2_supervision_fines(Profile, Verdict), Verdicts),
-    Verdicts == [nis2_supervision_fines_verdict(eligible, [cite(eu_dir_2022_2555_art_32_5)])].
-
-% (b) THE TEST WAS WRONG: maplist(=(item(_, ...))) shared one item id variable
-% across all five items; each item is now checked with a fresh pattern.
-item_met_and_cited(item(_, met, cite(eu_dir_2022_2555_art_32_5))).
-
-test(justification_query_seven_every_item_cited) :-
-    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
-    nis2_supervision_fines_checklist(Profile, Items),
-    length(Items, 5),
-    maplist(item_met_and_cited, Items).
-
-test(what_if_flips_ineligible_to_eligible) :-
-    nis2_supervision_fines_profile_for(escalation_action_taken_within_deadline, Profile),
-    nis2_supervision_fines_what_if(Profile, required_action_taken_within_deadline, false, eligible).
-
-test(what_if_flips_eligible_to_ineligible) :-
-    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
-    nis2_supervision_fines_what_if(Profile, deadline_set_for_necessary_action, false, ineligible).
-
-test(what_if_passes_an_unsure_judgement_through) :-
-    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
-    nis2_supervision_fines_what_if(Profile, earlier_measures_ineffective, unsure, needs_legal_review(open_textured(earlier_measures_ineffective, cite(eu_dir_2022_2555_art_32_5)), [inputs_relied_on([earlier_measures_ineffective-unsure])])).
-
-test(what_if_with_a_bad_value_reports_input_problems) :-
-    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
-    nis2_supervision_fines_what_if(Profile, entity_class, banana, input_problems([wrong_type(entity_class)])).
-
-test(what_if_does_not_crisp_the_unsure_judgement, fail) :-
-    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
-    nis2_supervision_fines_what_if(Profile, earlier_measures_ineffective, unsure, eligible).
-
-test(input_check_is_re_exported) :-
-    nis2_supervision_fines_input_problems([attribute(colour, red)], [unknown_key(colour)]).
-
-test(root_atoms_are_exported) :-
+test(root_export_atoms_are_reachable) :-
     entity_class,
-    unsure,
-    essential.
+    essential,
+    important,
+    other,
+    unsure.
+
+test(the_reexported_input_check_passes_a_fixture) :-
+    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
+    nis2_supervision_fines_input_problems(Profile, []).
+
+% ---- #16 what-if -----------------------------------------------------
+what_if_statuses(Subject, OverriddenKey, NewValue, Statuses) :-
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    findall(Status, nis2_supervision_fines_what_if(Profile, OverriddenKey, NewValue, Status), Statuses).
+
+test(what_if_a_public_administration_entity_flips_to_ineligible) :-
+    what_if_statuses(escalation_exercisable, entity_is_public_administration, true, Statuses),
+    Statuses == [ineligible].
+test(what_if_the_unsure_judgement_is_decided_resolves_to_eligible) :-
+    what_if_statuses(escalation_measures_unsure, earlier_measures_ineffective, true, Statuses),
+    Statuses == [eligible].
+test(what_if_the_judgement_turns_unsure_is_indeterminate) :-
+    what_if_statuses(escalation_exercisable, earlier_measures_ineffective, unsure, Statuses),
+    Statuses == [indeterminate].
+test(what_if_the_absent_class_is_important_is_ineligible) :-
+    what_if_statuses(escalation_class_absent, entity_class, important, Statuses),
+    Statuses == [ineligible].
+test(what_if_repairs_a_wrong_type) :-
+    what_if_statuses(invalid_crisp_key_unsure, entity_is_public_administration, false, Statuses),
+    Statuses == [eligible].
+test(what_if_cannot_edit_a_non_list) :-
+    what_if_statuses(invalid_not_a_list, entity_class, essential, Statuses),
+    Statuses == [invalid_profile].
+test(what_if_adding_an_unknown_key_is_invalid_profile) :-
+    what_if_statuses(escalation_exercisable, colour, red, Statuses),
+    Statuses == [invalid_profile].
+test(what_if_repairs_a_duplicate_key) :-
+    findall(Status, nis2_supervision_fines_what_if([attribute(entity_class, important), attribute(entity_class, essential), attribute(entity_is_public_administration, false), attribute(earlier_measures_ineffective, true), attribute(deadline_set_for_necessary_action, true), attribute(required_action_taken_within_deadline, false)], entity_class, essential, Status), Statuses),
+    Statuses == [eligible].
+test(what_if_a_public_administration_entity_is_not_eligible, fail) :-
+    nis2_supervision_fines_profile_for(escalation_exercisable, Profile),
+    nis2_supervision_fines_what_if(Profile, entity_is_public_administration, true, eligible).
 
 :- end_module(test_queries).

@@ -4,7 +4,7 @@
 
 ## Scope
 
-Directive (EU) 2022/2555 (NIS 2) Art 23(1), (3), (4): whether an incident is significant (either of two judgement limbs), which reporting steps are then due (early warning, incident notification, intermediate report, final report, progress report and later final report) and whether the early warning and the incident notification were in time (24 and 72 hour limits, 24 for a trust service provider's notification, no excuse after the limit, plus a without-undue-delay judgement). Out of scope and handed to the lawyer: entity class, recipient authority, definition of incident, sector-specific acts, calendar-month periods, content of the reports, notification of service recipients, Art 23(2), and Implementing Regulation (EU) 2024/2690.
+Directive (EU) 2022/2555 (NIS 2) Art 23(1), (3) and (4): for an essential or important entity and an incident taken as given, whether the incident is significant (Art 23(3)(a) or (b), each a judgement the caller states), which reporting steps of Art 23(4)(a) to (e) are due with their limits (24 hours for the early warning, 72 hours for the incident notification or 24 hours for a trust service provider whose trust services are affected, an intermediate report on request, a final report one month after the notification, and for an ongoing incident a progress report and a later final report), and whether a submitted early warning or incident notification was on time given the whole hours elapsed since becoming aware (late is late: no reasons-for-delay exception; inside the limit, without undue delay is a judgement referred to a lawyer when unsure). Out of scope: the entity class (Arts 2, 3), the definition of incident (Art 6), the competent CSIRT or authority, sector acts under Art 4, the moment of becoming aware, the content of each report, the calendar computation of the one-month limits, Art 23(2), Art 23(5) to (10) (the authorities' side) and the implementing acts under Art ...
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Directive (EU) 2022/2555 (NIS 2) Art 23(1), (3), (4): whether an incident is sig
 
 ## What was checked
 
-- 115 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 174 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

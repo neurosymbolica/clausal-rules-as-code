@@ -3,7 +3,11 @@ id: eu/nis2_jurisdiction_registration
 shape_family: classification
 kit_version: "0.1.0"
 # The domain's .clausal file set, in import-DAG order (determination slices
-# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
 modules:
   - "kernel"
   - "citations"
@@ -11,23 +15,30 @@ modules:
   - "nis2_jurisdiction_registration"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES (and the exported root atoms), grouped
-# per submodule -- in sync with the :- module(...) export lists.
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
+  # (nis2_jurisdiction_registration_input_problems/2 is listed under
+  # queries.clausal, which re-exports it)
   # -- citations.clausal --
   - "citation/2"
   # -- nis2_jurisdiction_registration.clausal --
-  - "decide_nis2_jurisdiction_registration/2"
-  - "nis2_jurisdiction_registration_status/2"
-  - "nis2_jurisdiction_registration_checklist/2"
-  - "nis2_jurisdiction_registration_decision_resolvable/1"
-  - "nis2_jurisdiction_registration_status_values/1"
   - "jurisdiction_basis/3"
   - "main_establishment_rule/3"
   - "registry_submission_items/2"
   - "entity_list_submission_items/2"
   - "change_notification_limits/2"
+  - "decide_nis2_jurisdiction_registration/2"
+  - "nis2_jurisdiction_registration_status/2"
+  - "nis2_jurisdiction_registration_checklist/2"
+  - "nis2_jurisdiction_registration_decision_resolvable/1"
+  - "nis2_jurisdiction_registration_status_values/1"
+  # -- queries.clausal --
+  - "nis2_jurisdiction_registration_profile_keys/1"
+  - "nis2_jurisdiction_registration_input_problems/2"
+  - "nis2_jurisdiction_registration_what_if/4"
   - "entity_category/0"
   - "established_in_union/0"
   - "offers_services_in_union/0"
@@ -40,6 +51,7 @@ public_interface:
   - "public_electronic_communications_provider/0"
   - "main_establishment_provider/0"
   - "public_administration_entity/0"
+  - "unsure/0"
   - "state_of_establishment/0"
   - "state_where_services_are_provided/0"
   - "state_of_main_establishment/0"
@@ -50,7 +62,6 @@ public_interface:
   - "state_where_cybersecurity_risk_management_decisions_are_taken/0"
   - "state_where_cybersecurity_operations_are_carried_out/0"
   - "state_of_establishment_with_most_employees_in_the_union/0"
-  - "unsure/0"
   - "indeterminate/1"
   - "needs_legal_review/2"
   - "open_textured/2"
@@ -64,30 +75,30 @@ public_interface:
   - "limit/3"
   - "months_after_change/1"
   - "weeks_after_change/1"
-  # -- queries.clausal --
-  - "nis2_jurisdiction_registration_profile_keys/1"
-  - "nis2_jurisdiction_registration_input_problems/2"
-  - "nis2_jurisdiction_registration_what_if/4"
-  - "nis2_jurisdiction_registration_status_by_category/2"
   # -- fixtures.clausal --
   - "nis2_jurisdiction_registration_subject/1"
   - "nis2_jurisdiction_registration_profile_for/2"
   - "nis2_jurisdiction_registration_assess/2"
-  - "nis2_jurisdiction_registration_fixtures/1"
 
-# Independence classification: no external scorer yet.
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/query_combinators), which are not backbone packages.
 uses: []
 
-scope: "Which Member State's jurisdiction an entity falls under (Directive (EU) 2022/2555 Art 26(1)-(3)), where the main establishment of a Union provider is (Art 26(2)), what the entity must submit to the registry (Art 27(2)) and for the Member States' list of entities (Art 3(4)), and the limits for notifying changes (Art 27(3), Art 3(4)). The Directive binds the Member States; this domain states what it requires. Out of scope (handed to the lawyer or a sibling domain): whether the entity is in scope and its category (sibling order on scope), calendar computation of the periods, national registers, forms and channels."
+scope: "Directive (EU) 2022/2555 (NIS 2), original OJ text, Art 26(1) to (3), Art 27(1) to (3) and Art 3(3) and (4). Decided here, for an entity whose category the caller gives: the basis of its jurisdiction (never the Member State itself), the step of Art 26(2) that fixes the main establishment of a provider named in Art 26(1)(b), the information it must submit for the ENISA registry (Art 27(2)) and for the Member States list of entities (Art 3(4)), and the limits for notifying changes (Art 27(3), Art 3(4) second subparagraph), listed and not computed. Unsure judgements on Art 26(2) are referred to a lawyer. Out of scope: whether the entity is in scope and which category it falls in (sibling order on scope), the authorities duties, the national register and channel (country orders), calendar computation of periods (Regulation 1182/71), and whether an initial submission was on time."
 
 sources:
-  - "Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022, Art 3(3)-(4), Art 26(1)-(3), Art 27(1)-(3), Art 27(5)"
+  - "Directive (EU) 2022/2555 of the European Parliament and of the Council of 14 December 2022 (NIS 2 Directive), OJ L 333, 27.12.2022, p. 80, CELEX 32022L2555: Art 26(1), (2), (3) (jurisdiction and main establishment)"
+  - "Directive (EU) 2022/2555, OJ L 333, 27.12.2022, CELEX 32022L2555: Art 27(1), (2), (3) (registry of entities: information and changes)"
+  - "Directive (EU) 2022/2555, OJ L 333, 27.12.2022, CELEX 32022L2555: Art 3(3), (4) (the list of essential and important entities and entities providing domain name registration services)"
 
 query_interface:
-  2: "nis2_jurisdiction_registration_status/2"      # eligibility verdict (eligible / ineligible / indeterminate)
-  7: "nis2_jurisdiction_registration_checklist/2"   # justification: checklist row carries cite(...) per item
+  2: "nis2_jurisdiction_registration_status/2"      # eligibility/status verdict
+  7: "nis2_jurisdiction_registration_checklist/2"   # justification: cited checklist rows
   16: "nis2_jurisdiction_registration_what_if/4"    # what_if: re-evaluate under an overridden key
 
 deferred_set:
@@ -162,17 +173,18 @@ deferred_set:
     give the channel.
   declaration: answered_with_caveat
   not_formalized_because: national_law
-- what: registry_initial_submission_date
+- what: registry_submission_chapeau_and_initial_date
   units:
   - 32022L2555#parag_027.002
-  reason: The opening words of Art 27(2) require Member States to have entities submit
-    the information of points (a) to (f) by 17 January 2025. The items themselves
-    are formalized through points (a) to (f) of Art 27(2) (registry_submission_items/2,
-    each item carrying its cite(eu_dir_2022_2555_art_27_2_x)); the date has passed
-    and no query gives or checks a date (reading (6)), so the opening words add no
-    result of their own.
-  consequence: The answers list what is to be submitted, not whether an initial submission
-    was on time; the caller judges the date.
+  reason: The chapeau of Art 27(2) ('Member States shall require entities referred
+    to in paragraph 1 to submit the following information to the competent authorities
+    by 17 January 2025') binds the Member States and sets the date of the initial
+    submission. The date has passed and no query gives or checks it (reading (6));
+    the information items themselves are formalized through points (a) to (f)
+    (32022L2555#point_027.002_a to _f), and the entities addressed through the list
+    of Art 27(1) (reading (6)).
+  consequence: The answers list what an entity of Art 27(1) must submit; they do not
+    say whether an initial submission was on time.
   declaration: answered_with_caveat
   not_formalized_because: procedural_no_output
 

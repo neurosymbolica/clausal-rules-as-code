@@ -1,0 +1,83 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_cra_manufacturer_duties_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_cra_manufacturer_duties_cra_manufacturer_duties, [decide_cra_manufacturer_duties/2, cra_manufacturer_duties_status/2]).
+:- use_module(m__eu_cra_manufacturer_duties_fixtures, [cra_manufacturer_duties_subject/1, cra_manufacturer_duties_profile_for/2, cra_manufacturer_duties_assess/2]).
+
+expected_answer(before_article_14_date, not_yet_applicable, [cite(eu_reg_2024_2847_art_71_2)]).
+expected_answer(article_14_window_opens, article_14_only, [cite(eu_reg_2024_2847_art_71_2)]).
+expected_answer(article_14_window_last_day, article_14_only, [cite(eu_reg_2024_2847_art_71_2)]).
+expected_answer(missing_placing_date, indeterminate([placing_on_market_date]), []).
+expected_answer(placed_on_application_day, subject_to_requirements, [cite(eu_reg_2024_2847_art_71_2)]).
+expected_answer(placed_day_before_application_unmodified, article_14_only, [cite(eu_reg_2024_2847_art_69_2), cite(eu_reg_2024_2847_art_69_3)]).
+expected_answer(legacy_product_modified, subject_to_requirements, [cite(eu_reg_2024_2847_art_69_2)]).
+expected_answer(legacy_product_unmodified, article_14_only, [cite(eu_reg_2024_2847_art_69_2), cite(eu_reg_2024_2847_art_69_3)]).
+expected_answer(legacy_product_unsure, needs_legal_review(open_textured(substantially_modified_on_or_after_application_date, cite(eu_reg_2024_2847_art_69_2)), [inputs_relied_on([substantially_modified_on_or_after_application_date - unsure])]), []).
+expected_answer(legacy_product_judgement_missing, indeterminate([substantially_modified_on_or_after_application_date]), []).
+expected_answer(unknown_key_in_profile, input_problems([unknown_key(colour)]), []).
+expected_answer(duplicate_and_unknown_keys, input_problems([duplicate_key(placing_on_market_date), unknown_key(colour)]), []).
+expected_answer(impossible_assessment_date, input_problems([wrong_type(assessment_date)]), []).
+expected_answer(support_floor_day_before_application, not_yet_applicable, [cite(eu_reg_2024_2847_art_71_2)]).
+expected_answer(support_floor_on_application_day, minimum_support_period(60), [cite(eu_reg_2024_2847_art_13_8)]).
+expected_answer(long_lived_router, minimum_support_period(60), [cite(eu_reg_2024_2847_art_13_8)]).
+expected_answer(use_time_at_floor, minimum_support_period(60), [cite(eu_reg_2024_2847_art_13_8)]).
+expected_answer(use_time_just_below_floor, minimum_support_period(59), [cite(eu_reg_2024_2847_art_13_8)]).
+expected_answer(use_time_zero, minimum_support_period(0), [cite(eu_reg_2024_2847_art_13_8)]).
+expected_answer(missing_use_time, indeterminate([expected_use_time_in_months]), []).
+expected_answer(negative_use_time, input_problems([wrong_type(expected_use_time_in_months)]), []).
+expected_answer(retention_day_before_application, not_yet_applicable, [cite(eu_reg_2024_2847_art_71_2)]).
+expected_answer(documentation_ten_years_wins, keep_until(date(2038, 2, 1)), [cite(eu_reg_2024_2847_art_13_13)]).
+expected_answer(documentation_equal_dates, keep_until(date(2038, 2, 1)), [cite(eu_reg_2024_2847_art_13_13)]).
+expected_answer(documentation_support_period_one_day_longer, keep_until(date(2038, 2, 2)), [cite(eu_reg_2024_2847_art_13_13)]).
+expected_answer(instructions_support_period_wins, keep_until(date(2040, 6, 30)), [cite(eu_reg_2024_2847_art_13_18)]).
+expected_answer(instructions_ten_years_wins, keep_until(date(2038, 2, 1)), [cite(eu_reg_2024_2847_art_13_18)]).
+expected_answer(leap_day_update, keep_until(date(2038, 2, 28)), [cite(eu_reg_2024_2847_art_13_9)]).
+expected_answer(day_after_leap_day_update, keep_until(date(2038, 3, 1)), [cite(eu_reg_2024_2847_art_13_9)]).
+expected_answer(update_on_last_day, keep_until(date(2041, 1, 1)), [cite(eu_reg_2024_2847_art_13_9)]).
+expected_answer(update_day_after_last_day, not_applicable_outside_support_period, [cite(eu_reg_2024_2847_art_13_9)]).
+expected_answer(retention_missing_start, indeterminate([placing_on_market_date]), []).
+expected_answer(retention_missing_end, indeterminate([support_period_end_date]), []).
+expected_answer(unknown_item, input_problems([wrong_type(item)]), []).
+
+subject_gets_expected(Subject) :-
+    expected_answer(Subject, Verdict, Citations),
+    findall(GotVerdict - GotCitations, cra_manufacturer_duties_assess(Subject, cra_manufacturer_duties_verdict(GotVerdict, GotCitations)), Answers),
+    Answers == [Verdict - Citations].
+
+test(every_fixture_has_an_expected_answer) :-
+    findall(Subject, cra_manufacturer_duties_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, expected_answer(Subject, _, _), ExpectedSubjects),
+    sort(ExpectedSubjects, ExpectedSet),
+    ExpectedSet == SubjectSet.
+test(every_fixture_yields_exactly_its_expected_answer) :-
+    findall(Subject, expected_answer(Subject, _, _), Subjects),
+    maplist(subject_gets_expected, Subjects).
+test(the_window_last_day_and_application_day_differ) :-
+    subject_gets_expected(article_14_window_last_day),
+    subject_gets_expected(missing_placing_date).
+test(the_floor_boundary_pair) :-
+    subject_gets_expected(use_time_at_floor),
+    subject_gets_expected(use_time_just_below_floor).
+test(the_last_day_update_pair) :-
+    subject_gets_expected(update_on_last_day),
+    subject_gets_expected(update_day_after_last_day).
+test(the_status_is_read_out_once) :-
+    cra_manufacturer_duties_profile_for(legacy_product_unsure, Question),
+    findall(Status, cra_manufacturer_duties_status(Question, Status), Statuses),
+    Statuses == [needs_legal_review].
+test(a_final_verdict_carries_a_citation) :-
+    cra_manufacturer_duties_profile_for(placed_on_application_day, Question),
+    decide_cra_manufacturer_duties(Question, cra_manufacturer_duties_verdict(_, [_FirstCitation|_OtherCitations])).
+
+cp_test_names([every_fixture_has_an_expected_answer, every_fixture_yields_exactly_its_expected_answer, the_window_last_day_and_application_day_differ, the_floor_boundary_pair, the_last_day_update_pair, the_status_is_read_out_once, a_final_verdict_carries_a_citation]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

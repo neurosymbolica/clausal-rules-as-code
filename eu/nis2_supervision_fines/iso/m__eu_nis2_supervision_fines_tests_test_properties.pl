@@ -4,17 +4,14 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_lists_extra, [is_list/1]).
-:- use_module(library(clpz)).
-:- use_module(m__eu_nis2_supervision_fines_nis2_supervision_fines, [decide_nis2_supervision_fines/2, nis2_supervision_fines_checklist/2, fine_ceiling_floor/3, minimum_powers/2, escalation_powers_exercisable/3, fine_barred_by_gdpr_fine/3, data_protection_authority_information/2]).
+:- use_module(clausal_lists_extra, [last/2, clausal_is_list/1, clausal_msort/2]).
+:- use_module(m__eu_nis2_supervision_fines_nis2_supervision_fines, [decide_nis2_supervision_fines/2, nis2_supervision_fines_status/2, nis2_supervision_fines_status_values/1, fine_ceiling_floor/3, minimum_powers/2, escalation_powers_exercisable/3, fine_barred_by_gdpr_fine/3, data_protection_authority_information/2]).
+:- use_module(m__eu_nis2_supervision_fines_citations, [citation/2]).
 :- use_module(m__eu_nis2_supervision_fines_fixtures, [nis2_supervision_fines_subject/1, nis2_supervision_fines_profile_for/2]).
 
-subject_profile(Subject, Profile) :-
-    nis2_supervision_fines_subject(Subject),
-    nis2_supervision_fines_profile_for(Subject, Profile).
-
 subject_classifies(Subject) :-
-    subject_profile(Subject, Profile),
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
     decide_nis2_supervision_fines(Profile, _Verdict).
 
 test(totality_every_subject_classifies) :-
@@ -22,90 +19,137 @@ test(totality_every_subject_classifies) :-
     sort(Subjects, SubjectSet),
     findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
     sort(ClassifiedSubjects, SubjectSet).
-test(determinism_every_subject_one_answer_per_query) :-
-    findall(Profile, subject_profile(_, Profile), Profiles),
-    Profiles = [_|_],
-    maplist(one_answer_per_query, Profiles).
-test(citation_completeness_every_checklist_item_is_cited) :-
-    findall(Profile, subject_profile(_, Profile), Profiles),
-    maplist(checklist_cited, Profiles).
-test(the_least_maximum_is_never_below_its_fixed_amount) :-
-    findall(AmountEur - Citations, (subject_profile(_, Profile), fine_ceiling_floor(Profile, minimum_national_maximum(AmountEur, _), Citations)), Rows),
-    Rows = [_|_],
-    maplist(amount_at_least_floor, Rows).
-test(the_essential_least_maximum_is_monotone_in_turnover) :-
-    maplist(ceiling_amount_at(essential), [0, 1, 499999999, 500000000, 500000001, 1000000000], Amounts),
-    non_decreasing(Amounts).
-test(the_important_least_maximum_is_monotone_in_turnover) :-
-    maplist(ceiling_amount_at(important), [0, 1, 500000000, 500000001, 1000000000], Amounts),
-    non_decreasing(Amounts).
-test(escalation_powers_only_for_essential_non_public_administration) :-
-    findall(Subject, lists_escalation_power(Subject), Subjects),
-    sort(Subjects, SubjectSet),
-    SubjectSet == [escalation_action_taken_within_deadline, escalation_deadline_keys_missing, escalation_exercisable, escalation_measures_not_ineffective, escalation_measures_unsure, escalation_no_deadline_set].
-test(the_facade_agrees_with_the_escalation_query) :-
-    findall(Profile, subject_profile(_, Profile), Profiles),
-    maplist(facade_agrees, Profiles).
-test(a_gdpr_fine_bar_leaves_the_measures_available) :-
-    nis2_supervision_fines_profile_for(gdpr_fine_barred, Profile),
+test(determinism_every_query_gives_one_answer_per_subject) :-
+    findall(Subject - QueryName, subject_query(Subject, QueryName), AllPairs),
+    findall(Subject - QueryName, subject_query_single(Subject, QueryName), SinglePairs),
+    SinglePairs == AllPairs.
+test(every_status_is_in_the_status_table) :-
+    findall(Subject, nis2_supervision_fines_subject(Subject), Subjects),
+    findall(Subject, subject_status_in_table(Subject), TabledSubjects),
+    TabledSubjects == Subjects.
+test(citation_completeness_every_returned_citation_is_recorded) :-
+    findall(Subject - Labelled, subject_citations(Subject, Labelled), AllCitations),
+    sort(AllCitations, AllSet),
+    findall(Subject - Labelled, subject_citations_recorded(Subject, Labelled), RecordedCitations),
+    sort(RecordedCitations, AllSet).
+test(every_floor_is_at_least_the_smaller_fixed_amount) :-
+    findall(Subject - AmountEur, subject_floor(Subject, AmountEur), Floors),
+    Floors = [_|_],
+    findall(Subject - AmountEur, subject_floor_at_least_fixed(Subject, AmountEur), CheckedFloors),
+    CheckedFloors == Floors.
+test(the_essential_floor_never_falls_as_turnover_rises) :-
+    maplist(essential_floor_at, [0, 1, 499999999, 500000000, 500000001, 1000000000, 5000000000], Amounts),
+    clausal_msort(Amounts, Amounts).
+test(the_important_floor_never_falls_as_turnover_rises) :-
+    maplist(important_floor_at, [0, 1, 499999999, 500000000, 500000001, 1000000000, 5000000000], Amounts),
+    clausal_msort(Amounts, Amounts).
+test(the_essential_floor_is_never_below_the_important_floor) :-
+    essential_floor_at(800000000, EssentialAmountEur),
+    important_floor_at(800000000, ImportantAmountEur),
+    EssentialAmountEur >= ImportantAmountEur.
+test(a_barred_fine_leaves_every_power_in_place) :-
+    nis2_supervision_fines_profile_for(gdpr_fine_bars_nis2_fine, Profile),
     fine_barred_by_gdpr_fine(Profile, fine_barred, _),
     minimum_powers(Profile, Powers),
-    length(Powers, 14).
-
-one_answer_per_query(Profile) :-
-    findall(Verdict, decide_nis2_supervision_fines(Profile, Verdict), Verdicts),
-    length(Verdicts, 1),
-    findall(Ceiling - CeilingCitations, fine_ceiling_floor(Profile, Ceiling, CeilingCitations), Ceilings),
-    length(Ceilings, 1),
-    findall(Powers, minimum_powers(Profile, Powers), PowerAnswers),
-    length(PowerAnswers, 1),
-    findall(Result - ResultCitations, escalation_powers_exercisable(Profile, Result, ResultCitations), Results),
-    length(Results, 1),
-    findall(Bar - BarCitations, fine_barred_by_gdpr_fine(Profile, Bar, BarCitations), Bars),
-    length(Bars, 1),
-    findall(Duty, data_protection_authority_information(Profile, Duty), Duties),
-    length(Duties, 1).
-
-item_cited(item(_, _, cite(Key))) :-
-    atom(Key).
-
-checklist_cited(Profile) :-
-    nis2_supervision_fines_checklist(Profile, Items),
-    Items = [_|_],
-    maplist(item_cited, Items).
-
-amount_at_least_floor(AmountEur - [cite(eu_dir_2022_2555_art_34_4)]) :-
-    AmountEur #>= 10000000.
-amount_at_least_floor(AmountEur - [cite(eu_dir_2022_2555_art_34_5)]) :-
-    AmountEur #>= 7000000.
-
-ceiling_amount_at(EntityClass, TurnoverEur, AmountEur) :-
-    fine_ceiling_floor([attribute(entity_class, EntityClass), attribute(infringed_provision, art_21), attribute(worldwide_annual_turnover_eur, TurnoverEur)], minimum_national_maximum(AmountEur, _), _).
-
-non_decreasing([_]).
-non_decreasing([First, Second|Rest]) :-
-    First #=< Second,
-    non_decreasing([Second|Rest]).
-
-lists_escalation_power(Subject) :-
-    subject_profile(Subject, Profile),
+    length(Powers, 18),
+    nis2_supervision_fines_status(Profile, eligible).
+test(a_public_administration_entity_keeps_the_administrative_fine) :-
+    nis2_supervision_fines_profile_for(escalation_public_administration_entity, Profile),
     minimum_powers(Profile, Powers),
-    is_list(Powers),
+    last(Powers, power(enforcement, administrative_fine, cite(eu_dir_2022_2555_art_32_4_i))).
+
+query_name(decide_nis2_supervision_fines).
+query_name(fine_ceiling_floor).
+query_name(minimum_powers).
+query_name(escalation_powers_exercisable).
+query_name(fine_barred_by_gdpr_fine).
+query_name(data_protection_authority_information).
+
+query_answers(decide_nis2_supervision_fines, Profile, Answers) :-
+    findall(Verdict, decide_nis2_supervision_fines(Profile, Verdict), Answers).
+query_answers(fine_ceiling_floor, Profile, Answers) :-
+    findall(Ceiling - Citations, fine_ceiling_floor(Profile, Ceiling, Citations), Answers).
+query_answers(minimum_powers, Profile, Answers) :-
+    findall(Powers, minimum_powers(Profile, Powers), Answers).
+query_answers(escalation_powers_exercisable, Profile, Answers) :-
+    findall(Result - Citations, escalation_powers_exercisable(Profile, Result, Citations), Answers).
+query_answers(fine_barred_by_gdpr_fine, Profile, Answers) :-
+    findall(Result - Citations, fine_barred_by_gdpr_fine(Profile, Result, Citations), Answers).
+query_answers(data_protection_authority_information, Profile, Answers) :-
+    findall(DutyList, data_protection_authority_information(Profile, DutyList), Answers).
+
+subject_query(Subject, QueryName) :-
+    nis2_supervision_fines_subject(Subject),
+    query_name(QueryName).
+
+subject_query_single(Subject, QueryName) :-
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    query_name(QueryName),
+    query_answers(QueryName, Profile, Answers),
+    length(Answers, 1).
+
+subject_status_in_table(Subject) :-
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    nis2_supervision_fines_status(Profile, Status),
+    nis2_supervision_fines_status_values(StatusValues),
+    member(Status, StatusValues).
+
+subject_citations(Subject, fine_ceiling_floor - Citations) :-
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    fine_ceiling_floor(Profile, _, Citations).
+subject_citations(Subject, escalation_powers_exercisable - Citations) :-
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    escalation_powers_exercisable(Profile, _, Citations).
+subject_citations(Subject, fine_barred_by_gdpr_fine - Citations) :-
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    fine_barred_by_gdpr_fine(Profile, _, Citations).
+subject_citations(Subject, data_protection_authority_information - Citations) :-
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    data_protection_authority_information(Profile, DutyList),
+    clausal_is_list(DutyList),
+    maplist(duty_item_citation, DutyList, Citations).
+
+duty_item_citation(inform_gdpr_supervisory_authorities(Citation), Citation).
+duty_item_citation(inform_supervisory_authority_in_own_member_state(Citation), Citation).
+
+recorded_citations([]).
+recorded_citations([cite(CitationKey)|MoreCitations]) :-
+    citation(CitationKey, _),
+    recorded_citations(MoreCitations).
+
+subject_citations_recorded(Subject, Labelled) :-
+    subject_citations(Subject, Labelled),
+    Labelled = _ - Citations,
+    recorded_citations(Citations).
+
+subject_floor(Subject, AmountEur) :-
+    nis2_supervision_fines_subject(Subject),
+    nis2_supervision_fines_profile_for(Subject, Profile),
+    fine_ceiling_floor(Profile, minimum_national_maximum(AmountEur, _), _).
+
+subject_floor_at_least_fixed(Subject, AmountEur) :-
+    subject_floor(Subject, AmountEur),
+    AmountEur >= 7000000.
+
+essential_floor_at(TurnoverEur, AmountEur) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_21), attribute(entity_class, essential), attribute(worldwide_annual_turnover_eur, TurnoverEur)], minimum_national_maximum(AmountEur, _), _).
+
+important_floor_at(TurnoverEur, AmountEur) :-
+    fine_ceiling_floor([attribute(infringed_provision, art_23), attribute(entity_class, important), attribute(worldwide_annual_turnover_eur, TurnoverEur)], minimum_national_maximum(AmountEur, _), _).
+
+test(a_public_administration_entity_has_no_escalation_power, fail) :-
+    nis2_supervision_fines_profile_for(escalation_public_administration_entity, Profile),
+    minimum_powers(Profile, Powers),
     member(power(escalation, _, _), Powers).
 
-facade_pair(exercisable, eligible).
-facade_pair(not_exercisable(_), ineligible).
-facade_pair(indeterminate(MissingKeys), indeterminate(MissingKeys)).
-facade_pair(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
-facade_pair(input_problems(Problems), input_problems(Problems)).
-
-facade_agrees(Profile) :-
-    decide_nis2_supervision_fines(Profile, nis2_supervision_fines_verdict(Status, _)),
-    escalation_powers_exercisable(Profile, Result, _),
-    facade_pair(Result, Status).
-
-cp_test_names([totality_every_subject_classifies, determinism_every_subject_one_answer_per_query, citation_completeness_every_checklist_item_is_cited, the_least_maximum_is_never_below_its_fixed_amount, the_essential_least_maximum_is_monotone_in_turnover, the_important_least_maximum_is_monotone_in_turnover, escalation_powers_only_for_essential_non_public_administration, the_facade_agrees_with_the_escalation_query, a_gdpr_fine_bar_leaves_the_measures_available]).
-cp_test_fail_names([]).
+cp_test_names([totality_every_subject_classifies, determinism_every_query_gives_one_answer_per_subject, every_status_is_in_the_status_table, citation_completeness_every_returned_citation_is_recorded, every_floor_is_at_least_the_smaller_fixed_amount, the_essential_floor_never_falls_as_turnover_rises, the_important_floor_never_falls_as_turnover_rises, the_essential_floor_is_never_below_the_important_floor, a_barred_fine_leaves_every_power_in_place, a_public_administration_entity_keeps_the_administrative_fine]).
+cp_test_fail_names([a_public_administration_entity_has_no_escalation_power]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

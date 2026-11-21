@@ -1,0 +1,104 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ind_dpdp_research_state_processing_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ind_dpdp_research_state_processing_dpdp_research_state_processing, [research_exemption/3, state_processing_standards/3, state_processing_disapplied_provisions/3, dpdp_research_state_processing_status/2]).
+:- use_module(m__ind_dpdp_research_state_processing_kernel, [dpdp_research_state_processing_input_problems/2]).
+:- use_module(m__ind_dpdp_research_state_processing_fixtures, [dpdp_research_state_processing_profile_for/2]).
+
+test(research_exemption_with_exempt_and_its_citations_bound) :-
+    dpdp_research_state_processing_profile_for(complete_processing, Profile),
+    research_exemption(Profile, exempt_from_act, [cite(in_dpdp_act_2023_s_17_2), cite(in_dpdp_act_2023_s_17_2_b), cite(in_dpdp_rules_2025_r_16), cite(in_dpdp_rules_2025_sch_2), cite(in_dpdp_rules_2025_sch_2_a), cite(in_dpdp_rules_2025_sch_2_b), cite(in_dpdp_rules_2025_sch_2_c), cite(in_dpdp_rules_2025_sch_2_d), cite(in_dpdp_rules_2025_sch_2_e), cite(in_dpdp_rules_2025_sch_2_f), cite(in_dpdp_rules_2025_sch_2_h)]).
+test(research_exemption_not_in_force_with_its_citations_bound) :-
+    dpdp_research_state_processing_profile_for(section_seventeen_not_in_force, Profile),
+    research_exemption(Profile, not_in_force, [cite(in_dpdp_rules_2025_r_1_4), cite(in_dpdp_rules_2025_r_16), cite(in_dpdp_act_2023_s_17_2), cite(in_dpdp_act_2023_s_17_2_b)]).
+test(research_exemption_not_exempt_with_its_citations_bound) :-
+    dpdp_research_state_processing_profile_for(decision_specific_to_data_principal, Profile),
+    research_exemption(Profile, not_exempt, [cite(in_dpdp_act_2023_s_17_2), cite(in_dpdp_act_2023_s_17_2_b), cite(in_dpdp_rules_2025_r_16)]).
+test(state_standards_follows_with_its_citations_bound) :-
+    dpdp_research_state_processing_profile_for(complete_processing, Profile),
+    state_processing_standards(Profile, follows_second_schedule, [cite(in_dpdp_rules_2025_r_5_1), cite(in_dpdp_rules_2025_sch_2), cite(in_dpdp_rules_2025_sch_2_a), cite(in_dpdp_rules_2025_sch_2_b), cite(in_dpdp_rules_2025_sch_2_c), cite(in_dpdp_rules_2025_sch_2_d), cite(in_dpdp_rules_2025_sch_2_e), cite(in_dpdp_rules_2025_sch_2_f), cite(in_dpdp_rules_2025_sch_2_g), cite(in_dpdp_rules_2025_sch_2_g_i), cite(in_dpdp_rules_2025_sch_2_g_ii), cite(in_dpdp_rules_2025_sch_2_g_iii), cite(in_dpdp_rules_2025_sch_2_h)]).
+test(state_standards_not_applicable_with_its_citations_bound) :-
+    dpdp_research_state_processing_profile_for(not_section_seven_b_use, Profile),
+    state_processing_standards(Profile, not_applicable, [cite(in_dpdp_rules_2025_r_5_1), cite(in_dpdp_act_2023_s_7_b)]).
+test(state_standards_not_in_force_with_its_citations_bound) :-
+    dpdp_research_state_processing_profile_for(section_seven_not_in_force, Profile),
+    state_processing_standards(Profile, not_in_force, [cite(in_dpdp_rules_2025_r_1_4), cite(in_dpdp_rules_2025_r_5_1), cite(in_dpdp_act_2023_s_7_b)]).
+test(state_standards_does_not_follow_with_its_citations_bound) :-
+    dpdp_research_state_processing_profile_for(lawful_manner_not_observed, Profile),
+    state_processing_standards(Profile, does_not_follow_second_schedule, [cite(in_dpdp_rules_2025_r_5_1), cite(in_dpdp_rules_2025_sch_2)]).
+test(disapplied_provisions_with_its_citation_bound) :-
+    dpdp_research_state_processing_profile_for(complete_processing, Profile),
+    state_processing_disapplied_provisions(Profile, sections_8_7_12_2_and_12_3_do_not_apply, [cite(in_dpdp_act_2023_s_17_4)]).
+test(disapplied_provisions_with_a_decision_purpose_bound) :-
+    dpdp_research_state_processing_profile_for(purpose_includes_affecting_decision, Profile),
+    state_processing_disapplied_provisions(Profile, sections_8_7_and_12_3_do_not_apply, [cite(in_dpdp_act_2023_s_17_4)]).
+test(a_referral_with_empty_citations_bound) :-
+    dpdp_research_state_processing_profile_for(state_body_unsure, Profile),
+    state_processing_disapplied_provisions(Profile, needs_legal_review(open_textured(processing_by_state_or_instrumentality, cite(in_dpdp_act_2023_s_17_4)), [inputs_relied_on([processing_by_state_or_instrumentality - unsure])]), []).
+test(status_holds_with_the_verdict_bound) :-
+    dpdp_research_state_processing_profile_for(complete_processing, Profile),
+    dpdp_research_state_processing_status(Profile, determinations(exempt_from_act, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+test(an_element_that_is_not_an_attribute_is_wrong_type_profile) :-
+    dpdp_research_state_processing_input_problems([attribute(colour, red), lawful_manner], [wrong_type(profile)]).
+test(a_number_is_not_a_profile) :-
+    dpdp_research_state_processing_input_problems(42, [wrong_type(profile)]).
+test(a_number_key_is_an_unknown_key) :-
+    dpdp_research_state_processing_input_problems([attribute(42, true)], [unknown_key(42)]).
+test(a_compound_key_is_an_unknown_key_as_given) :-
+    dpdp_research_state_processing_input_problems([attribute(key(lawful_manner), true)], [unknown_key(key(lawful_manner))]).
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(personal_data_to_be_used_for_decision_specific_to_data_principal, unsure)], [wrong_type(personal_data_to_be_used_for_decision_specific_to_data_principal)]).
+test(a_string_value_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(section_17_in_force_on_reference_date, "true")], [wrong_type(section_17_in_force_on_reference_date)]).
+test(year_zero_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, date(0, 1, 1))], [wrong_type(reference_date)]).
+test(a_negative_year_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, date(-5, 1, 1))], [wrong_type(reference_date)]).
+test(year_ten_thousand_is_a_real_day) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, date(10000, 1, 1))], []).
+test(february_twenty_ninth_in_a_common_year_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, date(2027, 2, 29))], [wrong_type(reference_date)]).
+test(february_twenty_ninth_in_a_leap_year_is_a_real_day) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, date(2028, 2, 29))], []).
+test(february_twenty_ninth_in_a_century_year_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, date(2100, 2, 29))], [wrong_type(reference_date)]).
+test(a_month_thirteen_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, date(2027, 13, 1))], [wrong_type(reference_date)]).
+test(a_date_string_is_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, '2027-06-01')], [wrong_type(reference_date)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    dpdp_research_state_processing_input_problems([attribute(colour, red), attribute(lawful_manner, maybe), attribute(shape, round), attribute(section_7_in_force_on_reference_date, unsure), attribute(colour, blue)], [wrong_type(section_7_in_force_on_reference_date), wrong_type(lawful_manner), unknown_key(colour), unknown_key(shape)]).
+test(a_duplicate_key_is_never_also_wrong_type) :-
+    dpdp_research_state_processing_input_problems([attribute(reference_date, nonsense), attribute(reference_date, date(2027, 6, 1))], [duplicate_key(reference_date)]).
+test(an_absent_key_is_not_a_problem) :-
+    dpdp_research_state_processing_input_problems([], []).
+test(each_query_answers_input_problems_with_no_citations) :-
+    research_exemption([attribute(lawful_manner, maybe)], input_problems([wrong_type(lawful_manner)]), []),
+    state_processing_standards([attribute(lawful_manner, maybe)], input_problems([wrong_type(lawful_manner)]), []),
+    state_processing_disapplied_provisions([attribute(lawful_manner, maybe)], input_problems([wrong_type(lawful_manner)]), []).
+test(a_non_list_profile_gets_input_problems) :-
+    research_exemption(nothing, input_problems([wrong_type(profile)]), []).
+test(a_problem_in_a_key_the_query_does_not_read_is_still_answered) :-
+    state_processing_disapplied_provisions([attribute(section_17_in_force_on_reference_date, true), attribute(processing_by_state_or_instrumentality, true), attribute(purpose_includes_decision_affecting_data_principal, false), attribute(intimation_to_data_principal, unsure)], input_problems([wrong_type(intimation_to_data_principal)]), []).
+
+test(research_exemption_with_a_wrong_verdict_bound, fail) :-
+    dpdp_research_state_processing_profile_for(complete_processing, Profile),
+    research_exemption(Profile, not_exempt, _).
+test(a_referral_never_carries_citations, fail) :-
+    dpdp_research_state_processing_profile_for(state_body_unsure, Profile),
+    state_processing_disapplied_provisions(Profile, _, [_|_]).
+test(status_with_another_verdict_bound_is_rejected, fail) :-
+    dpdp_research_state_processing_profile_for(complete_processing, Profile),
+    dpdp_research_state_processing_status(Profile, determinations(not_exempt, follows_second_schedule, sections_8_7_12_2_and_12_3_do_not_apply)).
+
+cp_test_names([research_exemption_with_exempt_and_its_citations_bound, research_exemption_not_in_force_with_its_citations_bound, research_exemption_not_exempt_with_its_citations_bound, state_standards_follows_with_its_citations_bound, state_standards_not_applicable_with_its_citations_bound, state_standards_not_in_force_with_its_citations_bound, state_standards_does_not_follow_with_its_citations_bound, disapplied_provisions_with_its_citation_bound, disapplied_provisions_with_a_decision_purpose_bound, a_referral_with_empty_citations_bound, status_holds_with_the_verdict_bound, an_element_that_is_not_an_attribute_is_wrong_type_profile, a_number_is_not_a_profile, a_number_key_is_an_unknown_key, a_compound_key_is_an_unknown_key_as_given, a_crisp_key_given_unsure_is_wrong_type, a_string_value_is_wrong_type, year_zero_is_wrong_type, a_negative_year_is_wrong_type, year_ten_thousand_is_a_real_day, february_twenty_ninth_in_a_common_year_is_wrong_type, february_twenty_ninth_in_a_leap_year_is_a_real_day, february_twenty_ninth_in_a_century_year_is_wrong_type, a_month_thirteen_is_wrong_type, a_date_string_is_wrong_type, problems_come_in_contract_order_then_unknown_keys, a_duplicate_key_is_never_also_wrong_type, an_absent_key_is_not_a_problem, each_query_answers_input_problems_with_no_citations, a_non_list_profile_gets_input_problems, a_problem_in_a_key_the_query_does_not_read_is_still_answered]).
+cp_test_fail_names([research_exemption_with_a_wrong_verdict_bound, a_referral_never_carries_citations, status_with_another_verdict_bound_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

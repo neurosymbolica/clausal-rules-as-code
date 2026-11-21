@@ -1,0 +1,495 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_tlpt_dora_tlpt, [tlpt_identification_basis/3, tlpt_duty/3, decide_dora_tlpt/2, dora_tlpt_status/2, dora_tlpt_checklist/2, dora_tlpt_decision_resolvable/1, dora_tlpt_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(clpz)).
+:- use_module(formalize_lib, [profile_get/3]).
+:- use_module(m__eu_dora_tlpt_kernel, [dora_tlpt_input_problems/2]).
+:- use_module(m__eu_dora_tlpt_citations, [implements/1]).
+
+threshold_provision(payment_transactions_threshold_eur, cite(eu_reg_2025_1190_art_2_2_b)).
+threshold_provision(electronic_money_threshold_eur, cite(eu_reg_2025_1190_art_2_2_c)).
+threshold_provision(subset_gross_written_premium_threshold_eur, cite(eu_reg_2025_1190_art_2_2_g)).
+threshold_provision(subset_technical_provisions_threshold_eur, cite(eu_reg_2025_1190_art_2_2_g)).
+threshold_provision(subset_total_assets_share_threshold_basis_points, cite(eu_reg_2025_1190_art_2_2_g)).
+threshold_provision(second_list_gross_written_premium_threshold_eur, cite(eu_reg_2025_1190_art_2_2_g)).
+threshold_provision(second_list_technical_provisions_threshold_eur, cite(eu_reg_2025_1190_art_2_2_g)).
+threshold_provision(second_list_total_assets_share_threshold_basis_points, cite(eu_reg_2025_1190_art_2_2_g)).
+
+type_listing(credit_institution, point(point_a, cite(eu_reg_2025_1190_art_2_2_a))).
+type_listing(institution_exempted_pursuant_to_directive_2013_36, no_point).
+type_listing(payment_institution, point(point_b, cite(eu_reg_2025_1190_art_2_2_b))).
+type_listing(exempted_payment_institution, no_point).
+type_listing(account_information_service_provider, no_point).
+type_listing(electronic_money_institution, point(point_c, cite(eu_reg_2025_1190_art_2_2_c))).
+type_listing(exempted_electronic_money_institution, no_point).
+type_listing(investment_firm, no_point).
+type_listing(crypto_asset_service_provider, no_point).
+type_listing(issuer_of_asset_referenced_tokens, no_point).
+type_listing(central_securities_depository, point(point_d, cite(eu_reg_2025_1190_art_2_2_d))).
+type_listing(central_counterparty, point(point_e, cite(eu_reg_2025_1190_art_2_2_e))).
+type_listing(trading_venue, point(point_f, cite(eu_reg_2025_1190_art_2_2_f))).
+type_listing(trade_repository, no_point).
+type_listing(manager_of_alternative_investment_funds, no_point).
+type_listing(management_company, no_point).
+type_listing(data_reporting_service_provider, no_point).
+type_listing(insurance_undertaking, point(point_g, cite(eu_reg_2025_1190_art_2_2_g))).
+type_listing(reinsurance_undertaking, point(point_g, cite(eu_reg_2025_1190_art_2_2_g))).
+type_listing(insurance_intermediary, no_point).
+type_listing(reinsurance_intermediary, no_point).
+type_listing(ancillary_insurance_intermediary, no_point).
+type_listing(institution_for_occupational_retirement_provision, no_point).
+type_listing(credit_rating_agency, no_point).
+type_listing(administrator_of_critical_benchmarks, no_point).
+type_listing(crowdfunding_service_provider, no_point).
+type_listing(securitisation_repository, no_point).
+type_listing(ict_third_party_service_provider, no_point).
+type_listing(none_of_the_listed_types, no_point).
+
+point_keys(credit_institution, [credit_institution_is_or_is_part_of_g_sii_or_o_sii]).
+point_keys(payment_institution, [payment_transactions_total_value_eur_first_preceding_calendar_year, payment_transactions_total_value_eur_second_preceding_calendar_year]).
+point_keys(electronic_money_institution, [payment_transactions_total_value_eur_first_preceding_calendar_year, payment_transactions_total_value_eur_second_preceding_calendar_year, outstanding_electronic_money_eur_first_preceding_calendar_year, outstanding_electronic_money_eur_second_preceding_calendar_year]).
+point_keys(central_securities_depository, []).
+point_keys(central_counterparty, []).
+point_keys(trading_venue, [trading_venue_has_electronic_trading_system, trading_venue_has_highest_national_turnover_share_in_both_preceding_years, trading_venue_union_turnover_share_exceeds_5_percent_in_both_preceding_years]).
+point_keys(insurance_undertaking, [insurance_undertaking_activities, gross_written_premium_eur, technical_provisions_eur, total_assets_share_of_member_state_insurance_sector_basis_points]).
+point_keys(reinsurance_undertaking, [gross_written_premium_eur, technical_provisions_eur, total_assets_share_of_member_state_insurance_sector_basis_points]).
+
+dora_tlpt_status_values([no_tlpt_duty, tlpt_required, indeterminate, input_problems]).
+
+key_state(Profile, Key, State) :-
+    findall(Value, profile_get(Profile, Key, Value), Values),
+    values_state(Values, State).
+
+values_state([], absent).
+values_state([Value], present(Value)).
+
+payment_value_exceeds_t(ValueEur, true) :-
+    implements(eu_reg_2025_1190_art_2_2_b),
+    ValueEur #> 150000000000.
+payment_value_exceeds_t(ValueEur, false) :-
+    implements(eu_reg_2025_1190_art_2_2_b),
+    ValueEur #< 150000000001.
+
+electronic_money_exceeds_t(MoneyEur, true) :-
+    implements(eu_reg_2025_1190_art_2_2_c),
+    MoneyEur #> 40000000000.
+electronic_money_exceeds_t(MoneyEur, false) :-
+    implements(eu_reg_2025_1190_art_2_2_c),
+    MoneyEur #< 40000000001.
+
+subset_premium_exceeds_t(PremiumEur, true) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    PremiumEur #> 1500000000.
+subset_premium_exceeds_t(PremiumEur, false) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    PremiumEur #< 1500000001.
+
+subset_provisions_exceed_t(ProvisionsEur, true) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ProvisionsEur #> 10000000000.
+subset_provisions_exceed_t(ProvisionsEur, false) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ProvisionsEur #< 10000000001.
+
+subset_share_exceeds_t(ShareBasisPoints, true) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ShareBasisPoints #> 350.
+subset_share_exceeds_t(ShareBasisPoints, false) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ShareBasisPoints #< 351.
+
+second_list_premium_exceeds_t(PremiumEur, true) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    PremiumEur #> 3000000000.
+second_list_premium_exceeds_t(PremiumEur, false) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    PremiumEur #< 3000000001.
+
+second_list_provisions_exceed_t(ProvisionsEur, true) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ProvisionsEur #> 30000000000.
+second_list_provisions_exceed_t(ProvisionsEur, false) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ProvisionsEur #< 30000000001.
+
+second_list_share_exceeds_t(ShareBasisPoints, true) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ShareBasisPoints #> 1000.
+second_list_share_exceeds_t(ShareBasisPoints, false) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    ShareBasisPoints #< 1001.
+
+life_share_condition_t(life_only, ShareBasisPoints, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    subset_share_exceeds_t(ShareBasisPoints, Truth).
+life_share_condition_t(life_and_non_life, ShareBasisPoints, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    subset_share_exceeds_t(ShareBasisPoints, Truth).
+life_share_condition_t(non_life_only, _, true) :-
+    implements(eu_reg_2025_1190_art_2_2_g).
+
+second_list_t(PremiumEur, ProvisionsEur, ShareBasisPoints, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    second_list_premium_exceeds_t(PremiumEur, PremiumMet),
+    second_list_provisions_exceed_t(ProvisionsEur, ProvisionsMet),
+    second_list_share_exceeds_t(ShareBasisPoints, ShareMet),
+    truth_disjunction(PremiumMet, ProvisionsMet, PremiumOrProvisions),
+    truth_disjunction(PremiumOrProvisions, ShareMet, Truth).
+
+truth_conjunction(true, Truth, Truth).
+truth_conjunction(false, _, false).
+
+truth_disjunction(true, _, true).
+truth_disjunction(false, Truth, Truth).
+
+assignment_value(Assignment, Key, Value) :-
+    member(Key - Value, Assignment).
+
+point_met_t(credit_institution, Assignment, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_a),
+    assignment_value(Assignment, credit_institution_is_or_is_part_of_g_sii_or_o_sii, Truth).
+point_met_t(payment_institution, Assignment, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_b),
+    assignment_value(Assignment, payment_transactions_total_value_eur_first_preceding_calendar_year, FirstYearPaymentsEur),
+    assignment_value(Assignment, payment_transactions_total_value_eur_second_preceding_calendar_year, SecondYearPaymentsEur),
+    payment_value_exceeds_t(FirstYearPaymentsEur, FirstYearMet),
+    payment_value_exceeds_t(SecondYearPaymentsEur, SecondYearMet),
+    truth_conjunction(FirstYearMet, SecondYearMet, Truth).
+point_met_t(electronic_money_institution, Assignment, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_c),
+    assignment_value(Assignment, payment_transactions_total_value_eur_first_preceding_calendar_year, FirstYearPaymentsEur),
+    assignment_value(Assignment, payment_transactions_total_value_eur_second_preceding_calendar_year, SecondYearPaymentsEur),
+    assignment_value(Assignment, outstanding_electronic_money_eur_first_preceding_calendar_year, FirstYearMoneyEur),
+    assignment_value(Assignment, outstanding_electronic_money_eur_second_preceding_calendar_year, SecondYearMoneyEur),
+    payment_value_exceeds_t(FirstYearPaymentsEur, FirstYearPaymentsMet),
+    electronic_money_exceeds_t(FirstYearMoneyEur, FirstYearMoneyMet),
+    payment_value_exceeds_t(SecondYearPaymentsEur, SecondYearPaymentsMet),
+    electronic_money_exceeds_t(SecondYearMoneyEur, SecondYearMoneyMet),
+    truth_disjunction(FirstYearPaymentsMet, FirstYearMoneyMet, FirstYearMet),
+    truth_disjunction(SecondYearPaymentsMet, SecondYearMoneyMet, SecondYearMet),
+    truth_conjunction(FirstYearMet, SecondYearMet, Truth).
+point_met_t(central_securities_depository, [], true) :-
+    implements(eu_reg_2025_1190_art_2_2_d).
+point_met_t(central_counterparty, [], true) :-
+    implements(eu_reg_2025_1190_art_2_2_e).
+point_met_t(trading_venue, Assignment, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_f),
+    assignment_value(Assignment, trading_venue_has_electronic_trading_system, ElectronicTradingSystem),
+    assignment_value(Assignment, trading_venue_has_highest_national_turnover_share_in_both_preceding_years, HighestNationalShare),
+    assignment_value(Assignment, trading_venue_union_turnover_share_exceeds_5_percent_in_both_preceding_years, UnionShareAboveFivePercent),
+    truth_disjunction(HighestNationalShare, UnionShareAboveFivePercent, MarketShareMet),
+    truth_conjunction(ElectronicTradingSystem, MarketShareMet, Truth).
+point_met_t(insurance_undertaking, Assignment, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    assignment_value(Assignment, insurance_undertaking_activities, Activities),
+    assignment_value(Assignment, gross_written_premium_eur, PremiumEur),
+    assignment_value(Assignment, technical_provisions_eur, ProvisionsEur),
+    assignment_value(Assignment, total_assets_share_of_member_state_insurance_sector_basis_points, ShareBasisPoints),
+    subset_premium_exceeds_t(PremiumEur, PremiumInSubset),
+    subset_provisions_exceed_t(ProvisionsEur, ProvisionsInSubset),
+    life_share_condition_t(Activities, ShareBasisPoints, ShareInSubset),
+    truth_conjunction(PremiumInSubset, ProvisionsInSubset, FiguresInSubset),
+    truth_conjunction(FiguresInSubset, ShareInSubset, InSubset),
+    second_list_t(PremiumEur, ProvisionsEur, ShareBasisPoints, OnSecondList),
+    truth_conjunction(InSubset, OnSecondList, Truth).
+point_met_t(reinsurance_undertaking, Assignment, Truth) :-
+    implements(eu_reg_2025_1190_art_2_2_g),
+    assignment_value(Assignment, gross_written_premium_eur, PremiumEur),
+    assignment_value(Assignment, technical_provisions_eur, ProvisionsEur),
+    assignment_value(Assignment, total_assets_share_of_member_state_insurance_sector_basis_points, ShareBasisPoints),
+    subset_premium_exceeds_t(PremiumEur, PremiumInSubset),
+    subset_provisions_exceed_t(ProvisionsEur, ProvisionsInSubset),
+    truth_conjunction(PremiumInSubset, ProvisionsInSubset, InSubset),
+    second_list_t(PremiumEur, ProvisionsEur, ShareBasisPoints, OnSecondList),
+    truth_conjunction(InSubset, OnSecondList, Truth).
+
+key_domain(credit_institution_is_or_is_part_of_g_sii_or_o_sii, [true, false]).
+key_domain(payment_transactions_total_value_eur_first_preceding_calendar_year, Values) :-
+    payment_domain(Values).
+key_domain(payment_transactions_total_value_eur_second_preceding_calendar_year, Values) :-
+    payment_domain(Values).
+key_domain(outstanding_electronic_money_eur_first_preceding_calendar_year, Values) :-
+    electronic_money_domain(Values).
+key_domain(outstanding_electronic_money_eur_second_preceding_calendar_year, Values) :-
+    electronic_money_domain(Values).
+key_domain(trading_venue_has_electronic_trading_system, [true, false]).
+key_domain(trading_venue_has_highest_national_turnover_share_in_both_preceding_years, [true, false]).
+key_domain(trading_venue_union_turnover_share_exceeds_5_percent_in_both_preceding_years, [true, false]).
+key_domain(insurance_undertaking_activities, [life_only, life_and_non_life, non_life_only]).
+key_domain(gross_written_premium_eur, [0, AboveSubset, AboveSecondList]) :-
+    AboveSubset #= 1500000000 + 1,
+    AboveSecondList #= 3000000000 + 1.
+key_domain(technical_provisions_eur, [0, AboveSubset, AboveSecondList]) :-
+    AboveSubset #= 10000000000 + 1,
+    AboveSecondList #= 30000000000 + 1.
+key_domain(total_assets_share_of_member_state_insurance_sector_basis_points, [0, AboveSubset, AboveSecondList]) :-
+    AboveSubset #= 350 + 1,
+    AboveSecondList #= 1000 + 1.
+
+payment_domain([0, Above]) :-
+    Above #= 150000000000 + 1.
+
+electronic_money_domain([0, Above]) :-
+    Above #= 40000000000 + 1.
+
+completion([], _, []).
+completion([Key|Keys], Profile, [Key - Value|Assignment]) :-
+    key_state(Profile, Key, State),
+    state_value(State, Key, Value),
+    completion(Keys, Profile, Assignment).
+
+state_value(present(Value), _, Value).
+state_value(absent, Key, Value) :-
+    key_domain(Key, Values),
+    member(Value, Values).
+
+point_outcome(Type, Profile, Outcome) :-
+    point_keys(Type, Keys),
+    findall(Assignment - Truth, (completion(Keys, Profile, Assignment), point_met_t(Type, Assignment, Truth)), Outcomes),
+    findall(Truth, member(_ - Truth, Outcomes), Truths),
+    sort(Truths, Distinct),
+    settled_outcome(Distinct, Keys, Profile, Outcomes, Outcome).
+
+settled_outcome([true], _, _, _, met).
+settled_outcome([false], _, _, _, not_met).
+settled_outcome([false, true], Keys, Profile, Outcomes, unsettled(Key)) :-
+    choose_key(Keys, Profile, Outcomes, Key).
+
+choose_key(Keys, Profile, Outcomes, Key) :-
+    findall(Absent, (member(Absent, Keys), key_state(Profile, Absent, absent)), AbsentKeys),
+    findall(Candidate, (member(Candidate, AbsentKeys), changing_key_t(Candidate, Outcomes, true)), Candidates),
+    findall(Decider, (member(Decider, Candidates), deciding_key_t(Decider, Outcomes, true)), Deciders),
+    pick_key(Deciders, Candidates, Key).
+
+pick_key([Decider|_], _, Decider).
+pick_key([], [Candidate|_], Candidate).
+
+changing_key_t(Key, Outcomes, Truth) :-
+    findall(Context - Outcome, (member(Assignment - Outcome, Outcomes), select(Key - _, Assignment, Context)), Pairs),
+    findall(Context, (member(Context - false, Pairs), member(Context - true, Pairs)), Witnesses),
+    length(Witnesses, Count),
+    count_truth(Count, Truth).
+
+deciding_key_t(Key, Outcomes, Truth) :-
+    key_domain(Key, Values),
+    findall(Value, (member(Value, Values), uniform_value_t(Key, Value, Outcomes, true)), UniformValues),
+    length(UniformValues, Count),
+    count_truth(Count, Truth).
+
+uniform_value_t(Key, Value, Outcomes, Truth) :-
+    findall(Outcome, (member(Assignment - Outcome, Outcomes), member(Key - Value, Assignment)), Found),
+    sort(Found, Distinct),
+    length(Distinct, Count),
+    single_truth(Count, Truth).
+
+count_truth(Count, true) :-
+    Count #> 0.
+count_truth(Count, false) :-
+    Count #= 0.
+
+single_truth(1, true).
+single_truth(Count, false) :-
+    Count #> 1.
+
+tlpt_identification_basis(Profile, Result, Citations) :-
+    dora_tlpt_input_problems(Profile, Problems),
+    identification_after_check(Problems, Profile, Result, Citations).
+
+identification_after_check([Problem|Problems], _, input_problems([Problem|Problems]), []).
+identification_after_check([], Profile, Result, Citations) :-
+    key_state(Profile, financial_entity_is_article_16_1_entity, State),
+    identification_from_article_16_state(State, Profile, Result, Citations).
+
+identification_from_article_16_state(present(true), _, excluded_from_tlpt(article_16_1_entity), [cite(eu_reg_2022_2554_art_26_1)]) :-
+    implements(eu_reg_2022_2554_art_26_1).
+identification_from_article_16_state(absent, _, indeterminate([financial_entity_is_article_16_1_entity]), []).
+identification_from_article_16_state(present(false), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_26_1),
+    key_state(Profile, financial_entity_is_microenterprise, State),
+    identification_from_microenterprise_state(State, Profile, Result, Citations).
+
+identification_from_microenterprise_state(present(true), _, excluded_from_tlpt(microenterprise), [cite(eu_reg_2022_2554_art_26_1)]) :-
+    implements(eu_reg_2022_2554_art_26_1).
+identification_from_microenterprise_state(absent, _, indeterminate([financial_entity_is_microenterprise]), []).
+identification_from_microenterprise_state(present(false), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_26_1),
+    key_state(Profile, dora_entity_type, State),
+    identification_from_type_state(State, Profile, Result, Citations).
+
+identification_from_type_state(absent, _, indeterminate([dora_entity_type]), []).
+identification_from_type_state(present(Type), Profile, Result, Citations) :-
+    implements(eu_reg_2025_1190_art_2_2),
+    type_listing(Type, Listing),
+    identification_from_listing(Listing, Type, Profile, Result, Citations).
+
+identification_from_listing(no_point, _, _, not_listed_for_tlpt, [cite(eu_reg_2022_2554_art_26_8), cite(eu_reg_2025_1190_art_2_1), cite(eu_reg_2025_1190_art_2_2)]) :-
+    implements(eu_reg_2025_1190_art_2_2).
+identification_from_listing(point(Point, PointCitation), Type, Profile, Result, Citations) :-
+    implements(eu_reg_2025_1190_art_2_2),
+    point_outcome(Type, Profile, Outcome),
+    identification_from_outcome(Outcome, Point, PointCitation, Result, Citations).
+
+identification_from_outcome(unsettled(Key), _, _, indeterminate([Key]), []).
+identification_from_outcome(met, Point, PointCitation, listed_for_tlpt(Point), [cite(eu_reg_2025_1190_art_2_2), PointCitation]) :-
+    implements(eu_reg_2025_1190_art_2_2).
+identification_from_outcome(not_met, _, _, not_listed_for_tlpt, [cite(eu_reg_2022_2554_art_26_8), cite(eu_reg_2025_1190_art_2_1), cite(eu_reg_2025_1190_art_2_2)]) :-
+    implements(eu_reg_2025_1190_art_2_2).
+
+tlpt_duty(Profile, Result, Citations) :-
+    dora_tlpt_input_problems(Profile, Problems),
+    duty_after_check(Problems, Profile, Result, Citations).
+
+duty_after_check([Problem|Problems], _, input_problems([Problem|Problems]), []).
+duty_after_check([], Profile, Result, Citations) :-
+    key_state(Profile, financial_entity_is_article_16_1_entity, State),
+    duty_from_article_16_state(State, Profile, Result, Citations).
+
+duty_from_article_16_state(present(true), _, no_tlpt_duty(article_16_1_entity), [cite(eu_reg_2022_2554_art_26_1)]) :-
+    implements(eu_reg_2022_2554_art_26_1).
+duty_from_article_16_state(absent, _, indeterminate([financial_entity_is_article_16_1_entity]), []).
+duty_from_article_16_state(present(false), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_26_1),
+    key_state(Profile, financial_entity_is_microenterprise, State),
+    duty_from_microenterprise_state(State, Profile, Result, Citations).
+
+duty_from_microenterprise_state(present(true), _, no_tlpt_duty(microenterprise), [cite(eu_reg_2022_2554_art_26_1)]) :-
+    implements(eu_reg_2022_2554_art_26_1).
+duty_from_microenterprise_state(absent, _, indeterminate([financial_entity_is_microenterprise]), []).
+duty_from_microenterprise_state(present(false), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_26_1),
+    key_state(Profile, identified_by_tlpt_authority_as_required_to_perform_tlpt, State),
+    duty_from_identification_state(State, Profile, Result, Citations).
+
+duty_from_identification_state(present(false), _, no_tlpt_duty(not_identified), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]) :-
+    implements(eu_reg_2022_2554_art_26_8).
+duty_from_identification_state(absent, _, indeterminate([identified_by_tlpt_authority_as_required_to_perform_tlpt]), []).
+duty_from_identification_state(present(true), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_26_8),
+    key_state(Profile, tlpt_frequency_changed_by_competent_authority, State),
+    duty_from_frequency_state(State, Result, Citations).
+
+duty_from_frequency_state(absent, indeterminate([tlpt_frequency_changed_by_competent_authority]), []).
+duty_from_frequency_state(present(true), tlpt_required(frequency_set_by_competent_authority), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]) :-
+    implements(eu_reg_2022_2554_art_26_1).
+duty_from_frequency_state(present(false), tlpt_required(at_least_every_three_years), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]) :-
+    implements(eu_reg_2022_2554_art_26_1).
+
+decide_dora_tlpt(Profile, dora_tlpt_verdict(Status, Citations)) :-
+    tlpt_duty(Profile, Status, Citations).
+
+dora_tlpt_status(Profile, Status) :-
+    decide_dora_tlpt(Profile, dora_tlpt_verdict(Status, _Citations)).
+
+dora_tlpt_checklist(Profile, [item(not_article_16_1_entity, ArticleSixteenStatus, cite(eu_reg_2022_2554_art_26_1)), item(not_microenterprise, MicroenterpriseStatus, cite(eu_reg_2022_2554_art_26_1)), item(listed_in_article_2_2, ListingStatus, cite(eu_reg_2025_1190_art_2_2)), item(identified_by_tlpt_authority, IdentificationStatus, cite(eu_reg_2022_2554_art_26_8))]) :-
+    dora_tlpt_input_problems(Profile, []),
+    key_state(Profile, financial_entity_is_article_16_1_entity, ArticleSixteenState),
+    key_state(Profile, financial_entity_is_microenterprise, MicroenterpriseState),
+    key_state(Profile, identified_by_tlpt_authority_as_required_to_perform_tlpt, IdentificationState),
+    tlpt_identification_basis(Profile, Basis, _),
+    carve_out_status(ArticleSixteenState, financial_entity_is_article_16_1_entity, article_16_1_entity, ArticleSixteenStatus),
+    carve_out_status(MicroenterpriseState, financial_entity_is_microenterprise, microenterprise, MicroenterpriseStatus),
+    listing_status(Basis, ListingStatus),
+    identification_status(IdentificationState, IdentificationStatus).
+
+carve_out_status(absent, Key, _, unknown([Key])).
+carve_out_status(present(false), _, _, met) :-
+    implements(eu_reg_2022_2554_art_26_1).
+carve_out_status(present(true), _, Ground, unmet(Ground)) :-
+    implements(eu_reg_2022_2554_art_26_1).
+
+listing_status(listed_for_tlpt(_), met) :-
+    implements(eu_reg_2025_1190_art_2_2).
+listing_status(not_listed_for_tlpt, unmet(not_listed_for_tlpt)) :-
+    implements(eu_reg_2025_1190_art_2_2).
+listing_status(excluded_from_tlpt(Ground), unmet(excluded_from_tlpt(Ground))) :-
+    implements(eu_reg_2022_2554_art_26_1).
+listing_status(indeterminate(Keys), unknown(Keys)).
+
+identification_status(absent, unknown([identified_by_tlpt_authority_as_required_to_perform_tlpt])).
+identification_status(present(true), met) :-
+    implements(eu_reg_2022_2554_art_26_8).
+identification_status(present(false), unmet(not_identified)) :-
+    implements(eu_reg_2022_2554_art_26_8).
+
+dora_tlpt_decision_resolvable(Profile) :-
+    decide_dora_tlpt(Profile, _Verdict).
+
+test(an_article_16_1_entity_is_excluded) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, true), attribute(financial_entity_is_microenterprise, true)], excluded_from_tlpt(article_16_1_entity), [cite(eu_reg_2022_2554_art_26_1)]).
+test(the_article_16_1_fact_is_asked_first_even_beside_a_microenterprise) :-
+    tlpt_identification_basis([attribute(financial_entity_is_microenterprise, true)], indeterminate([financial_entity_is_article_16_1_entity]), []).
+test(a_microenterprise_is_excluded) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, true)], excluded_from_tlpt(microenterprise), [cite(eu_reg_2022_2554_art_26_1)]).
+test(the_type_is_asked_after_the_carve_outs) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false)], indeterminate([dora_entity_type]), []).
+test(a_central_counterparty_is_listed) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, central_counterparty)], listed_for_tlpt(point_e), [cite(eu_reg_2025_1190_art_2_2), cite(eu_reg_2025_1190_art_2_2_e)]).
+test(an_investment_firm_is_not_listed) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, investment_firm)], not_listed_for_tlpt, [cite(eu_reg_2022_2554_art_26_8), cite(eu_reg_2025_1190_art_2_1), cite(eu_reg_2025_1190_art_2_2)]).
+test(a_credit_institution_without_its_fact_names_it) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, credit_institution)], indeterminate([credit_institution_is_or_is_part_of_g_sii_or_o_sii]), []).
+test(a_payment_value_equal_to_the_threshold_does_not_exceed_it) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, payment_institution), attribute(payment_transactions_total_value_eur_first_preceding_calendar_year, 150000000000), attribute(payment_transactions_total_value_eur_second_preceding_calendar_year, 150000000001)], not_listed_for_tlpt, _).
+test(a_payment_institution_over_the_threshold_in_both_years_is_listed) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, payment_institution), attribute(payment_transactions_total_value_eur_first_preceding_calendar_year, 150000000001), attribute(payment_transactions_total_value_eur_second_preceding_calendar_year, 150000000001)], listed_for_tlpt(point_b), [cite(eu_reg_2025_1190_art_2_2), cite(eu_reg_2025_1190_art_2_2_b)]).
+test(a_payment_institution_missing_its_second_year_names_it) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, payment_institution), attribute(payment_transactions_total_value_eur_first_preceding_calendar_year, 150000000001)], indeterminate([payment_transactions_total_value_eur_second_preceding_calendar_year]), []).
+test(an_electronic_money_institution_meets_point_c_with_either_figure_each_year) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, electronic_money_institution), attribute(payment_transactions_total_value_eur_first_preceding_calendar_year, 150000000001), attribute(payment_transactions_total_value_eur_second_preceding_calendar_year, 0), attribute(outstanding_electronic_money_eur_first_preceding_calendar_year, 0), attribute(outstanding_electronic_money_eur_second_preceding_calendar_year, 40000000001)], listed_for_tlpt(point_c), _).
+test(an_electronic_money_institution_with_no_figures_names_the_first_payment_year) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, electronic_money_institution)], indeterminate([payment_transactions_total_value_eur_first_preceding_calendar_year]), []).
+test(an_electronic_money_institution_with_one_year_met_names_the_other_year) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, electronic_money_institution), attribute(payment_transactions_total_value_eur_first_preceding_calendar_year, 150000000001)], indeterminate([payment_transactions_total_value_eur_second_preceding_calendar_year]), []).
+test(a_trading_venue_without_facts_names_the_electronic_trading_system) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, trading_venue)], indeterminate([trading_venue_has_electronic_trading_system]), []).
+test(a_trading_venue_with_a_union_share_is_listed) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, trading_venue), attribute(trading_venue_has_electronic_trading_system, true), attribute(trading_venue_union_turnover_share_exceeds_5_percent_in_both_preceding_years, true)], listed_for_tlpt(point_f), _).
+test(a_trading_venue_with_no_electronic_trading_system_is_not_listed) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, trading_venue), attribute(trading_venue_has_electronic_trading_system, false)], not_listed_for_tlpt, _).
+test(an_insurance_undertaking_without_figures_names_the_premium) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, insurance_undertaking)], indeterminate([gross_written_premium_eur]), []).
+test(a_non_life_insurance_undertaking_needs_no_share) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, insurance_undertaking), attribute(insurance_undertaking_activities, non_life_only), attribute(gross_written_premium_eur, 3000000001), attribute(technical_provisions_eur, 10000000001)], listed_for_tlpt(point_g), [cite(eu_reg_2025_1190_art_2_2), cite(eu_reg_2025_1190_art_2_2_g)]).
+test(a_life_insurance_undertaking_at_the_share_threshold_is_not_listed) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, insurance_undertaking), attribute(insurance_undertaking_activities, life_only), attribute(gross_written_premium_eur, 3500000000), attribute(technical_provisions_eur, 11000000000), attribute(total_assets_share_of_member_state_insurance_sector_basis_points, 350)], not_listed_for_tlpt, _).
+test(the_activities_are_named_before_the_share) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, insurance_undertaking), attribute(gross_written_premium_eur, 3500000000), attribute(technical_provisions_eur, 11000000000)], indeterminate([insurance_undertaking_activities]), []).
+test(a_reinsurance_undertaking_reads_no_activities) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, reinsurance_undertaking), attribute(gross_written_premium_eur, 3500000000), attribute(technical_provisions_eur, 11000000000)], listed_for_tlpt(point_g), _).
+test(a_reinsurance_undertaking_below_the_second_list_names_the_share) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, reinsurance_undertaking), attribute(gross_written_premium_eur, 2000000000), attribute(technical_provisions_eur, 20000000000)], indeterminate([total_assets_share_of_member_state_insurance_sector_basis_points]), []).
+test(a_float_figure_is_an_input_problem) :-
+    FloatPremiumEur is float(1500000000),
+    tlpt_identification_basis([attribute(gross_written_premium_eur, FloatPremiumEur)], input_problems([wrong_type(gross_written_premium_eur)]), []).
+test(each_identification_query_yields_one_solution) :-
+    findall(Result - Citations, tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, insurance_undertaking)], Result, Citations), Answers),
+    length(Answers, 1).
+test(a_listed_entity_not_identified_has_no_duty) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, central_counterparty), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, false)], no_tlpt_duty(not_identified), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]).
+test(the_identification_is_named_before_the_frequency) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false)], indeterminate([identified_by_tlpt_authority_as_required_to_perform_tlpt]), []).
+test(an_identified_entity_needs_the_frequency_fact) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, true)], indeterminate([tlpt_frequency_changed_by_competent_authority]), []).
+test(an_identified_entity_tests_at_least_every_three_years) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, true), attribute(tlpt_frequency_changed_by_competent_authority, false)], tlpt_required(at_least_every_three_years), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]).
+test(a_changed_frequency_is_set_by_the_competent_authority) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, true), attribute(tlpt_frequency_changed_by_competent_authority, true)], tlpt_required(frequency_set_by_competent_authority), _).
+test(a_carve_out_beats_an_identification) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, true), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, true)], no_tlpt_duty(microenterprise), [cite(eu_reg_2022_2554_art_26_1)]).
+test(an_unknown_key_is_an_input_problem) :-
+    tlpt_duty([attribute(colour, blue)], input_problems([unknown_key(colour)]), []).
+test(each_duty_query_yields_one_solution) :-
+    findall(Result - Citations, tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false)], Result, Citations), Answers),
+    length(Answers, 1).
+test(the_checklist_has_four_rows) :-
+    dora_tlpt_checklist([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, central_securities_depository), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, true)], [item(not_article_16_1_entity, met, cite(eu_reg_2022_2554_art_26_1)), item(not_microenterprise, met, cite(eu_reg_2022_2554_art_26_1)), item(listed_in_article_2_2, met, cite(eu_reg_2025_1190_art_2_2)), item(identified_by_tlpt_authority, met, cite(eu_reg_2022_2554_art_26_8))]).
+test(the_status_projects_the_duty) :-
+    dora_tlpt_status([attribute(financial_entity_is_article_16_1_entity, true)], no_tlpt_duty(article_16_1_entity)).
+
+test(an_investment_firm_is_not_listed_under_a_point, fail) :-
+    tlpt_identification_basis([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, investment_firm)], listed_for_tlpt(_), _).
+test(a_listed_entity_not_identified_is_not_required, fail) :-
+    tlpt_duty([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, central_counterparty), attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, false)], tlpt_required(_), _).

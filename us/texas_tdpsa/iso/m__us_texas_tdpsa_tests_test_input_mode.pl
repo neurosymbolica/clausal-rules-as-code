@@ -1,0 +1,139 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__us_texas_tdpsa_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__us_texas_tdpsa_texas_tdpsa, [applicability_status/4, response_deadline/4, extended_response_deadline/4, appeal_response_deadline/4, cure_period_last_day/4, attorney_general_action_status/5, civil_penalty_maximum/3, texas_tdpsa_status/2, texas_tdpsa_status_values/1]).
+:- use_module(m__us_texas_tdpsa_kernel, [texas_tdpsa_input_problems/2]).
+:- use_module(m__us_texas_tdpsa_fixtures, [texas_tdpsa_profile_for/2]).
+
+attested_value(Value, attested(Value, attestation(host_user, host_time, size_review, none))).
+
+test(status_holds_with_the_verdict_bound) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    findall(Status, texas_tdpsa_status(Profile, Status), [BaselineStatus]),
+    BaselineStatus == in_scope,
+    texas_tdpsa_status(Profile, in_scope).
+test(bound_in_scope_with_its_basis) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    attested_value(false, Attested),
+    applicability_status(Profile, in_scope, [outside_fact(small_business_as_defined_by_sba, Attested)], [cite(us_tx_bc_541_002_a)|_]).
+test(bound_out_of_scope_for_a_nonprofit) :-
+    texas_tdpsa_profile_for(nonprofit_excluded, Profile),
+    applicability_status(Profile, out_of_scope, [], [_|_]).
+test(bound_out_of_scope_for_an_attested_small_business) :-
+    texas_tdpsa_profile_for(small_business_attested, Profile),
+    attested_value(true, Attested),
+    applicability_status(Profile, out_of_scope, [outside_fact(small_business_as_defined_by_sba, Attested)], _).
+test(bound_indeterminate_names_the_missing_key) :-
+    texas_tdpsa_profile_for(entity_category_missing, Profile),
+    applicability_status(Profile, indeterminate([entity_category]), [], []).
+test(bound_absent_referral) :-
+    texas_tdpsa_profile_for(sba_absent_referral, Profile),
+    applicability_status(Profile, needs_legal_review(cross_reference_unresolved(cite(us_tx_bc_541_002_a_3), cite(sba_small_business_size_determination)), [resolution(cite(sba_small_business_size_determination), not_attempted), inputs_relied_on([small_business_as_defined_by_sba - absent])]), [], []).
+test(bound_open_textured_referral) :-
+    texas_tdpsa_profile_for(conducts_business_unsure, Profile),
+    applicability_status(Profile, needs_legal_review(open_textured(conducts_business_in_texas_or_serves_texas_residents, cite(us_tx_bc_541_002_a_1)), [inputs_relied_on([conducts_business_in_texas_or_serves_texas_residents - unsure])]), [], []).
+test(bound_input_problems) :-
+    texas_tdpsa_profile_for(malformed_duplicate_key, Profile),
+    applicability_status(Profile, input_problems([duplicate_key(entity_category)]), [], []).
+test(bound_response_deadline) :-
+    response_deadline([], date(2026, 1, 1), date(2026, 2, 15), [cite(us_tx_bc_541_052_b), cite(us_tx_bc_541_052_c)]).
+test(bound_extended_response_deadline) :-
+    texas_tdpsa_profile_for(extension_granted, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), date(2026, 4, 1), [cite(us_tx_bc_541_052_b)]).
+test(bound_no_extension_available) :-
+    texas_tdpsa_profile_for(extension_notice_late, Profile),
+    extended_response_deadline(Profile, date(2026, 1, 1), no_extension_available, [cite(us_tx_bc_541_052_b)]).
+test(bound_appeal_response_deadline) :-
+    appeal_response_deadline([], date(2026, 1, 1), date(2026, 3, 2), [cite(us_tx_bc_541_053_c)]).
+test(bound_cure_period_last_day) :-
+    cure_period_last_day([], date(2026, 3, 1), date(2026, 3, 31), [cite(us_tx_bc_541_154), cite(us_tx_bc_541_154_1)]).
+test(bound_cure_period_running) :-
+    attorney_general_action_status([], date(2026, 3, 1), date(2026, 3, 15), cure_period_running, [cite(us_tx_bc_541_154)]).
+test(bound_action_may_be_brought) :-
+    texas_tdpsa_profile_for(cure_not_achieved, Profile),
+    attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), action_may_be_brought, _).
+test(bound_no_action_for_cured_violation) :-
+    texas_tdpsa_profile_for(cure_completed, Profile),
+    attorney_general_action_status(Profile, date(2026, 3, 1), date(2026, 4, 1), no_action_for_cured_violation, _).
+test(bound_penalty_maximum) :-
+    texas_tdpsa_profile_for(penalty_three_violations, Profile),
+    civil_penalty_maximum(Profile, 22500, [cite(us_tx_bc_541_155_a)]).
+test(bound_no_civil_penalty) :-
+    texas_tdpsa_profile_for(penalty_no_ground, Profile),
+    civil_penalty_maximum(Profile, no_civil_penalty, [cite(us_tx_bc_541_155_a)]).
+test(well_formed_profile_has_no_problem) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    texas_tdpsa_input_problems(Profile, []).
+test(empty_profile_has_no_problem) :-
+    texas_tdpsa_input_problems([], []).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    texas_tdpsa_input_problems([attribute(colour, red), attribute(entity_category, nonprofit_organization), attribute(entity_category, financial_institution), attribute(processes_or_sells_personal_data, yes)], [duplicate_key(entity_category), wrong_type(processes_or_sells_personal_data), unknown_key(colour)]).
+test(unknown_key_named_once_however_often_it_repeats) :-
+    texas_tdpsa_input_problems([attribute(colour, red), attribute(colour, blue)], [unknown_key(colour)]).
+test(not_a_list_is_wrong_type_profile) :-
+    texas_tdpsa_input_problems(not_a_profile, [wrong_type(profile)]).
+test(unbound_profile_is_wrong_type_profile) :-
+    texas_tdpsa_input_problems(_, [wrong_type(profile)]).
+test(partial_list_is_wrong_type_profile) :-
+    texas_tdpsa_input_problems([attribute(violation_count, 1)|_], [wrong_type(profile)]).
+test(non_attribute_element_is_wrong_type_profile) :-
+    texas_tdpsa_input_problems([attribute(violation_count, 1), violation_count], [wrong_type(profile)]).
+test(unbound_key_is_unknown_key_as_given) :-
+    texas_tdpsa_input_problems([attribute(UnboundKey, true)], Problems),
+    Problems = [unknown_key(NamedKey)],
+    NamedKey == UnboundKey.
+test(unbound_value_is_wrong_type) :-
+    texas_tdpsa_input_problems([attribute(violation_count, _)], [wrong_type(violation_count)]).
+test(float_count_is_wrong_type) :-
+    texas_tdpsa_input_problems([attribute(violation_count, 3.0)], [wrong_type(violation_count)]).
+test(negative_count_is_wrong_type) :-
+    texas_tdpsa_input_problems([attribute(violation_count, -1)], [wrong_type(violation_count)]).
+test(bare_outside_fact_is_wrong_type) :-
+    texas_tdpsa_input_problems([attribute(small_business_as_defined_by_sba, false)], [wrong_type(small_business_as_defined_by_sba)]).
+test(attestation_holding_a_variable_is_wrong_type) :-
+    texas_tdpsa_input_problems([attribute(small_business_as_defined_by_sba, attested(false, attestation(_, host_time, size_review, none)))], [wrong_type(small_business_as_defined_by_sba)]).
+test(attested_crisp_key_is_wrong_type) :-
+    attested_value(true, Attested),
+    texas_tdpsa_input_problems([attribute(cured_within_cure_period, Attested)], [wrong_type(cured_within_cure_period)]).
+test(unsure_crisp_key_is_wrong_type) :-
+    texas_tdpsa_input_problems([attribute(processes_or_sells_personal_data, unsure)], [wrong_type(processes_or_sells_personal_data)]).
+test(unsure_judgement_is_accepted) :-
+    texas_tdpsa_input_problems([attribute(extension_reasonably_necessary, unsure)], []).
+test(evidence_url_is_accepted) :-
+    texas_tdpsa_input_problems([attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, url(location, retrieved))))], []).
+test(non_leap_february_29_is_wrong_type_received_date) :-
+    response_deadline([], date(2026, 2, 29), input_problems([wrong_type(received_date)]), []).
+test(year_zero_is_wrong_type_received_date) :-
+    extended_response_deadline([], date(0, 1, 1), input_problems([wrong_type(received_date)]), []).
+test(float_day_is_wrong_type_appeal_received_date) :-
+    appeal_response_deadline([], date(2026, 1, 1.0), input_problems([wrong_type(appeal_received_date)]), []).
+test(atom_is_wrong_type_notice_date) :-
+    cure_period_last_day([], tomorrow, input_problems([wrong_type(notice_date)]), []).
+test(profile_problems_precede_date_problems) :-
+    response_deadline([attribute(colour, blue)], bad, input_problems([unknown_key(colour), wrong_type(received_date)]), []).
+test(bad_notice_date_alone) :-
+    attorney_general_action_status([], date(2026, 2, 30), date(2026, 3, 1), input_problems([wrong_type(notice_date)]), []).
+test(reference_before_notice_is_the_added_check) :-
+    attorney_general_action_status([], date(2026, 3, 1), date(2026, 2, 28), input_problems([wrong_type(reference_date)]), []).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    texas_tdpsa_profile_for(in_scope_controller, Profile),
+    findall(Status, texas_tdpsa_status(Profile, Status), [BaselineStatus]),
+    texas_tdpsa_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    texas_tdpsa_status(Profile, Other).
+test(bound_wrong_response_deadline_is_rejected, fail) :-
+    response_deadline([], date(2026, 1, 1), date(2026, 2, 16), _).
+
+cp_test_names([status_holds_with_the_verdict_bound, bound_in_scope_with_its_basis, bound_out_of_scope_for_a_nonprofit, bound_out_of_scope_for_an_attested_small_business, bound_indeterminate_names_the_missing_key, bound_absent_referral, bound_open_textured_referral, bound_input_problems, bound_response_deadline, bound_extended_response_deadline, bound_no_extension_available, bound_appeal_response_deadline, bound_cure_period_last_day, bound_cure_period_running, bound_action_may_be_brought, bound_no_action_for_cured_violation, bound_penalty_maximum, bound_no_civil_penalty, well_formed_profile_has_no_problem, empty_profile_has_no_problem, problems_come_in_contract_order_then_unknown_keys, unknown_key_named_once_however_often_it_repeats, not_a_list_is_wrong_type_profile, unbound_profile_is_wrong_type_profile, partial_list_is_wrong_type_profile, non_attribute_element_is_wrong_type_profile, unbound_key_is_unknown_key_as_given, unbound_value_is_wrong_type, float_count_is_wrong_type, negative_count_is_wrong_type, bare_outside_fact_is_wrong_type, attestation_holding_a_variable_is_wrong_type, attested_crisp_key_is_wrong_type, unsure_crisp_key_is_wrong_type, unsure_judgement_is_accepted, evidence_url_is_accepted, non_leap_february_29_is_wrong_type_received_date, year_zero_is_wrong_type_received_date, float_day_is_wrong_type_appeal_received_date, atom_is_wrong_type_notice_date, profile_problems_precede_date_problems, bad_notice_date_alone, reference_before_notice_is_the_added_check]).
+cp_test_fail_names([every_other_bound_status_is_rejected, bound_wrong_response_deadline_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

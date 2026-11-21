@@ -1,10 +1,12 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_art6_lawful_basis_kernel, [gdpr_art6_lawful_basis_input_problems/2]).
+:- module(m__eu_data_protection_gdpr_art6_lawful_basis_kernel, [gdpr_art6_lawful_basis_input_problems/2, gdpr_art6_lawful_basis_root_keys/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
 :- use_module(library(reif), [memberd_t/3]).
+
+gdpr_art6_lawful_basis_root_keys([basis_claimed, consent_given_and_conditions_met, contract_necessary, legal_obligation_necessary, legal_obligation_laid_down_by_law, vital_interests_necessary, public_interest_task_necessary, public_interest_task_laid_down_by_law, processing_by_public_authority_in_its_tasks, legitimate_interests_pursued, interests_overridden, child_data_subject, special_category, new_purpose_processing, compatible_purpose, link_between_purposes_taken_into_account, collection_context_taken_into_account, nature_of_data_taken_into_account, possible_consequences_taken_into_account, appropriate_safeguards_taken_into_account]).
 
 gdpr_art6_lawful_basis_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -12,7 +14,7 @@ gdpr_art6_lawful_basis_input_problems(Profile, Problems) :-
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    Keys = [basis_claimed, consent_given_and_conditions_met, contract_necessary, legal_obligation_necessary, legal_obligation_laid_down_by_law, vital_interests_necessary, public_interest_task_necessary, public_interest_task_laid_down_by_law, processing_by_public_authority_in_its_tasks, legitimate_interests_pursued, interests_overridden, child_data_subject, special_category, new_purpose_processing, compatible_purpose],
+    gdpr_art6_lawful_basis_root_keys(Keys),
     unknown_keys(Profile, Keys, UnknownKeyProblems),
     key_problems(Keys, Profile, UnknownKeyProblems, Problems).
 
@@ -31,6 +33,11 @@ key_type(child_data_subject, outside_fact).
 key_type(special_category, outside_fact).
 key_type(new_purpose_processing, boolean).
 key_type(compatible_purpose, judgement).
+key_type(link_between_purposes_taken_into_account, boolean).
+key_type(collection_context_taken_into_account, boolean).
+key_type(nature_of_data_taken_into_account, boolean).
+key_type(possible_consequences_taken_into_account, boolean).
+key_type(appropriate_safeguards_taken_into_account, boolean).
 
 attribute_list_t(Term, false) :-
     var(Term).
@@ -160,3 +167,19 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(root_keys_are_twenty) :-
+    gdpr_art6_lawful_basis_root_keys(Keys),
+    length(Keys, 20).
+test(empty_profile_has_no_problem) :-
+    gdpr_art6_lawful_basis_input_problems([], []).
+test(unbound_profile_is_wrong_type) :-
+    gdpr_art6_lawful_basis_input_problems(_, [wrong_type(profile)]).
+test(bare_true_outside_fact_is_wrong_type) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(special_category, true)], [wrong_type(special_category)]).
+test(attested_outside_fact_is_well_formed) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(special_category, attested(true, attestation(by, at, reason, none)))], []).
+test(duplicate_key_is_named_once) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(contract_necessary, true), attribute(contract_necessary, unsure)], [duplicate_key(contract_necessary)]).
+test(unknown_key_is_named) :-
+    gdpr_art6_lawful_basis_input_problems([attribute(colour, blue)], [unknown_key(colour)]).

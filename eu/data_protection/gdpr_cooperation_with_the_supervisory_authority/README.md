@@ -4,7 +4,7 @@
 
 ## Scope
 
-Regulation (EU) 2016/679 (GDPR) Art 31 (the whole article, one paragraph): whether, on the caller's statement of its role, of the supervisory authority's request and of its own judgement that the request is made in the performance of the authority's tasks, the caller is bound to cooperate on that one request, and whether an attested statement says it cooperated (cooperation_not_required, cooperation_met, cooperation_not_met). Decided here: who is bound (controller, processor, representative where applicable), the 'on request' condition, and the hand-off of 'in the performance of its tasks' as a tri-state judgement. Out of scope: who is a controller, processor or representative (Art 4, Art 27, sibling orders), the authority's tasks (Art 57), its powers and corrective measures (Art 58), fines (Art 83), and whether the cooperation given was enough, timely or complete (the attested statement is copied, never judged). An unsure judgement or an absent cooperation statement goes to a lawyer.
+Regulation (EU) 2016/679 (GDPR) Art 31, one request at a time: whether a caller that states it acts as a controller, a processor or the representative of one is under the duty to cooperate, on request, with the supervisory authority in the performance of its tasks, and whether an attested statement says it cooperated with that request. Answers are cooperation_not_required (no request, a request the caller judges not in the performance of the authority's tasks, or not bound), cooperation_met or cooperation_not_met (copying the attested statement), or a non-final status (input_problems, indeterminate naming the first missing key, or needs_legal_review for an absent cooperation statement or an unsure judgement on the authority's tasks). Out of scope: who is a controller, processor or representative (Arts 4(7), 4(8), 27), the authority's tasks (Art 57), its powers and corrective measures (Art 58), fines (Art 83), and whether the cooperation was sufficient, timely or complete.
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Regulation (EU) 2016/679 (GDPR) Art 31 (the whole article, one paragraph): wheth
 
 ## What was checked
 
-- 197 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 173 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

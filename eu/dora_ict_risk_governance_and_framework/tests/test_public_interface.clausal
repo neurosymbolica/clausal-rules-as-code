@@ -1,0 +1,441 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Every fixture subject resolves to its EXPECTED verdict; near-miss
+% controls get the opposite verdict.
+% Run: python -m clausal.testing eu/dora_ict_risk_governance_and_framework/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/dora_ict_risk_governance_and_framework, [
+    decide_dora_ict_risk_governance_and_framework/2,
+    dora_ict_risk_governance_and_framework_status/2,
+    dora_ict_risk_governance_and_framework_checklist/2,
+    dora_ict_risk_governance_and_framework_decision_resolvable/1,
+    dora_ict_risk_governance_and_framework_status_values/1,
+    dora_ict_risk_governance_and_framework_subject/1,
+    dora_ict_risk_governance_and_framework_profile_for/2,
+    dora_ict_risk_governance_and_framework_assess/2,
+    ict_risk_governance_duties_required/3,
+    ict_risk_governance_duties_complete/3,
+    ict_risk_governance_duties_outstanding/3,
+    dora_ict_risk_governance_and_framework_input_problems/2
+]).
+:- use_module(eu/dora_ict_risk_governance_and_framework/queries, [
+    dora_ict_risk_governance_and_framework_what_if/4,
+    dora_ict_risk_governance_and_framework_compliance_check/3
+]).
+
+% ---- expected facade verdicts (the complete query), one per subject ----
+expected_status(large_entity_all_performed, complete).
+expected_status(large_entity_data_security_unperformed, incomplete).
+expected_status(microenterprise_all_performed, complete).
+expected_status(microenterprise_periodic_review_unperformed, incomplete).
+expected_status(microenterprise_annual_review_unperformed, complete).
+expected_status(large_entity_annual_review_unperformed, incomplete).
+expected_status(large_entity_every_trigger, complete).
+expected_status(large_entity_major_change_unassessed, incomplete).
+expected_status(large_entity_no_major_change_unassessed, complete).
+expected_status(large_entity_major_change_unanswered, complete).
+expected_status(microenterprise_major_change_unanswered, complete).
+expected_status(large_entity_legacy_systems_unassessed, incomplete).
+expected_status(large_entity_no_legacy_systems_unassessed, complete).
+expected_status(large_entity_legacy_and_data_security_unperformed, incomplete).
+expected_status(large_entity_information_request_unanswered, incomplete).
+expected_status(large_entity_no_information_request, complete).
+expected_status(large_entity_review_report_request_unanswered, incomplete).
+expected_status(large_entity_no_review_report_request, complete).
+expected_status(microenterprise_control_function_unsure, complete).
+expected_status(large_entity_control_function_unsure_and_data_security_unperformed, incomplete).
+expected_status(article_16_1_entity, simplified_framework_entity).
+expected_status(article_16_1_entity_with_unperformed_duty, simplified_framework_entity).
+expected_status(article_16_1_answer_absent, indeterminate([financial_entity_is_article_16_1_entity])).
+expected_status(large_entity_governance_framework_unanswered, indeterminate([has_internal_governance_and_control_framework])).
+expected_status(size_unanswered_all_performed, complete).
+expected_status(size_unanswered_annual_review_unperformed, indeterminate([financial_entity_is_microenterprise])).
+expected_status(size_unanswered_both_reviews_unperformed, incomplete).
+expected_status(microenterprise_answered_unsure, input_problems([wrong_type(financial_entity_is_microenterprise)])).
+expected_status(large_entity_unknown_key, input_problems([unknown_key(entity_holds_a_banking_licence)])).
+expected_status(large_entity_duplicate_size_answer, input_problems([duplicate_key(financial_entity_is_microenterprise)])).
+
+% The one subject whose verdict is a referral (its PAIRS are checked apart).
+referred_subject(large_entity_control_function_unsure).
+
+accounted_subject(Subject) :-
+    expected_status(Subject, _).
+accounted_subject(Subject) :-
+    referred_subject(Subject).
+
+subject_status(Subject, Status) :-
+    dora_ict_risk_governance_and_framework_assess(Subject, dora_ict_risk_governance_and_framework_verdict(Status, _Citations)).
+
+single_status(Subject, Status) :-
+    findall(Found, subject_status(Subject, Found), Statuses),
+    Statuses == [Status].
+
+matches_expectation(Subject-Status) :-
+    single_status(Subject, Status).
+
+profile_of(Subject, Profile) :-
+    dora_ict_risk_governance_and_framework_profile_for(Subject, Profile).
+
+answers_each_query_once(Subject) :-
+    profile_of(Subject, Profile),
+    findall(Result, ict_risk_governance_duties_required(Profile, Result, _), RequiredResults),
+    findall(Result, ict_risk_governance_duties_complete(Profile, Result, _), CompleteResults),
+    findall(Result, ict_risk_governance_duties_outstanding(Profile, Result, _), OutstandingResults),
+    findall(Problems, dora_ict_risk_governance_and_framework_input_problems(Profile, Problems), ProblemResults),
+    length(RequiredResults, 1),
+    length(CompleteResults, 1),
+    length(OutstandingResults, 1),
+    length(ProblemResults, 1).
+
+resolvable_subject(Subject) :-
+    profile_of(Subject, Profile),
+    dora_ict_risk_governance_and_framework_decision_resolvable(Profile).
+
+cited_item(item(_, _, cite(_))).
+
+microenterprise_duties([
+    internal_governance_and_control_framework,
+    management_body_framework_responsibility,
+    management_body_ultimate_ict_risk_responsibility,
+    data_security_policies,
+    ict_roles_and_governance_arrangements,
+    resilience_strategy_and_risk_tolerance_approval,
+    business_continuity_policy_oversight,
+    ict_audit_plan_approval,
+    resilience_budget_allocation,
+    third_party_policy_approval,
+    management_body_reporting_channels,
+    management_body_ict_knowledge_and_training,
+    ict_risk_management_framework,
+    protection_of_information_and_ict_assets,
+    ict_risk_impact_minimisation,
+    segregation_of_risk_control_and_audit_functions,
+    periodic_framework_review,
+    event_driven_framework_review_and_improvement,
+    digital_operational_resilience_strategy,
+    ict_systems_protocols_and_tools,
+    identification_and_classification,
+    identification_of_ict_risk_sources,
+    asset_identification_and_mapping,
+    third_party_dependency_identification,
+    inventories_maintained
+]).
+
+% ---- every subject: its expected verdict, once ------------------------
+test(every_subject_has_an_expectation) :-
+    findall(Subject, dora_ict_risk_governance_and_framework_subject(Subject), Subjects),
+    length(Subjects, Count),
+    sort(Subjects, Distinct),
+    length(Distinct, Count),
+    maplist(accounted_subject, Subjects).
+test(every_subject_resolves_to_its_expected_verdict) :-
+    findall(Subject-Status, expected_status(Subject, Status), Expectations),
+    maplist(matches_expectation, Expectations).
+test(every_subject_answers_each_query_exactly_once) :-
+    findall(Subject, dora_ict_risk_governance_and_framework_subject(Subject), Subjects),
+    maplist(answers_each_query_once, Subjects).
+test(every_subject_is_resolvable) :-
+    findall(Subject, dora_ict_risk_governance_and_framework_subject(Subject), Subjects),
+    maplist(resolvable_subject, Subjects).
+test(the_final_statuses_are_in_the_status_vocabulary) :-
+    dora_ict_risk_governance_and_framework_status_values(StatusValues),
+    single_status(large_entity_all_performed, complete),
+    single_status(large_entity_data_security_unperformed, incomplete),
+    single_status(article_16_1_entity, simplified_framework_entity),
+    member(complete, StatusValues),
+    member(incomplete, StatusValues),
+    member(simplified_framework_entity, StatusValues).
+
+% ---- named pairs: positive case and near-miss control ------------------
+test(all_performed_is_complete) :-
+    single_status(large_entity_all_performed, complete).
+test(one_unperformed_duty_is_incomplete) :-
+    single_status(large_entity_data_security_unperformed, incomplete).
+test(one_unperformed_duty_is_not_complete, fail) :-
+    subject_status(large_entity_data_security_unperformed, complete).
+test(the_annual_review_binds_a_large_entity) :-
+    single_status(large_entity_annual_review_unperformed, incomplete).
+test(the_annual_review_does_not_bind_a_microenterprise) :-
+    single_status(microenterprise_annual_review_unperformed, complete).
+test(the_periodic_review_binds_a_microenterprise) :-
+    single_status(microenterprise_periodic_review_unperformed, incomplete).
+test(a_major_change_triggers_the_risk_assessment) :-
+    single_status(large_entity_major_change_unassessed, incomplete).
+test(without_a_major_change_no_risk_assessment_is_due) :-
+    single_status(large_entity_no_major_change_unassessed, complete).
+test(legacy_systems_trigger_their_risk_assessment) :-
+    single_status(large_entity_legacy_systems_unassessed, incomplete).
+test(without_legacy_systems_no_legacy_assessment_is_due) :-
+    single_status(large_entity_no_legacy_systems_unassessed, complete).
+test(an_information_request_triggers_its_duty) :-
+    single_status(large_entity_information_request_unanswered, incomplete).
+test(without_an_information_request_no_information_is_due) :-
+    single_status(large_entity_no_information_request, complete).
+test(a_review_report_request_triggers_its_duty) :-
+    single_status(large_entity_review_report_request_unanswered, incomplete).
+test(without_a_review_report_request_no_report_is_due) :-
+    single_status(large_entity_no_review_report_request, complete).
+test(an_article_16_entity_is_a_simplified_framework_entity) :-
+    single_status(article_16_1_entity, simplified_framework_entity).
+test(an_article_16_entity_is_not_read_for_its_duties) :-
+    single_status(article_16_1_entity_with_unperformed_duty, simplified_framework_entity).
+test(an_absent_article_16_answer_is_named_first) :-
+    single_status(article_16_1_answer_absent, indeterminate([financial_entity_is_article_16_1_entity])).
+test(an_absent_duty_key_is_named) :-
+    single_status(large_entity_governance_framework_unanswered, indeterminate([has_internal_governance_and_control_framework])).
+test(an_unanswered_size_that_matters_is_named) :-
+    single_status(size_unanswered_annual_review_unperformed, indeterminate([financial_entity_is_microenterprise])).
+test(an_unanswered_size_failing_either_way_is_incomplete) :-
+    single_status(size_unanswered_both_reviews_unperformed, incomplete).
+test(an_unanswered_size_that_cannot_matter_is_complete) :-
+    single_status(size_unanswered_all_performed, complete).
+
+% ---- referral: an unsure judgement that matters goes to a lawyer --------
+test(an_unsure_control_function_of_a_large_entity_goes_to_a_lawyer) :-
+    profile_of(large_entity_control_function_unsure, Profile),
+    ict_risk_governance_duties_complete(Profile, needs_legal_review(open_textured(independent_ict_risk_control_function_assigned, cite(eu_reg_2022_2554_art_6_4)), [inputs_relied_on(Pairs)]), Citations),
+    Citations == [],
+    length(Pairs, 40),
+    Pairs = [financial_entity_is_article_16_1_entity-false|_],
+    member(independent_ict_risk_control_function_assigned-unsure, Pairs).
+test(the_facade_status_of_the_referral_is_needs_legal_review) :-
+    profile_of(large_entity_control_function_unsure, Profile),
+    dora_ict_risk_governance_and_framework_status(Profile, needs_legal_review(open_textured(independent_ict_risk_control_function_assigned, _), _)).
+test(an_unsure_control_function_of_a_microenterprise_is_not_referred) :-
+    single_status(microenterprise_control_function_unsure, complete).
+test(a_failing_duty_decides_before_the_unsure_judgement) :-
+    single_status(large_entity_control_function_unsure_and_data_security_unperformed, incomplete).
+test(the_outstanding_query_refers_the_unsure_judgement_too) :-
+    profile_of(large_entity_control_function_unsure, Profile),
+    ict_risk_governance_duties_outstanding(Profile, needs_legal_review(open_textured(independent_ict_risk_control_function_assigned, cite(eu_reg_2022_2554_art_6_4)), [inputs_relied_on(_)]), []).
+test(the_provenance_constructor_builds_a_term) :-
+    Term = provenance(open_textured_referral, []),
+    Term = provenance(Clause, Citations),
+    Clause == open_textured_referral,
+    Citations == [].
+test(the_referral_context_carries_no_provenance_element) :-
+    profile_of(large_entity_control_function_unsure, Profile),
+    ict_risk_governance_duties_complete(Profile, needs_legal_review(_, Context), []),
+    Context = [inputs_relied_on(_)].
+
+% ---- ict_risk_governance_duties_required --------------------------------
+test(a_large_entity_without_triggers_has_twenty_nine_duties) :-
+    profile_of(large_entity_all_performed, Profile),
+    findall(Result, ict_risk_governance_duties_required(Profile, Result, _), Results),
+    Results = [required(Duties)],
+    length(Duties, 29),
+    Duties = [internal_governance_and_control_framework|_],
+    member(third_party_monitoring_role, Duties),
+    member(annual_framework_review, Duties).
+test(a_large_entity_has_the_internal_audit_and_its_follow_up) :-
+    profile_of(large_entity_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), Citations),
+    member(internal_audit_of_framework, Duties),
+    member(audit_follow_up_process, Duties),
+    member(cite(eu_reg_2022_2554_art_6_6), Citations),
+    member(cite(eu_reg_2022_2554_art_6_7), Citations).
+test(a_microenterprise_has_no_internal_audit, fail) :-
+    profile_of(microenterprise_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), _),
+    member(internal_audit_of_framework, Duties).
+test(a_microenterprise_has_no_audit_follow_up, fail) :-
+    profile_of(microenterprise_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), _),
+    member(audit_follow_up_process, Duties).
+test(the_audit_duties_are_inapplicable_in_a_microenterprise_checklist) :-
+    profile_of(microenterprise_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    member(item(internal_audit_of_framework, inapplicable, cite(eu_reg_2022_2554_art_6_6)), Items),
+    member(item(audit_follow_up_process, inapplicable, cite(eu_reg_2022_2554_art_6_7)), Items).
+test(a_large_entity_is_never_asked_the_periodic_review, fail) :-
+    profile_of(large_entity_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), _),
+    member(periodic_framework_review, Duties).
+test(a_microenterprise_has_exactly_its_twenty_five_duties) :-
+    profile_of(microenterprise_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), _),
+    microenterprise_duties(Expected),
+    Duties == Expected.
+test(a_large_entity_cites_the_monitoring_role) :-
+    profile_of(large_entity_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(_), Citations),
+    member(cite(eu_reg_2022_2554_art_5_3), Citations).
+test(a_microenterprise_does_not_cite_the_monitoring_role, fail) :-
+    profile_of(microenterprise_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(_), Citations),
+    member(cite(eu_reg_2022_2554_art_5_3), Citations).
+test(every_trigger_gives_thirty_three_duties) :-
+    profile_of(large_entity_every_trigger, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), _),
+    length(Duties, 33),
+    member(risk_assessment_upon_major_change, Duties),
+    member(legacy_systems_risk_assessment, Duties),
+    member(ict_risk_information_to_authority, Duties),
+    member(framework_review_report_to_authority, Duties).
+test(the_major_change_duty_follows_its_trigger) :-
+    profile_of(large_entity_major_change_unassessed, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), _),
+    member(risk_assessment_upon_major_change, Duties).
+test(no_major_change_no_major_change_duty, fail) :-
+    profile_of(large_entity_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, required(Duties), _),
+    member(risk_assessment_upon_major_change, Duties).
+test(an_absent_trigger_is_named_for_a_large_entity) :-
+    profile_of(large_entity_major_change_unanswered, Profile),
+    ict_risk_governance_duties_required(Profile, indeterminate([major_change_occurred]), []).
+test(an_absent_event_trigger_is_not_read_for_a_microenterprise) :-
+    profile_of(microenterprise_major_change_unanswered, Profile),
+    ict_risk_governance_duties_required(Profile, required(_), _).
+test(the_required_query_names_an_absent_size) :-
+    profile_of(size_unanswered_all_performed, Profile),
+    ict_risk_governance_duties_required(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+test(the_required_query_of_an_article_16_entity) :-
+    profile_of(article_16_1_entity, Profile),
+    ict_risk_governance_duties_required(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+
+% ---- ict_risk_governance_duties_complete citations ----------------------
+test(complete_carries_the_twenty_fixed_citations) :-
+    profile_of(large_entity_all_performed, Profile),
+    ict_risk_governance_duties_complete(Profile, complete, Citations),
+    length(Citations, 20),
+    member(cite(eu_reg_2022_2554_art_8_7), Citations),
+    member(cite(eu_reg_2022_2554_art_7), Citations).
+test(incomplete_carries_the_twenty_fixed_citations) :-
+    profile_of(large_entity_data_security_unperformed, Profile),
+    ict_risk_governance_duties_complete(Profile, incomplete, Citations),
+    length(Citations, 20),
+    member(cite(eu_reg_2022_2554_art_5_1), Citations).
+test(a_status_compound_carries_no_citation) :-
+    profile_of(article_16_1_answer_absent, Profile),
+    ict_risk_governance_duties_complete(Profile, indeterminate([financial_entity_is_article_16_1_entity]), Citations),
+    Citations == [].
+
+% ---- ict_risk_governance_duties_outstanding -----------------------------
+test(nothing_outstanding_when_all_performed) :-
+    profile_of(large_entity_all_performed, Profile),
+    ict_risk_governance_duties_outstanding(Profile, none_outstanding, Citations),
+    length(Citations, 20).
+test(a_performed_entity_has_no_outstanding_list, fail) :-
+    profile_of(large_entity_all_performed, Profile),
+    ict_risk_governance_duties_outstanding(Profile, outstanding(_), _).
+test(the_unperformed_duty_is_outstanding) :-
+    profile_of(large_entity_data_security_unperformed, Profile),
+    ict_risk_governance_duties_outstanding(Profile, outstanding([data_security_policies]), [cite(eu_reg_2022_2554_art_5_2_b)]).
+test(outstanding_duties_come_in_duty_order) :-
+    profile_of(large_entity_legacy_and_data_security_unperformed, Profile),
+    ict_risk_governance_duties_outstanding(Profile, outstanding(Duties), Citations),
+    Duties == [data_security_policies, legacy_systems_risk_assessment],
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2022_2554_art_5_2_b), cite(eu_reg_2022_2554_art_8_7)].
+test(an_unperformed_duty_that_does_not_apply_is_not_outstanding) :-
+    profile_of(large_entity_no_legacy_systems_unassessed, Profile),
+    ict_risk_governance_duties_outstanding(Profile, none_outstanding, _).
+test(a_false_key_does_not_end_the_outstanding_query) :-
+    profile_of(size_unanswered_both_reviews_unperformed, Profile),
+    ict_risk_governance_duties_outstanding(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+test(the_outstanding_query_of_an_article_16_entity) :-
+    profile_of(article_16_1_entity_with_unperformed_duty, Profile),
+    ict_risk_governance_duties_outstanding(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+
+% ---- input check ----------------------------------------------------------
+test(a_well_formed_profile_has_no_problem) :-
+    profile_of(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_input_problems(Profile, Problems),
+    Problems == [].
+test(unsure_on_a_crisp_key_is_wrong_type) :-
+    profile_of(microenterprise_answered_unsure, Profile),
+    dora_ict_risk_governance_and_framework_input_problems(Profile, [wrong_type(financial_entity_is_microenterprise)]).
+test(a_repeated_key_is_a_duplicate) :-
+    profile_of(large_entity_duplicate_size_answer, Profile),
+    dora_ict_risk_governance_and_framework_input_problems(Profile, [duplicate_key(financial_entity_is_microenterprise)]).
+test(a_key_outside_the_contract_is_unknown) :-
+    profile_of(large_entity_unknown_key, Profile),
+    ict_risk_governance_duties_required(Profile, input_problems([unknown_key(entity_holds_a_banking_licence)]), []).
+test(a_number_is_never_a_boolean) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(major_change_occurred, 7)], [wrong_type(major_change_occurred)]),
+    dora_ict_risk_governance_and_framework_input_problems([attribute(major_change_occurred, 7.0)], [wrong_type(major_change_occurred)]).
+test(a_term_that_is_not_a_list_is_not_a_profile) :-
+    dora_ict_risk_governance_and_framework_input_problems(not_a_profile, [wrong_type(profile)]).
+test(an_unbound_key_is_reported_as_given) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(Key, true)], Problems),
+    Problems == [unknown_key(Key)].
+test(contract_problems_come_before_unknown_keys) :-
+    dora_ict_risk_governance_and_framework_input_problems([attribute(entity_holds_a_banking_licence, true), attribute(major_change_occurred, unsure)], Problems),
+    Problems == [wrong_type(major_change_occurred), unknown_key(entity_holds_a_banking_licence)].
+test(an_empty_profile_is_well_formed) :-
+    dora_ict_risk_governance_and_framework_input_problems([], Problems),
+    Problems == [].
+
+% ---- justification: the cited checklist ------------------------------------
+test(every_checklist_item_carries_a_citation) :-
+    profile_of(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    length(Items, 34),
+    maplist(cited_item, Items),
+    member(item(internal_governance_and_control_framework, met, cite(eu_reg_2022_2554_art_5_1)), Items).
+test(the_checklist_marks_the_unperformed_duty_unmet) :-
+    profile_of(large_entity_data_security_unperformed, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    member(item(data_security_policies, unmet(not_performed), cite(eu_reg_2022_2554_art_5_2_b)), Items).
+test(the_checklist_marks_the_performed_duty_met) :-
+    profile_of(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    member(item(data_security_policies, met, cite(eu_reg_2022_2554_art_5_2_b)), Items).
+test(the_annual_review_is_inapplicable_to_a_microenterprise) :-
+    profile_of(microenterprise_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    member(item(annual_framework_review, inapplicable, cite(eu_reg_2022_2554_art_6_5)), Items),
+    member(item(periodic_framework_review, met, cite(eu_reg_2022_2554_art_6_5)), Items).
+test(the_unsure_judgement_is_unknown_in_the_checklist) :-
+    profile_of(large_entity_control_function_unsure, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    member(item(ict_risk_control_function, unknown([independent_ict_risk_control_function_assigned]), cite(eu_reg_2022_2554_art_6_4)), Items).
+
+% ---- eligibility facade ------------------------------------------------
+test(the_facade_verdict_is_the_complete_answer) :-
+    profile_of(microenterprise_all_performed, Profile),
+    decide_dora_ict_risk_governance_and_framework(Profile, dora_ict_risk_governance_and_framework_verdict(complete, Citations)),
+    length(Citations, 20).
+test(the_facade_status_of_a_near_miss_is_incomplete) :-
+    profile_of(microenterprise_periodic_review_unperformed, Profile),
+    dora_ict_risk_governance_and_framework_status(Profile, incomplete).
+
+% ---- what-if ------------------------------------------------------------
+test(what_if_a_performed_duty_were_not_performed) :-
+    profile_of(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_what_if(Profile, management_body_put_in_place_data_security_policies, false, incomplete).
+test(what_if_the_unperformed_duty_were_performed) :-
+    profile_of(large_entity_data_security_unperformed, Profile),
+    dora_ict_risk_governance_and_framework_what_if(Profile, management_body_put_in_place_data_security_policies, true, complete).
+test(what_if_an_absent_key_were_answered) :-
+    profile_of(large_entity_governance_framework_unanswered, Profile),
+    dora_ict_risk_governance_and_framework_what_if(Profile, has_internal_governance_and_control_framework, true, complete).
+
+% ---- compliance check ---------------------------------------------------
+test(omitting_a_duty_that_applies_is_forbidden) :-
+    profile_of(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(third_party_monitoring_role), verdict(forbidden, Citations)),
+    member(cite(eu_reg_2022_2554_art_5_3), Citations).
+test(a_microenterprise_may_omit_the_monitoring_role) :-
+    profile_of(microenterprise_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(third_party_monitoring_role), verdict(permitted, _)).
+test(a_microenterprise_may_not_omit_segregation) :-
+    profile_of(microenterprise_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(segregation_of_risk_control_and_audit_functions), verdict(forbidden, _)).
+test(performing_a_duty_is_permitted) :-
+    profile_of(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, perform_duty(annual_framework_review), verdict(permitted, _)).
+test(an_article_16_entity_may_omit_every_duty) :-
+    profile_of(article_16_1_entity, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(internal_governance_and_control_framework), verdict(permitted, [cite(eu_reg_2022_2554_art_16_1)])).
+test(an_article_16_entity_is_never_forbidden, fail) :-
+    profile_of(article_16_1_entity, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(internal_governance_and_control_framework), verdict(forbidden, _)).
+test(an_unanswered_size_leaves_the_action_indeterminate) :-
+    profile_of(size_unanswered_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(third_party_monitoring_role), verdict(indeterminate([financial_entity_is_microenterprise]), [])).
+
+:- end_module(test_public_interface).

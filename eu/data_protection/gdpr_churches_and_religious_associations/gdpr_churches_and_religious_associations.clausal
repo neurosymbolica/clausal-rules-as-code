@@ -1,0 +1,486 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% gdpr_churches_and_religious_associations.clausal -- the "gdpr_churches_and_religious_associations" DETERMINATION for eu/data_protection/gdpr_churches_and_religious_associations,
+% self-contained top to bottom: its statutory condition table, its readers,
+% the limbs of both queries, its per-rule tests, its checklist and its
+% verdict assembly.
+%
+% Source: Regulation (EU) 2016/679 (GDPR) Art 91(1) and Art 91(2), pinned
+% unit text of 02016R0679-20160504 (#parag_091.001, #parag_091.002).
+%
+% Queries (THE LIMBS of the order):
+%   church_rules_continuation(Profile, Result, Basis, Citations), Art 91(1);
+%   church_supervision(Profile, Result, Basis, Citations), Art 91(2) read
+%     with Art 91(1).
+% Both call the kernel's input check first (step 0). Each query yields
+% exactly ONE solution: the profile is first reduced to one ground reading
+% term, and each limb is one clause over that reading with a disjoint guard.
+%
+% The order NEVER reads a church rule or a Member State law: the time of
+% entry into force and the Chapter VI conditions are attested outside facts,
+% the comprehensive character and the bringing into line are the caller's
+% tri-state judgements (open-textured: handed to a lawyer when unsure).
+% =====================================================================
+
+:- module(gdpr_churches_and_religious_associations, [
+    church_rules_continuation/4,
+    church_supervision/4,
+    church_rules_may_continue_to_apply/0,
+    church_rules_not_covered_by_article_91_1/0,
+    article_91_2_not_engaged/0,
+    subject_to_independent_supervisory_authority/0,
+    specific_supervisory_authority_permitted/0,
+    specific_supervisory_authority_not_permitted/0,
+    decide_gdpr_churches_and_religious_associations/2,
+    gdpr_churches_and_religious_associations_status/2,
+    gdpr_churches_and_religious_associations_checklist/2,
+    gdpr_churches_and_religious_associations_decision_resolvable/1,
+    gdpr_churches_and_religious_associations_status_values/1
+]).
+
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/kernel, [gdpr_churches_and_religious_associations_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- the result atoms (final answers of the two queries) -------------
+church_rules_may_continue_to_apply.
+church_rules_not_covered_by_article_91_1.
+article_91_2_not_engaged.
+subject_to_independent_supervisory_authority.
+specific_supervisory_authority_permitted.
+specific_supervisory_authority_not_permitted.
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% THE ARTICLE 91(1) CONDITIONS, in the order of the order (root_exports
+% order), joined by AND: condition(Key, Kind, Citation). Kind is stated
+% (a crisp key or a tri-state judgement, read as given) or outside_fact
+% (attested(Value, Attestation), Value read).
+article_91_1_conditions([
+    condition(body_is_church_or_religious_association_or_community, stated, cite(eu_reg_2016_679_art_91_1)),
+    condition(rules_applied_in_a_member_state, stated, cite(eu_reg_2016_679_art_91_1)),
+    condition(comprehensive_rules_relating_to_protection_with_regard_to_processing, stated, cite(eu_reg_2016_679_art_91_1)),
+    condition(rules_applied_at_entry_into_force_of_the_regulation, outside_fact, cite(eu_reg_2016_679_art_91_1)),
+    condition(rules_brought_into_line_with_the_regulation, stated, cite(eu_reg_2016_679_art_91_1))
+]).
+
+% The verdict vocabulary of the facade (the Result of
+% church_rules_continuation/4): the two final atoms and the names of the
+% three status compounds.
+gdpr_churches_and_religious_associations_status_values([
+    church_rules_may_continue_to_apply,
+    church_rules_not_covered_by_article_91_1,
+    indeterminate,
+    needs_legal_review,
+    input_problems
+]).
+
+% ---- profile plumbing: the state of one key ---------------------------
+% key_state(Kind, Profile, Key, State): State is absent, or the value as
+% given (stated), or the attested value (outside_fact). Run only on a
+% profile that passed the input check, so each key occurs at most once.
+key_state(stated, Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_state(stated, Profile, Key, Value) :-
+    profile_get(Profile, Key, Value).
+key_state(outside_fact, Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_state(outside_fact, Profile, Key, Value) :-
+    profile_get(Profile, Key, attested(Value, _Attestation)).
+
+% first_with_state(Wanted, KeyStates, First): key(Key) for the first Key
+% whose state is Wanted, none when there is none.
+first_with_state(_, [], none).
+first_with_state(Wanted, [Key-Wanted|_], key(Key)).
+first_with_state(Wanted, [_-State|KeyStates], First) :-
+    dif(State, Wanted),
+    first_with_state(Wanted, KeyStates, First).
+
+% ---- Art 91(1): the reading of the five conditions --------------------
+% condition_states(Conditions, Profile, KeyStates): Key-State per condition.
+condition_states([], _, []).
+condition_states([condition(Key, Kind, _Citation)|Conditions], Profile, [Key-State|KeyStates]) :-
+    implements(eu_reg_2016_679_art_91_1),
+    key_state(Kind, Profile, Key, State),
+    condition_states(Conditions, Profile, KeyStates).
+
+% article_91_1_reading(Profile, reading(AnyFalse, FirstAbsent, EntryState, FirstUnsure)):
+% AnyFalse true when one of the five conditions is false (AND: one false
+% settles); FirstAbsent the first absent of the four stated conditions;
+% EntryState the attested value of the time of entry into force, or absent;
+% FirstUnsure the first unsure of the two judgements.
+article_91_1_reading(Profile, reading(AnyFalse, FirstAbsent, EntryState, FirstUnsure)) :-
+    implements(eu_reg_2016_679_art_91_1),
+    article_91_1_conditions(Conditions),
+    condition_states(Conditions, Profile, KeyStates),
+    pairs_values(KeyStates, States),
+    memberd_t(false, States, AnyFalse),
+    KeyStates = [BodyKey-BodyState, MemberStateKey-MemberStateState, ComprehensiveKey-ComprehensiveState, _-EntryState, BroughtKey-BroughtState],
+    first_with_state(absent, [BodyKey-BodyState, MemberStateKey-MemberStateState, ComprehensiveKey-ComprehensiveState, BroughtKey-BroughtState], FirstAbsent),
+    first_with_state(unsure, [ComprehensiveKey-ComprehensiveState, BroughtKey-BroughtState], FirstUnsure).
+
+% judgement_values(Profile, ComprehensiveValue, BroughtValue): the two
+% judgements as given (both present wherever a referral is made).
+judgement_values(Profile, ComprehensiveValue, BroughtValue) :-
+    profile_get(Profile, comprehensive_rules_relating_to_protection_with_regard_to_processing, ComprehensiveValue),
+    profile_get(Profile, rules_brought_into_line_with_the_regulation, BroughtValue).
+
+% ---- church_rules_continuation/4 (Art 91(1)) --------------------------
+church_rules_continuation(Profile, Result, Basis, Citations) :-
+    gdpr_churches_and_religious_associations_input_problems(Profile, Problems),
+    continuation_after_check(Problems, Profile, Result, Basis, Citations).
+
+% Step 0: the input check.
+continuation_after_check([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+continuation_after_check([], Profile, Result, Basis, Citations) :-
+    article_91_1_reading(Profile, Reading),
+    continuation_route(Reading, Profile, Result, Basis, Citations).
+
+% Step 1: one condition false settles the answer, whatever the others are.
+continuation_route(reading(true, _, _, _), _, church_rules_not_covered_by_article_91_1, [], [cite(eu_reg_2016_679_art_91_1)]) :-
+    implements(eu_reg_2016_679_art_91_1).
+% Step 2: the first absent stated condition is asked for.
+continuation_route(reading(false, key(Key), _, _), _, indeterminate([Key]), [], []) :-
+    implements(eu_reg_2016_679_art_91_1).
+% Step 3: the statement on the time of entry into force is not given.
+continuation_route(reading(false, none, absent, _),
+                   Profile,
+                   needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_1), cite(rules_applied_at_entry_into_force_statement)),
+                                      [resolution(cite(rules_applied_at_entry_into_force_statement), not_attempted),
+                                       inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-ComprehensiveValue,
+                                                         rules_applied_at_entry_into_force_of_the_regulation-absent,
+                                                         rules_brought_into_line_with_the_regulation-BroughtValue])]),
+                   [],
+                   []) :-
+    implements(eu_reg_2016_679_art_91_1),
+    judgement_values(Profile, ComprehensiveValue, BroughtValue).
+% Step 4: an unsure judgement goes to a lawyer, the first of the two.
+continuation_route(reading(false, none, true, key(Key)),
+                   Profile,
+                   needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_91_1)),
+                                      [inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-ComprehensiveValue,
+                                                         rules_brought_into_line_with_the_regulation-BroughtValue])]),
+                   [],
+                   []) :-
+    implements(eu_reg_2016_679_art_91_1),
+    judgement_values(Profile, ComprehensiveValue, BroughtValue).
+% Step 5: all five conditions hold.
+continuation_route(reading(false, none, true, none),
+                   Profile,
+                   church_rules_may_continue_to_apply,
+                   [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, Attested)],
+                   [cite(eu_reg_2016_679_art_91_1)]) :-
+    implements(eu_reg_2016_679_art_91_1),
+    profile_get(Profile, rules_applied_at_entry_into_force_of_the_regulation, Attested).
+
+% ---- church_supervision/4 (Art 91(2) read with Art 91(1)) -------------
+% chapter_state(SpecificState, Profile, ChapterState): the Chapter VI
+% statement is read only for a specific authority (Q5).
+chapter_state(true, Profile, ChapterState) :-
+    implements(eu_reg_2016_679_art_91_2),
+    key_state(outside_fact, Profile, specific_authority_fulfils_chapter_vi_conditions, ChapterState).
+chapter_state(false, _, not_read) :-
+    implements(eu_reg_2016_679_art_91_2).
+chapter_state(absent, _, not_read) :-
+    implements(eu_reg_2016_679_art_91_2).
+
+supervision_reading(Profile, supervision(AnyFalse, FirstAbsent, SpecificState, EntryState, ChapterState, FirstUnsure)) :-
+    implements(eu_reg_2016_679_art_91_2),
+    article_91_1_reading(Profile, reading(AnyFalse, FirstAbsent, EntryState, FirstUnsure)),
+    key_state(stated, Profile, supervisory_authority_is_specific, SpecificState),
+    chapter_state(SpecificState, Profile, ChapterState).
+
+church_supervision(Profile, Result, Basis, Citations) :-
+    gdpr_churches_and_religious_associations_input_problems(Profile, Problems),
+    supervision_after_check(Problems, Profile, Result, Basis, Citations).
+
+% Step 0: the input check.
+supervision_after_check([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+supervision_after_check([], Profile, Result, Basis, Citations) :-
+    supervision_reading(Profile, Reading),
+    supervision_route(Reading, Profile, Result, Basis, Citations).
+
+% Step 1: a false Art 91(1) condition: Art 91(2) is not engaged.
+supervision_route(supervision(true, _, _, _, _, _), _, article_91_2_not_engaged, [], [cite(eu_reg_2016_679_art_91_1), cite(eu_reg_2016_679_art_91_2)]) :-
+    implements(eu_reg_2016_679_art_91_2).
+% Step 2: the first absent stated condition is asked for.
+supervision_route(supervision(false, key(Key), _, _, _, _), _, indeterminate([Key]), [], []) :-
+    implements(eu_reg_2016_679_art_91_1).
+% Step 3: whether the authority is specific is asked for next.
+supervision_route(supervision(false, none, absent, _, _, _), _, indeterminate([supervisory_authority_is_specific]), [], []) :-
+    implements(eu_reg_2016_679_art_91_2).
+% Step 4: the statement on the time of entry into force is not given.
+supervision_route(supervision(false, none, SpecificState, absent, _, _),
+                  Profile,
+                  needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_1), cite(rules_applied_at_entry_into_force_statement)),
+                                     [resolution(cite(rules_applied_at_entry_into_force_statement), not_attempted),
+                                      inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-ComprehensiveValue,
+                                                        rules_applied_at_entry_into_force_of_the_regulation-absent,
+                                                        rules_brought_into_line_with_the_regulation-BroughtValue])]),
+                  [],
+                  []) :-
+    implements(eu_reg_2016_679_art_91_1),
+    dif(SpecificState, absent),
+    judgement_values(Profile, ComprehensiveValue, BroughtValue).
+% Step 5: a specific authority without a Chapter VI statement.
+supervision_route(supervision(false, none, true, true, absent, _),
+                  Profile,
+                  needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_2), cite(chapter_vi_conditions_statement)),
+                                     [resolution(cite(chapter_vi_conditions_statement), not_attempted),
+                                      inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-ComprehensiveValue,
+                                                        rules_brought_into_line_with_the_regulation-BroughtValue,
+                                                        specific_authority_fulfils_chapter_vi_conditions-absent])]),
+                  [],
+                  []) :-
+    implements(eu_reg_2016_679_art_91_2),
+    judgement_values(Profile, ComprehensiveValue, BroughtValue).
+% Step 6: an unsure judgement goes to a lawyer (authority not specific).
+supervision_route(supervision(false, none, false, true, not_read, key(Key)),
+                  Profile,
+                  needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_91_1)),
+                                     [inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-ComprehensiveValue,
+                                                        rules_brought_into_line_with_the_regulation-BroughtValue])]),
+                  [],
+                  []) :-
+    implements(eu_reg_2016_679_art_91_1),
+    judgement_values(Profile, ComprehensiveValue, BroughtValue).
+% Step 6: an unsure judgement goes to a lawyer (specific authority, Chapter VI stated).
+supervision_route(supervision(false, none, true, true, ChapterState, key(Key)),
+                  Profile,
+                  needs_legal_review(open_textured(Key, cite(eu_reg_2016_679_art_91_1)),
+                                     [inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-ComprehensiveValue,
+                                                        rules_brought_into_line_with_the_regulation-BroughtValue])]),
+                  [],
+                  []) :-
+    implements(eu_reg_2016_679_art_91_1),
+    dif(ChapterState, absent),
+    judgement_values(Profile, ComprehensiveValue, BroughtValue).
+% Step 7: an authority that is not specific.
+supervision_route(supervision(false, none, false, true, not_read, none),
+                  Profile,
+                  subject_to_independent_supervisory_authority,
+                  [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, Attested)],
+                  [cite(eu_reg_2016_679_art_91_1), cite(eu_reg_2016_679_art_91_2)]) :-
+    implements(eu_reg_2016_679_art_91_2),
+    profile_get(Profile, rules_applied_at_entry_into_force_of_the_regulation, Attested).
+% Step 8: a specific authority attested to fulfil Chapter VI.
+supervision_route(supervision(false, none, true, true, true, none),
+                  Profile,
+                  specific_supervisory_authority_permitted,
+                  [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, EntryAttested),
+                   outside_fact(specific_authority_fulfils_chapter_vi_conditions, ChapterAttested)],
+                  [cite(eu_reg_2016_679_art_91_1), cite(eu_reg_2016_679_art_91_2)]) :-
+    implements(eu_reg_2016_679_art_91_2),
+    profile_get(Profile, rules_applied_at_entry_into_force_of_the_regulation, EntryAttested),
+    profile_get(Profile, specific_authority_fulfils_chapter_vi_conditions, ChapterAttested).
+% Step 9: a specific authority attested not to fulfil Chapter VI.
+supervision_route(supervision(false, none, true, true, false, none),
+                  Profile,
+                  specific_supervisory_authority_not_permitted,
+                  [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, EntryAttested),
+                   outside_fact(specific_authority_fulfils_chapter_vi_conditions, ChapterAttested)],
+                  [cite(eu_reg_2016_679_art_91_1), cite(eu_reg_2016_679_art_91_2)]) :-
+    implements(eu_reg_2016_679_art_91_2),
+    profile_get(Profile, rules_applied_at_entry_into_force_of_the_regulation, EntryAttested),
+    profile_get(Profile, specific_authority_fulfils_chapter_vi_conditions, ChapterAttested).
+
+% ---- facade: verdict, projection, checklist ---------------------------
+decide_gdpr_churches_and_religious_associations(Profile, gdpr_churches_and_religious_associations_verdict(Status, Citations)) :-
+    church_rules_continuation(Profile, Status, _Basis, Citations).
+
+gdpr_churches_and_religious_associations_status(Profile, Status) :-
+    decide_gdpr_churches_and_religious_associations(Profile, gdpr_churches_and_religious_associations_verdict(Status, _Citations)).
+
+% state_status(State, Key, Status): the checklist status of one condition.
+state_status(true, _, met).
+state_status(false, Key, unmet(Key)).
+state_status(absent, Key, unknown([Key])).
+state_status(unsure, Key, unknown([Key])).
+
+checklist_items([], _, []).
+checklist_items([condition(Key, Kind, Citation)|Conditions], Profile, [item(Key, Status, Citation)|Items]) :-
+    implements(eu_reg_2016_679_art_91_1),
+    key_state(Kind, Profile, Key, State),
+    state_status(State, Key, Status),
+    checklist_items(Conditions, Profile, Items).
+
+% One row per condition of Art 91(1), each carrying its cite(...) term;
+% only a well-formed profile has a checklist.
+gdpr_churches_and_religious_associations_checklist(Profile, Items) :-
+    gdpr_churches_and_religious_associations_input_problems(Profile, []),
+    article_91_1_conditions(Conditions),
+    checklist_items(Conditions, Profile, Items).
+
+gdpr_churches_and_religious_associations_decision_resolvable(Profile) :-
+    decide_gdpr_churches_and_religious_associations(Profile, _Verdict).
+
+% ---- test fixtures (plumbing, no marker) ------------------------------
+sample_attested(Value, attested(Value, attestation(host, moment, reason, none))).
+
+conditions_profile(Comprehensive, Brought, Profile) :-
+    sample_attested(true, EntryAttested),
+    Profile = [attribute(body_is_church_or_religious_association_or_community, true),
+               attribute(rules_applied_in_a_member_state, true),
+               attribute(comprehensive_rules_relating_to_protection_with_regard_to_processing, Comprehensive),
+               attribute(rules_applied_at_entry_into_force_of_the_regulation, EntryAttested),
+               attribute(rules_brought_into_line_with_the_regulation, Brought)].
+
+% ---- tests: church_rules_continuation ---------------------------------
+test(all_conditions_hold_the_rules_may_continue) :-
+    conditions_profile(true, true, Profile),
+    sample_attested(true, EntryAttested),
+    church_rules_continuation(Profile, Result, Basis, Citations),
+    Result == church_rules_may_continue_to_apply,
+    Basis == [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, EntryAttested)],
+    Citations == [cite(eu_reg_2016_679_art_91_1)].
+test(continuation_yields_one_solution) :-
+    conditions_profile(true, true, Profile),
+    findall(Result-Basis-Citations, church_rules_continuation(Profile, Result, Basis, Citations), Answers),
+    length(Answers, 1).
+test(all_conditions_hold_is_not_cut, fail) :-
+    conditions_profile(true, true, Profile),
+    church_rules_continuation(Profile, church_rules_not_covered_by_article_91_1, _, _).
+test(a_false_body_settles_whatever_is_absent) :-
+    church_rules_continuation([attribute(body_is_church_or_religious_association_or_community, false),
+                               attribute(comprehensive_rules_relating_to_protection_with_regard_to_processing, unsure)],
+                              Result, Basis, Citations),
+    Result == church_rules_not_covered_by_article_91_1,
+    Basis == [],
+    Citations == [cite(eu_reg_2016_679_art_91_1)].
+test(an_attested_false_entry_settles_with_empty_basis) :-
+    sample_attested(false, EntryAttested),
+    church_rules_continuation([attribute(rules_applied_at_entry_into_force_of_the_regulation, EntryAttested)],
+                              Result, Basis, _),
+    Result == church_rules_not_covered_by_article_91_1,
+    Basis == [].
+test(the_first_absent_stated_key_is_named) :-
+    church_rules_continuation([attribute(body_is_church_or_religious_association_or_community, true),
+                               attribute(comprehensive_rules_relating_to_protection_with_regard_to_processing, unsure)],
+                              Result, Basis, Citations),
+    Result == indeterminate([rules_applied_in_a_member_state]),
+    Basis == [],
+    Citations == [].
+test(an_absent_entry_statement_is_referred) :-
+    church_rules_continuation([attribute(body_is_church_or_religious_association_or_community, true),
+                               attribute(rules_applied_in_a_member_state, true),
+                               attribute(comprehensive_rules_relating_to_protection_with_regard_to_processing, unsure),
+                               attribute(rules_brought_into_line_with_the_regulation, true)],
+                              Result, _, _),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_1), cite(rules_applied_at_entry_into_force_statement)),
+                                 [resolution(cite(rules_applied_at_entry_into_force_statement), not_attempted),
+                                  inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-unsure,
+                                                    rules_applied_at_entry_into_force_of_the_regulation-absent,
+                                                    rules_brought_into_line_with_the_regulation-true])]).
+test(an_unsure_bringing_into_line_is_open_textured) :-
+    conditions_profile(true, unsure, Profile),
+    church_rules_continuation(Profile, Result, Basis, Citations),
+    Result == needs_legal_review(open_textured(rules_brought_into_line_with_the_regulation, cite(eu_reg_2016_679_art_91_1)),
+                                 [inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-true,
+                                                    rules_brought_into_line_with_the_regulation-unsure])]),
+    Basis == [],
+    Citations == [].
+test(the_first_unsure_judgement_is_referred) :-
+    conditions_profile(unsure, unsure, Profile),
+    church_rules_continuation(Profile, needs_legal_review(open_textured(Key, _), _), _, _),
+    Key == comprehensive_rules_relating_to_protection_with_regard_to_processing.
+test(supervision_keys_do_not_change_continuation) :-
+    conditions_profile(true, true, Profile),
+    church_rules_continuation([attribute(supervisory_authority_is_specific, true)|Profile], Result, _, _),
+    Result == church_rules_may_continue_to_apply.
+test(a_malformed_profile_gets_its_problems) :-
+    church_rules_continuation([attribute(rules_applied_in_a_member_state, unsure)], Result, Basis, Citations),
+    Result == input_problems([wrong_type(rules_applied_in_a_member_state)]),
+    Basis == [],
+    Citations == [].
+
+% ---- tests: church_supervision ----------------------------------------
+test(an_authority_not_specific_is_subject_to_supervision) :-
+    conditions_profile(true, true, Profile),
+    sample_attested(true, EntryAttested),
+    church_supervision([attribute(supervisory_authority_is_specific, false)|Profile], Result, Basis, Citations),
+    Result == subject_to_independent_supervisory_authority,
+    Basis == [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, EntryAttested)],
+    msort(Citations, [cite(eu_reg_2016_679_art_91_1), cite(eu_reg_2016_679_art_91_2)]).
+test(chapter_vi_is_not_read_for_an_authority_not_specific) :-
+    conditions_profile(true, true, Profile),
+    sample_attested(false, ChapterAttested),
+    church_supervision([attribute(supervisory_authority_is_specific, false),
+                        attribute(specific_authority_fulfils_chapter_vi_conditions, ChapterAttested)|Profile],
+                       Result, _, _),
+    Result == subject_to_independent_supervisory_authority.
+test(a_specific_authority_fulfilling_chapter_vi_is_permitted) :-
+    conditions_profile(true, true, Profile),
+    sample_attested(true, Attested),
+    church_supervision([attribute(supervisory_authority_is_specific, true),
+                        attribute(specific_authority_fulfils_chapter_vi_conditions, Attested)|Profile],
+                       Result, Basis, _),
+    Result == specific_supervisory_authority_permitted,
+    Basis == [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, Attested),
+              outside_fact(specific_authority_fulfils_chapter_vi_conditions, Attested)].
+test(a_specific_authority_not_fulfilling_chapter_vi_is_not_permitted) :-
+    conditions_profile(true, true, Profile),
+    sample_attested(false, ChapterAttested),
+    church_supervision([attribute(supervisory_authority_is_specific, true),
+                        attribute(specific_authority_fulfils_chapter_vi_conditions, ChapterAttested)|Profile],
+                       Result, _, _),
+    Result == specific_supervisory_authority_not_permitted.
+test(not_fulfilling_chapter_vi_is_not_permitted_answer_only, fail) :-
+    conditions_profile(true, true, Profile),
+    sample_attested(false, ChapterAttested),
+    church_supervision([attribute(supervisory_authority_is_specific, true),
+                        attribute(specific_authority_fulfils_chapter_vi_conditions, ChapterAttested)|Profile],
+                       specific_supervisory_authority_permitted, _, _).
+test(supervision_yields_one_solution) :-
+    conditions_profile(unsure, true, Profile),
+    findall(Result, church_supervision([attribute(supervisory_authority_is_specific, true)|Profile], Result, _, _), Results),
+    length(Results, 1).
+test(a_false_condition_does_not_engage_article_91_2) :-
+    church_supervision([attribute(rules_applied_in_a_member_state, false)], Result, Basis, Citations),
+    Result == article_91_2_not_engaged,
+    Basis == [],
+    msort(Citations, [cite(eu_reg_2016_679_art_91_1), cite(eu_reg_2016_679_art_91_2)]).
+test(specificity_is_asked_before_the_entry_statement_is_referred) :-
+    church_supervision([attribute(body_is_church_or_religious_association_or_community, true),
+                        attribute(rules_applied_in_a_member_state, true),
+                        attribute(comprehensive_rules_relating_to_protection_with_regard_to_processing, true),
+                        attribute(rules_brought_into_line_with_the_regulation, true)],
+                       Result, _, _),
+    Result == indeterminate([supervisory_authority_is_specific]).
+test(an_absent_entry_statement_is_referred_in_supervision) :-
+    church_supervision([attribute(body_is_church_or_religious_association_or_community, true),
+                        attribute(rules_applied_in_a_member_state, true),
+                        attribute(comprehensive_rules_relating_to_protection_with_regard_to_processing, true),
+                        attribute(rules_brought_into_line_with_the_regulation, true),
+                        attribute(supervisory_authority_is_specific, true)],
+                       Result, _, _),
+    Result = needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_1), cite(rules_applied_at_entry_into_force_statement)), _).
+test(an_absent_chapter_vi_statement_is_referred_before_an_unsure_judgement) :-
+    conditions_profile(unsure, true, Profile),
+    church_supervision([attribute(supervisory_authority_is_specific, true)|Profile], Result, Basis, Citations),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_91_2), cite(chapter_vi_conditions_statement)),
+                                 [resolution(cite(chapter_vi_conditions_statement), not_attempted),
+                                  inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-unsure,
+                                                    rules_brought_into_line_with_the_regulation-true,
+                                                    specific_authority_fulfils_chapter_vi_conditions-absent])]),
+    Basis == [],
+    Citations == [].
+test(an_unsure_judgement_is_referred_for_an_authority_not_specific) :-
+    conditions_profile(true, unsure, Profile),
+    church_supervision([attribute(supervisory_authority_is_specific, false)|Profile], Result, _, _),
+    Result == needs_legal_review(open_textured(rules_brought_into_line_with_the_regulation, cite(eu_reg_2016_679_art_91_1)),
+                                 [inputs_relied_on([comprehensive_rules_relating_to_protection_with_regard_to_processing-true,
+                                                    rules_brought_into_line_with_the_regulation-unsure])]).
+
+% ---- tests: facade and checklist --------------------------------------
+test(the_checklist_cites_every_condition) :-
+    conditions_profile(true, unsure, Profile),
+    gdpr_churches_and_religious_associations_checklist(Profile, Items),
+    length(Items, 5),
+    member(item(rules_brought_into_line_with_the_regulation, unknown([rules_brought_into_line_with_the_regulation]), cite(eu_reg_2016_679_art_91_1)), Items),
+    member(item(body_is_church_or_religious_association_or_community, met, cite(eu_reg_2016_679_art_91_1)), Items).
+test(the_facade_projects_the_continuation_status) :-
+    conditions_profile(true, true, Profile),
+    gdpr_churches_and_religious_associations_status(Profile, Status),
+    Status == church_rules_may_continue_to_apply.
+
+:- end_module(gdpr_churches_and_religious_associations).

@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality and determinism of both queries; well-shaped answers (BASIS and
+% CITATIONS per kind of RESULT, citations from the vocabulary, each once);
+% irrelevance of the supervision keys to church_rules_continuation/4; and
+% agreement of the two queries on a false Art 91(1) condition.
+% Run: python -m clausal.testing eu/data_protection/gdpr_churches_and_religious_associations/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/gdpr_churches_and_religious_associations, [
+    decide_gdpr_churches_and_religious_associations/2,
+    church_rules_continuation/4,
+    church_supervision/4
+]).
+:- use_module(eu/data_protection/gdpr_churches_and_religious_associations/fixtures, [
+    gdpr_churches_and_religious_associations_subject/1,
+    gdpr_churches_and_religious_associations_profile_for/2
+]).
+
+subject_set(SubjectSet) :-
+    findall(Subject, gdpr_churches_and_religious_associations_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet).
+
+subject_classifies(Subject) :-
+    gdpr_churches_and_religious_associations_subject(Subject),
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    decide_gdpr_churches_and_religious_associations(Profile, _Verdict).
+
+continuation_is_deterministic(Subject) :-
+    gdpr_churches_and_religious_associations_subject(Subject),
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    findall(Result-Basis-Citations, church_rules_continuation(Profile, Result, Basis, Citations), Answers),
+    length(Answers, 1).
+
+supervision_is_deterministic(Subject) :-
+    gdpr_churches_and_religious_associations_subject(Subject),
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    findall(Result-Basis-Citations, church_supervision(Profile, Result, Basis, Citations), Answers),
+    length(Answers, 1).
+
+known_citation(cite(eu_reg_2016_679_art_91_1)).
+known_citation(cite(eu_reg_2016_679_art_91_2)).
+
+% answer_shape(Result, Shape): final answers rest on outside facts, cut
+% answers have BASIS [], statuses have BASIS [] and CITATIONS [].
+answer_shape(church_rules_may_continue_to_apply, final).
+answer_shape(subject_to_independent_supervisory_authority, final).
+answer_shape(specific_supervisory_authority_permitted, final).
+answer_shape(specific_supervisory_authority_not_permitted, final).
+answer_shape(church_rules_not_covered_by_article_91_1, cut).
+answer_shape(article_91_2_not_engaged, cut).
+answer_shape(indeterminate(_MissingKeys), status).
+answer_shape(needs_legal_review(_Reason, _Context), status).
+answer_shape(input_problems(_Problems), status).
+
+shape_holds(final, [_|_], [_|_]).
+shape_holds(cut, [], [_|_]).
+shape_holds(status, [], []).
+
+answer_well_shaped(Result, Basis, Citations) :-
+    answer_shape(Result, Shape),
+    shape_holds(Shape, Basis, Citations),
+    maplist(known_citation, Citations),
+    sort(Citations, CitationSet),
+    same_length(Citations, CitationSet).
+
+continuation_well_shaped(Subject) :-
+    gdpr_churches_and_religious_associations_subject(Subject),
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    church_rules_continuation(Profile, Result, Basis, Citations),
+    answer_well_shaped(Result, Basis, Citations).
+
+supervision_well_shaped(Subject) :-
+    gdpr_churches_and_religious_associations_subject(Subject),
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    church_supervision(Profile, Result, Basis, Citations),
+    answer_well_shaped(Result, Basis, Citations).
+
+supervision_attribute(attribute(supervisory_authority_is_specific, _Value)).
+supervision_attribute(attribute(specific_authority_fulfils_chapter_vi_conditions, _Value)).
+
+continuation_ignores_supervision_keys(Subject) :-
+    gdpr_churches_and_religious_associations_subject(Subject),
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    exclude(supervision_attribute, Profile, Reduced),
+    church_rules_continuation(Profile, Result, Basis, Citations),
+    church_rules_continuation(Reduced, Result, Basis, Citations).
+
+% consistent_pair(ContinuationResult, SupervisionResult): a false condition
+% gives the cut answer in both queries, and only then.
+consistent_pair(church_rules_not_covered_by_article_91_1, article_91_2_not_engaged).
+consistent_pair(ContinuationResult, SupervisionResult) :-
+    dif(ContinuationResult, church_rules_not_covered_by_article_91_1),
+    dif(SupervisionResult, article_91_2_not_engaged).
+
+queries_agree(Subject) :-
+    gdpr_churches_and_religious_associations_subject(Subject),
+    gdpr_churches_and_religious_associations_profile_for(Subject, Profile),
+    church_rules_continuation(Profile, ContinuationResult, _, _),
+    church_supervision(Profile, SupervisionResult, _, _),
+    consistent_pair(ContinuationResult, SupervisionResult).
+
+all_subjects_satisfy(Property) :-
+    subject_set(SubjectSet),
+    findall(Subject, call(Property, Subject), Satisfying),
+    sort(Satisfying, SatisfyingSet),
+    SatisfyingSet == SubjectSet.
+
+test(totality_every_subject_classifies) :-
+    all_subjects_satisfy(subject_classifies).
+test(determinism_continuation_yields_one_answer_per_subject) :-
+    all_subjects_satisfy(continuation_is_deterministic).
+test(determinism_supervision_yields_one_answer_per_subject) :-
+    all_subjects_satisfy(supervision_is_deterministic).
+test(every_continuation_answer_is_well_shaped) :-
+    all_subjects_satisfy(continuation_well_shaped).
+test(every_supervision_answer_is_well_shaped) :-
+    all_subjects_satisfy(supervision_well_shaped).
+test(continuation_ignores_the_supervision_keys) :-
+    all_subjects_satisfy(continuation_ignores_supervision_keys).
+test(the_two_queries_agree_on_a_false_condition) :-
+    all_subjects_satisfy(queries_agree).
+
+% Falsifiers: the shape property is not vacuous.
+test(a_final_answer_without_citations_is_ill_shaped, fail) :-
+    answer_well_shaped(church_rules_may_continue_to_apply, [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, none)], []).
+test(a_cut_answer_with_a_basis_is_ill_shaped, fail) :-
+    answer_well_shaped(article_91_2_not_engaged, [outside_fact(rules_applied_at_entry_into_force_of_the_regulation, none)], [cite(eu_reg_2016_679_art_91_1)]).
+test(a_status_with_citations_is_ill_shaped, fail) :-
+    answer_well_shaped(indeterminate([supervisory_authority_is_specific]), [], [cite(eu_reg_2016_679_art_91_2)]).
+test(a_repeated_citation_is_ill_shaped, fail) :-
+    answer_well_shaped(article_91_2_not_engaged, [], [cite(eu_reg_2016_679_art_91_1), cite(eu_reg_2016_679_art_91_1)]).
+test(a_cut_pair_against_another_answer_is_inconsistent, fail) :-
+    consistent_pair(church_rules_not_covered_by_article_91_1, subject_to_independent_supervisory_authority).
+
+:- end_module(test_properties).

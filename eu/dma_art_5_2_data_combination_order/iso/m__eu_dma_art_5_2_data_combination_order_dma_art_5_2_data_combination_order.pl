@@ -1,0 +1,607 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dma_art_5_2_data_combination_order_dma_art_5_2_data_combination_order, [article_5_application_status/4, personal_data_practice_status/4, consent_request_repetition_status/6, decide_dma_art_5_2_data_combination_order/2, dma_art_5_2_data_combination_order_status/2, dma_art_5_2_data_combination_order_checklist/2, dma_art_5_2_data_combination_order_decision_resolvable/1, dma_art_5_2_data_combination_order_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(error), [must_be/2]).
+:- use_module(library(clpz)).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_kernel, [dma_art_5_2_data_combination_order_input_problems/2]).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_citations, [implements/1]).
+
+practice_point(processing_for_online_advertising_services, cite(eu_reg_2022_1925_art_5_2_a)).
+practice_point(combining_personal_data, cite(eu_reg_2022_1925_art_5_2_b)).
+practice_point(cross_using_personal_data, cite(eu_reg_2022_1925_art_5_2_c)).
+practice_point(signing_in_end_users_to_combine_personal_data, cite(eu_reg_2022_1925_art_5_2_d)).
+
+dma_art_5_2_data_combination_order_status_values([practice_allowed_with_consent, practice_allowed_on_other_legal_basis, practice_prohibited, practice_outside_article_5_2, article_5_obligations_do_not_apply]).
+
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, present(Value)) :-
+    profile_get(Profile, ProfileKey, Value).
+
+outside_fact_truth(absent, absent).
+outside_fact_truth(present(attested(Truth, _)), Truth).
+
+plain_truth(absent, absent).
+plain_truth(present(Value), Value).
+
+optional_pair(absent, _, []).
+optional_pair(present(Value), ProfileKey, [ProfileKey - Value]).
+
+referral(CitationKey, TargetKey, Pairs, needs_legal_review(cross_reference_unresolved(cite(CitationKey), cite(TargetKey)), [resolution(cite(TargetKey), not_attempted), inputs_relied_on(Pairs)])).
+
+article_5_application_status(Profile, Result, Basis, Citations) :-
+    dma_art_5_2_data_combination_order_input_problems(Profile, Problems),
+    application_answer(Problems, Profile, Result, Basis, Citations).
+
+application_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+application_answer([], Profile, Result, Basis, Citations) :-
+    key_state(Profile, designated_as_gatekeeper_for_core_platform_service, Designation),
+    application_from_designation(Designation, Result, Basis, Citations).
+
+application_from_designation(present(attested(true, Attestation)), article_5_obligations_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(true, Attestation))], [cite(eu_reg_2022_1925_art_5_1)]) :-
+    implements(eu_reg_2022_1925_art_5_1).
+application_from_designation(present(attested(false, Attestation)), article_5_obligations_do_not_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, attested(false, Attestation))], [cite(eu_reg_2022_1925_art_5_1)]) :-
+    implements(eu_reg_2022_1925_art_5_1).
+application_from_designation(absent, Result, [], []) :-
+    implements(eu_reg_2022_1925_art_5_1),
+    referral(eu_reg_2022_1925_art_5_1, commission_designation_decision, [designated_as_gatekeeper_for_core_platform_service - absent], Result).
+
+personal_data_practice_status(Profile, Result, Basis, Citations) :-
+    dma_art_5_2_data_combination_order_input_problems(Profile, Problems),
+    practice_answer(Problems, Profile, Result, Basis, Citations).
+
+practice_answer([Problem|Problems], _, input_problems([Problem|Problems]), [], []).
+practice_answer([], Profile, Result, Basis, Citations) :-
+    key_state(Profile, designated_as_gatekeeper_for_core_platform_service, Designation),
+    key_state(Profile, practice_under_article_5_2, Practice),
+    key_state(Profile, end_user_presented_with_specific_choice, Choice),
+    key_state(Profile, end_user_consent_given, Consent),
+    key_state(Profile, gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis),
+    outside_fact_truth(Designation, DesignationTruth),
+    practice_class(Practice, PracticeClass, PointCitation),
+    plain_truth(Choice, ChoiceTruth),
+    outside_fact_truth(Consent, ConsentTruth),
+    outside_fact_truth(OtherBasis, OtherBasisTruth),
+    practice_step(DesignationTruth, PracticeClass, ChoiceTruth, ConsentTruth, OtherBasisTruth, StepNumber),
+    practice_step_answer(StepNumber, states(Designation, Practice, Choice, Consent, OtherBasis), PointCitation, Result, Basis, Citations).
+
+practice_class(absent, absent, no_point).
+practice_class(present(none_of_the_four_practices), none, no_point) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_class(present(unsure), unsure, no_point).
+practice_class(present(Practice), point, PointCitation) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    practice_point(Practice, PointCitation).
+
+consent_route(true, true, allows) :-
+    implements(eu_reg_2022_1925_art_5_2).
+consent_route(false, _, fails) :-
+    implements(eu_reg_2022_1925_art_5_2).
+consent_route(ChoiceTruth, false, fails) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    member(ChoiceTruth, [absent, true, unsure]).
+consent_route(absent, absent, open).
+consent_route(absent, true, open).
+consent_route(true, absent, open).
+consent_route(unsure, absent, open).
+consent_route(unsure, true, open).
+
+practice_step(false, _, _, _, _, 4) :-
+    implements(eu_reg_2022_1925_art_5_1).
+practice_step(true, none, _, _, _, 5) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_step(true, point, ChoiceTruth, ConsentTruth, OtherBasisTruth, StepNumber) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    consent_route(ChoiceTruth, ConsentTruth, Route),
+    point_step(Route, ChoiceTruth, ConsentTruth, OtherBasisTruth, StepNumber).
+practice_step(true, unsure, ChoiceTruth, ConsentTruth, OtherBasisTruth, StepNumber) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    consent_route(ChoiceTruth, ConsentTruth, Route),
+    unsure_practice_step(Route, ChoiceTruth, ConsentTruth, OtherBasisTruth, StepNumber).
+practice_step(true, absent, _, _, _, 9).
+practice_step(absent, absent, _, _, _, 9).
+practice_step(absent, none, _, _, _, 11).
+practice_step(absent, point, ChoiceTruth, ConsentTruth, _, StepNumber) :-
+    undesignated_step(ChoiceTruth, ConsentTruth, StepNumber).
+practice_step(absent, unsure, ChoiceTruth, ConsentTruth, _, StepNumber) :-
+    undesignated_step(ChoiceTruth, ConsentTruth, StepNumber).
+
+point_step(allows, _, _, _, 6) :-
+    implements(eu_reg_2022_1925_art_5_2).
+point_step(fails, _, _, true, 7) :-
+    implements(eu_reg_2022_1925_art_5_2).
+point_step(fails, _, _, false, 8) :-
+    implements(eu_reg_2022_1925_art_5_2).
+point_step(fails, _, _, absent, 13).
+point_step(open, ChoiceTruth, ConsentTruth, OtherBasisTruth, StepNumber) :-
+    open_step(ChoiceTruth, ConsentTruth, OtherBasisTruth, 15, StepNumber).
+
+unsure_practice_step(allows, _, _, _, 14).
+unsure_practice_step(fails, _, _, absent, 13).
+unsure_practice_step(fails, _, _, OtherBasisTruth, 14) :-
+    member(OtherBasisTruth, [true, false]).
+unsure_practice_step(open, ChoiceTruth, ConsentTruth, OtherBasisTruth, StepNumber) :-
+    open_step(ChoiceTruth, ConsentTruth, OtherBasisTruth, 14, StepNumber).
+
+open_step(absent, _, _, _, 10).
+open_step(true, absent, _, _, 12).
+open_step(unsure, absent, _, _, 12).
+open_step(unsure, true, absent, _, 13).
+open_step(unsure, true, OtherBasisTruth, UnsureStep, UnsureStep) :-
+    member(OtherBasisTruth, [true, false]).
+
+undesignated_step(absent, absent, 10).
+undesignated_step(absent, true, 10).
+undesignated_step(absent, false, 11).
+undesignated_step(ChoiceTruth, _, 11) :-
+    member(ChoiceTruth, [true, false, unsure]).
+
+practice_step_answer(4, states(present(DesignationAttested), _, _, _, _), _, article_5_obligations_do_not_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested)], [cite(eu_reg_2022_1925_art_5_1)]) :-
+    implements(eu_reg_2022_1925_art_5_1).
+practice_step_answer(5, states(present(DesignationAttested), _, _, _, _), _, practice_outside_article_5_2, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested)], [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)]) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_step_answer(6, states(present(DesignationAttested), _, _, present(ConsentAttested), _), PointCitation, practice_allowed_with_consent, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested), outside_fact(end_user_consent_given, ConsentAttested)], [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), PointCitation, cite(eu_reg_2022_1925_art_2_32)]) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    implements(eu_reg_2022_1925_art_2_32).
+practice_step_answer(7, states(present(DesignationAttested), _, _, _, present(OtherBasisAttested)), PointCitation, practice_allowed_on_other_legal_basis, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested), outside_fact(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasisAttested)], [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), PointCitation]) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_step_answer(8, states(present(DesignationAttested), _, _, _, present(OtherBasisAttested)), PointCitation, practice_prohibited, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested), outside_fact(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasisAttested)], [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), PointCitation]) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_step_answer(9, _, _, indeterminate([practice_under_article_5_2]), [], []) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_step_answer(10, _, _, indeterminate([end_user_presented_with_specific_choice]), [], []) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_step_answer(11, states(_, Practice, Choice, _, _), _, Result, [], []) :-
+    implements(eu_reg_2022_1925_art_5_1),
+    optional_pair(Practice, practice_under_article_5_2, PracticePairs),
+    optional_pair(Choice, end_user_presented_with_specific_choice, ChoicePairs),
+    append([[designated_as_gatekeeper_for_core_platform_service - absent], PracticePairs, ChoicePairs], Pairs),
+    referral(eu_reg_2022_1925_art_5_1, commission_designation_decision, Pairs, Result).
+practice_step_answer(12, states(_, Practice, Choice, _, _), _, Result, [], []) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    optional_pair(Practice, practice_under_article_5_2, PracticePairs),
+    optional_pair(Choice, end_user_presented_with_specific_choice, ChoicePairs),
+    append([PracticePairs, ChoicePairs, [end_user_consent_given - absent]], Pairs),
+    referral(eu_reg_2022_1925_art_5_2, digital_markets_end_user_consent_statement, Pairs, Result).
+practice_step_answer(13, states(_, Practice, Choice, _, _), _, Result, [], []) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    optional_pair(Practice, practice_under_article_5_2, PracticePairs),
+    optional_pair(Choice, end_user_presented_with_specific_choice, ChoicePairs),
+    append([PracticePairs, ChoicePairs, [gatekeeper_may_rely_on_article_6_1_c_d_or_e - absent]], Pairs),
+    referral(eu_reg_2022_1925_art_5_2, digital_markets_article_6_1_c_d_e_basis_statement, Pairs, Result).
+practice_step_answer(14, states(_, Practice, Choice, _, _), _, needs_legal_review(open_textured(practice_under_article_5_2, cite(eu_reg_2022_1925_art_5_2)), [inputs_relied_on(Pairs)]), [], []) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    optional_pair(Practice, practice_under_article_5_2, PracticePairs),
+    optional_pair(Choice, end_user_presented_with_specific_choice, ChoicePairs),
+    append(PracticePairs, ChoicePairs, Pairs).
+practice_step_answer(15, states(_, Practice, Choice, _, _), _, needs_legal_review(open_textured(end_user_presented_with_specific_choice, cite(eu_reg_2022_1925_art_5_2)), [inputs_relied_on(Pairs)]), [], []) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    optional_pair(Practice, practice_under_article_5_2, PracticePairs),
+    optional_pair(Choice, end_user_presented_with_specific_choice, ChoicePairs),
+    append(PracticePairs, ChoicePairs, Pairs).
+
+consent_request_repetition_status(Profile, RefusalDate, RequestDate, Result, Basis, Citations) :-
+    dma_art_5_2_data_combination_order_input_problems(Profile, ProfileProblems),
+    date_problems(RefusalDate, RequestDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems),
+    repetition_answer(Problems, Profile, RefusalDate, RequestDate, Result, Basis, Citations).
+
+repetition_answer([Problem|Problems], _, _, _, input_problems([Problem|Problems]), [], []).
+repetition_answer([], Profile, RefusalDate, RequestDate, Result, Basis, Citations) :-
+    key_state(Profile, designated_as_gatekeeper_for_core_platform_service, Designation),
+    key_state(Profile, consent_request_already_repeated_in_period, AlreadyRepeated),
+    outside_fact_truth(Designation, DesignationTruth),
+    plain_truth(AlreadyRepeated, AlreadyRepeatedTruth),
+    within_period_t(RefusalDate, RequestDate, Within),
+    repetition_step(DesignationTruth, Within, AlreadyRepeatedTruth, StepNumber),
+    repetition_step_answer(StepNumber, Designation, Result, Basis, Citations).
+
+date_problems(RefusalDate, RequestDate, Problems) :-
+    calendar_day_t(RefusalDate, RefusalIsDay),
+    calendar_day_t(RequestDate, RequestIsDay),
+    dated_problems(RefusalIsDay, RequestIsDay, RefusalDate, RequestDate, Problems).
+
+dated_problems(false, false, _, _, [wrong_type(refusal_date), wrong_type(request_date)]).
+dated_problems(false, true, _, _, [wrong_type(refusal_date)]).
+dated_problems(true, false, _, _, [wrong_type(request_date)]).
+dated_problems(true, true, RefusalDate, RequestDate, Problems) :-
+    date_order(RefusalDate, RequestDate, Order),
+    order_problems(Order, Problems).
+
+order_problems(request_before_refusal, [wrong_type(request_date)]).
+order_problems(request_not_before_refusal, []).
+
+date_order(RefusalDate, RequestDate, request_before_refusal) :-
+    day_number(RefusalDate, RefusalNumber),
+    day_number(RequestDate, RequestNumber),
+    RequestNumber #< RefusalNumber.
+date_order(RefusalDate, RequestDate, request_not_before_refusal) :-
+    day_number(RefusalDate, RefusalNumber),
+    day_number(RequestDate, RequestNumber),
+    RequestNumber #>= RefusalNumber.
+
+day_number(date(DateYear, DateMonth, DateDay), Number) :-
+    Number #= DateYear * 10000 + DateMonth * 100 + DateDay.
+
+calendar_day_t(Term, false) :-
+    var(Term).
+calendar_day_t(Term, Truth) :-
+    nonvar(Term),
+    Term = date(DateYear, DateMonth, DateDay),
+    integers_t([DateYear, DateMonth, DateDay], AreIntegers),
+    integer_date_t(AreIntegers, DateYear, DateMonth, DateDay, Truth).
+calendar_day_t(Term, false) :-
+    nonvar(Term),
+    Term \= date(_, _, _).
+
+integers_t([], true).
+integers_t([Element|Elements], Truth) :-
+    integer_t(Element, ElementTruth),
+    integers_t(Elements, RestTruth),
+    truth_conjunction(ElementTruth, RestTruth, Truth).
+
+integer_t(Element, Truth) :-
+    catch(integer_truth(Element, Truth), error(_, _), Truth = false).
+
+integer_truth(Element, true) :-
+    must_be(integer, Element).
+
+truth_conjunction(true, Truth, Truth).
+truth_conjunction(false, _, false).
+
+integer_date_t(false, _, _, _, false).
+integer_date_t(true, DateYear, DateMonth, DateDay, Truth) :-
+    year_month_t(DateYear, DateMonth, YearMonthTruth),
+    day_in_month_t(YearMonthTruth, DateYear, DateMonth, DateDay, Truth).
+
+year_month_t(DateYear, DateMonth, Truth) :-
+    TruthBit #<==> DateYear #>= 1 #/\ DateYear #=< 9999 #/\ DateMonth #>= 1 #/\ DateMonth #=< 12,
+    bit_truth(TruthBit, Truth).
+
+day_in_month_t(false, _, _, _, false).
+day_in_month_t(true, DateYear, DateMonth, DateDay, Truth) :-
+    month_length(DateYear, DateMonth, MonthDays),
+    TruthBit #<==> DateDay #>= 1 #/\ DateDay #=< MonthDays,
+    bit_truth(TruthBit, Truth).
+
+month_length(DateYear, 2, MonthDays) :-
+    leap_year_t(DateYear, Leap),
+    february_length(Leap, MonthDays).
+month_length(_, DateMonth, 31) :-
+    member(DateMonth, [1, 3, 5, 7, 8, 10, 12]).
+month_length(_, DateMonth, 30) :-
+    member(DateMonth, [4, 6, 9, 11]).
+
+leap_year_t(DateYear, Truth) :-
+    TruthBit #<==> DateYear mod 4 #= 0 #/\ (DateYear mod 100 #\= 0 #\/ DateYear mod 400 #= 0),
+    bit_truth(TruthBit, Truth).
+
+february_length(true, 29).
+february_length(false, 28).
+
+bit_truth(1, true).
+bit_truth(0, false).
+
+within_period_t(date(RefusalYear, RefusalMonth, RefusalDay), RequestDate, Within) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    anniversary_number(RefusalYear, RefusalMonth, RefusalDay, AnniversaryNumber),
+    day_number(RequestDate, RequestNumber),
+    TruthBit #<==> RequestNumber #< AnniversaryNumber,
+    bit_truth(TruthBit, Within).
+
+anniversary_number(RefusalYear, 2, 29, AnniversaryNumber) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    AnniversaryYear #= RefusalYear + 1,
+    AnniversaryNumber #= AnniversaryYear * 10000 + 2 * 100 + 28.
+anniversary_number(RefusalYear, RefusalMonth, RefusalDay, AnniversaryNumber) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    dif(RefusalMonth - RefusalDay, 2 - 29),
+    AnniversaryYear #= RefusalYear + 1,
+    AnniversaryNumber #= AnniversaryYear * 10000 + RefusalMonth * 100 + RefusalDay.
+
+repeated_request_count(true, 1).
+repeated_request_count(false, 0).
+
+limit_step(RepeatedRequests, 18) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    RepeatedRequests #>= 1.
+limit_step(RepeatedRequests, 19) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    RepeatedRequests #< 1.
+
+repetition_step(false, _, _, 16) :-
+    implements(eu_reg_2022_1925_art_5_1).
+repetition_step(true, false, _, 17) :-
+    implements(eu_reg_2022_1925_art_5_2).
+repetition_step(true, true, AlreadyRepeatedTruth, StepNumber) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    repeated_request_count(AlreadyRepeatedTruth, RepeatedRequests),
+    limit_step(RepeatedRequests, StepNumber).
+repetition_step(true, true, absent, 20).
+repetition_step(absent, true, absent, 20).
+repetition_step(absent, true, AlreadyRepeatedTruth, 21) :-
+    repeated_request_count(AlreadyRepeatedTruth, _).
+repetition_step(absent, false, _, 21).
+
+repetition_step_answer(16, present(DesignationAttested), article_5_obligations_do_not_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested)], [cite(eu_reg_2022_1925_art_5_1)]) :-
+    implements(eu_reg_2022_1925_art_5_1).
+repetition_step_answer(17, present(DesignationAttested), request_after_one_year_period, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested)], [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)]) :-
+    implements(eu_reg_2022_1925_art_5_2).
+repetition_step_answer(18, present(DesignationAttested), repeated_request_not_permitted, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested)], [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)]) :-
+    implements(eu_reg_2022_1925_art_5_2).
+repetition_step_answer(19, present(DesignationAttested), repeated_request_permitted, [outside_fact(designated_as_gatekeeper_for_core_platform_service, DesignationAttested)], [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)]) :-
+    implements(eu_reg_2022_1925_art_5_2).
+repetition_step_answer(20, _, indeterminate([consent_request_already_repeated_in_period]), [], []) :-
+    implements(eu_reg_2022_1925_art_5_2).
+repetition_step_answer(21, absent, Result, [], []) :-
+    implements(eu_reg_2022_1925_art_5_1),
+    referral(eu_reg_2022_1925_art_5_1, commission_designation_decision, [designated_as_gatekeeper_for_core_platform_service - absent], Result).
+
+decide_dma_art_5_2_data_combination_order(Profile, dma_art_5_2_data_combination_order_verdict(Result, Citations)) :-
+    personal_data_practice_status(Profile, Result, _, Citations).
+
+dma_art_5_2_data_combination_order_status(Profile, Status) :-
+    decide_dma_art_5_2_data_combination_order(Profile, dma_art_5_2_data_combination_order_verdict(Status, _)).
+
+dma_art_5_2_data_combination_order_checklist(Profile, Items) :-
+    dma_art_5_2_data_combination_order_input_problems(Profile, Problems),
+    checklist_items(Problems, Profile, Items).
+
+checklist_items([Problem|Problems], _, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2022_1925_art_5_1))]).
+checklist_items([], Profile, [DesignationItem, PracticeItem, ChoiceItem, ConsentItem, OtherBasisItem]) :-
+    key_state(Profile, designated_as_gatekeeper_for_core_platform_service, Designation),
+    key_state(Profile, practice_under_article_5_2, Practice),
+    key_state(Profile, end_user_presented_with_specific_choice, Choice),
+    key_state(Profile, end_user_consent_given, Consent),
+    key_state(Profile, gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis),
+    designation_item(Designation, DesignationItem),
+    practice_item(Practice, PracticeItem),
+    choice_item(Choice, ChoiceItem),
+    consent_item(Consent, ConsentItem),
+    other_basis_item(OtherBasis, OtherBasisItem).
+
+designation_item(present(attested(true, _)), item(core_platform_service_listed, met, cite(eu_reg_2022_1925_art_5_1))) :-
+    implements(eu_reg_2022_1925_art_5_1).
+designation_item(present(attested(false, _)), item(core_platform_service_listed, unmet(not_listed_in_designation_decision), cite(eu_reg_2022_1925_art_5_1))) :-
+    implements(eu_reg_2022_1925_art_5_1).
+designation_item(absent, item(core_platform_service_listed, unknown([designated_as_gatekeeper_for_core_platform_service]), cite(eu_reg_2022_1925_art_5_1))) :-
+    implements(eu_reg_2022_1925_art_5_1).
+
+practice_item(present(Practice), item(practice_under_article_5_2, met, PointCitation)) :-
+    implements(eu_reg_2022_1925_art_5_2),
+    practice_point(Practice, PointCitation).
+practice_item(present(none_of_the_four_practices), item(practice_under_article_5_2, unmet(none_of_the_four_practices), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_item(present(unsure), item(practice_under_article_5_2, unknown([practice_under_article_5_2]), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+practice_item(absent, item(practice_under_article_5_2, unknown([practice_under_article_5_2]), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+
+choice_item(present(true), item(specific_choice_presented, met, cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+choice_item(present(false), item(specific_choice_presented, unmet(specific_choice_not_presented), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+choice_item(present(unsure), item(specific_choice_presented, unknown([end_user_presented_with_specific_choice]), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+choice_item(absent, item(specific_choice_presented, unknown([end_user_presented_with_specific_choice]), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+
+consent_item(present(attested(true, _)), item(consent_given, met, cite(eu_reg_2022_1925_art_2_32))) :-
+    implements(eu_reg_2022_1925_art_2_32).
+consent_item(present(attested(false, _)), item(consent_given, unmet(consent_not_given), cite(eu_reg_2022_1925_art_2_32))) :-
+    implements(eu_reg_2022_1925_art_2_32).
+consent_item(absent, item(consent_given, unknown([end_user_consent_given]), cite(eu_reg_2022_1925_art_2_32))) :-
+    implements(eu_reg_2022_1925_art_2_32).
+
+other_basis_item(present(attested(true, _)), item(other_legal_basis, met, cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+other_basis_item(present(attested(false, _)), item(other_legal_basis, unmet(no_article_6_1_c_d_or_e_basis), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+other_basis_item(absent, item(other_legal_basis, unknown([gatekeeper_may_rely_on_article_6_1_c_d_or_e]), cite(eu_reg_2022_1925_art_5_2))) :-
+    implements(eu_reg_2022_1925_art_5_2).
+
+dma_art_5_2_data_combination_order_decision_resolvable(Profile) :-
+    decide_dma_art_5_2_data_combination_order(Profile, _).
+
+sample_attested(Truth, attested(Truth, attestation(clerk, noon, statement, none))).
+
+outside_attribute(_, absent, []).
+outside_attribute(ProfileKey, Truth, [attribute(ProfileKey, Attested)]) :-
+    dif(Truth, absent),
+    sample_attested(Truth, Attested).
+
+plain_attribute(_, absent, []).
+plain_attribute(ProfileKey, Value, [attribute(ProfileKey, Value)]) :-
+    dif(Value, absent).
+
+sample_profile_of(DesignationTruth, Practice, Choice, ConsentTruth, OtherBasisTruth, Profile) :-
+    outside_attribute(designated_as_gatekeeper_for_core_platform_service, DesignationTruth, DesignationAttributes),
+    plain_attribute(practice_under_article_5_2, Practice, PracticeAttributes),
+    plain_attribute(end_user_presented_with_specific_choice, Choice, ChoiceAttributes),
+    outside_attribute(end_user_consent_given, ConsentTruth, ConsentAttributes),
+    outside_attribute(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasisTruth, OtherBasisAttributes),
+    append([DesignationAttributes, PracticeAttributes, ChoiceAttributes, ConsentAttributes, OtherBasisAttributes], Profile).
+
+sample_profile(Profile) :-
+    member(DesignationTruth, [absent, true, false]),
+    member(Practice, [absent, combining_personal_data, none_of_the_four_practices, unsure]),
+    member(Choice, [absent, true, false, unsure]),
+    member(ConsentTruth, [absent, true, false]),
+    member(OtherBasisTruth, [absent, true, false]),
+    sample_profile_of(DesignationTruth, Practice, Choice, ConsentTruth, OtherBasisTruth, Profile).
+
+repetition_profile(DesignationTruth, AlreadyRepeated, Profile) :-
+    outside_attribute(designated_as_gatekeeper_for_core_platform_service, DesignationTruth, DesignationAttributes),
+    plain_attribute(consent_request_already_repeated_in_period, AlreadyRepeated, RepeatedAttributes),
+    append(DesignationAttributes, RepeatedAttributes, Profile).
+
+one_practice_answer(Profile) :-
+    findall(Result, personal_data_practice_status(Profile, Result, _, _), Results),
+    length(Results, 1).
+
+one_repetition_answer(Profile - RequestDate) :-
+    findall(Result, consent_request_repetition_status(Profile, date(2025, 3, 10), RequestDate, Result, _, _), Results),
+    length(Results, 1).
+
+sorted_equal(Citations, Expected) :-
+    sort(Citations, Sorted),
+    sort(Expected, Sorted).
+
+test(listed_service_is_bound_by_article_5) :-
+    sample_attested(true, Designation),
+    article_5_application_status([attribute(designated_as_gatekeeper_for_core_platform_service, Designation)], article_5_obligations_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)], [cite(eu_reg_2022_1925_art_5_1)]).
+test(unlisted_service_is_not_bound) :-
+    sample_attested(false, Designation),
+    article_5_application_status([attribute(designated_as_gatekeeper_for_core_platform_service, Designation)], article_5_obligations_do_not_apply, _, _).
+test(absent_designation_is_referred) :-
+    article_5_application_status([], Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service - absent])]).
+test(application_unknown_key_is_an_input_problem) :-
+    article_5_application_status([attribute(colour, red)], input_problems([unknown_key(colour)]), [], []).
+test(application_non_list_profile) :-
+    article_5_application_status(nothing, input_problems([wrong_type(profile)]), [], []).
+test(application_has_one_answer) :-
+    findall(Result, article_5_application_status([], Result, _, _), Results),
+    length(Results, 1).
+test(step_4_unlisted_whatever_else) :-
+    sample_profile_of(false, unsure, absent, absent, absent, Profile),
+    sample_attested(false, Designation),
+    personal_data_practice_status(Profile, article_5_obligations_do_not_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)], [cite(eu_reg_2022_1925_art_5_1)]).
+test(step_5_none_of_the_four_practices) :-
+    sample_profile_of(true, none_of_the_four_practices, absent, absent, absent, Profile),
+    personal_data_practice_status(Profile, practice_outside_article_5_2, _, Citations),
+    sorted_equal(Citations, [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)]).
+test(step_6_choice_and_consent_allow) :-
+    sample_profile_of(true, combining_personal_data, true, true, false, Profile),
+    sample_attested(true, Attested),
+    personal_data_practice_status(Profile, practice_allowed_with_consent, Basis, Citations),
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Attested), outside_fact(end_user_consent_given, Attested)],
+    sorted_equal(Citations, [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), cite(eu_reg_2022_1925_art_5_2_b), cite(eu_reg_2022_1925_art_2_32)]).
+test(both_routes_answer_with_consent) :-
+    sample_profile_of(true, cross_using_personal_data, true, true, true, Profile),
+    personal_data_practice_status(Profile, practice_allowed_with_consent, _, _).
+test(step_7_other_legal_basis) :-
+    sample_profile_of(true, processing_for_online_advertising_services, false, absent, true, Profile),
+    sample_attested(true, Attested),
+    personal_data_practice_status(Profile, practice_allowed_on_other_legal_basis, Basis, Citations),
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Attested), outside_fact(gatekeeper_may_rely_on_article_6_1_c_d_or_e, Attested)],
+    sorted_equal(Citations, [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), cite(eu_reg_2022_1925_art_5_2_a)]).
+test(step_8_prohibited_without_consent_statement_in_basis) :-
+    sample_profile_of(true, signing_in_end_users_to_combine_personal_data, absent, false, false, Profile),
+    sample_attested(true, Designation),
+    sample_attested(false, OtherBasis),
+    personal_data_practice_status(Profile, practice_prohibited, Basis, Citations),
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation), outside_fact(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)],
+    sorted_equal(Citations, [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), cite(eu_reg_2022_1925_art_5_2_d)]).
+test(step_9_practice_named) :-
+    personal_data_practice_status([], indeterminate([practice_under_article_5_2]), [], []).
+test(step_10_choice_named) :-
+    sample_profile_of(absent, combining_personal_data, absent, absent, absent, Profile),
+    personal_data_practice_status(Profile, indeterminate([end_user_presented_with_specific_choice]), [], []).
+test(step_11_designation_referred) :-
+    sample_profile_of(absent, none_of_the_four_practices, absent, absent, absent, Profile),
+    personal_data_practice_status(Profile, Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service - absent, practice_under_article_5_2 - none_of_the_four_practices])]).
+test(step_12_consent_referred) :-
+    sample_profile_of(true, combining_personal_data, true, absent, absent, Profile),
+    personal_data_practice_status(Profile, Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_2), cite(digital_markets_end_user_consent_statement)), [resolution(cite(digital_markets_end_user_consent_statement), not_attempted), inputs_relied_on([practice_under_article_5_2 - combining_personal_data, end_user_presented_with_specific_choice - true, end_user_consent_given - absent])]).
+test(step_13_other_basis_referred) :-
+    sample_profile_of(true, combining_personal_data, false, absent, absent, Profile),
+    personal_data_practice_status(Profile, Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_2), cite(digital_markets_article_6_1_c_d_e_basis_statement)), [resolution(cite(digital_markets_article_6_1_c_d_e_basis_statement), not_attempted), inputs_relied_on([practice_under_article_5_2 - combining_personal_data, end_user_presented_with_specific_choice - false, gatekeeper_may_rely_on_article_6_1_c_d_or_e - absent])]).
+test(step_14_unsure_practice_to_lawyer) :-
+    sample_profile_of(true, unsure, true, true, absent, Profile),
+    personal_data_practice_status(Profile, Result, [], []),
+    Result == needs_legal_review(open_textured(practice_under_article_5_2, cite(eu_reg_2022_1925_art_5_2)), [inputs_relied_on([practice_under_article_5_2 - unsure, end_user_presented_with_specific_choice - true])]).
+test(step_15_unsure_choice_to_lawyer) :-
+    sample_profile_of(true, combining_personal_data, unsure, true, false, Profile),
+    personal_data_practice_status(Profile, Result, [], []),
+    Result == needs_legal_review(open_textured(end_user_presented_with_specific_choice, cite(eu_reg_2022_1925_art_5_2)), [inputs_relied_on([practice_under_article_5_2 - combining_personal_data, end_user_presented_with_specific_choice - unsure])]).
+test(practice_wrong_value_is_an_input_problem) :-
+    personal_data_practice_status([attribute(practice_under_article_5_2, maybe)], input_problems([wrong_type(practice_under_article_5_2)]), [], []).
+test(every_practice_profile_has_one_answer) :-
+    findall(Profile, sample_profile(Profile), Profiles),
+    length(Profiles, 432),
+    maplist(one_practice_answer, Profiles).
+test(first_repeat_within_year_permitted) :-
+    repetition_profile(true, false, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2025, 6, 1), repeated_request_permitted, _, Citations),
+    sorted_equal(Citations, [cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)]).
+test(refusal_day_itself_is_within) :-
+    repetition_profile(true, false, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2025, 3, 10), repeated_request_permitted, _, _).
+test(second_repeat_within_year_not_permitted) :-
+    repetition_profile(true, true, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2026, 3, 9), repeated_request_not_permitted, _, _).
+test(anniversary_ends_the_period) :-
+    repetition_profile(true, true, Profile),
+    sample_attested(true, Designation),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2026, 3, 10), request_after_one_year_period, [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)], _).
+test(leap_day_refusal_anniversary_is_28_february) :-
+    repetition_profile(true, false, Profile),
+    consent_request_repetition_status(Profile, date(2024, 2, 29), date(2025, 2, 28), request_after_one_year_period, _, _),
+    consent_request_repetition_status(Profile, date(2024, 2, 29), date(2025, 2, 27), repeated_request_permitted, _, _).
+test(year_9999_refusal_keeps_every_request_within) :-
+    repetition_profile(true, false, Profile),
+    consent_request_repetition_status(Profile, date(9999, 6, 1), date(9999, 12, 31), repeated_request_permitted, _, _).
+test(unlisted_service_repetition) :-
+    repetition_profile(false, absent, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2027, 1, 1), article_5_obligations_do_not_apply, _, [cite(eu_reg_2022_1925_art_5_1)]).
+test(already_repeated_named_within_period) :-
+    repetition_profile(absent, absent, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2025, 4, 1), indeterminate([consent_request_already_repeated_in_period]), [], []).
+test(designation_referred_for_repetition) :-
+    repetition_profile(absent, true, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2025, 4, 1), Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service - absent])]).
+test(designation_referred_after_period) :-
+    consent_request_repetition_status([], date(2025, 3, 10), date(2026, 3, 10), needs_legal_review(_, _), [], []).
+test(request_before_refusal_is_wrong_type) :-
+    consent_request_repetition_status([], date(2025, 3, 10), date(2025, 3, 9), input_problems([wrong_type(request_date)]), [], []).
+test(impossible_refusal_day) :-
+    consent_request_repetition_status([], date(2025, 2, 30), date(2025, 1, 1), input_problems([wrong_type(refusal_date)]), [], []).
+test(non_leap_29_february_is_not_a_day) :-
+    consent_request_repetition_status([], date(1900, 2, 29), date(2001, 1, 1), input_problems([wrong_type(refusal_date)]), [], []).
+test(leap_29_february_is_a_day) :-
+    consent_request_repetition_status([], date(2000, 2, 29), date(2000, 3, 1), indeterminate([consent_request_already_repeated_in_period]), [], []).
+test(both_dates_wrong) :-
+    consent_request_repetition_status([], nothing, date(2025, 13, 1), input_problems([wrong_type(refusal_date), wrong_type(request_date)]), [], []).
+test(atom_year_is_wrong_type) :-
+    consent_request_repetition_status([], date(twenty_twenty_five, 3, 10), date(2025, 4, 1), input_problems([wrong_type(refusal_date)]), [], []).
+test(unbound_request_date_is_wrong_type) :-
+    consent_request_repetition_status([], date(2025, 3, 10), _, input_problems([wrong_type(request_date)]), [], []).
+test(profile_problems_come_before_date_problems) :-
+    consent_request_repetition_status([attribute(colour, red)], date(2025, 2, 30), date(2025, 4, 1), input_problems([unknown_key(colour), wrong_type(refusal_date)]), [], []).
+test(every_repetition_case_has_one_answer) :-
+    findall(Profile - RequestDate, (member(DesignationTruth, [absent, true, false]), member(AlreadyRepeated, [absent, true, false]), member(RequestDate, [date(2025, 3, 10), date(2026, 3, 9), date(2026, 3, 10), date(2025, 3, 9)]), repetition_profile(DesignationTruth, AlreadyRepeated, Profile)), Cases),
+    length(Cases, 36),
+    maplist(one_repetition_answer, Cases).
+test(facade_verdict_is_the_practice_result) :-
+    sample_profile_of(true, combining_personal_data, false, false, false, Profile),
+    decide_dma_art_5_2_data_combination_order(Profile, dma_art_5_2_data_combination_order_verdict(practice_prohibited, _)),
+    dma_art_5_2_data_combination_order_status(Profile, practice_prohibited).
+test(checklist_carries_cited_rows) :-
+    sample_profile_of(true, combining_personal_data, true, true, absent, Profile),
+    dma_art_5_2_data_combination_order_checklist(Profile, Items),
+    member(item(core_platform_service_listed, met, cite(eu_reg_2022_1925_art_5_1)), Items),
+    member(item(practice_under_article_5_2, met, cite(eu_reg_2022_1925_art_5_2_b)), Items),
+    member(item(consent_given, met, cite(eu_reg_2022_1925_art_2_32)), Items),
+    member(item(other_legal_basis, unknown([gatekeeper_may_rely_on_article_6_1_c_d_or_e]), cite(eu_reg_2022_1925_art_5_2)), Items).
+test(checklist_has_one_answer) :-
+    findall(Items, dma_art_5_2_data_combination_order_checklist([], Items), Answers),
+    length(Answers, 1).
+
+test(unlisted_service_is_not_bound_is_not_apply, fail) :-
+    sample_attested(false, Designation),
+    article_5_application_status([attribute(designated_as_gatekeeper_for_core_platform_service, Designation)], article_5_obligations_apply, _, _).
+test(step_8_is_not_allowed_on_other_basis, fail) :-
+    sample_profile_of(true, signing_in_end_users_to_combine_personal_data, absent, false, false, Profile),
+    personal_data_practice_status(Profile, practice_allowed_on_other_legal_basis, _, _).
+test(anniversary_is_not_not_permitted, fail) :-
+    repetition_profile(true, true, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), date(2026, 3, 10), repeated_request_not_permitted, _, _).

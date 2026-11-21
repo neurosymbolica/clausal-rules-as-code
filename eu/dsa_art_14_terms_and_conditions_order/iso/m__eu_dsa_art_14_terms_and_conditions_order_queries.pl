@@ -1,0 +1,132 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dsa_art_14_terms_and_conditions_order_queries, [dsa_art_14_terms_and_conditions_order_profile_keys/1, dsa_art_14_terms_and_conditions_order_what_if/4, art_14_1_terms_and_conditions_compliant/0, art_14_1_terms_and_conditions_not_compliant/0, art_14_2_change_information_compliant/0, art_14_2_change_information_not_compliant/0, art_14_2_change_information_not_required/0, art_14_3_minors_explanation_compliant/0, art_14_3_minors_explanation_not_compliant/0, art_14_3_minors_explanation_not_required/0, art_14_4_restriction_enforcement_compliant/0, art_14_4_restriction_enforcement_not_compliant/0, art_14_4_restriction_enforcement_not_required/0, art_14_5_summary_compliant/0, art_14_5_summary_not_compliant/0, art_14_5_summary_not_required/0, art_14_6_official_languages_compliant/0, art_14_6_official_languages_not_compliant/0, art_14_6_official_languages_not_required/0, terms_and_conditions_include_information_on_restrictions_on_recipient_information/0, terms_and_conditions_include_information_on_content_moderation/0, terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language/0, terms_and_conditions_publicly_available_in_easily_accessible_and_machine_readable_format/0, provider_has_internal_complaint_handling_system/0, terms_and_conditions_include_rules_of_procedure_of_internal_complaint_handling_system/0, terms_and_conditions_changed/0, change_to_terms_and_conditions_is_significant/0, recipients_informed_of_change_to_terms_and_conditions/0, service_primarily_directed_at_minors/0, service_predominantly_used_by_minors/0, conditions_and_restrictions_explained_in_way_minors_can_understand/0, provider_applies_or_enforces_restriction/0, restriction_applied_in_diligent_objective_and_proportionate_manner/0, restriction_applied_with_due_regard_to_rights_and_legitimate_interests_of_parties/0, concise_clear_machine_readable_summary_of_terms_and_conditions_provided/0, terms_and_conditions_published_in_official_languages_of_all_member_states_of_service/0, designated_as_very_large_online_platform_or_search_engine/0, unsure/0, absent/0, not_attempted/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dsa_art_14_terms_and_conditions_order_kernel, [dsa_art_14_terms_and_conditions_order_input_problems/2]).
+:- use_module(m__eu_dsa_art_14_terms_and_conditions_order_dsa_art_14_terms_and_conditions_order, [dsa_art_14_terms_and_conditions_order_status/2]).
+
+dsa_art_14_terms_and_conditions_order_profile_keys([terms_and_conditions_include_information_on_restrictions_on_recipient_information, terms_and_conditions_include_information_on_content_moderation, terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language, terms_and_conditions_publicly_available_in_easily_accessible_and_machine_readable_format, provider_has_internal_complaint_handling_system, terms_and_conditions_include_rules_of_procedure_of_internal_complaint_handling_system, terms_and_conditions_changed, change_to_terms_and_conditions_is_significant, recipients_informed_of_change_to_terms_and_conditions, service_primarily_directed_at_minors, service_predominantly_used_by_minors, conditions_and_restrictions_explained_in_way_minors_can_understand, provider_applies_or_enforces_restriction, restriction_applied_in_diligent_objective_and_proportionate_manner, restriction_applied_with_due_regard_to_rights_and_legitimate_interests_of_parties, concise_clear_machine_readable_summary_of_terms_and_conditions_provided, terms_and_conditions_published_in_official_languages_of_all_member_states_of_service, designated_as_very_large_online_platform_or_search_engine]).
+
+art_14_1_terms_and_conditions_compliant.
+
+art_14_1_terms_and_conditions_not_compliant.
+
+art_14_2_change_information_compliant.
+
+art_14_2_change_information_not_compliant.
+
+art_14_2_change_information_not_required.
+
+art_14_3_minors_explanation_compliant.
+
+art_14_3_minors_explanation_not_compliant.
+
+art_14_3_minors_explanation_not_required.
+
+art_14_4_restriction_enforcement_compliant.
+
+art_14_4_restriction_enforcement_not_compliant.
+
+art_14_4_restriction_enforcement_not_required.
+
+art_14_5_summary_compliant.
+
+art_14_5_summary_not_compliant.
+
+art_14_5_summary_not_required.
+
+art_14_6_official_languages_compliant.
+
+art_14_6_official_languages_not_compliant.
+
+art_14_6_official_languages_not_required.
+
+terms_and_conditions_include_information_on_restrictions_on_recipient_information.
+
+terms_and_conditions_include_information_on_content_moderation.
+
+terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language.
+
+terms_and_conditions_publicly_available_in_easily_accessible_and_machine_readable_format.
+
+provider_has_internal_complaint_handling_system.
+
+terms_and_conditions_include_rules_of_procedure_of_internal_complaint_handling_system.
+
+terms_and_conditions_changed.
+
+change_to_terms_and_conditions_is_significant.
+
+recipients_informed_of_change_to_terms_and_conditions.
+
+service_primarily_directed_at_minors.
+
+service_predominantly_used_by_minors.
+
+conditions_and_restrictions_explained_in_way_minors_can_understand.
+
+provider_applies_or_enforces_restriction.
+
+restriction_applied_in_diligent_objective_and_proportionate_manner.
+
+restriction_applied_with_due_regard_to_rights_and_legitimate_interests_of_parties.
+
+concise_clear_machine_readable_summary_of_terms_and_conditions_provided.
+
+terms_and_conditions_published_in_official_languages_of_all_member_states_of_service.
+
+designated_as_very_large_online_platform_or_search_engine.
+
+unsure.
+
+absent.
+
+not_attempted.
+
+dsa_art_14_terms_and_conditions_order_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    dsa_art_14_terms_and_conditions_order_status(Hypothesis, NewStatus).
+
+attribute_override(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    attributes_without_key(Profile, OverriddenKey, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attributes_without_key([], _, []).
+attributes_without_key([attribute(ElementKey, Value)|Elements], OverriddenKey, [attribute(ElementKey, Value)|Kept]) :-
+    ElementKey \== OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, Kept).
+attributes_without_key([attribute(ElementKey, _)|Elements], OverriddenKey, Kept) :-
+    ElementKey == OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, Kept).
+
+test(the_schema_lists_the_eighteen_contract_keys_once_each) :-
+    dsa_art_14_terms_and_conditions_order_profile_keys(ContractKeys),
+    length(ContractKeys, 18),
+    sort(ContractKeys, SortedKeys),
+    length(SortedKeys, 18).
+test(a_breach_alone_rolls_up_not_compliant) :-
+    dsa_art_14_terms_and_conditions_order_status([attribute(terms_and_conditions_include_information_on_content_moderation, false)], dsa_art_14_terms_and_conditions_order_not_compliant).
+test(what_if_curing_the_breach_leaves_only_missing_facts) :-
+    findall(NewStatus, dsa_art_14_terms_and_conditions_order_what_if([attribute(terms_and_conditions_include_information_on_content_moderation, false)], terms_and_conditions_include_information_on_content_moderation, true, NewStatus), Statuses),
+    Statuses == [dsa_art_14_terms_and_conditions_order_indeterminate].
+test(what_if_replaces_every_occurrence_of_a_duplicated_key) :-
+    Profile = [attribute(terms_and_conditions_include_information_on_content_moderation, true), attribute(terms_and_conditions_include_information_on_content_moderation, false)],
+    dsa_art_14_terms_and_conditions_order_input_problems(Profile, [duplicate_key(terms_and_conditions_include_information_on_content_moderation)]),
+    findall(NewStatus, dsa_art_14_terms_and_conditions_order_what_if(Profile, terms_and_conditions_include_information_on_content_moderation, false, NewStatus), Statuses),
+    Statuses == [dsa_art_14_terms_and_conditions_order_not_compliant].
+test(the_root_atoms_are_recorded) :-
+    art_14_1_terms_and_conditions_compliant,
+    art_14_6_official_languages_not_required,
+    designated_as_very_large_online_platform_or_search_engine,
+    unsure,
+    absent,
+    not_attempted.
+test(the_constructors_build_and_destructure_as_data) :-
+    Term = indeterminate([terms_and_conditions_changed]),
+    Term = indeterminate([MissingKey]),
+    MissingKey == terms_and_conditions_changed.
+
+test(what_if_curing_the_breach_is_not_still_not_compliant, fail) :-
+    dsa_art_14_terms_and_conditions_order_what_if([attribute(terms_and_conditions_include_information_on_content_moderation, false)], terms_and_conditions_include_information_on_content_moderation, true, dsa_art_14_terms_and_conditions_order_not_compliant).

@@ -4,290 +4,335 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_lists, [msort/2]).
-:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_gdpr_art6_lawful_basis, [decide_gdpr_art6_lawful_basis/2, gdpr_art6_lawful_basis_status/2, gdpr_art6_lawful_basis_checklist/2, gdpr_art6_lawful_basis_decision_resolvable/1, gdpr_art6_lawful_basis_status_values/1]).
-:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_fixtures, [gdpr_art6_lawful_basis_subject/1, gdpr_art6_lawful_basis_profile_for/2, gdpr_art6_lawful_basis_assess/2]).
-:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_gdpr_art6_lawful_basis, [lawful_basis_status/4, purpose_compatibility/4]).
+:- use_module(clausal_hof, [exclude/3]).
+:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_gdpr_art6_lawful_basis, [lawful_basis_status/4, purpose_compatibility/4, decide_gdpr_art6_lawful_basis/2, gdpr_art6_lawful_basis_status/2, gdpr_art6_lawful_basis_checklist/2, gdpr_art6_lawful_basis_decision_resolvable/1, gdpr_art6_lawful_basis_status_values/1]).
 :- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_kernel, [gdpr_art6_lawful_basis_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_queries, [gdpr_art6_lawful_basis_what_if/4, gdpr_art6_lawful_basis_profile_keys/1]).
+:- use_module(m__eu_data_protection_gdpr_art6_lawful_basis_fixtures, [gdpr_art6_lawful_basis_subject/1, gdpr_art6_lawful_basis_profile_for/2, gdpr_art6_lawful_basis_assess/2]).
 
-host_statement(Value, attested(Value, attestation(host_system, recorded_moment, stated_by_host, none))).
+expected_lawful(claimed_consent_holds, eligible, [outside_fact(consent_given_and_conditions_met, attested(true, attestation(host_system, recorded_moment, stated_reason, none)))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a)]).
+expected_lawful(claimed_consent_refused, ineligible, [outside_fact(consent_given_and_conditions_met, attested(false, attestation(host_system, recorded_moment, stated_reason, none)))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a)]).
+expected_lawful(claimed_consent_statement_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_1_a), cite(consent_basis_statement)), [resolution(cite(consent_basis_statement), not_attempted), inputs_relied_on([consent_given_and_conditions_met - absent])]), [], []).
+expected_lawful(claimed_contract_holds, eligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)]).
+expected_lawful(claimed_contract_not_necessary, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)]).
+expected_lawful(claimed_legal_obligation_holds, eligible, [outside_fact(legal_obligation_laid_down_by_law, attested(true, attestation(host_system, recorded_moment, stated_reason, url(statute_address, retrieved_moment))))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_3)]).
+expected_lawful(claimed_legal_obligation_law_refused, ineligible, [outside_fact(legal_obligation_laid_down_by_law, attested(false, attestation(host_system, recorded_moment, stated_reason, none)))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_3)]).
+expected_lawful(claimed_legal_obligation_necessity_absent, indeterminate([legal_obligation_necessary]), [], []).
+expected_lawful(claimed_legal_obligation_necessity_unsure_law_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(legal_obligation_law_statement)), [resolution(cite(legal_obligation_law_statement), not_attempted), inputs_relied_on([legal_obligation_laid_down_by_law - absent])]), [], []).
+expected_lawful(claimed_vital_interests_holds, eligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_d)]).
+expected_lawful(claimed_vital_interests_not_necessary, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_d)]).
+expected_lawful(claimed_public_interest_task_holds, eligible, [outside_fact(public_interest_task_laid_down_by_law, attested(true, attestation(host_system, recorded_moment, stated_reason, document(upload_identifier, content_digest))))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_3)]).
+expected_lawful(claimed_public_interest_task_law_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(public_interest_task_law_statement)), [resolution(cite(public_interest_task_law_statement), not_attempted), inputs_relied_on([public_interest_task_laid_down_by_law - absent])]), [], []).
+expected_lawful(claimed_legitimate_interests_holds, eligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]).
+expected_lawful(claimed_legitimate_interests_overridden, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f)]).
+expected_lawful(claimed_legitimate_interests_public_authority, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]).
+expected_lawful(claimed_legitimate_interests_balance_absent, indeterminate([interests_overridden]), [], []).
+expected_lawful(claimed_legitimate_interests_balance_unsure_child, needs_legal_review(open_textured(interests_overridden, cite(eu_reg_2016_679_art_6_1_f)), [inputs_relied_on([basis_claimed - legitimate_interests, processing_by_public_authority_in_its_tasks - false, legitimate_interests_pursued - true, interests_overridden - unsure, child_data_subject - attested(true, attestation(host_system, recorded_moment, stated_reason, none))])]), [], []).
+expected_lawful(legitimate_interests_holds_child_flagged, eligible, [flagged(child_data_subject, attested(true, attestation(host_system, recorded_moment, stated_reason, none)))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]).
+expected_lawful(consent_holds_special_category_flagged, eligible, [outside_fact(consent_given_and_conditions_met, attested(true, attestation(host_system, recorded_moment, stated_reason, none))), flagged(special_category, attested(true, attestation(host_system, recorded_moment, stated_reason, none)))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a)]).
+expected_lawful(every_way_fails, ineligible, [outside_fact(consent_given_and_conditions_met, attested(false, attestation(host_system, recorded_moment, stated_reason, none)))], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a), cite(eu_reg_2016_679_art_6_1_b), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_1_d), cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_1_f)]).
+expected_lawful(empty_profile, indeterminate([contract_necessary]), [], []).
+expected_lawful(unsure_contract_vital_interests_absent, indeterminate([vital_interests_necessary]), [], []).
+expected_lawful(only_unsure_contract_left, needs_legal_review(open_textured(contract_necessary, cite(eu_reg_2016_679_art_6_1_b)), [inputs_relied_on([consent_given_and_conditions_met - attested(false, attestation(host_system, recorded_moment, stated_reason, none)), contract_necessary - unsure, legal_obligation_necessary - false, vital_interests_necessary - false, public_interest_task_necessary - false, legitimate_interests_pursued - false])]), [], []).
+expected_lawful(purpose_test_not_engaged, indeterminate([contract_necessary]), [], []).
+expected_lawful(purpose_compatible, indeterminate([contract_necessary]), [], []).
+expected_lawful(purpose_not_compatible, indeterminate([contract_necessary]), [], []).
+expected_lawful(purpose_factor_left_out, indeterminate([contract_necessary]), [], []).
+expected_lawful(purpose_factors_all_taken, indeterminate([contract_necessary]), [], []).
+expected_lawful(purpose_judgement_absent, indeterminate([contract_necessary]), [], []).
+expected_lawful(purpose_judgement_unsure, indeterminate([contract_necessary]), [], []).
+expected_lawful(input_duplicate_key, input_problems([duplicate_key(contract_necessary)]), [], []).
+expected_lawful(input_attested_judgement, input_problems([wrong_type(contract_necessary)]), [], []).
+expected_lawful(input_bare_outside_fact, input_problems([wrong_type(consent_given_and_conditions_met)]), [], []).
+expected_lawful(input_attestation_argument_unbound, input_problems([wrong_type(special_category)]), [], []).
+expected_lawful(input_unknown_number_key, input_problems([unknown_key(42)]), [], []).
+expected_lawful(input_partial_list, input_problems([wrong_type(profile)]), [], []).
 
-expected_status(consent_claimed_attested_true, eligible).
-expected_status(consent_claimed_attested_false, ineligible).
-expected_status(contract_claimed_necessary, eligible).
-expected_status(contract_claimed_not_necessary, ineligible).
-expected_status(legal_obligation_laid_down_by_law_true, eligible).
-expected_status(legal_obligation_laid_down_by_law_false, ineligible).
-expected_status(vital_interests_claimed_necessary, eligible).
-expected_status(vital_interests_claimed_not_necessary, ineligible).
-expected_status(public_interest_task_laid_down_by_law_true, eligible).
-expected_status(public_interest_task_not_necessary, ineligible).
-expected_status(legitimate_interests_balance_for_controller, eligible).
-expected_status(legitimate_interests_public_authority, ineligible).
-expected_status(legitimate_interests_overridden, ineligible).
-expected_status(two_ways_hold_with_special_category, eligible).
-expected_status(contract_alone_unclaimed, eligible).
-expected_status(empty_profile, indeterminate([contract_necessary])).
-expected_status(consent_statement_attested_for_last_open_way, eligible).
-expected_status(consent_statement_absent_for_last_open_way, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_1_a), cite(consent_basis_statement)), [resolution(cite(consent_basis_statement), not_attempted), inputs_relied_on([consent_given_and_conditions_met - absent])])).
-expected_status(legal_obligation_law_statement_absent_one_step, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(legal_obligation_law_statement)), [resolution(cite(legal_obligation_law_statement), not_attempted), inputs_relied_on([legal_obligation_laid_down_by_law - absent])])).
-expected_status(public_authority_question_missing_beside_unsure, indeterminate([processing_by_public_authority_in_its_tasks])).
-expected_status(public_task_necessity_unsure_after_authority_stated, needs_legal_review(open_textured(public_interest_task_necessary, cite(eu_reg_2016_679_art_6_1_e)), [inputs_relied_on([consent_given_and_conditions_met - Refused, contract_necessary - false, legal_obligation_necessary - false, vital_interests_necessary - false, public_interest_task_necessary - unsure, public_interest_task_laid_down_by_law - LawStated, processing_by_public_authority_in_its_tasks - true])])) :-
-    host_statement(false, Refused),
-    host_statement(true, LawStated).
-expected_status(legal_obligation_unsure_law_statement_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(legal_obligation_law_statement)), [resolution(cite(legal_obligation_law_statement), not_attempted), inputs_relied_on([legal_obligation_laid_down_by_law - absent])])).
-expected_status(legal_obligation_unsure_law_statement_attested, needs_legal_review(open_textured(legal_obligation_necessary, cite(eu_reg_2016_679_art_6_1_c)), [inputs_relied_on([basis_claimed - legal_obligation, legal_obligation_necessary - unsure, legal_obligation_laid_down_by_law - LawStated])])) :-
-    host_statement(true, LawStated).
-expected_status(legitimate_interests_balance_unsure, needs_legal_review(open_textured(interests_overridden, cite(eu_reg_2016_679_art_6_1_f)), [inputs_relied_on([basis_claimed - legitimate_interests, processing_by_public_authority_in_its_tasks - false, legitimate_interests_pursued - true, interests_overridden - unsure, child_data_subject - Child])])) :-
-    host_statement(true, Child).
-expected_status(duplicate_contract_key, input_problems([duplicate_key(contract_necessary)])).
-expected_status(bare_outside_fact_value, input_problems([wrong_type(consent_given_and_conditions_met)])).
-expected_status(attested_judgement_value, input_problems([wrong_type(contract_necessary)])).
-expected_status(crisp_key_given_unsure, input_problems([wrong_type(processing_by_public_authority_in_its_tasks)])).
-expected_status(basis_claimed_outside_its_list, input_problems([wrong_type(basis_claimed)])).
-expected_status(unknown_and_numeric_keys, input_problems([unknown_key(favourite_colour), unknown_key(42)])).
-expected_status(unbound_attestation_argument, input_problems([wrong_type(consent_given_and_conditions_met)])).
-expected_status(partial_list_profile, input_problems([wrong_type(profile)])).
-expected_status(new_purpose_not_engaged, indeterminate([contract_necessary])).
-expected_status(new_purpose_absent, indeterminate([contract_necessary])).
-expected_status(new_purpose_compatible, indeterminate([contract_necessary])).
-expected_status(new_purpose_not_compatible, indeterminate([contract_necessary])).
-expected_status(new_purpose_compatibility_absent, indeterminate([contract_necessary])).
-expected_status(new_purpose_compatibility_unsure, indeterminate([contract_necessary])).
+expected_purpose(purpose_test_not_engaged, compatibility_test_not_engaged, [], [cite(eu_reg_2016_679_art_6_4)]).
+expected_purpose(empty_profile, indeterminate([new_purpose_processing]), [], []).
+expected_purpose(purpose_compatible, purpose_compatible, [], [cite(eu_reg_2016_679_art_6_4)]).
+expected_purpose(purpose_not_compatible, purpose_not_compatible, [], [cite(eu_reg_2016_679_art_6_4)]).
+expected_purpose(purpose_factor_left_out, compatibility_not_ascertained, [], [cite(eu_reg_2016_679_art_6_4), cite(eu_reg_2016_679_art_6_4_a), cite(eu_reg_2016_679_art_6_4_b), cite(eu_reg_2016_679_art_6_4_c), cite(eu_reg_2016_679_art_6_4_d), cite(eu_reg_2016_679_art_6_4_e)]).
+expected_purpose(purpose_factors_all_taken, purpose_compatible, [], [cite(eu_reg_2016_679_art_6_4)]).
+expected_purpose(purpose_judgement_absent, indeterminate([compatible_purpose]), [], []).
+expected_purpose(purpose_judgement_unsure, needs_legal_review(open_textured(compatible_purpose, cite(eu_reg_2016_679_art_6_4)), [inputs_relied_on([new_purpose_processing - true, compatible_purpose - unsure])]), [], []).
+expected_purpose(claimed_contract_holds, indeterminate([new_purpose_processing]), [], []).
+expected_purpose(input_duplicate_key, input_problems([duplicate_key(contract_necessary)]), [], []).
+expected_purpose(input_attested_judgement, input_problems([wrong_type(contract_necessary)]), [], []).
+expected_purpose(input_bare_outside_fact, input_problems([wrong_type(consent_given_and_conditions_met)]), [], []).
+expected_purpose(input_attestation_argument_unbound, input_problems([wrong_type(special_category)]), [], []).
+expected_purpose(input_unknown_number_key, input_problems([unknown_key(42)]), [], []).
+expected_purpose(input_partial_list, input_problems([wrong_type(profile)]), [], []).
 
-expected_final(consent_claimed_attested_true, eligible, [outside_fact(consent_given_and_conditions_met, Consent)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a)]) :-
-    host_statement(true, Consent).
-expected_final(consent_claimed_attested_false, ineligible, [outside_fact(consent_given_and_conditions_met, Refused)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a)]) :-
-    host_statement(false, Refused).
-expected_final(contract_claimed_necessary, eligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)]).
-expected_final(contract_claimed_not_necessary, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)]).
-expected_final(legal_obligation_laid_down_by_law_true, eligible, [outside_fact(legal_obligation_laid_down_by_law, LawStated)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_3)]) :-
-    host_statement(true, LawStated).
-expected_final(legal_obligation_laid_down_by_law_false, ineligible, [outside_fact(legal_obligation_laid_down_by_law, LawRefused)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_c), cite(eu_reg_2016_679_art_6_3)]) :-
-    host_statement(false, LawRefused).
-expected_final(vital_interests_claimed_necessary, eligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_d)]).
-expected_final(vital_interests_claimed_not_necessary, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_d)]).
-expected_final(public_interest_task_laid_down_by_law_true, eligible, [outside_fact(public_interest_task_laid_down_by_law, LawStated)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_3)]) :-
-    host_statement(true, LawStated).
-expected_final(public_interest_task_not_necessary, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_e)]).
-expected_final(legitimate_interests_balance_for_controller, eligible, [flagged(child_data_subject, Child), flagged(special_category, Special)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]) :-
-    host_statement(true, Child),
-    host_statement(true, Special).
-expected_final(legitimate_interests_public_authority, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f), cite(eu_reg_2016_679_art_6_1_second_subpara)]).
-expected_final(legitimate_interests_overridden, ineligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_f)]).
-expected_final(two_ways_hold_with_special_category, eligible, [flagged(special_category, Special)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b), cite(eu_reg_2016_679_art_6_1_d)]) :-
-    host_statement(true, Special).
-expected_final(contract_alone_unclaimed, eligible, [], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_b)]).
-expected_final(consent_statement_attested_for_last_open_way, eligible, [outside_fact(consent_given_and_conditions_met, Consent)], [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_a)]) :-
-    host_statement(true, Consent).
+same_citations(FoundCitations, ExpectedCitations) :-
+    sort(FoundCitations, SortedCitations),
+    sort(ExpectedCitations, SortedCitations).
 
-expected_compatibility(new_purpose_not_engaged, compatibility_test_not_engaged, [cite(eu_reg_2016_679_art_6_4)]).
-expected_compatibility(new_purpose_absent, indeterminate([new_purpose_processing]), []).
-expected_compatibility(new_purpose_compatible, purpose_compatible, [cite(eu_reg_2016_679_art_6_4)]).
-expected_compatibility(new_purpose_not_compatible, purpose_not_compatible, [cite(eu_reg_2016_679_art_6_4)]).
-expected_compatibility(new_purpose_compatibility_absent, indeterminate([compatible_purpose]), []).
-expected_compatibility(new_purpose_compatibility_unsure, needs_legal_review(open_textured(compatible_purpose, cite(eu_reg_2016_679_art_6_4)), [inputs_relied_on([new_purpose_processing - true, compatible_purpose - unsure])]), []).
-
-final_matches(Subject, Result, Basis, Citations) :-
+lawful_answer_is(Subject) :-
+    expected_lawful(Subject, ExpectedResult, ExpectedBasis, ExpectedCitations),
     gdpr_art6_lawful_basis_profile_for(Subject, Profile),
-    findall(Found - FoundBasis - FoundCitations, lawful_basis_status(Profile, Found, FoundBasis, FoundCitations), Answers),
-    Answers = [Single - SingleBasis - SingleCitations],
-    Single == Result,
-    SingleBasis == Basis,
-    sort(SingleCitations, SortedCitations),
-    sort(Citations, SortedCitations).
+    findall(answer(FoundResult, FoundBasis, FoundCitations), lawful_basis_status(Profile, FoundResult, FoundBasis, FoundCitations), Answers),
+    Answers = [answer(Result, Basis, Citations)],
+    Result == ExpectedResult,
+    Basis == ExpectedBasis,
+    same_citations(Citations, ExpectedCitations).
 
-compatibility_matches(Subject, Result, Citations) :-
+purpose_answer_is(Subject) :-
+    expected_purpose(Subject, ExpectedResult, ExpectedBasis, ExpectedCitations),
     gdpr_art6_lawful_basis_profile_for(Subject, Profile),
-    findall(Found - FoundBasis - FoundCitations, purpose_compatibility(Profile, Found, FoundBasis, FoundCitations), Answers),
-    Answers == [Result - [] - Citations].
+    findall(answer(FoundResult, FoundBasis, FoundCitations), purpose_compatibility(Profile, FoundResult, FoundBasis, FoundCitations), Answers),
+    Answers = [answer(Result, Basis, Citations)],
+    Result == ExpectedResult,
+    Basis == ExpectedBasis,
+    same_citations(Citations, ExpectedCitations).
 
-not_final_matches(Subject) :-
-    expected_status(Subject, Result),
+has_expected_lawful(Subject) :-
+    expected_lawful(Subject, _, _, _).
+
+single_answer_for_every_query(Subject) :-
     gdpr_art6_lawful_basis_profile_for(Subject, Profile),
-    findall(Found - FoundBasis - FoundCitations, lawful_basis_status(Profile, Found, FoundBasis, FoundCitations), Answers),
-    Answers == [Result - [] - []].
+    findall(LawfulResult, lawful_basis_status(Profile, LawfulResult, _, _), LawfulResults),
+    length(LawfulResults, 1),
+    findall(PurposeResult, purpose_compatibility(Profile, PurposeResult, _, _), PurposeResults),
+    length(PurposeResults, 1),
+    findall(Problems, gdpr_art6_lawful_basis_input_problems(Profile, Problems), ProblemLists),
+    length(ProblemLists, 1),
+    findall(Status, gdpr_art6_lawful_basis_status(Profile, Status), Statuses),
+    length(Statuses, 1).
 
-test(every_fixture_subject_gets_exactly_its_expected_status) :-
-    findall(Subject - Status, (gdpr_art6_lawful_basis_subject(Subject), gdpr_art6_lawful_basis_assess(Subject, gdpr_art6_lawful_basis_verdict(Status, _))), Answers),
-    findall(ExpectedSubject - ExpectedStatus, expected_status(ExpectedSubject, ExpectedStatus), Expected),
-    msort(Answers, SortedAnswers),
-    msort(Expected, SortedExpected),
-    SortedAnswers == SortedExpected.
-test(every_final_subject_carries_its_basis_and_citations) :-
-    findall(Subject, expected_final(Subject, _, _, _), Subjects),
-    findall(Matched, (expected_final(Matched, Result, Basis, Citations), final_matches(Matched, Result, Basis, Citations)), MatchedSubjects),
-    MatchedSubjects == Subjects.
-test(final_statuses_are_in_the_status_vocabulary) :-
+item_carries_citation(item(_, _, cite(_))).
+
+checklist_is_cited(Subject) :-
+    gdpr_art6_lawful_basis_profile_for(Subject, Profile),
+    gdpr_art6_lawful_basis_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(item_carries_citation, [FirstItem|OtherItems]).
+
+assess_agrees_with_lawful_status(Subject) :-
+    expected_lawful(Subject, ExpectedResult, _, ExpectedCitations),
+    gdpr_art6_lawful_basis_assess(Subject, gdpr_art6_lawful_basis_verdict(Status, Citations)),
+    Status == ExpectedResult,
+    same_citations(Citations, ExpectedCitations).
+
+final_status_is_listed(Subject) :-
+    gdpr_art6_lawful_basis_assess(Subject, gdpr_art6_lawful_basis_verdict(Status, [_|_])),
     gdpr_art6_lawful_basis_status_values(StatusValues),
-    findall(Subject, expected_final(Subject, _, _, _), Subjects),
-    findall(Listed, (expected_final(Listed, _, _, _), gdpr_art6_lawful_basis_assess(Listed, gdpr_art6_lawful_basis_verdict(Status, [_|_])), member(Status, StatusValues)), ListedSubjects),
-    ListedSubjects == Subjects.
-test(not_final_answers_carry_empty_basis_and_citations) :-
-    not_final_matches(empty_profile),
-    not_final_matches(consent_statement_absent_for_last_open_way),
-    not_final_matches(legal_obligation_law_statement_absent_one_step),
-    not_final_matches(public_authority_question_missing_beside_unsure),
-    not_final_matches(public_task_necessity_unsure_after_authority_stated),
-    not_final_matches(legal_obligation_unsure_law_statement_absent),
-    not_final_matches(legal_obligation_unsure_law_statement_attested),
-    not_final_matches(legitimate_interests_balance_unsure),
-    not_final_matches(duplicate_contract_key),
-    not_final_matches(partial_list_profile).
-test(every_compatibility_subject_gets_its_answer_once) :-
-    findall(Subject, expected_compatibility(Subject, _, _), Subjects),
-    findall(Matched, (expected_compatibility(Matched, Result, Citations), compatibility_matches(Matched, Result, Citations)), MatchedSubjects),
-    MatchedSubjects == Subjects.
-test(every_fixture_subject_is_resolvable_with_a_non_empty_checklist) :-
+    member(Status, StatusValues).
+
+is_provenance(provenance(_, _)).
+
+scored_context(Subject, Context, ScoredContext) :-
+    gdpr_art6_lawful_basis_profile_for(Subject, Profile),
+    lawful_basis_status(Profile, Result, _, _),
+    Result = needs_legal_review(_, Context),
+    exclude(is_provenance, Context, ScoredContext).
+
+test(every_subject_has_an_expected_lawful_answer) :-
     findall(Subject, gdpr_art6_lawful_basis_subject(Subject), Subjects),
-    findall(Resolved, (gdpr_art6_lawful_basis_subject(Resolved), gdpr_art6_lawful_basis_profile_for(Resolved, Profile), gdpr_art6_lawful_basis_decision_resolvable(Profile), gdpr_art6_lawful_basis_checklist(Profile, [_|_])), ResolvedSubjects),
-    ResolvedSubjects == Subjects.
-test(consent_attested_true_is_eligible) :-
-    gdpr_art6_lawful_basis_assess(consent_claimed_attested_true, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(consent_attested_false_is_ineligible) :-
-    gdpr_art6_lawful_basis_assess(consent_claimed_attested_false, gdpr_art6_lawful_basis_verdict(ineligible, _)).
-test(contract_necessary_is_eligible) :-
-    gdpr_art6_lawful_basis_assess(contract_claimed_necessary, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(contract_not_necessary_is_ineligible) :-
-    gdpr_art6_lawful_basis_assess(contract_claimed_not_necessary, gdpr_art6_lawful_basis_verdict(ineligible, _)).
-test(legal_obligation_with_its_law_is_eligible) :-
-    gdpr_art6_lawful_basis_assess(legal_obligation_laid_down_by_law_true, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(legal_obligation_without_its_law_is_ineligible) :-
-    gdpr_art6_lawful_basis_assess(legal_obligation_laid_down_by_law_false, gdpr_art6_lawful_basis_verdict(ineligible, _)).
-test(vital_interests_necessary_is_eligible) :-
-    gdpr_art6_lawful_basis_assess(vital_interests_claimed_necessary, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(vital_interests_not_necessary_is_ineligible) :-
-    gdpr_art6_lawful_basis_assess(vital_interests_claimed_not_necessary, gdpr_art6_lawful_basis_verdict(ineligible, _)).
-test(public_task_with_its_law_is_eligible) :-
-    gdpr_art6_lawful_basis_assess(public_interest_task_laid_down_by_law_true, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(public_task_not_necessary_is_ineligible) :-
-    gdpr_art6_lawful_basis_assess(public_interest_task_not_necessary, gdpr_art6_lawful_basis_verdict(ineligible, _)).
-test(balance_for_the_controller_is_eligible) :-
-    gdpr_art6_lawful_basis_assess(legitimate_interests_balance_for_controller, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(public_authority_cannot_rely_on_point_f) :-
-    gdpr_art6_lawful_basis_assess(legitimate_interests_public_authority, gdpr_art6_lawful_basis_verdict(ineligible, _)).
-test(overridden_interests_are_ineligible) :-
-    gdpr_art6_lawful_basis_assess(legitimate_interests_overridden, gdpr_art6_lawful_basis_verdict(ineligible, _)).
-test(empty_profile_asks_for_the_contract_judgement) :-
-    gdpr_art6_lawful_basis_status_of(empty_profile, indeterminate([contract_necessary])).
-test(contract_stated_settles_the_empty_profile) :-
-    gdpr_art6_lawful_basis_status_of(contract_alone_unclaimed, eligible).
-test(absent_consent_statement_is_referred) :-
-    gdpr_art6_lawful_basis_status_of(consent_statement_absent_for_last_open_way, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_1_a), cite(consent_basis_statement)), _)).
-test(attested_consent_statement_settles_the_referral) :-
-    gdpr_art6_lawful_basis_status_of(consent_statement_attested_for_last_open_way, eligible).
-test(missing_crisp_key_comes_before_the_unsure_judgement) :-
-    gdpr_art6_lawful_basis_status_of(public_authority_question_missing_beside_unsure, indeterminate([processing_by_public_authority_in_its_tasks])).
-test(stated_crisp_key_leaves_the_unsure_judgement_to_a_lawyer) :-
-    gdpr_art6_lawful_basis_status_of(public_task_necessity_unsure_after_authority_stated, needs_legal_review(open_textured(public_interest_task_necessary, cite(eu_reg_2016_679_art_6_1_e)), _)).
-test(absent_law_statement_comes_before_the_unsure_judgement) :-
-    gdpr_art6_lawful_basis_status_of(legal_obligation_unsure_law_statement_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_3), cite(legal_obligation_law_statement)), _)).
-test(attested_law_statement_leaves_the_unsure_judgement_to_a_lawyer) :-
-    gdpr_art6_lawful_basis_status_of(legal_obligation_unsure_law_statement_attested, needs_legal_review(open_textured(legal_obligation_necessary, cite(eu_reg_2016_679_art_6_1_c)), _)).
-test(a_well_formed_profile_has_no_input_problem) :-
-    gdpr_art6_lawful_basis_profile_for(legitimate_interests_balance_for_controller, Profile),
-    findall(Problems, gdpr_art6_lawful_basis_input_problems(Profile, Problems), Answers),
-    Answers == [[]].
-test(duplicate_key_is_never_also_wrong_type) :-
-    gdpr_art6_lawful_basis_profile_for(duplicate_contract_key, Profile),
+    maplist(has_expected_lawful, Subjects).
+test(every_subject_gives_exactly_one_answer_per_query) :-
+    findall(Subject, gdpr_art6_lawful_basis_subject(Subject), Subjects),
+    maplist(single_answer_for_every_query, Subjects).
+test(every_subject_checklist_is_non_empty_and_cited) :-
+    findall(Subject, gdpr_art6_lawful_basis_subject(Subject), Subjects),
+    maplist(checklist_is_cited, Subjects).
+test(every_subject_assess_agrees_with_lawful_basis_status) :-
+    findall(Subject, gdpr_art6_lawful_basis_subject(Subject), Subjects),
+    maplist(assess_agrees_with_lawful_status, Subjects).
+test(final_subjects_give_a_listed_status) :-
+    maplist(final_status_is_listed, [claimed_consent_holds, claimed_consent_refused, claimed_contract_holds, claimed_contract_not_necessary, claimed_legal_obligation_holds, claimed_legal_obligation_law_refused, claimed_vital_interests_holds, claimed_vital_interests_not_necessary, claimed_public_interest_task_holds, claimed_legitimate_interests_holds, claimed_legitimate_interests_overridden, claimed_legitimate_interests_public_authority, legitimate_interests_holds_child_flagged, consent_holds_special_category_flagged, every_way_fails]).
+test(claimed_consent_holds_is_eligible) :-
+    lawful_answer_is(claimed_consent_holds).
+test(claimed_consent_refused_is_ineligible) :-
+    lawful_answer_is(claimed_consent_refused).
+test(claimed_consent_statement_absent_is_referred) :-
+    lawful_answer_is(claimed_consent_statement_absent).
+test(claimed_contract_holds_is_eligible) :-
+    lawful_answer_is(claimed_contract_holds).
+test(claimed_contract_not_necessary_is_ineligible) :-
+    lawful_answer_is(claimed_contract_not_necessary).
+test(claimed_legal_obligation_holds_is_eligible) :-
+    lawful_answer_is(claimed_legal_obligation_holds).
+test(claimed_legal_obligation_law_refused_is_ineligible) :-
+    lawful_answer_is(claimed_legal_obligation_law_refused).
+test(claimed_legal_obligation_necessity_absent_is_named) :-
+    lawful_answer_is(claimed_legal_obligation_necessity_absent).
+test(claimed_legal_obligation_law_absent_is_referred_before_unsure) :-
+    lawful_answer_is(claimed_legal_obligation_necessity_unsure_law_absent).
+test(claimed_vital_interests_holds_is_eligible) :-
+    lawful_answer_is(claimed_vital_interests_holds).
+test(claimed_vital_interests_not_necessary_is_ineligible) :-
+    lawful_answer_is(claimed_vital_interests_not_necessary).
+test(claimed_public_interest_task_holds_is_eligible) :-
+    lawful_answer_is(claimed_public_interest_task_holds).
+test(claimed_public_interest_task_law_absent_is_referred) :-
+    lawful_answer_is(claimed_public_interest_task_law_absent).
+test(claimed_legitimate_interests_holds_is_eligible) :-
+    lawful_answer_is(claimed_legitimate_interests_holds).
+test(claimed_legitimate_interests_overridden_is_ineligible) :-
+    lawful_answer_is(claimed_legitimate_interests_overridden).
+test(claimed_legitimate_interests_public_authority_is_ineligible) :-
+    lawful_answer_is(claimed_legitimate_interests_public_authority).
+test(claimed_legitimate_interests_balance_absent_is_named) :-
+    lawful_answer_is(claimed_legitimate_interests_balance_absent).
+test(claimed_legitimate_interests_balance_unsure_goes_to_a_lawyer) :-
+    lawful_answer_is(claimed_legitimate_interests_balance_unsure_child).
+test(legitimate_interests_holding_flags_the_child) :-
+    lawful_answer_is(legitimate_interests_holds_child_flagged).
+test(consent_holding_flags_special_category) :-
+    lawful_answer_is(consent_holds_special_category_flagged).
+test(every_way_failing_is_ineligible) :-
+    lawful_answer_is(every_way_fails).
+test(empty_profile_names_contract_necessary) :-
+    lawful_answer_is(empty_profile).
+test(missing_vital_interests_is_named_before_an_unsure_contract) :-
+    lawful_answer_is(unsure_contract_vital_interests_absent).
+test(only_an_unsure_contract_left_goes_to_a_lawyer) :-
+    lawful_answer_is(only_unsure_contract_left).
+test(open_textured_context_has_no_provenance_item) :-
+    scored_context(only_unsure_contract_left, Context, ScoredContext),
+    ScoredContext == Context,
+    Context = [inputs_relied_on(_)].
+test(cross_reference_context_has_no_provenance_item) :-
+    scored_context(claimed_consent_statement_absent, Context, ScoredContext),
+    ScoredContext == Context,
+    Context = [resolution(cite(consent_basis_statement), not_attempted), inputs_relied_on(_)].
+test(a_provenance_item_is_left_out_of_the_scored_context) :-
+    exclude(is_provenance, [inputs_relied_on([contract_necessary - unsure]), provenance(contract_clause, [cite(eu_reg_2016_679_art_6_1_b)])], ScoredContext),
+    ScoredContext == [inputs_relied_on([contract_necessary - unsure])].
+test(purpose_subjects_leave_the_lawful_basis_open) :-
+    maplist(lawful_answer_is, [purpose_test_not_engaged, purpose_compatible, purpose_not_compatible, purpose_factor_left_out, purpose_factors_all_taken, purpose_judgement_absent, purpose_judgement_unsure]).
+test(purpose_test_not_engaged) :-
+    purpose_answer_is(purpose_test_not_engaged).
+test(purpose_new_purpose_absent_is_named) :-
+    purpose_answer_is(empty_profile).
+test(purpose_new_purpose_absent_on_a_lawful_basis_profile) :-
+    purpose_answer_is(claimed_contract_holds).
+test(purpose_compatible) :-
+    purpose_answer_is(purpose_compatible).
+test(purpose_not_compatible) :-
+    purpose_answer_is(purpose_not_compatible).
+test(purpose_factor_left_out_is_not_ascertained) :-
+    purpose_answer_is(purpose_factor_left_out).
+test(purpose_factors_all_taken_is_compatible) :-
+    purpose_answer_is(purpose_factors_all_taken).
+test(purpose_judgement_absent_is_named) :-
+    purpose_answer_is(purpose_judgement_absent).
+test(purpose_judgement_unsure_goes_to_a_lawyer) :-
+    purpose_answer_is(purpose_judgement_unsure).
+test(input_problems_for_both_queries) :-
+    maplist(lawful_answer_is, [input_duplicate_key, input_attested_judgement, input_bare_outside_fact, input_attestation_argument_unbound, input_unknown_number_key, input_partial_list]),
+    maplist(purpose_answer_is, [input_duplicate_key, input_attested_judgement, input_bare_outside_fact, input_attestation_argument_unbound, input_unknown_number_key, input_partial_list]).
+test(input_check_names_the_duplicate_key) :-
+    gdpr_art6_lawful_basis_profile_for(input_duplicate_key, Profile),
     gdpr_art6_lawful_basis_input_problems(Profile, [duplicate_key(contract_necessary)]).
-test(input_problems_give_a_one_item_checklist) :-
-    gdpr_art6_lawful_basis_profile_for(duplicate_contract_key, Profile),
-    gdpr_art6_lawful_basis_checklist(Profile, [item(input_check, unmet(input_problems([duplicate_key(contract_necessary)])), cite(eu_reg_2016_679_art_6_1))]).
-test(input_problems_also_answer_purpose_compatibility) :-
-    gdpr_art6_lawful_basis_profile_for(crisp_key_given_unsure, Profile),
-    purpose_compatibility(Profile, input_problems([wrong_type(processing_by_public_authority_in_its_tasks)]), [], []).
-test(url_evidence_is_well_formed) :-
-    Attested = attested(true, attestation(host_system, recorded_moment, stated_by_host, url(source_address, retrieved_moment))),
-    findall(Problems, gdpr_art6_lawful_basis_input_problems([attribute(consent_given_and_conditions_met, Attested)], Problems), Answers),
-    Answers == [[]].
-test(url_evidence_is_copied_unchanged_into_basis) :-
-    Attested = attested(true, attestation(host_system, recorded_moment, stated_by_host, url(source_address, retrieved_moment))),
-    findall(Result - Basis, lawful_basis_status([attribute(consent_given_and_conditions_met, Attested)], Result, Basis, _), Answers),
-    Answers == [eligible - [outside_fact(consent_given_and_conditions_met, Attested)]].
-test(url_evidence_in_a_three_argument_attestation_is_wrong_type) :-
-    Attested = attested(true, attestation(host_system, recorded_moment, url(source_address, retrieved_moment))),
-    gdpr_art6_lawful_basis_input_problems([attribute(consent_given_and_conditions_met, Attested)], [wrong_type(consent_given_and_conditions_met)]).
-test(document_evidence_is_well_formed) :-
-    Attested = attested(false, attestation(host_system, recorded_moment, stated_by_host, document(upload_identifier, content_hash))),
-    findall(Problems, gdpr_art6_lawful_basis_input_problems([attribute(legal_obligation_laid_down_by_law, Attested)], Problems), Answers),
-    Answers == [[]].
-test(document_evidence_attested_false_is_copied_into_ineligible_basis) :-
-    Attested = attested(false, attestation(host_system, recorded_moment, stated_by_host, document(upload_identifier, content_hash))),
-    Profile = [attribute(basis_claimed, legal_obligation), attribute(legal_obligation_necessary, true), attribute(legal_obligation_laid_down_by_law, Attested)],
-    findall(Result - Basis, lawful_basis_status(Profile, Result, Basis, _), Answers),
-    Answers == [ineligible - [outside_fact(legal_obligation_laid_down_by_law, Attested)]].
-test(provenance_follows_inputs_relied_on_in_the_context) :-
-    gdpr_art6_lawful_basis_profile_for(legitimate_interests_balance_unsure, Profile),
-    lawful_basis_status(Profile, needs_legal_review(Reason, Context), [], []),
-    append(Context, [provenance(step_six, [cite(eu_reg_2016_679_art_6_1)])], Extended),
-    Extended = [inputs_relied_on(Pairs), provenance(Clause, ProvenanceCitations)],
-    Reason = open_textured(interests_overridden, cite(eu_reg_2016_679_art_6_1_f)),
-    Clause == step_six,
-    ProvenanceCitations == [cite(eu_reg_2016_679_art_6_1)],
-    member(interests_overridden - unsure, Pairs).
-test(checklist_marks_the_holding_way_met_with_its_citation) :-
-    gdpr_art6_lawful_basis_profile_for(legitimate_interests_balance_for_controller, Profile),
+test(input_check_is_clean_on_a_good_profile) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legal_obligation_holds, Profile),
+    gdpr_art6_lawful_basis_input_problems(Profile, []).
+test(input_problem_checklist_is_one_cited_row) :-
+    gdpr_art6_lawful_basis_profile_for(input_partial_list, Profile),
     gdpr_art6_lawful_basis_checklist(Profile, Items),
-    length(Items, 6),
-    member(item(point_f, met, cite(eu_reg_2016_679_art_6_1_f)), Items),
-    member(item(point_a, inapplicable, cite(eu_reg_2016_679_art_6_1_a)), Items).
-test(checklist_names_the_unresolved_keys_of_an_open_way) :-
+    Items == [item(overall, input_problems([wrong_type(profile)]), cite(eu_reg_2016_679_art_6_1))].
+test(decide_carries_status_and_citations) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_public_interest_task_holds, Profile),
+    decide_gdpr_art6_lawful_basis(Profile, gdpr_art6_lawful_basis_verdict(Status, Citations)),
+    Status == eligible,
+    same_citations(Citations, [cite(eu_reg_2016_679_art_6_1), cite(eu_reg_2016_679_art_6_1_e), cite(eu_reg_2016_679_art_6_3)]).
+test(status_projects_the_result) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legitimate_interests_overridden, Profile),
+    gdpr_art6_lawful_basis_status(Profile, ineligible).
+test(checklist_item_for_a_holding_way) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_holds, Profile),
+    gdpr_art6_lawful_basis_checklist(Profile, Items),
+    Items == [item(way_b, met, cite(eu_reg_2016_679_art_6_1_b))].
+test(checklist_item_for_a_failing_way_names_the_key) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legal_obligation_law_refused, Profile),
+    gdpr_art6_lawful_basis_checklist(Profile, Items),
+    Items == [item(way_c, unmet(failing_keys([legal_obligation_laid_down_by_law])), cite(eu_reg_2016_679_art_6_1_c))].
+test(checklist_has_six_rows_without_a_claim) :-
     gdpr_art6_lawful_basis_profile_for(empty_profile, Profile),
     gdpr_art6_lawful_basis_checklist(Profile, Items),
-    member(item(point_c, unknown([legal_obligation_necessary, legal_obligation_laid_down_by_law]), cite(eu_reg_2016_679_art_6_1_c)), Items).
-test(status_projection_equals_the_verdict_status) :-
-    gdpr_art6_lawful_basis_profile_for(two_ways_hold_with_special_category, Profile),
-    gdpr_art6_lawful_basis_status(Profile, eligible),
-    decide_gdpr_art6_lawful_basis(Profile, gdpr_art6_lawful_basis_verdict(eligible, [_|_])).
-test(what_if_flips_the_near_miss_back) :-
-    gdpr_art6_lawful_basis_profile_for(legitimate_interests_overridden, Profile),
-    gdpr_art6_lawful_basis_what_if(Profile, interests_overridden, false, eligible).
-test(what_if_unflipped_stays_ineligible) :-
-    gdpr_art6_lawful_basis_profile_for(legitimate_interests_overridden, Profile),
-    gdpr_art6_lawful_basis_what_if(Profile, interests_overridden, true, ineligible).
-test(profile_keys_are_fifteen) :-
+    length(Items, 6).
+test(decision_is_resolvable_on_every_subject) :-
+    findall(Profile, (gdpr_art6_lawful_basis_subject(Subject), gdpr_art6_lawful_basis_profile_for(Subject, Profile)), Profiles),
+    maplist(gdpr_art6_lawful_basis_decision_resolvable, Profiles).
+test(status_values_are_the_final_atoms) :-
+    gdpr_art6_lawful_basis_status_values(StatusValues),
+    StatusValues == [eligible, ineligible].
+test(profile_keys_are_the_twenty_contract_keys) :-
     gdpr_art6_lawful_basis_profile_keys(ProfileKeys),
-    length(ProfileKeys, 15).
+    length(ProfileKeys, 20).
+test(what_if_contract_necessary_flips_to_eligible) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_not_necessary, Profile),
+    gdpr_art6_lawful_basis_what_if(Profile, contract_necessary, true, eligible).
+test(what_if_contract_not_necessary_flips_to_ineligible) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_holds, Profile),
+    gdpr_art6_lawful_basis_what_if(Profile, contract_necessary, false, ineligible).
+test(what_if_removing_the_consent_statement_refers) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_consent_holds, Profile),
+    gdpr_art6_lawful_basis_what_if(Profile, consent_given_and_conditions_met, absent, Status),
+    Status == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_6_1_a), cite(consent_basis_statement)), [resolution(cite(consent_basis_statement), not_attempted), inputs_relied_on([consent_given_and_conditions_met - absent])]).
+test(what_if_settles_the_balance) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legitimate_interests_balance_absent, Profile),
+    gdpr_art6_lawful_basis_what_if(Profile, interests_overridden, false, eligible).
+test(what_if_replaces_a_duplicated_key) :-
+    gdpr_art6_lawful_basis_profile_for(input_duplicate_key, Profile),
+    gdpr_art6_lawful_basis_what_if(Profile, contract_necessary, true, eligible).
+test(what_if_on_a_partial_list_reports_the_profile) :-
+    gdpr_art6_lawful_basis_profile_for(input_partial_list, Profile),
+    gdpr_art6_lawful_basis_what_if(Profile, contract_necessary, true, input_problems([wrong_type(profile)])).
+test(what_if_gives_exactly_one_solution) :-
+    gdpr_art6_lawful_basis_profile_for(empty_profile, Profile),
+    findall(Status, gdpr_art6_lawful_basis_what_if(Profile, vital_interests_necessary, true, Status), Statuses),
+    Statuses == [eligible].
 
-test(consent_attested_false_is_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_assess(consent_claimed_attested_false, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(contract_not_necessary_is_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_assess(contract_claimed_not_necessary, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(legal_obligation_without_its_law_is_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_assess(legal_obligation_laid_down_by_law_false, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(vital_interests_not_necessary_is_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_assess(vital_interests_claimed_not_necessary, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(public_task_not_necessary_is_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_assess(public_interest_task_not_necessary, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(public_authority_is_not_eligible_on_point_f, fail) :-
-    gdpr_art6_lawful_basis_assess(legitimate_interests_public_authority, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(overridden_interests_are_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_assess(legitimate_interests_overridden, gdpr_art6_lawful_basis_verdict(eligible, _)).
-test(empty_profile_is_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_status_of(empty_profile, eligible).
-test(absent_consent_statement_is_not_ineligible, fail) :-
-    gdpr_art6_lawful_basis_status_of(consent_statement_absent_for_last_open_way, ineligible).
-test(unsure_balance_is_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_status_of(legitimate_interests_balance_unsure, eligible).
-test(input_problems_are_not_eligible, fail) :-
-    gdpr_art6_lawful_basis_status_of(basis_claimed_outside_its_list, eligible).
-test(document_evidence_attested_false_is_not_eligible, fail) :-
-    Attested = attested(false, attestation(host_system, recorded_moment, stated_by_host, document(upload_identifier, content_hash))),
-    lawful_basis_status([attribute(basis_claimed, legal_obligation), attribute(legal_obligation_necessary, true), attribute(legal_obligation_laid_down_by_law, Attested)], eligible, _, _).
-test(provenance_is_never_inside_the_pairs, fail) :-
-    gdpr_art6_lawful_basis_profile_for(legitimate_interests_balance_unsure, Profile),
-    lawful_basis_status(Profile, needs_legal_review(_, [inputs_relied_on(Pairs)|_]), [], []),
-    member(provenance(_, _), Pairs).
+test(claimed_consent_refused_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_consent_refused, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(claimed_contract_holds_is_not_ineligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_holds, Profile),
+    lawful_basis_status(Profile, ineligible, _, _).
+test(claimed_contract_not_necessary_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_contract_not_necessary, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(claimed_legal_obligation_law_refused_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legal_obligation_law_refused, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(claimed_vital_interests_not_necessary_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_vital_interests_not_necessary, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(claimed_public_interest_task_law_absent_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_public_interest_task_law_absent, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(claimed_legitimate_interests_overridden_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legitimate_interests_overridden, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(claimed_legitimate_interests_public_authority_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legitimate_interests_public_authority, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(the_child_is_never_named_missing, fail) :-
+    gdpr_art6_lawful_basis_profile_for(claimed_legitimate_interests_balance_absent, Profile),
+    lawful_basis_status(Profile, indeterminate([child_data_subject]), _, _).
+test(every_way_failing_is_not_eligible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(every_way_fails, Profile),
+    lawful_basis_status(Profile, eligible, _, _).
+test(an_outside_fact_is_never_named_missing, fail) :-
+    gdpr_art6_lawful_basis_profile_for(empty_profile, Profile),
+    lawful_basis_status(Profile, indeterminate([consent_given_and_conditions_met]), _, _).
+test(no_referral_context_holds_a_provenance_item, fail) :-
+    scored_context(only_unsure_contract_left, Context, _),
+    member(provenance(_, _), Context).
+test(purpose_not_compatible_is_not_compatible_answer, fail) :-
+    gdpr_art6_lawful_basis_profile_for(purpose_not_compatible, Profile),
+    purpose_compatibility(Profile, purpose_compatible, _, _).
+test(purpose_factor_left_out_is_not_purpose_compatible, fail) :-
+    gdpr_art6_lawful_basis_profile_for(purpose_factor_left_out, Profile),
+    purpose_compatibility(Profile, purpose_compatible, _, _).
+test(an_absent_factor_key_is_never_named, fail) :-
+    gdpr_art6_lawful_basis_profile_for(purpose_judgement_absent, Profile),
+    purpose_compatibility(Profile, indeterminate([collection_context_taken_into_account]), _, _).
 
-gdpr_art6_lawful_basis_status_of(Subject, Status) :-
-    gdpr_art6_lawful_basis_profile_for(Subject, Profile),
-    findall(Found, gdpr_art6_lawful_basis_status(Profile, Found), Answers),
-    Answers = [Status].
-
-cp_test_names([every_fixture_subject_gets_exactly_its_expected_status, every_final_subject_carries_its_basis_and_citations, final_statuses_are_in_the_status_vocabulary, not_final_answers_carry_empty_basis_and_citations, every_compatibility_subject_gets_its_answer_once, every_fixture_subject_is_resolvable_with_a_non_empty_checklist, consent_attested_true_is_eligible, consent_attested_false_is_ineligible, contract_necessary_is_eligible, contract_not_necessary_is_ineligible, legal_obligation_with_its_law_is_eligible, legal_obligation_without_its_law_is_ineligible, vital_interests_necessary_is_eligible, vital_interests_not_necessary_is_ineligible, public_task_with_its_law_is_eligible, public_task_not_necessary_is_ineligible, balance_for_the_controller_is_eligible, public_authority_cannot_rely_on_point_f, overridden_interests_are_ineligible, empty_profile_asks_for_the_contract_judgement, contract_stated_settles_the_empty_profile, absent_consent_statement_is_referred, attested_consent_statement_settles_the_referral, missing_crisp_key_comes_before_the_unsure_judgement, stated_crisp_key_leaves_the_unsure_judgement_to_a_lawyer, absent_law_statement_comes_before_the_unsure_judgement, attested_law_statement_leaves_the_unsure_judgement_to_a_lawyer, a_well_formed_profile_has_no_input_problem, duplicate_key_is_never_also_wrong_type, input_problems_give_a_one_item_checklist, input_problems_also_answer_purpose_compatibility, url_evidence_is_well_formed, url_evidence_is_copied_unchanged_into_basis, url_evidence_in_a_three_argument_attestation_is_wrong_type, document_evidence_is_well_formed, document_evidence_attested_false_is_copied_into_ineligible_basis, provenance_follows_inputs_relied_on_in_the_context, checklist_marks_the_holding_way_met_with_its_citation, checklist_names_the_unresolved_keys_of_an_open_way, status_projection_equals_the_verdict_status, what_if_flips_the_near_miss_back, what_if_unflipped_stays_ineligible, profile_keys_are_fifteen]).
-cp_test_fail_names([consent_attested_false_is_not_eligible, contract_not_necessary_is_not_eligible, legal_obligation_without_its_law_is_not_eligible, vital_interests_not_necessary_is_not_eligible, public_task_not_necessary_is_not_eligible, public_authority_is_not_eligible_on_point_f, overridden_interests_are_not_eligible, empty_profile_is_not_eligible, absent_consent_statement_is_not_ineligible, unsure_balance_is_not_eligible, input_problems_are_not_eligible, document_evidence_attested_false_is_not_eligible, provenance_is_never_inside_the_pairs]).
+cp_test_names([every_subject_has_an_expected_lawful_answer, every_subject_gives_exactly_one_answer_per_query, every_subject_checklist_is_non_empty_and_cited, every_subject_assess_agrees_with_lawful_basis_status, final_subjects_give_a_listed_status, claimed_consent_holds_is_eligible, claimed_consent_refused_is_ineligible, claimed_consent_statement_absent_is_referred, claimed_contract_holds_is_eligible, claimed_contract_not_necessary_is_ineligible, claimed_legal_obligation_holds_is_eligible, claimed_legal_obligation_law_refused_is_ineligible, claimed_legal_obligation_necessity_absent_is_named, claimed_legal_obligation_law_absent_is_referred_before_unsure, claimed_vital_interests_holds_is_eligible, claimed_vital_interests_not_necessary_is_ineligible, claimed_public_interest_task_holds_is_eligible, claimed_public_interest_task_law_absent_is_referred, claimed_legitimate_interests_holds_is_eligible, claimed_legitimate_interests_overridden_is_ineligible, claimed_legitimate_interests_public_authority_is_ineligible, claimed_legitimate_interests_balance_absent_is_named, claimed_legitimate_interests_balance_unsure_goes_to_a_lawyer, legitimate_interests_holding_flags_the_child, consent_holding_flags_special_category, every_way_failing_is_ineligible, empty_profile_names_contract_necessary, missing_vital_interests_is_named_before_an_unsure_contract, only_an_unsure_contract_left_goes_to_a_lawyer, open_textured_context_has_no_provenance_item, cross_reference_context_has_no_provenance_item, a_provenance_item_is_left_out_of_the_scored_context, purpose_subjects_leave_the_lawful_basis_open, purpose_test_not_engaged, purpose_new_purpose_absent_is_named, purpose_new_purpose_absent_on_a_lawful_basis_profile, purpose_compatible, purpose_not_compatible, purpose_factor_left_out_is_not_ascertained, purpose_factors_all_taken_is_compatible, purpose_judgement_absent_is_named, purpose_judgement_unsure_goes_to_a_lawyer, input_problems_for_both_queries, input_check_names_the_duplicate_key, input_check_is_clean_on_a_good_profile, input_problem_checklist_is_one_cited_row, decide_carries_status_and_citations, status_projects_the_result, checklist_item_for_a_holding_way, checklist_item_for_a_failing_way_names_the_key, checklist_has_six_rows_without_a_claim, decision_is_resolvable_on_every_subject, status_values_are_the_final_atoms, profile_keys_are_the_twenty_contract_keys, what_if_contract_necessary_flips_to_eligible, what_if_contract_not_necessary_flips_to_ineligible, what_if_removing_the_consent_statement_refers, what_if_settles_the_balance, what_if_replaces_a_duplicated_key, what_if_on_a_partial_list_reports_the_profile, what_if_gives_exactly_one_solution]).
+cp_test_fail_names([claimed_consent_refused_is_not_eligible, claimed_contract_holds_is_not_ineligible, claimed_contract_not_necessary_is_not_eligible, claimed_legal_obligation_law_refused_is_not_eligible, claimed_vital_interests_not_necessary_is_not_eligible, claimed_public_interest_task_law_absent_is_not_eligible, claimed_legitimate_interests_overridden_is_not_eligible, claimed_legitimate_interests_public_authority_is_not_eligible, the_child_is_never_named_missing, every_way_failing_is_not_eligible, an_outside_fact_is_never_named_missing, no_referral_context_holds_a_provenance_item, purpose_not_compatible_is_not_compatible_answer, purpose_factor_left_out_is_not_purpose_compatible, an_absent_factor_key_is_never_named]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

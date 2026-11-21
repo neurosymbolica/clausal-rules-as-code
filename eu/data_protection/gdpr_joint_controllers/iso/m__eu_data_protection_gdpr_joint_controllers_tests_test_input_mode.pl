@@ -8,104 +8,100 @@
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_kernel, [gdpr_joint_controllers_input_problems/2]).
 :- use_module(m__eu_data_protection_gdpr_joint_controllers_fixtures, [gdpr_joint_controllers_profile_for/2]).
 
-attested_statement(Truth, attested(Truth, attestation(registry_host, moment, stated_reason, none))).
+stated(Value, attested(Value, attestation(host_service, attested_moment, stated_reason, none))).
 
-test(entitled_fixture_is_eligible_bound) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
+test(eligible_holds_bound_for_a_full_payment) :-
+    gdpr_joint_controllers_profile_for(claim_back_after_full_payment, Profile),
     gdpr_joint_controllers_status(Profile, eligible).
-test(partial_payment_is_ineligible_bound) :-
-    gdpr_joint_controllers_profile_for(partial_payment_near_miss, Profile),
+test(ineligible_holds_bound_for_a_partial_payment) :-
+    gdpr_joint_controllers_profile_for(claim_back_after_partial_payment, Profile),
     gdpr_joint_controllers_status(Profile, ineligible).
-test(payment_not_yet_stated_is_unresolved_bound) :-
-    gdpr_joint_controllers_profile_for(payment_not_yet_stated, Profile),
-    gdpr_joint_controllers_status(Profile, unresolved).
-test(statement_absent_is_referred_bound) :-
-    gdpr_joint_controllers_profile_for(statement_absent_referred, Profile),
-    gdpr_joint_controllers_status(Profile, referred_for_legal_review).
-test(malformed_statement_is_malformed_input_bound) :-
-    gdpr_joint_controllers_profile_for(malformed_bare_statement, Profile),
-    gdpr_joint_controllers_status(Profile, malformed_input).
-test(rights_bound_exercisable) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
-    rights_against_each_joint_controller(Profile, rights_exercisable_against_this_controller, [cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]).
-test(liability_bound_entire_damage) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
-    liability_for_the_entire_damage(Profile, liable_for_the_entire_damage, [outside_fact(responsible_under_article_82_2_and_3, _)], [cite(eu_reg_2016_679_art_82_4)]).
-test(recourse_bound_parties_as_given) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
-    recourse_after_full_compensation(Profile, entitled_to_claim_back([controller_b, processor_c]), _, [cite(eu_reg_2016_679_art_82_5)]).
-test(key_order_does_not_change_the_answer) :-
-    attested_statement(true, Attested),
-    findall(Result, recourse_after_full_compensation([attribute(full_compensation_paid, true), attribute(other_responsible_parties, [controller_b]), attribute(responsible_under_article_82_2_and_3, Attested), attribute(controllers_jointly_determine_purposes_and_means, false)], Result, _, _), Results),
-    Results == [entitled_to_claim_back([controller_b])].
-test(well_formed_profile_has_no_problem) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
-    gdpr_joint_controllers_input_problems(Profile, []).
-test(empty_profile_has_no_problem) :-
+test(indeterminate_holds_bound_for_an_unsure_payment) :-
+    gdpr_joint_controllers_profile_for(claim_back_payment_unsure, Profile),
+    gdpr_joint_controllers_status(Profile, indeterminate).
+test(indeterminate_holds_bound_for_an_absent_statement) :-
+    gdpr_joint_controllers_profile_for(responsibility_statement_absent, Profile),
+    gdpr_joint_controllers_status(Profile, indeterminate).
+test(indeterminate_holds_bound_for_a_duplicate_key) :-
+    gdpr_joint_controllers_profile_for(duplicate_payment_key, Profile),
+    gdpr_joint_controllers_status(Profile, indeterminate).
+test(rights_exercisable_holds_bound) :-
+    rights_against_each_joint_controller([attribute(controllers_jointly_determine_purposes_and_means, true)], rights_exercisable_against_this_controller, [cite(eu_reg_2016_679_art_26_3), cite(eu_reg_2016_679_art_28_10)]).
+test(liable_for_the_entire_damage_holds_bound) :-
+    stated(true, Attested),
+    liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_alpha])], liable_for_the_entire_damage, [outside_fact(responsible_under_article_82_2_and_3, Attested)], [cite(eu_reg_2016_679_art_82_4)]).
+test(entitled_to_claim_back_holds_bound_with_the_parties_as_given) :-
+    stated(true, Attested),
+    recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha]), attribute(full_compensation_paid, true)], entitled_to_claim_back([processor_beta, controller_alpha]), [outside_fact(responsible_under_article_82_2_and_3, Attested)], [cite(eu_reg_2016_679_art_82_5)]).
+test(a_well_formed_profile_has_no_problem) :-
+    stated(true, Attested),
+    gdpr_joint_controllers_input_problems([attribute(controllers_jointly_determine_purposes_and_means, unsure), attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, []), attribute(full_compensation_paid, false)], []).
+test(the_empty_profile_has_no_problem) :-
     gdpr_joint_controllers_input_problems([], []).
-test(empty_party_list_is_well_formed) :-
-    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, [])], []).
-test(repeated_party_is_well_formed) :-
-    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, [controller_b, controller_b])], []).
-test(unbound_profile_is_wrong_type) :-
-    findall(Problems, gdpr_joint_controllers_input_problems(_, Problems), Answers),
-    Answers == [[wrong_type(profile)]].
-test(partial_list_profile_is_wrong_type) :-
-    findall(Problems, gdpr_joint_controllers_input_problems([attribute(full_compensation_paid, true)|_], Problems), Answers),
-    Answers == [[wrong_type(profile)]].
-test(non_attribute_element_is_wrong_type) :-
-    gdpr_joint_controllers_input_problems([attribute(full_compensation_paid, true), loose_element], Problems),
+test(a_stray_element_makes_the_profile_not_an_attribute_list) :-
+    gdpr_joint_controllers_input_problems([attribute(full_compensation_paid, true), stray_element], Problems),
     Problems == [wrong_type(profile)].
-test(atom_profile_is_wrong_type) :-
-    gdpr_joint_controllers_input_problems(not_a_profile, Problems),
-    Problems == [wrong_type(profile)].
-test(unbound_value_is_wrong_type) :-
-    findall(Problems, gdpr_joint_controllers_input_problems([attribute(full_compensation_paid, _)], Problems), Answers),
-    Answers == [[wrong_type(full_compensation_paid)]].
-test(number_key_is_unknown_as_given) :-
-    gdpr_joint_controllers_input_problems([attribute(42, true)], Problems),
-    Problems == [unknown_key(42)].
-test(number_judgement_is_wrong_type) :-
-    gdpr_joint_controllers_input_problems([attribute(controllers_jointly_determine_purposes_and_means, 1)], Problems),
-    Problems == [wrong_type(controllers_jointly_determine_purposes_and_means)].
-test(attested_judgement_is_wrong_type) :-
-    attested_statement(true, Attested),
-    gdpr_joint_controllers_input_problems([attribute(full_compensation_paid, Attested)], Problems),
-    Problems == [wrong_type(full_compensation_paid)].
-test(bare_unsure_statement_is_wrong_type) :-
-    gdpr_joint_controllers_input_problems([attribute(responsible_under_article_82_2_and_3, unsure)], Problems),
-    Problems == [wrong_type(responsible_under_article_82_2_and_3)].
-test(nested_list_party_is_wrong_type) :-
-    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, [[controller_b]])], Problems),
-    Problems == [wrong_type(other_responsible_parties)].
-test(non_list_parties_is_wrong_type) :-
-    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, controller_b)], Problems),
-    Problems == [wrong_type(other_responsible_parties)].
-test(problems_in_contract_order_then_unknown) :-
-    gdpr_joint_controllers_input_problems([attribute(extra_key, x), attribute(full_compensation_paid, maybe), attribute(controllers_jointly_determine_purposes_and_means, yes), attribute(extra_key, y)], Problems),
-    Problems == [wrong_type(controllers_jointly_determine_purposes_and_means), wrong_type(full_compensation_paid), unknown_key(extra_key)].
-test(duplicate_key_is_never_also_wrong_type) :-
-    gdpr_joint_controllers_input_problems([attribute(full_compensation_paid, maybe), attribute(full_compensation_paid, true)], Problems),
-    Problems == [duplicate_key(full_compensation_paid)].
+test(a_non_list_profile_is_not_an_attribute_list) :-
+    gdpr_joint_controllers_input_problems(not_a_profile, [wrong_type(profile)]).
+test(a_compound_key_is_an_unknown_key_as_given) :-
+    gdpr_joint_controllers_input_problems([attribute(key_of(stray), true)], Problems),
+    Problems == [unknown_key(key_of(stray))].
+test(a_number_key_is_an_unknown_key) :-
+    gdpr_joint_controllers_input_problems([attribute(42, true)], [unknown_key(42)]).
+test(a_judgement_given_an_attested_term_is_a_wrong_type) :-
+    stated(true, Attested),
+    gdpr_joint_controllers_input_problems([attribute(controllers_jointly_determine_purposes_and_means, Attested)], [wrong_type(controllers_jointly_determine_purposes_and_means)]).
+test(a_bare_true_outside_fact_is_a_wrong_type) :-
+    gdpr_joint_controllers_input_problems([attribute(responsible_under_article_82_2_and_3, true)], [wrong_type(responsible_under_article_82_2_and_3)]).
+test(an_attested_unsure_is_a_wrong_type) :-
+    gdpr_joint_controllers_input_problems([attribute(responsible_under_article_82_2_and_3, attested(unsure, attestation(host_service, attested_moment, stated_reason, none)))], [wrong_type(responsible_under_article_82_2_and_3)]).
+test(an_attestation_with_three_arguments_is_a_wrong_type) :-
+    gdpr_joint_controllers_input_problems([attribute(responsible_under_article_82_2_and_3, attested(true, attestation(host_service, attested_moment, none)))], [wrong_type(responsible_under_article_82_2_and_3)]).
+test(document_evidence_is_well_formed) :-
+    gdpr_joint_controllers_input_problems([attribute(responsible_under_article_82_2_and_3, attested(false, attestation(host_service, attested_moment, stated_reason, document(upload_identifier, content_hash))))], []).
+test(a_number_in_the_parties_list_is_a_wrong_type) :-
+    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, [controller_alpha, 7])], [wrong_type(other_responsible_parties)]).
+test(a_compound_in_the_parties_list_is_a_wrong_type) :-
+    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, [controller(alpha)])], [wrong_type(other_responsible_parties)]).
+test(an_empty_list_in_the_parties_list_is_a_wrong_type) :-
+    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, [[]])], [wrong_type(other_responsible_parties)]).
+test(a_bare_atom_parties_value_is_a_wrong_type) :-
+    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, controller_alpha)], [wrong_type(other_responsible_parties)]).
+test(a_repeated_party_is_not_a_problem) :-
+    gdpr_joint_controllers_input_problems([attribute(other_responsible_parties, [controller_alpha, controller_alpha])], []).
+test(a_duplicate_key_is_named_once_whatever_its_values) :-
+    gdpr_joint_controllers_input_problems([attribute(full_compensation_paid, true), attribute(full_compensation_paid, banana), attribute(full_compensation_paid, true)], [duplicate_key(full_compensation_paid)]).
+test(problems_follow_the_contract_order_then_unknown_keys) :-
+    gdpr_joint_controllers_input_problems([attribute(stray_key, true), attribute(full_compensation_paid, maybe), attribute(controllers_jointly_determine_purposes_and_means, yes), attribute(stray_key, false)], Problems),
+    Problems == [wrong_type(controllers_jointly_determine_purposes_and_means), wrong_type(full_compensation_paid), unknown_key(stray_key)].
+test(the_input_check_yields_exactly_one_solution_for_an_unbound_profile) :-
+    findall(Problems, gdpr_joint_controllers_input_problems(_Profile, Problems), Answers),
+    length(Answers, 1).
+test(a_malformed_profile_gives_input_problems_in_every_query) :-
+    rights_against_each_joint_controller(not_a_profile, input_problems([wrong_type(profile)]), []),
+    liability_for_the_entire_damage(not_a_profile, input_problems([wrong_type(profile)]), [], []),
+    recourse_after_full_compensation(not_a_profile, input_problems([wrong_type(profile)]), [], []).
 
-test(entitled_fixture_is_not_ineligible_bound, fail) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
+test(ineligible_is_rejected_bound_for_a_full_payment, fail) :-
+    gdpr_joint_controllers_profile_for(claim_back_after_full_payment, Profile),
     gdpr_joint_controllers_status(Profile, ineligible).
-test(partial_payment_is_not_eligible_bound, fail) :-
-    gdpr_joint_controllers_profile_for(partial_payment_near_miss, Profile),
+test(indeterminate_is_rejected_bound_for_a_full_payment, fail) :-
+    gdpr_joint_controllers_profile_for(claim_back_after_full_payment, Profile),
+    gdpr_joint_controllers_status(Profile, indeterminate).
+test(eligible_is_rejected_bound_for_a_partial_payment, fail) :-
+    gdpr_joint_controllers_profile_for(claim_back_after_partial_payment, Profile),
     gdpr_joint_controllers_status(Profile, eligible).
-test(statement_absent_is_not_unresolved_bound, fail) :-
-    gdpr_joint_controllers_profile_for(statement_absent_referred, Profile),
-    gdpr_joint_controllers_status(Profile, unresolved).
-test(rights_bound_not_joint_controllers_rejected, fail) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
-    rights_against_each_joint_controller(Profile, not_joint_controllers, _).
-test(recourse_bound_reordered_parties_rejected, fail) :-
-    gdpr_joint_controllers_profile_for(joint_processor_entitled_to_claim_back, Profile),
-    recourse_after_full_compensation(Profile, entitled_to_claim_back([processor_c, controller_b]), _, _).
+test(not_joint_controllers_is_rejected_bound_for_a_joint_controller, fail) :-
+    rights_against_each_joint_controller([attribute(controllers_jointly_determine_purposes_and_means, true)], not_joint_controllers, _).
+test(no_other_responsible_party_is_rejected_bound_with_another_party, fail) :-
+    stated(true, Attested),
+    liability_for_the_entire_damage([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [controller_alpha])], no_other_responsible_party, _, _).
+test(entitled_to_claim_back_is_rejected_bound_with_reordered_parties, fail) :-
+    stated(true, Attested),
+    recourse_after_full_compensation([attribute(responsible_under_article_82_2_and_3, Attested), attribute(other_responsible_parties, [processor_beta, controller_alpha]), attribute(full_compensation_paid, true)], entitled_to_claim_back([controller_alpha, processor_beta]), _, _).
 
-cp_test_names([entitled_fixture_is_eligible_bound, partial_payment_is_ineligible_bound, payment_not_yet_stated_is_unresolved_bound, statement_absent_is_referred_bound, malformed_statement_is_malformed_input_bound, rights_bound_exercisable, liability_bound_entire_damage, recourse_bound_parties_as_given, key_order_does_not_change_the_answer, well_formed_profile_has_no_problem, empty_profile_has_no_problem, empty_party_list_is_well_formed, repeated_party_is_well_formed, unbound_profile_is_wrong_type, partial_list_profile_is_wrong_type, non_attribute_element_is_wrong_type, atom_profile_is_wrong_type, unbound_value_is_wrong_type, number_key_is_unknown_as_given, number_judgement_is_wrong_type, attested_judgement_is_wrong_type, bare_unsure_statement_is_wrong_type, nested_list_party_is_wrong_type, non_list_parties_is_wrong_type, problems_in_contract_order_then_unknown, duplicate_key_is_never_also_wrong_type]).
-cp_test_fail_names([entitled_fixture_is_not_ineligible_bound, partial_payment_is_not_eligible_bound, statement_absent_is_not_unresolved_bound, rights_bound_not_joint_controllers_rejected, recourse_bound_reordered_parties_rejected]).
+cp_test_names([eligible_holds_bound_for_a_full_payment, ineligible_holds_bound_for_a_partial_payment, indeterminate_holds_bound_for_an_unsure_payment, indeterminate_holds_bound_for_an_absent_statement, indeterminate_holds_bound_for_a_duplicate_key, rights_exercisable_holds_bound, liable_for_the_entire_damage_holds_bound, entitled_to_claim_back_holds_bound_with_the_parties_as_given, a_well_formed_profile_has_no_problem, the_empty_profile_has_no_problem, a_stray_element_makes_the_profile_not_an_attribute_list, a_non_list_profile_is_not_an_attribute_list, a_compound_key_is_an_unknown_key_as_given, a_number_key_is_an_unknown_key, a_judgement_given_an_attested_term_is_a_wrong_type, a_bare_true_outside_fact_is_a_wrong_type, an_attested_unsure_is_a_wrong_type, an_attestation_with_three_arguments_is_a_wrong_type, document_evidence_is_well_formed, a_number_in_the_parties_list_is_a_wrong_type, a_compound_in_the_parties_list_is_a_wrong_type, an_empty_list_in_the_parties_list_is_a_wrong_type, a_bare_atom_parties_value_is_a_wrong_type, a_repeated_party_is_not_a_problem, a_duplicate_key_is_named_once_whatever_its_values, problems_follow_the_contract_order_then_unknown_keys, the_input_check_yields_exactly_one_solution_for_an_unbound_profile, a_malformed_profile_gives_input_problems_in_every_query]).
+cp_test_fail_names([ineligible_is_rejected_bound_for_a_full_payment, indeterminate_is_rejected_bound_for_a_full_payment, eligible_is_rejected_bound_for_a_partial_payment, not_joint_controllers_is_rejected_bound_for_a_joint_controller, no_other_responsible_party_is_rejected_bound_with_another_party, entitled_to_claim_back_is_rejected_bound_with_reordered_parties]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

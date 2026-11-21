@@ -15,29 +15,38 @@ modules:
   - "cra_art14_manufacturer_reporting"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
-# sync with the :- module(...) export lists re-exported via the package
-# facade __init__.clausal.
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+# The root-export atoms (the four profile keys, the two EVENT atoms, the two
+# STEP argument atoms, unsure) and the result constructors are exported as
+# name/0 and name/N facts by the slice and listed here so the package root
+# carries them as module attributes.
 public_interface:
   # -- kernel.clausal --
   # -- citations.clausal --
   - "citation/2"
   # -- cra_art14_manufacturer_reporting.clausal --
-  - "severe_incident_status/3"
-  - "manufacturer_reporting_steps/4"
-  - "manufacturer_reporting_step_timeliness/5"
   - "decide_cra_art14_manufacturer_reporting/2"
   - "cra_art14_manufacturer_reporting_status/2"
   - "cra_art14_manufacturer_reporting_checklist/2"
   - "cra_art14_manufacturer_reporting_decision_resolvable/1"
   - "cra_art14_manufacturer_reporting_status_values/1"
-  # -- queries.clausal --
-  - "cra_art14_manufacturer_reporting_profile_keys/1"
-  - "cra_art14_manufacturer_reporting_input_problems/2"
-  - "cra_art14_manufacturer_reporting_what_if/4"
+  - "severe_incident_status/3"
+  - "manufacturer_reporting_steps/4"
+  - "manufacturer_reporting_step_timeliness/5"
   - "severe/0"
   - "not_severe/0"
   - "on_time/0"
+  - "unsure/0"
+  - "affects_protection_of_sensitive_or_important_data_or_functions/0"
+  - "leads_to_malicious_code_in_product_or_user_systems/0"
+  - "early_warning_without_undue_delay/0"
+  - "notification_without_undue_delay/0"
+  - "actively_exploited_vulnerability/0"
+  - "incident_impacting_product_security/0"
+  - "early_warning/0"
+  - "notification/0"
   - "date/3"
   - "step_due/3"
   - "hours_after_awareness/1"
@@ -53,67 +62,55 @@ public_interface:
   - "unknown_key/1"
   - "wrong_type/1"
   - "duplicate_key/1"
+  # -- queries.clausal --
+  - "cra_art14_manufacturer_reporting_profile_keys/1"
+  - "cra_art14_manufacturer_reporting_input_problems/2"
+  - "cra_art14_manufacturer_reporting_what_if/4"
   # -- fixtures.clausal --
   - "cra_art14_manufacturer_reporting_subject/1"
   - "cra_art14_manufacturer_reporting_profile_for/2"
   - "cra_art14_manufacturer_reporting_assess/2"
-
-# root_atoms: the order's root_exports, bare atoms the test cases read as
-# package-root module attributes. Atoms are never in a :- module export
-# list; the generated package facade carries them.
-root_atoms:
-  - "affects_protection_of_sensitive_or_important_data_or_functions"
-  - "leads_to_malicious_code_in_product_or_user_systems"
-  - "early_warning_without_undue_delay"
-  - "notification_without_undue_delay"
-  - "actively_exploited_vulnerability"
-  - "incident_impacting_product_security"
-  - "early_warning"
-  - "notification"
-  - "unsure"
 
 # Independence classification: no external scorer yet -- the only check is a
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
 # Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. This domain imports only kit modules (formalize_lib) and
-# library(reif), library(clpz); no shared backbone package.
+# domain imports. This domain imports only kit libraries (formalize_lib,
+# kit/deadline_lib) and library(datetime), no shared backbone package.
 uses: []
 
 scope: >-
-  The reporting obligations of manufacturers under Article 14 of Regulation (EU)
-  2024/2847 (Cyber Resilience Act), with the definitions of Article 3 that Article
-  14 uses and the date of application of Article 14 in Article 71(2). Decided here:
+  Reporting obligations of manufacturers under Article 14(1) to (6) of Regulation
+  (EU) 2024/2847 (Cyber Resilience Act), with the Article 3 definitions that
+  Article 14 uses (read as the caller's classification) and the date of
+  application of Article 14 in Article 71(2) (11 September 2026). Decided here:
   whether an incident having an impact on the security of a product with digital
-  elements is severe (Art 14(5)(a) or (b), an OR of two judgement keys); which
-  reporting steps are due, with their limits, for an actively exploited
-  vulnerability (Art 14(1), (2)(a) to (c)) or a severe incident (Art 14(3), (4)(a)
-  to (c)), plus the intermediate report on request (Art 14(6)), none before
-  awareness on 11 September 2026 (Art 71(2)); and whether an early warning or a
-  notification was submitted within its 24-hour or 72-hour limit and without undue
-  delay (a judgement key; an unsure judgement goes to a lawyer). Out of scope:
-  who is a manufacturer and whether the event is one of the two kinds (the
-  caller's classification), the recipient CSIRT, ENISA and the single reporting
-  platform (Art 14(1), (3), (7)), the content of each step and 'unless the
-  relevant information has already been provided', informing users (Art 14(8)),
-  the Commission's acts (Art 14(9), (10)), the end date of the calendar periods,
-  product scope and transitional provisions, and overlap with NIS2 and DORA.
-  Every reading is the author's, not a lawyer's.
+  elements is severe (Art 14(5), either limb); which reporting steps are due, with
+  their limits, for an actively exploited vulnerability (Art 14(2)) or a severe
+  incident (Art 14(4)), with the intermediate report on request (Art 14(6)); and
+  whether an early warning or a notification was submitted within its 24-hour or
+  72-hour limit (a partial hour rounded up) and without undue delay. Out of scope
+  (deferred or excluded sets): who is a manufacturer and which product or event
+  is covered, product scope and transitional provisions, the recipient CSIRT and
+  the single reporting platform (Art 14(7), Art 16), the content of each report and
+  the clause on information already provided, informing users (Art 14(8)), the
+  Commission's acts (Art 14(9) and (10)), computing the end of the 14-day and
+  one-month calendar periods, and overlap with NIS2 and DORA. The open-textured
+  judgements (the two severity limbs, without undue delay) are the caller's; an
+  unsure judgement is referred to a lawyer. Every reading is the drafter's, not a
+  lawyer's.
 
 sources:
-  - "Regulation (EU) 2024/2847 of the European Parliament and of the Council of 23 October 2024 (Cyber Resilience Act), OJ L, 2024/2847, 20.11.2024 (CELEX 32024R2847), original OJ text as published, pinned in eu/cra_art14_manufacturer_reporting/sources/ (raw sha256 fe0cca4a0caec50e7cf5a91432b94a19b211f86be8584fdba56372bdcea571ed)"
-  - "Art 3(1), (13), (40), (42), (43), (44): product with digital elements, manufacturer, vulnerability, actively exploited vulnerability, incident, incident having an impact on the security of the product (read as the caller's classification)"
-  - "Art 14(1) and (2)(a) to (c): notification of an actively exploited vulnerability; early warning within 24 hours, vulnerability notification within 72 hours, final report no later than 14 days after a corrective or mitigating measure is available"
-  - "Art 14(3) and (4)(a) to (c): notification of a severe incident; early warning within 24 hours, incident notification within 72 hours, final report within one month after the incident notification"
-  - "Art 14(5)(a) and (b): when an incident having an impact on the security of the product is severe"
-  - "Art 14(6): intermediate report at the request of the CSIRT designated as coordinator"
-  - "Art 71(2), second sentence: Article 14 shall apply from 11 September 2026"
+  - "Regulation (EU) 2024/2847 of the European Parliament and of the Council (Cyber Resilience Act), OJ L, 2024/2847, 20.11.2024, CELEX 32024R2847, original OJ text as published (raw sha256 fe0cca4a0caec50e7cf5a91432b94a19b211f86be8584fdba56372bdcea571ed; pin folder eu/cra_art14_manufacturer_reporting/sources/)"
+  - "Article 3, points (1), (13), (40), (42), (43) and (44) (definitions read as the caller's classification)"
+  - "Article 14(1) to (6) (reporting obligations of manufacturers: duties, early warning, notification, final report, severity, intermediate report)"
+  - "Article 71(2), second sentence (Article 14 applies from 11 September 2026)"
 
 query_interface:
-  2: "severe_incident_status/3"                        # eligibility: severity verdict with citations (checklist: cra_art14_manufacturer_reporting_checklist/2)
-  15: "manufacturer_reporting_steps/4"                 # deadline: steps due with their limits (consequence of missing: manufacturer_reporting_step_timeliness/5)
-  16: "cra_art14_manufacturer_reporting_what_if/4"     # what_if: re-evaluate under an overridden key
+  2: "severe_incident_status/3"                      # eligibility-shaped verdict: severe / not_severe / status compound, cited
+  15: "manufacturer_reporting_steps/4"               # deadline: which steps are due and their limits; timeliness via manufacturer_reporting_step_timeliness/5
+  16: "cra_art14_manufacturer_reporting_what_if/4"   # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: headings_and_lead_words

@@ -1,28 +1,30 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % fixtures.clausal -- representative profiles for eu/data_protection/gdpr_cooperation_with_the_supervisory_authority.
-% A TOP-LAYER consumer: it imports only the slice predicate it calls.
-% Profile keys and subject ids are atoms and need no import.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
 %
-% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (INTERFACE -
-% THE PROFILE AND THE ATOMS). Art 31 states no figure, so there is no
-% threshold to straddle: each route (step 0 to step 8 of INTERFACE - THE
-% LIMBS) has a positive subject and a near-miss control that differs from
-% it in ONE key and gets a different verdict.
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Art 31 has no numeric threshold, so the near-miss
+% controls are ONE-KEY flips: each route has a positive subject and a
+% control that differs from it in a single key and gets another verdict.
 %
-%   step 0  wrong_type_role_key / wrong_type_control
-%           duplicate_role_key / duplicate_control
-%           unknown_key_given / unknown_key_control
-%   step 1  no_request_made / request_made_and_cooperated
-%   step 2  request_outside_authority_tasks / request_within_authority_tasks
-%   step 3  caller_not_bound / representative_alone_bound
-%   step 4  processor_key_missing / processor_key_given
-%           request_key_missing / request_key_given
-%   step 5  cooperation_statement_absent / cooperation_statement_attested_false
-%           unsure_and_statement_absent / unsure_and_statement_given
-%   step 6  tasks_judgement_unsure / tasks_judgement_true
-%   step 7  request_made_and_cooperated (above)
-%   step 8  cooperation_statement_attested_false (above)
+% Routes (INTERFACE - THE LIMBS) and their subjects:
+%   step 7 cooperation_met           controller_cooperated, representative_cooperated,
+%                                    request_inside_tasks
+%   step 8 cooperation_not_met       controller_refused (control of controller_cooperated)
+%   step 1 cooperation_not_required  no_request (control: controller_cooperated),
+%                                    no_request_roles_absent
+%   step 2 cooperation_not_required  request_outside_tasks (control: request_inside_tasks)
+%   step 3 cooperation_not_required  not_bound (control: representative_cooperated)
+%   step 4 indeterminate([Key])      role_unknown (control: role_stated_false),
+%                                    two_keys_missing
+%   step 5 cross_reference_unresolved statement_missing_true, statement_missing_unsure
+%                                    (control: controller_cooperated)
+%   step 6 open_textured             judgement_unsure (control: controller_cooperated)
+%   step 0 input_problems            duplicate_and_unknown, wrong_types
+%                                    (control: controller_cooperated)
 % =====================================================================
 
 :- module(fixtures, [
@@ -34,151 +36,164 @@
 :- use_module(eu/data_protection/gdpr_cooperation_with_the_supervisory_authority/gdpr_cooperation_with_the_supervisory_authority, [decide_gdpr_cooperation_with_the_supervisory_authority/2]).
 
 % ---- Subject registry ------------------------------------------------
-gdpr_cooperation_with_the_supervisory_authority_subject(wrong_type_role_key).
-gdpr_cooperation_with_the_supervisory_authority_subject(wrong_type_control).
-gdpr_cooperation_with_the_supervisory_authority_subject(duplicate_role_key).
-gdpr_cooperation_with_the_supervisory_authority_subject(duplicate_control).
-gdpr_cooperation_with_the_supervisory_authority_subject(unknown_key_given).
-gdpr_cooperation_with_the_supervisory_authority_subject(unknown_key_control).
-gdpr_cooperation_with_the_supervisory_authority_subject(no_request_made).
-gdpr_cooperation_with_the_supervisory_authority_subject(request_made_and_cooperated).
-gdpr_cooperation_with_the_supervisory_authority_subject(request_outside_authority_tasks).
-gdpr_cooperation_with_the_supervisory_authority_subject(request_within_authority_tasks).
-gdpr_cooperation_with_the_supervisory_authority_subject(caller_not_bound).
-gdpr_cooperation_with_the_supervisory_authority_subject(representative_alone_bound).
-gdpr_cooperation_with_the_supervisory_authority_subject(processor_key_missing).
-gdpr_cooperation_with_the_supervisory_authority_subject(processor_key_given).
-gdpr_cooperation_with_the_supervisory_authority_subject(request_key_missing).
-gdpr_cooperation_with_the_supervisory_authority_subject(request_key_given).
-gdpr_cooperation_with_the_supervisory_authority_subject(cooperation_statement_absent).
-gdpr_cooperation_with_the_supervisory_authority_subject(cooperation_statement_attested_false).
-gdpr_cooperation_with_the_supervisory_authority_subject(unsure_and_statement_absent).
-gdpr_cooperation_with_the_supervisory_authority_subject(unsure_and_statement_given).
-gdpr_cooperation_with_the_supervisory_authority_subject(tasks_judgement_unsure).
-gdpr_cooperation_with_the_supervisory_authority_subject(tasks_judgement_true).
+gdpr_cooperation_with_the_supervisory_authority_subject(controller_cooperated).
+gdpr_cooperation_with_the_supervisory_authority_subject(controller_refused).
+gdpr_cooperation_with_the_supervisory_authority_subject(representative_cooperated).
+gdpr_cooperation_with_the_supervisory_authority_subject(not_bound).
+gdpr_cooperation_with_the_supervisory_authority_subject(no_request).
+gdpr_cooperation_with_the_supervisory_authority_subject(no_request_roles_absent).
+gdpr_cooperation_with_the_supervisory_authority_subject(request_inside_tasks).
+gdpr_cooperation_with_the_supervisory_authority_subject(request_outside_tasks).
+gdpr_cooperation_with_the_supervisory_authority_subject(role_unknown).
+gdpr_cooperation_with_the_supervisory_authority_subject(role_stated_false).
+gdpr_cooperation_with_the_supervisory_authority_subject(two_keys_missing).
+gdpr_cooperation_with_the_supervisory_authority_subject(statement_missing_true).
+gdpr_cooperation_with_the_supervisory_authority_subject(statement_missing_unsure).
+gdpr_cooperation_with_the_supervisory_authority_subject(judgement_unsure).
+gdpr_cooperation_with_the_supervisory_authority_subject(duplicate_and_unknown).
+gdpr_cooperation_with_the_supervisory_authority_subject(wrong_types).
 
 % ---- Profiles --------------------------------------------------------
-% Step 0: a crisp role key given unsure; the control gives it true.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(wrong_type_role_key,
-    [attribute(acts_as_controller, unsure),
-     attribute(authority_request_made, false)]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(wrong_type_control,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, false)]).
-
-% Step 0: a contract key given twice (equal values); the control gives it once.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(duplicate_role_key,
-    [attribute(acts_as_controller, true),
-     attribute(acts_as_controller, true),
-     attribute(authority_request_made, false)]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(duplicate_control,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, false)]).
-
-% Step 0: a key outside the six, repeated; the control leaves it out.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(unknown_key_given,
-    [attribute(as_of_date, monday),
-     attribute(acts_as_controller, true),
-     attribute(as_of_date, tuesday),
-     attribute(authority_request_made, false)]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(unknown_key_control,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, false)]).
-
-% Step 1: no request; the control has the request made (and the rest given).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(no_request_made,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, false),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(request_made_and_cooperated,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-
-% Step 2: the request is judged outside the tasks; the control judges it within.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(request_outside_authority_tasks,
-    [attribute(acts_as_processor, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, false),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(request_within_authority_tasks,
-    [attribute(acts_as_processor, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-
-% Step 3: all three role keys false; the control makes the representative true.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(caller_not_bound,
-    [attribute(acts_as_controller, false),
-     attribute(acts_as_processor, false),
-     attribute(acts_as_representative_of_controller_or_processor, false),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(representative_alone_bound,
-    [attribute(acts_as_controller, false),
-     attribute(acts_as_processor, false),
-     attribute(acts_as_representative_of_controller_or_processor, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-
-% Step 4: controller false and processor absent; the control gives processor true.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(processor_key_missing,
-    [attribute(acts_as_controller, false),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(processor_key_given,
-    [attribute(acts_as_controller, false),
-     attribute(acts_as_processor, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-
-% Step 4: a role true and the request key absent; the control gives it false.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(request_key_missing,
-    [attribute(acts_as_controller, true)]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(request_key_given,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, false)]).
-
-% Step 5: the attested statement absent; the control attests false (step 8).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(cooperation_statement_absent,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true)]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(cooperation_statement_attested_false,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(false, attestation(compliance_desk, received_2026_11_12, no_reply_sent, document(upload_seven, digest_seven))))]).
-
-% Step 5 before step 6: judgement unsure and statement absent; the control gives
-% the statement (step 6).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(unsure_and_statement_absent,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, unsure)]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(unsure_and_statement_given,
-    [attribute(acts_as_controller, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, unsure),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))]).
-
-% Step 6: judgement unsure with the statement given; the control judges true.
-gdpr_cooperation_with_the_supervisory_authority_profile_for(tasks_judgement_unsure,
-    [attribute(acts_as_representative_of_controller_or_processor, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, unsure),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, url(address_seven, retrieved_2026_11_12))))]).
-gdpr_cooperation_with_the_supervisory_authority_profile_for(tasks_judgement_true,
-    [attribute(acts_as_representative_of_controller_or_processor, true),
-     attribute(authority_request_made, true),
-     attribute(request_is_in_performance_of_authority_tasks, true),
-     attribute(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, url(address_seven, retrieved_2026_11_12))))]).
+% Step 7: a controller, on a request within the tasks, attested cooperating.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(controller_cooperated, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(true, attestation(compliance_officer, recorded_on_twelfth_november, response_sent, none)))
+    ].
+% Step 8 control: one key flipped -- the attested statement says false.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(controller_refused, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(false, attestation(compliance_officer, recorded_on_twelfth_november, no_response_sent, none)))
+    ].
+% Step 7 through the representative alone (reading 1, Q4).
+gdpr_cooperation_with_the_supervisory_authority_profile_for(representative_cooperated, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, false),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, true),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(true, attestation(union_representative, recorded_on_twelfth_november, documents_supplied, document(upload_identifier_one, digest_value_one))))
+    ].
+% Step 3 control of representative_cooperated: the one true role flipped to false.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(not_bound, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, false),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(true, attestation(union_representative, recorded_on_twelfth_november, documents_supplied, document(upload_identifier_one, digest_value_one))))
+    ].
+% Step 1 control of controller_cooperated: no request was made.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(no_request, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, false),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(true, attestation(compliance_officer, recorded_on_twelfth_november, response_sent, none)))
+    ].
+% Step 1 decides before the absent role keys are read.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(no_request_roles_absent, Profile) :-
+    Profile = [
+        attribute(authority_request_made, false)
+    ].
+% Step 7 with the request key present and the judgement true.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(request_inside_tasks, Profile) :-
+    Profile = [
+        attribute(acts_as_processor, true),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(true, attestation(processor_officer, recorded_on_twelfth_november, access_granted, url(address_of_record, retrieved_on_twelfth_november))))
+    ].
+% Step 2 control of request_inside_tasks: the judgement flipped to false.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(request_outside_tasks, Profile) :-
+    Profile = [
+        attribute(acts_as_processor, true),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, false),
+        attribute(cooperation_given, attested(true, attestation(processor_officer, recorded_on_twelfth_november, access_granted, url(address_of_record, retrieved_on_twelfth_november))))
+    ].
+% Step 4: no role true, the controller key absent -- named first.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(role_unknown, Profile) :-
+    Profile = [
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(true, attestation(compliance_officer, recorded_on_twelfth_november, response_sent, none)))
+    ].
+% Step 3 control of role_unknown: the controller key supplied as false.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(role_stated_false, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, false),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, attested(true, attestation(compliance_officer, recorded_on_twelfth_november, response_sent, none)))
+    ].
+% Step 4, bound: only the first of the two missing keys is named.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(two_keys_missing, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true)
+    ].
+% Step 5: the outside fact is absent, judgement true.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(statement_missing_true, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true)
+    ].
+% Step 5 before step 6: the outside fact is absent, judgement unsure.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(statement_missing_unsure, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, unsure)
+    ].
+% Step 6: the judgement unsure, the statement present -- a lawyer decides.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(judgement_unsure, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, false),
+        attribute(acts_as_representative_of_controller_or_processor, false),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, unsure),
+        attribute(cooperation_given, attested(true, attestation(compliance_officer, recorded_on_twelfth_november, response_sent, none)))
+    ].
+% Step 0: a repeated contract key and a key outside the six.
+gdpr_cooperation_with_the_supervisory_authority_profile_for(duplicate_and_unknown, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_controller, true),
+        attribute(authority_request_made, true),
+        attribute(colour, blue)
+    ].
+% Step 0: a crisp key given unsure and an outside fact that is not attested(...).
+gdpr_cooperation_with_the_supervisory_authority_profile_for(wrong_types, Profile) :-
+    Profile = [
+        attribute(acts_as_controller, true),
+        attribute(acts_as_processor, unsure),
+        attribute(authority_request_made, true),
+        attribute(request_is_in_performance_of_authority_tasks, true),
+        attribute(cooperation_given, yes)
+    ].
 
 % ---- Convenience wrapper ---------------------------------------------
 gdpr_cooperation_with_the_supervisory_authority_assess(Subject, Result) :-

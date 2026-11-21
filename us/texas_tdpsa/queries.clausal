@@ -1,0 +1,117 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for us/texas_tdpsa.
+% A TOP-LAYER consumer: it imports the determination slices' PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Tex. Bus. & Com. Code ch. 541 (Texas Data Privacy and Security
+% Act), pinned text document tx-bc-ch541-2026-11-16-pdf-save.
+%
+% The declared query types are served by the slice's public predicates,
+% which the package facade re-exports:
+%   #3  status_determination  applicability_status/4 (Sec. 541.002),
+%                             attorney_general_action_status/5
+%                             (Secs. 541.154, 541.155(a))
+%   #15 deadline              response_deadline/4, extended_response_deadline/4,
+%                             appeal_response_deadline/4, cure_period_last_day/4
+%   #23 calculation           civil_penalty_maximum/3 (Sec. 541.155(a))
+%   #7  justification         texas_tdpsa_checklist/2 (one cite(...) per item)
+%
+% This layer adds:
+%   texas_tdpsa_what_if/4         (#16 what-if): override one key, re-evaluate
+%                                 the applicability status
+%   texas_tdpsa_profile_keys/1    the eleven contract keys, in contract order
+%   texas_tdpsa_input_problems/2  THE INPUT CHECK, re-exported as the kernel
+%                                 wrote it
+%   the RESULT CONSTRUCTORS of the order (exported, never called as
+%   queries): they are data, declared with constructors/1 below, and
+%   have no clauses.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override
+% is the attribute-list plumbing override_attribute/4 below (every
+% occurrence of the key is replaced by one attribute at the end); it
+% decides nothing statutory and carries no marker.
+% =====================================================================
+
+:- module(queries, [
+    texas_tdpsa_profile_keys/1,
+    texas_tdpsa_input_problems/2,
+    texas_tdpsa_what_if/4,
+    in_scope/0,
+    out_of_scope/0,
+    no_extension_available/0,
+    cure_period_running/0,
+    action_may_be_brought/0,
+    no_action_for_cured_violation/0,
+    no_civil_penalty/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(us/texas_tdpsa/kernel, [texas_tdpsa_input_problems/2]).
+:- use_module(us/texas_tdpsa/texas_tdpsa, [texas_tdpsa_status/2]).
+
+% ---- result constructors (data terms; exported, no clauses) -----------
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, state),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    outside_fact(fact_key, attested),
+    attested(value, attestation),
+    attestation(by, at, reason, evidence),
+    url(location, retrieved_at),
+    document(upload_identifier, digest),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+texas_tdpsa_profile_keys([entity_category, processes_or_sells_personal_data, conducts_business_in_texas_or_serves_texas_residents, small_business_as_defined_by_sba, extension_reasonably_necessary, extension_notice_given_within_initial_period, cured_within_cure_period, written_statement_provided, written_statement_breached, violation_after_cure_period_or_statement_breach, violation_count]).
+
+% #16 what-if: re-evaluate the applicability status with one key
+% hypothetically overridden.
+texas_tdpsa_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    texas_tdpsa_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, OverriddenKey, NewValue, Hypothesis): every
+% attribute of OverriddenKey dropped, one attribute(OverriddenKey, NewValue)
+% added at the end. Complementary clauses on key identity.
+override_attribute([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+override_attribute([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, NewValue, [attribute(ElementKey, ElementValue)|Hypothesis]) :-
+    ElementKey \== OverriddenKey,
+    override_attribute(Elements, OverriddenKey, NewValue, Hypothesis).
+override_attribute([attribute(ElementKey, _)|Elements], OverriddenKey, NewValue, Hypothesis) :-
+    ElementKey == OverriddenKey,
+    override_attribute(Elements, OverriddenKey, NewValue, Hypothesis).
+
+% ---- result atoms (the seven final result atoms of the order) ---------
+in_scope.
+out_of_scope.
+no_extension_available.
+cure_period_running.
+action_may_be_brought.
+no_action_for_cured_violation.
+no_civil_penalty.
+
+:- end_module(queries).

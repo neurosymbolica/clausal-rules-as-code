@@ -1,0 +1,139 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_resilience_testing_programme_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_resilience_testing_programme_dora_resilience_testing_programme, [resilience_testing_duties_required/3, resilience_testing_duties_complete/3, resilience_testing_duties_outstanding/3, dora_resilience_testing_programme_status/2, dora_resilience_testing_programme_status_values/1]).
+:- use_module(m__eu_dora_resilience_testing_programme_kernel, [dora_resilience_testing_programme_input_problems/2]).
+:- use_module(m__eu_dora_resilience_testing_programme_fixtures, [dora_resilience_testing_programme_profile_for/2]).
+
+pair_attribute(ProfileKey - Value, attribute(ProfileKey, Value)).
+
+test_profile(Pairs, Profile) :-
+    maplist(pair_attribute, Pairs, Profile).
+
+checked_citations([cite(eu_reg_2022_2554_art_24_1), cite(eu_reg_2022_2554_art_24_2), cite(eu_reg_2022_2554_art_24_3), cite(eu_reg_2022_2554_art_24_4), cite(eu_reg_2022_2554_art_24_5), cite(eu_reg_2022_2554_art_24_6), cite(eu_reg_2022_2554_art_25_1), cite(eu_reg_2022_2554_art_25_2), cite(eu_reg_2022_2554_art_25_3)]).
+
+problems_of(Profile, Problems) :-
+    findall(Found, dora_resilience_testing_programme_input_problems(Profile, Found), [Problems]).
+
+test(status_holds_with_the_verdict_bound) :-
+    dora_resilience_testing_programme_profile_for(credit_institution_every_duty_performed, Profile),
+    dora_resilience_testing_programme_status(Profile, complete).
+test(complete_holds_with_result_and_citations_bound) :-
+    dora_resilience_testing_programme_profile_for(credit_institution_every_duty_performed, Profile),
+    checked_citations(Checked),
+    resilience_testing_duties_complete(Profile, complete, Checked).
+test(incomplete_holds_with_result_and_citations_bound) :-
+    dora_resilience_testing_programme_profile_for(credit_institution_yearly_testing_not_performed, Profile),
+    checked_citations(Checked),
+    resilience_testing_duties_complete(Profile, incomplete, Checked).
+test(required_holds_with_the_duty_list_bound) :-
+    dora_resilience_testing_programme_profile_for(central_counterparty_vulnerability_assessments_performed, Profile),
+    resilience_testing_duties_required(Profile, required([resilience_testing_programme, range_of_assessments_and_tests, risk_based_testing_approach, independent_testers, issue_prioritisation_classification_and_remedy, internal_validation_methodologies, yearly_testing_of_critical_ict_systems, execution_of_appropriate_tests, vulnerability_assessments_before_deployment]), _).
+test(outstanding_holds_with_the_list_and_citation_bound) :-
+    dora_resilience_testing_programme_profile_for(internal_tester_not_resourced, Profile),
+    resilience_testing_duties_outstanding(Profile, outstanding([internal_tester_resources_and_conflicts_of_interest]), [cite(eu_reg_2022_2554_art_24_4)]).
+test(a_referral_holds_with_its_reason_and_pairs_bound) :-
+    dora_resilience_testing_programme_profile_for(programme_judgement_unsure, Profile),
+    resilience_testing_duties_complete(Profile, needs_legal_review(open_textured(resilience_testing_programme_established_maintained_and_reviewed, cite(eu_reg_2022_2554_art_24_1)), [inputs_relied_on([financial_entity_is_microenterprise - false, dora_entity_type - credit_institution, tests_undertaken_by_internal_tester - false, resilience_testing_programme_established_maintained_and_reviewed - unsure, programme_includes_range_of_assessments_and_tests - true, programme_conducted_on_risk_based_approach - true, tests_undertaken_by_independent_parties - true, procedures_to_prioritise_classify_and_remedy_issues_established - true, internal_validation_methodologies_established - true, critical_ict_systems_tested_at_least_yearly - true, programme_provides_for_appropriate_tests - true])]), []).
+test(input_problems_hold_with_the_problem_list_bound) :-
+    test_profile([financial_entity_is_microenterprise - unsure], Profile),
+    resilience_testing_duties_outstanding(Profile, input_problems([wrong_type(financial_entity_is_microenterprise)]), []).
+test(a_well_formed_profile_has_no_problem) :-
+    dora_resilience_testing_programme_profile_for(credit_institution_every_duty_performed, Profile),
+    problems_of(Profile, Problems),
+    Problems == [].
+test(an_unbound_profile_is_one_profile_problem) :-
+    problems_of(_, Problems),
+    Problems == [wrong_type(profile)].
+test(a_non_list_profile_is_one_profile_problem) :-
+    problems_of(profile_of_an_entity, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_one_profile_problem) :-
+    problems_of([attribute(financial_entity_is_microenterprise, true)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(a_list_with_an_unbound_element_is_one_profile_problem) :-
+    problems_of([attribute(financial_entity_is_microenterprise, true), _], Problems),
+    Problems == [wrong_type(profile)].
+test(a_list_with_a_foreign_element_is_one_profile_problem_alone) :-
+    problems_of([attribute(colour, red), financial_entity_is_microenterprise - true], Problems),
+    Problems == [wrong_type(profile)].
+test(a_number_value_is_the_wrong_type) :-
+    problems_of([attribute(programme_provides_for_appropriate_tests, 1.0)], Problems),
+    Problems == [wrong_type(programme_provides_for_appropriate_tests)].
+test(a_string_value_is_the_wrong_type) :-
+    problems_of([attribute(financial_entity_is_microenterprise, "true")], Problems),
+    Problems == [wrong_type(financial_entity_is_microenterprise)].
+test(an_unbound_value_is_the_wrong_type) :-
+    problems_of([attribute(dora_entity_type, _)], Problems),
+    Problems == [wrong_type(dora_entity_type)].
+test(unsure_is_the_wrong_type_for_the_entity_type) :-
+    problems_of([attribute(dora_entity_type, unsure)], Problems),
+    Problems == [wrong_type(dora_entity_type)].
+test(every_entity_type_atom_is_accepted) :-
+    problems_of([attribute(dora_entity_type, none_of_the_listed_types)], []),
+    problems_of([attribute(dora_entity_type, ict_third_party_service_provider)], []),
+    problems_of([attribute(dora_entity_type, securitisation_repository)], []).
+test(a_duplicate_with_equal_values_is_a_duplicate_only) :-
+    problems_of([attribute(dora_entity_type, trading_venue), attribute(dora_entity_type, trading_venue)], Problems),
+    Problems == [duplicate_key(dora_entity_type)].
+test(problems_follow_the_contract_order_then_unknown_keys) :-
+    problems_of([attribute(colour, red), attribute(microenterprise_tests_risk_based_and_planned, maybe), attribute(colour, blue), attribute(financial_entity_is_microenterprise, true), attribute(financial_entity_is_microenterprise, false)], Problems),
+    Problems == [duplicate_key(financial_entity_is_microenterprise), wrong_type(microenterprise_tests_risk_based_and_planned), unknown_key(colour)].
+test(an_unbound_key_is_named_as_that_variable) :-
+    dora_resilience_testing_programme_input_problems([attribute(Key, true)], Problems),
+    Problems = [unknown_key(Reported)],
+    Reported == Key.
+test(two_unbound_keys_are_two_unknown_keys) :-
+    dora_resilience_testing_programme_input_problems([attribute(FirstKey, true), attribute(SecondKey, true)], Problems),
+    length(Problems, 2),
+    Problems = [unknown_key(FirstReported), unknown_key(SecondReported)],
+    FirstReported == FirstKey,
+    SecondReported == SecondKey.
+test(an_integer_key_and_a_float_key_are_two_keys) :-
+    problems_of([attribute(7, true), attribute(7.0, true)], Problems),
+    Problems == [unknown_key(7), unknown_key(7.0)].
+test(a_compound_key_is_an_unknown_key) :-
+    problems_of([attribute(key(dora_entity_type), credit_institution)], Problems),
+    Problems == [unknown_key(key(dora_entity_type))].
+test(an_absent_key_is_never_a_problem) :-
+    problems_of([attribute(dora_entity_type, central_counterparty)], []).
+test(a_contradictory_looking_combination_is_not_a_problem) :-
+    problems_of([attribute(financial_entity_is_microenterprise, true), attribute(dora_entity_type, central_securities_depository), attribute(tests_undertaken_by_independent_parties, false)], []).
+test(a_present_duty_key_is_checked_even_in_the_required_query) :-
+    test_profile([financial_entity_is_microenterprise - true, tests_undertaken_by_independent_parties - yes], Profile),
+    resilience_testing_duties_required(Profile, Result, Citations),
+    Result == input_problems([wrong_type(tests_undertaken_by_independent_parties)]),
+    Citations == [].
+test(an_unbound_profile_gets_one_answer_from_every_query) :-
+    findall(Result - Citations, resilience_testing_duties_required(_, Result, Citations), RequiredAnswers),
+    RequiredAnswers == [input_problems([wrong_type(profile)]) - []],
+    findall(Result - Citations, resilience_testing_duties_complete(_, Result, Citations), CompleteAnswers),
+    CompleteAnswers == [input_problems([wrong_type(profile)]) - []],
+    findall(Result - Citations, resilience_testing_duties_outstanding(_, Result, Citations), OutstandingAnswers),
+    OutstandingAnswers == [input_problems([wrong_type(profile)]) - []].
+
+test(the_baseline_profile_yields_no_other_table_status, fail) :-
+    dora_resilience_testing_programme_profile_for(credit_institution_every_duty_performed, Profile),
+    findall(Status, dora_resilience_testing_programme_status(Profile, Status), [BaselineStatus]),
+    dora_resilience_testing_programme_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_resilience_testing_programme_status(Profile, Other).
+test(complete_is_rejected_when_bound_on_an_incomplete_profile, fail) :-
+    dora_resilience_testing_programme_profile_for(credit_institution_yearly_testing_not_performed, Profile),
+    resilience_testing_duties_complete(Profile, complete, _).
+test(required_rejects_a_list_in_another_order, fail) :-
+    dora_resilience_testing_programme_profile_for(central_counterparty_vulnerability_assessments_performed, Profile),
+    resilience_testing_duties_required(Profile, required([vulnerability_assessments_before_deployment, resilience_testing_programme, range_of_assessments_and_tests, risk_based_testing_approach, independent_testers, issue_prioritisation_classification_and_remedy, internal_validation_methodologies, yearly_testing_of_critical_ict_systems, execution_of_appropriate_tests]), _).
+
+cp_test_names([status_holds_with_the_verdict_bound, complete_holds_with_result_and_citations_bound, incomplete_holds_with_result_and_citations_bound, required_holds_with_the_duty_list_bound, outstanding_holds_with_the_list_and_citation_bound, a_referral_holds_with_its_reason_and_pairs_bound, input_problems_hold_with_the_problem_list_bound, a_well_formed_profile_has_no_problem, an_unbound_profile_is_one_profile_problem, a_non_list_profile_is_one_profile_problem, a_partial_list_is_one_profile_problem, a_list_with_an_unbound_element_is_one_profile_problem, a_list_with_a_foreign_element_is_one_profile_problem_alone, a_number_value_is_the_wrong_type, a_string_value_is_the_wrong_type, an_unbound_value_is_the_wrong_type, unsure_is_the_wrong_type_for_the_entity_type, every_entity_type_atom_is_accepted, a_duplicate_with_equal_values_is_a_duplicate_only, problems_follow_the_contract_order_then_unknown_keys, an_unbound_key_is_named_as_that_variable, two_unbound_keys_are_two_unknown_keys, an_integer_key_and_a_float_key_are_two_keys, a_compound_key_is_an_unknown_key, an_absent_key_is_never_a_problem, a_contradictory_looking_combination_is_not_a_problem, a_present_duty_key_is_checked_even_in_the_required_query, an_unbound_profile_gets_one_answer_from_every_query]).
+cp_test_fail_names([the_baseline_profile_yields_no_other_table_status, complete_is_rejected_when_bound_on_an_incomplete_profile, required_rejects_a_list_in_another_order]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

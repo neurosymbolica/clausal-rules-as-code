@@ -1,0 +1,225 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_accountability_security.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's typed
+% input contract). An outside fact is attested(true | false,
+% attestation(By, At, Reason, Evidence)). This order has no numeric threshold,
+% so each route is paired with a ONE-FACT near-miss control: the same profile
+% with a single statement or crisp fact flipped (or one key dropped / added).
+%
+% Routes and their controls:
+%   all_statements_true                  compliant
+%   security_statement_false             not_compliant  (control of the above)
+%   accountability_statement_absent      review_required (control: key dropped)
+%   by_default_storage_aspect_false      not_compliant  (step B, aspect false)
+%   by_default_all_aspects_true          compliant      (control: aspect true)
+%   by_default_crisp_fact_false          not_compliant  (step B, crisp false)
+%   by_default_crisp_fact_true           compliant      (control: crisp true)
+%   joint_arrangement_in_place           arrangement_in_place
+%   joint_arrangement_missing            arrangement_missing (control)
+%   joint_controllers_unsure             open_textured referral (control: unsure)
+%   not_joint_controllers                not_joint_controllers
+%   joint_law_sets_responsibilities      arrangement_not_required
+%   joint_law_key_absent                 indeterminate (control: law key dropped)
+%   content_requirements_met             content_requirements_met
+%   content_essence_not_available        content_requirements_not_met (control)
+%   content_roles_statement_false        content_requirements_not_met (control)
+%   content_roles_statement_absent       cross-reference referral (control)
+%   duplicated_accountability_statement  input_problems (duplicate_key)
+%   unknown_key_present                  input_problems (unknown_key)
+%   wrong_type_judgement                 input_problems (wrong_type)
+% The facade verdict reads the seven duties only; the joint-controller and
+% content subjects carry seven true statements and so are compliant there.
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_accountability_security_subject/1,
+    gdpr_accountability_security_profile_for/2,
+    gdpr_accountability_security_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_accountability_security/gdpr_accountability_security, [decide_gdpr_accountability_security/2]).
+
+% ---- Attested statements ---------------------------------------------
+true_statement(attested(true, attestation(host_system, attestation_time, controller_statement, none))).
+false_statement(attested(false, attestation(host_system, attestation_time, controller_statement, none))).
+
+% duty_statements(AccountabilityAttributes, SecurityValue, Attributes): the seven
+% duty statements, the accountability one given as a list (empty when absent)
+% and the security one given as a value; the other five are true.
+duty_statements(AccountabilityAttributes, SecurityValue, Attributes) :-
+    true_statement(TrueStatement),
+    append(
+        AccountabilityAttributes,
+        [
+            attribute(controller_measures_implemented_and_reviewed, TrueStatement),
+            attribute(data_protection_policies_implemented, TrueStatement),
+            attribute(by_design_measures_implemented, TrueStatement),
+            attribute(by_default_only_necessary_data_processed, TrueStatement),
+            attribute(security_level_appropriate_to_risk, SecurityValue),
+            attribute(authorised_persons_process_only_on_instructions, TrueStatement)
+        ],
+        Attributes
+    ).
+
+all_true_statements(Attributes) :-
+    true_statement(TrueStatement),
+    duty_statements([attribute(accountability_demonstrated, TrueStatement)], TrueStatement, Attributes).
+
+with_extra(Extra, Profile) :-
+    all_true_statements(Statements),
+    append(Statements, Extra, Profile).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_accountability_security_subject(all_statements_true).
+gdpr_accountability_security_subject(security_statement_false).
+gdpr_accountability_security_subject(accountability_statement_absent).
+gdpr_accountability_security_subject(by_default_storage_aspect_false).
+gdpr_accountability_security_subject(by_default_all_aspects_true).
+gdpr_accountability_security_subject(by_default_crisp_fact_false).
+gdpr_accountability_security_subject(by_default_crisp_fact_true).
+gdpr_accountability_security_subject(joint_arrangement_in_place).
+gdpr_accountability_security_subject(joint_arrangement_missing).
+gdpr_accountability_security_subject(joint_controllers_unsure).
+gdpr_accountability_security_subject(not_joint_controllers).
+gdpr_accountability_security_subject(joint_law_sets_responsibilities).
+gdpr_accountability_security_subject(joint_law_key_absent).
+gdpr_accountability_security_subject(content_requirements_met).
+gdpr_accountability_security_subject(content_essence_not_available).
+gdpr_accountability_security_subject(content_roles_statement_false).
+gdpr_accountability_security_subject(content_roles_statement_absent).
+gdpr_accountability_security_subject(duplicated_accountability_statement).
+gdpr_accountability_security_subject(unknown_key_present).
+gdpr_accountability_security_subject(wrong_type_judgement).
+
+% ---- Profiles: the seven duties --------------------------------------
+gdpr_accountability_security_profile_for(all_statements_true, Profile) :-
+    all_true_statements(Profile).
+gdpr_accountability_security_profile_for(security_statement_false, Profile) :-
+    true_statement(TrueStatement),
+    false_statement(FalseStatement),
+    duty_statements([attribute(accountability_demonstrated, TrueStatement)], FalseStatement, Profile).
+gdpr_accountability_security_profile_for(accountability_statement_absent, Profile) :-
+    true_statement(TrueStatement),
+    duty_statements([], TrueStatement, Profile).
+
+% ---- Profiles: Art 25(2) depth (reading 7) ---------------------------
+gdpr_accountability_security_profile_for(by_default_storage_aspect_false, Profile) :-
+    true_statement(TrueStatement),
+    false_statement(FalseStatement),
+    with_extra(
+        [
+            attribute(by_default_amount_collected_limited_to_necessary, TrueStatement),
+            attribute(by_default_extent_of_processing_limited_to_necessary, TrueStatement),
+            attribute(by_default_storage_period_limited_to_necessary, FalseStatement),
+            attribute(by_default_accessibility_limited_to_necessary, TrueStatement),
+            attribute(by_default_not_accessible_to_indefinite_number_without_intervention, true)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(by_default_all_aspects_true, Profile) :-
+    true_statement(TrueStatement),
+    with_extra(
+        [
+            attribute(by_default_amount_collected_limited_to_necessary, TrueStatement),
+            attribute(by_default_extent_of_processing_limited_to_necessary, TrueStatement),
+            attribute(by_default_storage_period_limited_to_necessary, TrueStatement),
+            attribute(by_default_accessibility_limited_to_necessary, TrueStatement),
+            attribute(by_default_not_accessible_to_indefinite_number_without_intervention, true)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(by_default_crisp_fact_false, Profile) :-
+    with_extra([attribute(by_default_not_accessible_to_indefinite_number_without_intervention, false)], Profile).
+gdpr_accountability_security_profile_for(by_default_crisp_fact_true, Profile) :-
+    with_extra([attribute(by_default_not_accessible_to_indefinite_number_without_intervention, true)], Profile).
+
+% ---- Profiles: Art 26(1) joint controllers ---------------------------
+gdpr_accountability_security_profile_for(joint_arrangement_in_place, Profile) :-
+    with_extra(
+        [
+            attribute(controllers_jointly_determine_purposes_and_means, true),
+            attribute(responsibilities_set_by_union_or_member_state_law, false),
+            attribute(arrangement_between_controllers_exists, true)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(joint_arrangement_missing, Profile) :-
+    with_extra(
+        [
+            attribute(controllers_jointly_determine_purposes_and_means, true),
+            attribute(responsibilities_set_by_union_or_member_state_law, false),
+            attribute(arrangement_between_controllers_exists, false)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(joint_controllers_unsure, Profile) :-
+    with_extra(
+        [
+            attribute(controllers_jointly_determine_purposes_and_means, unsure),
+            attribute(responsibilities_set_by_union_or_member_state_law, false),
+            attribute(arrangement_between_controllers_exists, true)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(not_joint_controllers, Profile) :-
+    with_extra([attribute(controllers_jointly_determine_purposes_and_means, false)], Profile).
+gdpr_accountability_security_profile_for(joint_law_sets_responsibilities, Profile) :-
+    with_extra(
+        [
+            attribute(controllers_jointly_determine_purposes_and_means, true),
+            attribute(responsibilities_set_by_union_or_member_state_law, true)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(joint_law_key_absent, Profile) :-
+    with_extra([attribute(controllers_jointly_determine_purposes_and_means, true)], Profile).
+
+% ---- Profiles: Art 26(2) content of the arrangement ------------------
+gdpr_accountability_security_profile_for(content_requirements_met, Profile) :-
+    true_statement(TrueStatement),
+    with_extra(
+        [
+            attribute(arrangement_reflects_roles_and_relationships, TrueStatement),
+            attribute(essence_of_arrangement_made_available, true)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(content_essence_not_available, Profile) :-
+    true_statement(TrueStatement),
+    with_extra(
+        [
+            attribute(arrangement_reflects_roles_and_relationships, TrueStatement),
+            attribute(essence_of_arrangement_made_available, false)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(content_roles_statement_false, Profile) :-
+    false_statement(FalseStatement),
+    with_extra(
+        [
+            attribute(arrangement_reflects_roles_and_relationships, FalseStatement),
+            attribute(essence_of_arrangement_made_available, true)
+        ],
+        Profile
+    ).
+gdpr_accountability_security_profile_for(content_roles_statement_absent, Profile) :-
+    with_extra([attribute(essence_of_arrangement_made_available, true)], Profile).
+
+% ---- Profiles: input problems ----------------------------------------
+gdpr_accountability_security_profile_for(duplicated_accountability_statement, Profile) :-
+    true_statement(TrueStatement),
+    with_extra([attribute(accountability_demonstrated, TrueStatement)], Profile).
+gdpr_accountability_security_profile_for(unknown_key_present, Profile) :-
+    with_extra([attribute(controller_location, deu)], Profile).
+gdpr_accountability_security_profile_for(wrong_type_judgement, Profile) :-
+    with_extra([attribute(controllers_jointly_determine_purposes_and_means, maybe)], Profile).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_accountability_security_assess(Subject, Result) :-
+    gdpr_accountability_security_profile_for(Subject, Profile),
+    decide_gdpr_accountability_security(Profile, Result).
+
+:- end_module(fixtures).

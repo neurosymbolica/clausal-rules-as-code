@@ -1,0 +1,282 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/cra_manufacturer_duties.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types this domain serves:
+%   #3  status determination  -- requirements_applicability/4 and
+%                                cra_manufacturer_duties_status/2 (the slice);
+%   #23 calculation           -- support_period_minimum/4 (months, an integer)
+%                                and retention_end_date/5 (a date) (the slice);
+%   #7  justification         -- cra_manufacturer_duties_checklist/2 (the slice):
+%                                one item(STEP, STATUS, cite(KEY)) per ground;
+%   #16 what-if               -- cra_manufacturer_duties_what_if/4 (here).
+%
+% A QUESTION is one of the three query shapes without their outputs:
+%   requirements_applicability(PROFILE, ASSESSMENT_DATE)
+%   support_period_minimum(PROFILE, ASSESSMENT_DATE)
+%   retention_end_date(PROFILE, ASSESSMENT_DATE, ITEM)
+%
+% cra_manufacturer_duties_what_if(QUESTION, KEY, VALUE, VERDICT): the VERDICT
+%   the question gets when every occurrence of KEY in its PROFILE is replaced
+%   by the one attribute(KEY, VALUE). The profile is an ATTRIBUTE LIST, so the
+%   dict-based override_key/4 of kit/query_combinators does not apply; the
+%   override is local list plumbing. Exactly one solution for every term: a
+%   term that is not one of the three QUESTION shapes gives
+%   input_problems([wrong_type(question)]).
+% cra_manufacturer_duties_profile_keys/1: the profile key schema, contract order.
+% cra_manufacturer_duties_input_problems/2: re-exported from the kernel as the
+%   scaffold wrote it.
+%
+% ROOT EXPORTS: the verdict atoms, the five profile key atoms, the three ITEM
+% atoms and the judgement value unsure are exported here as name/0 facts.
+% The RESULT CONSTRUCTORS (date/3, minimum_support_period/1, keep_until/1,
+% indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1,
+% provenance/2, input_problems/1, unknown_key/1, wrong_type/1,
+% duplicate_key/1) are exported as data: a constructor has no clauses, and
+% its fields are named by the constructors/1 declaration below. The atoms
+% true and false are not pinned.
+% =====================================================================
+
+:- module(queries, [
+    cra_manufacturer_duties_profile_keys/1,
+    cra_manufacturer_duties_input_problems/2,
+    cra_manufacturer_duties_what_if/4,
+    subject_to_requirements/0,
+    article_14_only/0,
+    not_yet_applicable/0,
+    not_applicable_outside_support_period/0,
+    placing_on_market_date/0,
+    substantially_modified_on_or_after_application_date/0,
+    expected_use_time_in_months/0,
+    security_update_issue_date/0,
+    support_period_end_date/0,
+    technical_documentation_and_declaration_of_conformity/0,
+    information_and_instructions_to_the_user/0,
+    security_update/0,
+    unsure/0,
+    date/3,
+    minimum_support_period/1,
+    keep_until/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(eu/cra_manufacturer_duties/kernel, [cra_manufacturer_duties_input_problems/2]).
+:- use_module(eu/cra_manufacturer_duties/cra_manufacturer_duties, [decide_cra_manufacturer_duties/2]).
+
+% ---- result constructors (exported, never called as queries) ---------
+:- constructors([
+    date(y, m, d),
+    minimum_support_period(months),
+    keep_until(date),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    inputs_relied_on(pairs),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+cra_manufacturer_duties_profile_keys([placing_on_market_date, substantially_modified_on_or_after_application_date, expected_use_time_in_months, security_update_issue_date, support_period_end_date]).
+
+% ---- root exports: verdict atoms, profile keys, items, judgement value ----
+
+subject_to_requirements.
+article_14_only.
+not_yet_applicable.
+not_applicable_outside_support_period.
+
+placing_on_market_date.
+substantially_modified_on_or_after_application_date.
+expected_use_time_in_months.
+security_update_issue_date.
+support_period_end_date.
+
+technical_documentation_and_declaration_of_conformity.
+information_and_instructions_to_the_user.
+security_update.
+
+unsure.
+
+% ---- #16 what-if ------------------------------------------------------
+
+cra_manufacturer_duties_what_if(Question, OverriddenKey, NewValue, NewVerdict) :-
+    question_known_t(Question, IsKnownQuestion),
+    what_if_answer(IsKnownQuestion, Question, OverriddenKey, NewValue, NewVerdict).
+
+% question_known_t(Question, Truth): true for the three QUESTION shapes.
+question_known_t(Question, false) :-
+    var(Question).
+question_known_t(Question, IsKnownQuestion) :-
+    nonvar(Question),
+    functor(Question, QuestionName, QuestionArity),
+    memberd_t(QuestionName/QuestionArity,
+              [requirements_applicability/2,
+               support_period_minimum/2,
+               retention_end_date/3],
+              IsKnownQuestion).
+
+what_if_answer(false, _, _, _, input_problems([wrong_type(question)])).
+what_if_answer(true, Question, OverriddenKey, NewValue, NewVerdict) :-
+    hypothetical_question(Question, OverriddenKey, NewValue, Hypothesis),
+    decide_cra_manufacturer_duties(Hypothesis,
+                                   cra_manufacturer_duties_verdict(NewVerdict, _)).
+
+hypothetical_question(requirements_applicability(Profile, AssessmentDate),
+                      OverriddenKey,
+                      NewValue,
+                      requirements_applicability(NewProfile, AssessmentDate)) :-
+    override_attribute(Profile, OverriddenKey, NewValue, NewProfile).
+hypothetical_question(support_period_minimum(Profile, AssessmentDate),
+                      OverriddenKey,
+                      NewValue,
+                      support_period_minimum(NewProfile, AssessmentDate)) :-
+    override_attribute(Profile, OverriddenKey, NewValue, NewProfile).
+hypothetical_question(retention_end_date(Profile, AssessmentDate, RetentionItem),
+                      OverriddenKey,
+                      NewValue,
+                      retention_end_date(NewProfile, AssessmentDate, RetentionItem)) :-
+    override_attribute(Profile, OverriddenKey, NewValue, NewProfile).
+
+% The new attribute goes first; every old occurrence of the key is dropped.
+% A profile that is not an attribute list stays one (the input check then
+% refuses it), and an unbound tail is never enumerated.
+override_attribute(Profile,
+                   OverriddenKey,
+                   NewValue,
+                   [attribute(OverriddenKey, NewValue)|RemainingAttributes]) :-
+    remove_key(Profile, OverriddenKey, RemainingAttributes).
+
+remove_key(Profile, _, Profile) :-
+    var(Profile).
+remove_key([], _, []).
+remove_key([Element|Elements], OverriddenKey, RemainingAttributes) :-
+    element_matches_t(Element, OverriddenKey, Matches),
+    remove_step(Matches, Element, Elements, OverriddenKey, RemainingAttributes).
+remove_key(Profile, _, Profile) :-
+    nonvar(Profile),
+    Profile \== [],
+    Profile \= [_|_].
+
+remove_step(true, _, Elements, OverriddenKey, RemainingAttributes) :-
+    remove_key(Elements, OverriddenKey, RemainingAttributes).
+remove_step(false, Element, Elements, OverriddenKey, [Element|RemainingAttributes]) :-
+    remove_key(Elements, OverriddenKey, RemainingAttributes).
+
+element_matches_t(Element, _, false) :-
+    var(Element).
+element_matches_t(Element, OverriddenKey, true) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey.
+element_matches_t(Element, OverriddenKey, false) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== OverriddenKey.
+element_matches_t(Element, _, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% ---- tests -------------------------------------------------------------
+
+test(what_if_a_legacy_product_is_modified) :-
+    findall(Verdict,
+            cra_manufacturer_duties_what_if(
+                requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                            attribute(substantially_modified_on_or_after_application_date, false)],
+                                           date(2028, 3, 1)),
+                substantially_modified_on_or_after_application_date,
+                true,
+                Verdict),
+            Verdicts),
+    Verdicts == [subject_to_requirements].
+test(what_if_keeps_the_unmodified_answer_when_false_stays_false) :-
+    cra_manufacturer_duties_what_if(
+        requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 5)),
+                                    attribute(substantially_modified_on_or_after_application_date, true)],
+                                   date(2028, 3, 1)),
+        substantially_modified_on_or_after_application_date,
+        false,
+        Verdict),
+    Verdict == article_14_only.
+test(what_if_the_placing_date_moves_to_the_application_date) :-
+    cra_manufacturer_duties_what_if(
+        requirements_applicability([attribute(placing_on_market_date, date(2027, 12, 10))],
+                                   date(2028, 3, 1)),
+        placing_on_market_date,
+        date(2027, 12, 11),
+        Verdict),
+    Verdict == subject_to_requirements.
+test(what_if_a_shorter_use_time) :-
+    cra_manufacturer_duties_what_if(
+        support_period_minimum([attribute(expected_use_time_in_months, 72)], date(2028, 3, 1)),
+        expected_use_time_in_months,
+        59,
+        Verdict),
+    Verdict == minimum_support_period(59).
+test(what_if_a_later_support_period_end) :-
+    cra_manufacturer_duties_what_if(
+        retention_end_date([attribute(placing_on_market_date, date(2028, 2, 1)),
+                            attribute(support_period_end_date, date(2033, 2, 1))],
+                           date(2028, 3, 1),
+                           technical_documentation_and_declaration_of_conformity),
+        support_period_end_date,
+        date(2038, 2, 2),
+        Verdict),
+    Verdict == keep_until(date(2038, 2, 2)).
+test(what_if_replaces_a_duplicated_key_once) :-
+    findall(Verdict,
+            cra_manufacturer_duties_what_if(
+                support_period_minimum([attribute(expected_use_time_in_months, 10),
+                                        attribute(expected_use_time_in_months, 20)],
+                                       date(2028, 3, 1)),
+                expected_use_time_in_months,
+                30,
+                Verdict),
+            Verdicts),
+    Verdicts == [minimum_support_period(30)].
+test(what_if_an_unknown_question_is_wrong_type) :-
+    findall(Verdict,
+            cra_manufacturer_duties_what_if(nonsense, expected_use_time_in_months, 30, Verdict),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(question)])].
+test(what_if_an_unbound_question_is_wrong_type) :-
+    findall(Verdict,
+            cra_manufacturer_duties_what_if(_, expected_use_time_in_months, 30, Verdict),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(question)])].
+test(what_if_on_a_partial_profile_is_refused) :-
+    findall(Verdict,
+            cra_manufacturer_duties_what_if(
+                support_period_minimum([attribute(colour, red)|_], date(2028, 3, 1)),
+                expected_use_time_in_months,
+                30,
+                Verdict),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(profile)])].
+test(the_profile_keys_are_the_five_contract_keys) :-
+    cra_manufacturer_duties_profile_keys(Keys),
+    length(Keys, 5).
+test(the_root_atoms_hold) :-
+    subject_to_requirements,
+    article_14_only,
+    not_yet_applicable,
+    not_applicable_outside_support_period,
+    placing_on_market_date,
+    security_update,
+    unsure.
+
+:- end_module(queries).

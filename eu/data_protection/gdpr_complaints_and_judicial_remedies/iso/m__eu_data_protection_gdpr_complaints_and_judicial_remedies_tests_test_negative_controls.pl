@@ -4,79 +4,117 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_gdpr_complaints_and_judicial_remedies, [complaint_right/3, authority_decision_remedy_right/3, authority_inaction_remedy_right/4, controller_processor_remedy_right/3, controller_processor_forum/3, gdpr_complaints_and_judicial_remedies_status/2, gdpr_complaints_and_judicial_remedies_status_values/1]).
+:- use_module(clausal_lists_extra, [subtract/3]).
+:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_gdpr_complaints_and_judicial_remedies, [gdpr_complaints_and_judicial_remedies_status_values/1, complaint_right/3, authority_decision_remedy_right/3, authority_inaction_remedy_right/4, controller_processor_remedy_right/3, controller_processor_forum/3]).
+:- use_module(m__eu_data_protection_gdpr_complaints_and_judicial_remedies_fixtures, [gdpr_complaints_and_judicial_remedies_profile_for/2]).
 
-test(the_near_miss_verdict_is_a_real_verdict_atom) :-
+test(the_status_table_holds_every_near_miss_atom) :-
     gdpr_complaints_and_judicial_remedies_status_values(StatusValues),
-    member(remedy_open, StatusValues).
+    subtract([no_complaint_right, no_decision_remedy_right, no_inaction_remedy_right, no_judicial_remedy_right, forum_establishment_state_only], StatusValues, Unlisted),
+    Unlisted == [].
 test(complaint_positive) :-
-    complaint_right([attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, true)], complaint_right_exists, [cite(eu_reg_2016_679_art_77_1)]).
-test(complaint_near_miss_no_consideration_is_refused) :-
-    complaint_right([attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, false)], no_complaint_right, [cite(eu_reg_2016_679_art_77_1)]).
-test(complaint_near_miss_not_a_data_subject_is_refused) :-
-    complaint_right([attribute(is_data_subject, false), attribute(data_subject_considers_processing_infringes_regulation, true)], no_complaint_right, [cite(eu_reg_2016_679_art_77_1)]).
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    complaint_right(Profile, complaint_right_exists, _).
+test(complaint_near_miss_not_a_data_subject_gets_no_right) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(not_a_data_subject, Profile),
+    complaint_right(Profile, no_complaint_right, _).
+test(complaint_near_miss_no_consideration_gets_no_right) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(complaint_no_consideration, Profile),
+    complaint_right(Profile, no_complaint_right, _).
 test(decision_positive) :-
-    authority_decision_remedy_right([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, true)], decision_remedy_right_exists, [cite(eu_reg_2016_679_art_78_1)]).
-test(decision_near_miss_not_concerning_is_refused) :-
-    authority_decision_remedy_right([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, false)], no_decision_remedy_right, [cite(eu_reg_2016_679_art_78_1)]).
-test(decision_unsure_binding_refers) :-
-    authority_decision_remedy_right([attribute(decision_is_legally_binding, unsure), attribute(decision_concerns_the_caller, unsure)], needs_legal_review(open_textured(decision_is_legally_binding, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding - unsure, decision_concerns_the_caller - unsure])]), []).
-test(decision_near_miss_settled_binding_refers_on_concern) :-
-    authority_decision_remedy_right([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, unsure)], needs_legal_review(open_textured(decision_concerns_the_caller, cite(eu_reg_2016_679_art_78_1)), _), []).
-test(inaction_positive_unhandled) :-
-    Attested = attested(true, attestation(host, at, reason, none)),
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_competent_under_articles_55_and_56, Attested), attribute(authority_handled_the_complaint, false)], inaction_remedy_right_exists, [outside_fact(authority_competent_under_articles_55_and_56, Attested)], [cite(eu_reg_2016_679_art_78_2)]).
-test(inaction_near_miss_handled_within_the_period_is_refused) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none))), attribute(authority_handled_the_complaint, true), attribute(three_months_from_the_complaint_have_passed, false)], no_inaction_remedy_right, [], [cite(eu_reg_2016_679_art_78_2)]).
-test(inaction_near_miss_attested_incompetent_is_refused_with_basis) :-
-    Attested = attested(false, attestation(host, at, reason, none)),
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_competent_under_articles_55_and_56, Attested), attribute(authority_handled_the_complaint, false)], no_inaction_remedy_right, [outside_fact(authority_competent_under_articles_55_and_56, Attested)], [cite(eu_reg_2016_679_art_78_2)]).
-test(inaction_absent_competence_refers) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_handled_the_complaint, false)], needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), [resolution(cite(competence_statement), not_attempted), inputs_relied_on([authority_competent_under_articles_55_and_56 - absent])]), [], []).
-test(inaction_near_miss_no_complaint_lodged_is_refused) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, false), attribute(authority_handled_the_complaint, false)], no_inaction_remedy_right, [], [cite(eu_reg_2016_679_art_78_2)]).
-test(inaction_near_miss_not_a_data_subject_is_refused) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, false), attribute(complaint_lodged_under_article_77, true), attribute(authority_handled_the_complaint, false)], no_inaction_remedy_right, [], [cite(eu_reg_2016_679_art_78_2)]).
-test(inaction_missing_handling_is_named_before_the_referral) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true)], indeterminate([authority_handled_the_complaint]), [], []).
-test(judicial_positive) :-
-    controller_processor_remedy_right([attribute(is_data_subject, true), attribute(data_subject_considers_rights_infringed_by_processing, true)], judicial_remedy_right_exists, [cite(eu_reg_2016_679_art_79_1)]).
-test(judicial_near_miss_no_consideration_is_refused) :-
-    controller_processor_remedy_right([attribute(is_data_subject, true), attribute(data_subject_considers_rights_infringed_by_processing, false)], no_judicial_remedy_right, [cite(eu_reg_2016_679_art_79_1)]).
-test(forum_positive_public_authority) :-
-    controller_processor_forum([attribute(defendant_is_member_state_public_authority_acting_in_public_powers, true)], forum_establishment_state_only, [cite(eu_reg_2016_679_art_79_2)]).
-test(forum_near_miss_private_defendant_gives_both_courts) :-
-    controller_processor_forum([attribute(defendant_is_member_state_public_authority_acting_in_public_powers, false)], forum_establishment_or_habitual_residence_state, [cite(eu_reg_2016_679_art_79_2)]).
-test(input_positive_unknown_key) :-
-    complaint_right([attribute(colour, blue), attribute(is_data_subject, false)], input_problems([unknown_key(colour)]), []).
-test(input_near_miss_without_the_unknown_key_is_answered) :-
-    complaint_right([attribute(is_data_subject, false)], no_complaint_right, [cite(eu_reg_2016_679_art_77_1)]).
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    authority_decision_remedy_right(Profile, decision_remedy_right_exists, _).
+test(decision_near_miss_not_binding_gets_no_right) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(decision_not_binding, Profile),
+    authority_decision_remedy_right(Profile, no_decision_remedy_right, _).
+test(decision_near_miss_not_concerning_gets_no_right) :-
+    authority_decision_remedy_right([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, false)], no_decision_remedy_right, _).
+test(decision_unsure_refers) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(decision_unsure_binding, Profile),
+    authority_decision_remedy_right(Profile, needs_legal_review(open_textured(decision_is_legally_binding, cite(eu_reg_2016_679_art_78_1)), _), []).
+test(decision_unsure_concerning_refers_on_that_judgement) :-
+    authority_decision_remedy_right([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, unsure)], needs_legal_review(open_textured(decision_concerns_the_caller, cite(eu_reg_2016_679_art_78_1)), [inputs_relied_on([decision_is_legally_binding - true, decision_concerns_the_caller - unsure])]), []).
+test(decision_unsure_with_missing_names_the_missing_key) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(decision_unsure_and_missing, Profile),
+    authority_decision_remedy_right(Profile, indeterminate([decision_concerns_the_caller]), []).
+test(inaction_positive) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    authority_inaction_remedy_right(Profile, inaction_remedy_right_exists, _, _).
+test(inaction_near_miss_not_competent_gets_no_right) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_competence_false, Profile),
+    authority_inaction_remedy_right(Profile, no_inaction_remedy_right, [outside_fact(authority_competent_under_articles_55_and_56, attested(false, _))], _).
+test(inaction_near_miss_competence_absent_refers) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_competence_absent, Profile),
+    authority_inaction_remedy_right(Profile, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_78_2), cite(competence_statement)), _), [], []).
+test(inaction_near_miss_no_complaint_gets_no_right) :-
+    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, false), attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none))), attribute(authority_handled_the_complaint, false)], no_inaction_remedy_right, [], _).
+test(inaction_three_months_uninformed_positive) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_three_months_uninformed_handled_absent, Profile),
+    authority_inaction_remedy_right(Profile, inaction_remedy_right_exists, _, _).
+test(inaction_near_miss_informed_needs_handled) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_three_months_informed_handled_absent, Profile),
+    authority_inaction_remedy_right(Profile, indeterminate([authority_handled_the_complaint]), [], []).
+test(inaction_near_miss_handled_and_informed_gets_no_right) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_handled_and_informed, Profile),
+    authority_inaction_remedy_right(Profile, no_inaction_remedy_right, [], _).
+test(remedy_positive) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    controller_processor_remedy_right(Profile, judicial_remedy_right_exists, _).
+test(remedy_near_miss_no_consideration_gets_no_right) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(remedy_no_consideration, Profile),
+    controller_processor_remedy_right(Profile, no_judicial_remedy_right, _).
+test(remedy_near_miss_not_a_data_subject_gets_no_right) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(not_a_data_subject, Profile),
+    controller_processor_remedy_right(Profile, no_judicial_remedy_right, _).
+test(forum_positive_both_states) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(full_positive, Profile),
+    controller_processor_forum(Profile, forum_establishment_or_habitual_residence_state, _).
+test(forum_near_miss_public_authority_establishment_only) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(forum_public_authority, Profile),
+    controller_processor_forum(Profile, forum_establishment_state_only, _).
 
-test(an_empty_profile_is_open_not_available, fail) :-
-    gdpr_complaints_and_judicial_remedies_status([], remedy_available).
-test(complaint_near_miss_no_consideration_is_not_a_right, fail) :-
-    complaint_right([attribute(is_data_subject, true), attribute(data_subject_considers_processing_infringes_regulation, false)], complaint_right_exists, _).
-test(complaint_near_miss_not_a_data_subject_is_not_a_right, fail) :-
-    complaint_right([attribute(is_data_subject, false), attribute(data_subject_considers_processing_infringes_regulation, true)], complaint_right_exists, _).
-test(decision_near_miss_not_concerning_is_not_a_remedy, fail) :-
+test(complaint_near_miss_not_a_data_subject_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(not_a_data_subject, Profile),
+    complaint_right(Profile, complaint_right_exists, _).
+test(complaint_near_miss_no_consideration_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(complaint_no_consideration, Profile),
+    complaint_right(Profile, complaint_right_exists, _).
+test(decision_near_miss_not_binding_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(decision_not_binding, Profile),
+    authority_decision_remedy_right(Profile, decision_remedy_right_exists, _).
+test(decision_near_miss_not_concerning_is_not_exists, fail) :-
     authority_decision_remedy_right([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, false)], decision_remedy_right_exists, _).
-test(decision_near_miss_settled_binding_does_not_refer_on_binding, fail) :-
-    authority_decision_remedy_right([attribute(decision_is_legally_binding, true), attribute(decision_concerns_the_caller, unsure)], needs_legal_review(open_textured(decision_is_legally_binding, _), _), _).
-test(inaction_near_miss_handled_within_the_period_is_not_a_remedy, fail) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none))), attribute(authority_handled_the_complaint, true), attribute(three_months_from_the_complaint_have_passed, false)], inaction_remedy_right_exists, _, _).
-test(inaction_near_miss_attested_incompetent_is_not_a_remedy, fail) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, true), attribute(authority_competent_under_articles_55_and_56, attested(false, attestation(host, at, reason, none))), attribute(authority_handled_the_complaint, false)], inaction_remedy_right_exists, _, _).
-test(inaction_near_miss_no_complaint_lodged_does_not_refer, fail) :-
-    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, false), attribute(authority_handled_the_complaint, false)], needs_legal_review(_, _), _, _).
-test(judicial_near_miss_no_consideration_is_not_a_remedy, fail) :-
-    controller_processor_remedy_right([attribute(is_data_subject, true), attribute(data_subject_considers_rights_infringed_by_processing, false)], judicial_remedy_right_exists, _).
-test(forum_near_miss_private_defendant_is_not_establishment_only, fail) :-
-    controller_processor_forum([attribute(defendant_is_member_state_public_authority_acting_in_public_powers, false)], forum_establishment_state_only, _).
-test(input_near_miss_without_the_unknown_key_has_no_problem, fail) :-
-    complaint_right([attribute(is_data_subject, false)], input_problems(_), _).
+test(decision_unsure_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(decision_unsure_binding, Profile),
+    authority_decision_remedy_right(Profile, decision_remedy_right_exists, _).
+test(decision_unsure_with_missing_does_not_refer, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(decision_unsure_and_missing, Profile),
+    authority_decision_remedy_right(Profile, needs_legal_review(_, _), _).
+test(inaction_near_miss_not_competent_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_competence_false, Profile),
+    authority_inaction_remedy_right(Profile, inaction_remedy_right_exists, _, _).
+test(inaction_near_miss_competence_absent_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_competence_absent, Profile),
+    authority_inaction_remedy_right(Profile, inaction_remedy_right_exists, _, _).
+test(inaction_near_miss_no_complaint_is_not_exists, fail) :-
+    authority_inaction_remedy_right([attribute(is_data_subject, true), attribute(complaint_lodged_under_article_77, false), attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none))), attribute(authority_handled_the_complaint, false)], inaction_remedy_right_exists, _, _).
+test(inaction_near_miss_informed_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_three_months_informed_handled_absent, Profile),
+    authority_inaction_remedy_right(Profile, inaction_remedy_right_exists, _, _).
+test(inaction_near_miss_handled_and_informed_does_not_refer, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(inaction_handled_and_informed, Profile),
+    authority_inaction_remedy_right(Profile, needs_legal_review(_, _), _, _).
+test(remedy_near_miss_no_consideration_is_not_exists, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(remedy_no_consideration, Profile),
+    controller_processor_remedy_right(Profile, judicial_remedy_right_exists, _).
+test(forum_near_miss_public_authority_is_not_both, fail) :-
+    gdpr_complaints_and_judicial_remedies_profile_for(forum_public_authority, Profile),
+    controller_processor_forum(Profile, forum_establishment_or_habitual_residence_state, _).
+test(forum_missing_is_neither, fail) :-
+    controller_processor_forum([], forum_establishment_or_habitual_residence_state, _).
 
-cp_test_names([the_near_miss_verdict_is_a_real_verdict_atom, complaint_positive, complaint_near_miss_no_consideration_is_refused, complaint_near_miss_not_a_data_subject_is_refused, decision_positive, decision_near_miss_not_concerning_is_refused, decision_unsure_binding_refers, decision_near_miss_settled_binding_refers_on_concern, inaction_positive_unhandled, inaction_near_miss_handled_within_the_period_is_refused, inaction_near_miss_attested_incompetent_is_refused_with_basis, inaction_absent_competence_refers, inaction_near_miss_no_complaint_lodged_is_refused, inaction_near_miss_not_a_data_subject_is_refused, inaction_missing_handling_is_named_before_the_referral, judicial_positive, judicial_near_miss_no_consideration_is_refused, forum_positive_public_authority, forum_near_miss_private_defendant_gives_both_courts, input_positive_unknown_key, input_near_miss_without_the_unknown_key_is_answered]).
-cp_test_fail_names([an_empty_profile_is_open_not_available, complaint_near_miss_no_consideration_is_not_a_right, complaint_near_miss_not_a_data_subject_is_not_a_right, decision_near_miss_not_concerning_is_not_a_remedy, decision_near_miss_settled_binding_does_not_refer_on_binding, inaction_near_miss_handled_within_the_period_is_not_a_remedy, inaction_near_miss_attested_incompetent_is_not_a_remedy, inaction_near_miss_no_complaint_lodged_does_not_refer, judicial_near_miss_no_consideration_is_not_a_remedy, forum_near_miss_private_defendant_is_not_establishment_only, input_near_miss_without_the_unknown_key_has_no_problem]).
+cp_test_names([the_status_table_holds_every_near_miss_atom, complaint_positive, complaint_near_miss_not_a_data_subject_gets_no_right, complaint_near_miss_no_consideration_gets_no_right, decision_positive, decision_near_miss_not_binding_gets_no_right, decision_near_miss_not_concerning_gets_no_right, decision_unsure_refers, decision_unsure_concerning_refers_on_that_judgement, decision_unsure_with_missing_names_the_missing_key, inaction_positive, inaction_near_miss_not_competent_gets_no_right, inaction_near_miss_competence_absent_refers, inaction_near_miss_no_complaint_gets_no_right, inaction_three_months_uninformed_positive, inaction_near_miss_informed_needs_handled, inaction_near_miss_handled_and_informed_gets_no_right, remedy_positive, remedy_near_miss_no_consideration_gets_no_right, remedy_near_miss_not_a_data_subject_gets_no_right, forum_positive_both_states, forum_near_miss_public_authority_establishment_only]).
+cp_test_fail_names([complaint_near_miss_not_a_data_subject_is_not_exists, complaint_near_miss_no_consideration_is_not_exists, decision_near_miss_not_binding_is_not_exists, decision_near_miss_not_concerning_is_not_exists, decision_unsure_is_not_exists, decision_unsure_with_missing_does_not_refer, inaction_near_miss_not_competent_is_not_exists, inaction_near_miss_competence_absent_is_not_exists, inaction_near_miss_no_complaint_is_not_exists, inaction_near_miss_informed_is_not_exists, inaction_near_miss_handled_and_informed_does_not_refer, remedy_near_miss_no_consideration_is_not_exists, forum_near_miss_public_authority_is_not_both, forum_missing_is_neither]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

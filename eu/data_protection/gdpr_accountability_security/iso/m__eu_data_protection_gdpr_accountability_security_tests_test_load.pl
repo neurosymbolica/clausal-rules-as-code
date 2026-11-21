@@ -1,0 +1,108 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_accountability_security_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_accountability_security_kernel, [gdpr_accountability_security_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_accountability_security_citations, [citation/2, implements/1]).
+
+test(the_duty_results_are_distinct) :-
+    dif(met, not_met).
+test(the_arrangement_results_are_distinct) :-
+    dif(not_joint_controllers, arrangement_not_required),
+    dif(arrangement_not_required, arrangement_in_place),
+    dif(arrangement_in_place, arrangement_missing),
+    dif(not_joint_controllers, arrangement_missing).
+test(the_content_results_are_distinct) :-
+    dif(content_requirements_met, content_requirements_not_met).
+test(the_status_compounds_are_distinct) :-
+    dif(indeterminate([essence_of_arrangement_made_available]), input_problems([])),
+    dif(indeterminate([essence_of_arrangement_made_available]), needs_legal_review(_, _)).
+test(the_duty_status_answer_carries_its_basis_and_citations) :-
+    Attested = attested(true, attestation(by, at, reason, none)),
+    Answer = answer(met, [outside_fact(accountability_demonstrated, Attested)], [cite(eu_reg_2016_679_art_5_2)]),
+    Answer = answer(Result, [outside_fact(Key, Copied)], [cite(Citation)]),
+    Result == met,
+    Key == accountability_demonstrated,
+    Copied == Attested,
+    Citation == eu_reg_2016_679_art_5_2.
+test(the_cross_reference_referral_destructures) :-
+    Status = needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_32_1), cite(security_level_statement)), [resolution(cite(security_level_statement), not_attempted), inputs_relied_on([security_level_appropriate_to_risk - absent])]),
+    Status = needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)), [resolution(cite(Target), Resolution), inputs_relied_on(Pairs)]),
+    Citation == eu_reg_2016_679_art_32_1,
+    Target == security_level_statement,
+    Resolution == not_attempted,
+    Pairs == [security_level_appropriate_to_risk - absent].
+test(the_open_textured_referral_destructures) :-
+    Status = needs_legal_review(open_textured(controllers_jointly_determine_purposes_and_means, cite(eu_reg_2016_679_art_26_1)), [inputs_relied_on([controllers_jointly_determine_purposes_and_means - unsure])]),
+    Status = needs_legal_review(open_textured(Input, cite(Citation)), [inputs_relied_on(Pairs)]),
+    Input == controllers_jointly_determine_purposes_and_means,
+    Citation == eu_reg_2016_679_art_26_1,
+    Pairs == [controllers_jointly_determine_purposes_and_means - unsure].
+test(the_non_binding_item_destructures) :-
+    Item = non_binding_item(lawfulness_fairness_transparency, cite(eu_reg_2016_679_art_5_1_a)),
+    Item = non_binding_item(Name, cite(Citation)),
+    Name == lawfulness_fairness_transparency,
+    Citation == eu_reg_2016_679_art_5_1_a.
+test(the_accountability_citation_is_recorded) :-
+    citation(eu_reg_2016_679_art_5_2, _Record).
+test(the_joint_controller_citations_are_recorded) :-
+    citation(eu_reg_2016_679_art_26_1, _FirstRecord),
+    citation(eu_reg_2016_679_art_26_2, _SecondRecord).
+test(the_security_citations_are_recorded) :-
+    citation(eu_reg_2016_679_art_32_1, _FirstRecord),
+    citation(eu_reg_2016_679_art_32_2, _SecondRecord),
+    citation(eu_reg_2016_679_art_32_4, _ThirdRecord).
+test(the_marker_succeeds_for_a_recorded_key) :-
+    implements(eu_reg_2016_679_art_25_2).
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, gdpr_accountability_security_input_problems([], Problems), Answers),
+    Answers == [[]].
+test(a_well_formed_profile_has_no_problem) :-
+    Profile = [attribute(accountability_demonstrated, attested(true, attestation(by, at, reason, none))), attribute(controllers_jointly_determine_purposes_and_means, unsure), attribute(responsibilities_set_by_union_or_member_state_law, false), attribute(by_default_not_accessible_to_indefinite_number_without_intervention, true)],
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    findall(Problems, gdpr_accountability_security_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_list_with_a_foreign_element_is_not_an_attribute_list) :-
+    findall(Problems, gdpr_accountability_security_input_problems([attribute(essence_of_arrangement_made_available, true), other], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_crisp_key_given_unsure_is_wrong_type_before_an_unknown_key) :-
+    Profile = [attribute(stray_key, true), attribute(essence_of_arrangement_made_available, unsure)],
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(essence_of_arrangement_made_available), unknown_key(stray_key)]].
+test(an_outside_fact_with_a_bad_value_is_wrong_type) :-
+    Profile = [attribute(security_level_appropriate_to_risk, attested(maybe, attestation(by, at, reason, none)))],
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(security_level_appropriate_to_risk)]].
+test(an_outside_fact_given_a_bare_boolean_is_wrong_type) :-
+    Profile = [attribute(by_design_measures_implemented, true)],
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(by_design_measures_implemented)]].
+test(a_repeated_key_is_a_duplicate_and_never_wrong_type) :-
+    Profile = [attribute(arrangement_between_controllers_exists, unsure), attribute(arrangement_between_controllers_exists, true)],
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(arrangement_between_controllers_exists)]].
+test(an_unbound_value_is_wrong_type) :-
+    findall(Problems, gdpr_accountability_security_input_problems([attribute(controllers_jointly_determine_purposes_and_means, _)], Problems), Answers),
+    Answers == [[wrong_type(controllers_jointly_determine_purposes_and_means)]].
+test(a_repeated_unknown_key_is_named_once) :-
+    Profile = [attribute(stray_key, true), attribute(stray_key, false)],
+    findall(Problems, gdpr_accountability_security_input_problems(Profile, Problems), Answers),
+    Answers == [[unknown_key(stray_key)]].
+
+test(the_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(eu_reg_2016_679_art_25_3).
+test(a_well_formed_profile_is_not_refused, fail) :-
+    gdpr_accountability_security_input_problems([attribute(essence_of_arrangement_made_available, true)], [_|_]).
+
+cp_test_names([the_duty_results_are_distinct, the_arrangement_results_are_distinct, the_content_results_are_distinct, the_status_compounds_are_distinct, the_duty_status_answer_carries_its_basis_and_citations, the_cross_reference_referral_destructures, the_open_textured_referral_destructures, the_non_binding_item_destructures, the_accountability_citation_is_recorded, the_joint_controller_citations_are_recorded, the_security_citations_are_recorded, the_marker_succeeds_for_a_recorded_key, an_empty_profile_has_no_problem, a_well_formed_profile_has_no_problem, an_unbound_profile_is_not_an_attribute_list, a_list_with_a_foreign_element_is_not_an_attribute_list, a_crisp_key_given_unsure_is_wrong_type_before_an_unknown_key, an_outside_fact_with_a_bad_value_is_wrong_type, an_outside_fact_given_a_bare_boolean_is_wrong_type, a_repeated_key_is_a_duplicate_and_never_wrong_type, an_unbound_value_is_wrong_type, a_repeated_unknown_key_is_named_once]).
+cp_test_fail_names([the_marker_fails_for_an_unrecorded_key, a_well_formed_profile_is_not_refused]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

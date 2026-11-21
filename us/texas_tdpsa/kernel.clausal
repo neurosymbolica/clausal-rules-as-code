@@ -1,0 +1,302 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for us/texas_tdpsa (deontic family).
+% DAG root of the determination-slices layout:
+%   kernel -> citations -> parameters -> texas_tdpsa -> queries -> fixtures
+%
+% SOURCE: Tex. Bus. & Com. Code ch. 541 (Texas Data Privacy and Security
+% Act), Secs. 541.002(a) and (b) (applicability), 541.052(b) and (c)
+% (response period and its one extension), 541.053(c) (appeal answer),
+% 541.154 (notice of violation; opportunity to cure) and 541.155(a)
+% (civil penalty). Pinned text: document
+% tx-bc-ch541-2026-11-16-pdf-save, the current chapter saved to PDF
+% from the Texas statutes website on 2026-11-16 and extracted as text (a
+% secondary copy, not the official printed code; no 'current through'
+% line was read).
+%
+% WHAT LIVES HERE. Only predicates two or more files call. Today that is
+% the order's input check texas_tdpsa_input_problems/2 (INTERFACE - THE
+% INPUT CHECK), written by the scaffold from the order's typed input
+% contract and exported for the slice and the query facade. It is profile
+% plumbing: it decides no statutory condition, so it carries no
+% implements/1 marker (and the kernel, as the DAG root, imports nothing
+% from citations).
+%
+% NOT HERE. The date helpers (a date(Y, M, D) naming a real Gregorian day,
+% Y from 1 to 9999; a date plus N calendar days, the day of the event not
+% counted; the per-argument date problems; the ADDED CHECK that a
+% REFERENCE_DATE earlier than NOTICE_DATE is wrong_type(reference_date))
+% have ONE caller, the texas_tdpsa slice, so they are defined there. Move
+% them here the moment a second slice (for example a Sec. 541.107 slice)
+% calls them, export them as name/arity and import them by full path:
+%   :- use_module(us/texas_tdpsa/kernel, [shared_predicate/2]).
+%
+% RESULT TERMS (atoms and data terms need no declaration; this block only
+% records them so every file spells them alike):
+%   texas_tdpsa_verdict(Status, Citations)
+%     the facade verdict of the texas_tdpsa slice: Status is the RESULT
+%     of applicability_status/4 (in_scope, out_of_scope or a status
+%     compound), Citations its flat list of cite(Key) terms.
+%   The seven contract queries put ONE term in RESULT:
+%     applicability_status/4         in_scope | out_of_scope | status
+%     response_deadline/4            date(Y, M, D) | input_problems(P)
+%     extended_response_deadline/4   date(Y, M, D) | no_extension_available
+%                                    | status
+%     appeal_response_deadline/4     date(Y, M, D) | input_problems(P)
+%     cure_period_last_day/4         date(Y, M, D) | input_problems(P)
+%     attorney_general_action_status/5
+%                                    cure_period_running
+%                                    | action_may_be_brought
+%                                    | no_action_for_cured_violation | status
+%     civil_penalty_maximum/3        integer >= 0 (whole US dollars)
+%                                    | no_civil_penalty | status
+%   Status compounds (never a bare atom):
+%     indeterminate([Key])           one bare key atom, the first missing
+%     needs_legal_review(open_textured(Key, cite(Cite)),
+%                        [inputs_relied_on([Key-unsure])])
+%     needs_legal_review(cross_reference_unresolved(
+%                            cite(us_tx_bc_541_002_a_3),
+%                            cite(sba_small_business_size_determination)),
+%                        [resolution(cite(sba_small_business_size_determination),
+%                                    not_attempted),
+%                         inputs_relied_on([small_business_as_defined_by_sba-absent])])
+%     input_problems(Problems)       Problems a flat list of duplicate_key/1,
+%                                    wrong_type/1 and unknown_key/1 terms
+%   BASIS of applicability_status/4: [] or
+%     [outside_fact(small_business_as_defined_by_sba, Attested)],
+%     Attested the attested(Value, attestation(By, At, Reason, Evidence))
+%     term exactly as supplied.
+%
+% Spell every result and verdict atom exactly as the order pins it: an
+% atom spelled differently is a DIFFERENT atom, and nothing will warn you.
+% =====================================================================
+
+:- module(kernel, [texas_tdpsa_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% texas_tdpsa_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+texas_tdpsa_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [entity_category, processes_or_sells_personal_data, conducts_business_in_texas_or_serves_texas_residents, small_business_as_defined_by_sba, extension_reasonably_necessary, extension_notice_given_within_initial_period, cured_within_cure_period, written_statement_provided, written_statement_breached, violation_after_cure_period_or_statement_breach, violation_count],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(entity_category, entity_category).
+key_type(processes_or_sells_personal_data, boolean).
+key_type(conducts_business_in_texas_or_serves_texas_residents, judgement).
+key_type(small_business_as_defined_by_sba, outside_fact).
+key_type(extension_reasonably_necessary, judgement).
+key_type(extension_notice_given_within_initial_period, boolean).
+key_type(cured_within_cure_period, boolean).
+key_type(written_statement_provided, boolean).
+key_type(written_statement_breached, boolean).
+key_type(violation_after_cure_period_or_statement_breach, boolean).
+key_type(violation_count, non_negative_integer).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+% (So an attestation(By, At, Reason, Evidence) holding an unbound variable makes
+% small_business_as_defined_by_sba wrong_type, as INTERFACE - THE OUTSIDE FACTS states.)
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(entity_category, Value, T) :-
+    in_type_t(enum([state_agency_or_political_subdivision, financial_institution, covered_entity_or_business_associate_under_hipaa, nonprofit_organization, institution_of_higher_education, electric_utility_power_generation_company_or_retail_electric_provider, none_of_the_excluded_categories]), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(outside_fact, Value, T) :-
+    in_type_t(attested(boolean), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(non_negative_integer, Value, T) :-
+    non_negative_integer_t(Value, T).
+
+in_type_t(attested(Type), Value, T) :-
+    attested_t(Value, Type, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% attested_t(Value, Type, T): T is true when Value is
+% attested(AttestedValue, attestation(By, At, Reason, Evidence)) with AttestedValue in Type.
+% By, At, Reason and Evidence come from the host and are not checked.
+attested_t(attested(AttestedValue, Attestation), Type, T) :-
+    attestation_t(Attestation, IsAttestation),
+    attested_value_t(IsAttestation, Type, AttestedValue, T).
+attested_t(Value, _, false) :-
+    Value \= attested(_, _).
+
+attestation_t(attestation(_, _, _, _), true).
+attestation_t(Value, false) :-
+    Value \= attestation(_, _, _, _).
+
+attested_value_t(false, _, _, false).
+attested_value_t(true, Type, AttestedValue, T) :-
+    in_type_t(Type, AttestedValue, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer and false when it is a
+% float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% non_negative_integer_t(Value, T): for a ground Value, T is true when it is an integer of 0 or
+% more.
+non_negative_integer_t(Value, T) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, T).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+:- end_module(kernel).

@@ -1,0 +1,178 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/dma_art_6_9_10_portability_and_business_data_order loads. The tests check:
+% - the order's input check (kernel) gives exactly one answer, in the order
+%   THE INPUT CHECK states;
+% - the citation records the order returns resolve;
+% - the result vocabulary atoms are distinct;
+% - the not-final status compounds build and destructure.
+% The determination slice is not referenced here.
+% The order's stated answer for an UNBOUND key (unknown_key(KEY) holding
+% that same variable) is kept in the kernel exactly as the order states it;
+% it is not probed by a test, because the answer-shape gate re-runs every
+% test input expecting a ground answer. A non-atom key named as given is
+% probed below with a ground compound key instead.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/dma_art_6_9_10_portability_and_business_data_order/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/dma_art_6_9_10_portability_and_business_data_order/kernel, [dma_art_6_9_10_portability_and_business_data_order_input_problems/2]).
+:- use_module(eu/dma_art_6_9_10_portability_and_business_data_order/citations, [citation/2, implements/1]).
+
+% ---- the input check ----------------------------------------------
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, dma_art_6_9_10_portability_and_business_data_order_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_has_no_problem) :-
+    Profile = [
+        attribute(designated_as_gatekeeper_for_core_platform_service, attested(true, attestation(host, moment, commission_decision, none))),
+        attribute(portability_requested_by_end_user_or_authorised_third_party, true),
+        attribute(data_provided_by_or_generated_through_activity_of_end_user, unsure),
+        attribute(end_user_data_portability_free_of_charge, false),
+        attribute(end_users_opted_in_to_sharing_by_consent, attested(false, attestation(host, moment, statement, url(address, moment))))
+    ],
+    findall(Problems, dma_art_6_9_10_portability_and_business_data_order_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
+
+test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+    findall(Problems, dma_art_6_9_10_portability_and_business_data_order_input_problems(profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unbound_profile_is_wrong_type_profile) :-
+    findall(Problems, dma_art_6_9_10_portability_and_business_data_order_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_list_with_a_foreign_element_is_wrong_type_profile_alone) :-
+    findall(Problems, dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(stranger, 1), element], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(end_user_data_portability_free_of_charge, unsure)], Problems),
+    Problems == [wrong_type(end_user_data_portability_free_of_charge)].
+
+test(a_judgement_given_unsure_is_well_typed) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(end_user_data_portability_effective, unsure)], Problems),
+    Problems == [].
+
+test(an_outside_fact_given_a_plain_boolean_is_wrong_type) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(designated_as_gatekeeper_for_core_platform_service, true)], Problems),
+    Problems == [wrong_type(designated_as_gatekeeper_for_core_platform_service)].
+
+test(an_attestation_with_an_unbound_argument_is_wrong_type) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(end_users_opted_in_to_sharing_by_consent, attested(true, attestation(host, moment, _, none)))], Problems),
+    Problems == [wrong_type(end_users_opted_in_to_sharing_by_consent)].
+
+test(a_repeated_key_is_duplicate_key_and_never_also_wrong_type) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(portability_requested_by_end_user_or_authorised_third_party, maybe), attribute(portability_requested_by_end_user_or_authorised_third_party, true)], Problems),
+    Problems == [duplicate_key(portability_requested_by_end_user_or_authorised_third_party)].
+
+test(contract_key_problems_come_before_unknown_keys) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(stranger, 1), attribute(stranger, 2), attribute(business_user_data_access_free_of_charge, yes), attribute(designated_as_gatekeeper_for_core_platform_service, true)], Problems),
+    Problems == [wrong_type(designated_as_gatekeeper_for_core_platform_service), wrong_type(business_user_data_access_free_of_charge), unknown_key(stranger)].
+
+test(a_non_atom_key_is_unknown_key_as_given) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(given(key), true)], Problems),
+    Problems == [unknown_key(given(key))].
+
+test(an_unbound_value_is_wrong_type) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(requested_business_user_data_are_personal_data, _)], Problems),
+    Problems == [wrong_type(requested_business_user_data_are_personal_data)].
+
+test(a_well_formed_profile_is_not_reported_with_problems, fail) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(end_user_data_portability_effective, true)], [_|_]).
+
+% ---- the citation records -----------------------------------------
+
+test(the_article_6_1_citation_is_recorded) :-
+    citation(eu_reg_2022_1925_art_6_1, _).
+
+test(the_article_6_9_citation_is_recorded) :-
+    citation(eu_reg_2022_1925_art_6_9, _).
+
+test(the_article_6_10_citation_is_recorded) :-
+    citation(eu_reg_2022_1925_art_6_10, _).
+
+test(the_article_2_25_citation_is_recorded) :-
+    citation(eu_reg_2022_1925_art_2_25, _).
+
+test(the_article_2_32_citation_is_recorded) :-
+    citation(eu_reg_2022_1925_art_2_32, _).
+
+test(the_referral_targets_are_recorded) :-
+    citation(commission_designation_decision, _),
+    citation(digital_markets_business_user_data_sharing_consent_statement, _).
+
+test(the_citation_record_has_label_reference_and_verbatim) :-
+    citation(eu_reg_2022_1925_art_6_9, [label-_, ref-_, verbatim-_]).
+
+test(the_provenance_marker_holds_for_a_recorded_key) :-
+    implements(eu_reg_2022_1925_art_6_10).
+
+test(the_provenance_marker_fails_for_a_shortened_key, fail) :-
+    implements(art_6_10).
+
+% ---- the result vocabulary ----------------------------------------
+
+test(the_application_atoms_are_distinct) :-
+    dif(article_6_obligations_apply, article_6_obligations_do_not_apply).
+
+test(the_portability_atoms_are_distinct) :-
+    Atoms = [portability_duty_met, portability_duty_not_met, portability_not_requested, data_outside_article_6_9, article_6_obligations_do_not_apply],
+    sort(Atoms, Sorted),
+    length(Atoms, Count),
+    length(Sorted, Count).
+
+test(the_business_user_data_atoms_are_distinct) :-
+    Atoms = [data_access_duty_met, data_access_duty_not_met, personal_data_access_duty_met, personal_data_access_duty_not_met, personal_data_access_not_required, data_access_not_requested, data_outside_article_6_10, article_6_obligations_do_not_apply],
+    sort(Atoms, Sorted),
+    length(Atoms, Count),
+    length(Sorted, Count).
+
+test(the_met_and_not_met_atoms_differ) :-
+    dif(personal_data_access_duty_met, personal_data_access_duty_not_met),
+    dif(data_access_duty_met, data_access_duty_not_met).
+
+% ---- the status compounds build and destructure -------------------
+
+test(the_indeterminate_compound_names_one_key) :-
+    Result = indeterminate([portability_requested_by_end_user_or_authorised_third_party]),
+    Result = indeterminate([Key]),
+    Key == portability_requested_by_end_user_or_authorised_third_party.
+
+test(the_cross_reference_referral_builds_and_destructures) :-
+    Result = needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_6_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service-absent])]),
+    Result = needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)), [resolution(cite(Target), Status), inputs_relied_on(Pairs)]),
+    Citation == eu_reg_2022_1925_art_6_1,
+    Target == commission_designation_decision,
+    Status == not_attempted,
+    Pairs == [designated_as_gatekeeper_for_core_platform_service-absent],
+    citation(Citation, _),
+    citation(Target, _).
+
+test(the_open_textured_referral_builds_and_destructures) :-
+    Result = needs_legal_review(open_textured(end_user_data_portability_effective, cite(eu_reg_2022_1925_art_6_9)), [inputs_relied_on([portability_requested_by_end_user_or_authorised_third_party-true, end_user_data_portability_effective-unsure])]),
+    Result = needs_legal_review(open_textured(Key, cite(Citation)), [inputs_relied_on(Pairs)]),
+    Key == end_user_data_portability_effective,
+    citation(Citation, _),
+    Pairs = [_-true, _-Judgement],
+    Judgement == unsure.
+
+test(the_basis_term_carries_the_attestation_as_supplied) :-
+    Attested = attested(true, attestation(host, moment, commission_decision, document(upload, digest))),
+    Basis = [outside_fact(designated_as_gatekeeper_for_core_platform_service, Attested)],
+    Basis = [outside_fact(Key, attested(Value, attestation(By, _, _, Evidence)))],
+    Key == designated_as_gatekeeper_for_core_platform_service,
+    Value == true,
+    By == host,
+    Evidence == document(upload, digest).
+
+test(the_input_problems_compound_wraps_the_bare_list) :-
+    dma_art_6_9_10_portability_and_business_data_order_input_problems([attribute(stranger, 1)], Problems),
+    Result = input_problems(Problems),
+    Result = input_problems([Problem]),
+    Problem == unknown_key(stranger).
+
+:- end_module(test_load).

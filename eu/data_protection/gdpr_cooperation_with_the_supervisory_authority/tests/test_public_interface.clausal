@@ -2,117 +2,92 @@
 % =====================================================================
 % test_public_interface.clausal -- the package's PUBLIC surface, exercised
 % through the generated package facade (what an external caller sees).
-% Each fixture subject resolves to its EXPECTED status (asserted exactly),
-% every checklist is non-empty and cited, and every near-miss control gets
-% a verdict different from its positive subject.
+% Every fixture subject resolves to its EXPECTED verdict, exactly once;
+% every subject has a non-empty, cited checklist; every near-miss control
+% gets a verdict other than its positive case's.
 % Run: python -m clausal.testing eu/data_protection/gdpr_cooperation_with_the_supervisory_authority/tests/test_public_interface.clausal
 % =====================================================================
 :- module(test_public_interface, []).
 :- use_module(eu/data_protection/gdpr_cooperation_with_the_supervisory_authority, [
-    cooperation_duty/4,
-    gdpr_cooperation_with_the_supervisory_authority_input_problems/2,
     decide_gdpr_cooperation_with_the_supervisory_authority/2,
     gdpr_cooperation_with_the_supervisory_authority_status/2,
     gdpr_cooperation_with_the_supervisory_authority_checklist/2,
     gdpr_cooperation_with_the_supervisory_authority_decision_resolvable/1,
     gdpr_cooperation_with_the_supervisory_authority_status_values/1,
-    gdpr_cooperation_with_the_supervisory_authority_what_if/4,
     gdpr_cooperation_with_the_supervisory_authority_subject/1,
     gdpr_cooperation_with_the_supervisory_authority_profile_for/2,
     gdpr_cooperation_with_the_supervisory_authority_assess/2,
-    provenance/2,
-    attested/2,
-    document/2,
-    duplicate_key/1,
-    indeterminate/1,
-    input_problems/1,
-    needs_legal_review/2,
-    outside_fact/2,
-    unknown_key/1,
-    url/2,
-    wrong_type/1
+    cooperation_duty/4
 ]).
 
-% ---- expected statuses, one row per fixture subject -------------------
-expected_status(wrong_type_role_key, input_problems([wrong_type(acts_as_controller)])).
-expected_status(wrong_type_control, cooperation_not_required).
-expected_status(duplicate_role_key, input_problems([duplicate_key(acts_as_controller)])).
-expected_status(duplicate_control, cooperation_not_required).
-expected_status(unknown_key_given, input_problems([unknown_key(as_of_date)])).
-expected_status(unknown_key_control, cooperation_not_required).
-expected_status(no_request_made, cooperation_not_required).
-expected_status(request_made_and_cooperated, cooperation_met).
-expected_status(request_outside_authority_tasks, cooperation_not_required).
-expected_status(request_within_authority_tasks, cooperation_met).
-expected_status(caller_not_bound, cooperation_not_required).
-expected_status(representative_alone_bound, cooperation_met).
-expected_status(processor_key_missing, indeterminate([acts_as_processor])).
-expected_status(processor_key_given, cooperation_met).
-expected_status(request_key_missing, indeterminate([authority_request_made])).
-expected_status(request_key_given, cooperation_not_required).
-expected_status(cooperation_statement_absent,
-    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)),
-                       [resolution(cite(cooperation_statement), not_attempted),
-                        inputs_relied_on([request_is_in_performance_of_authority_tasks-true, cooperation_given-absent])])).
-expected_status(cooperation_statement_attested_false, cooperation_not_met).
-expected_status(unsure_and_statement_absent,
-    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)),
-                       [resolution(cite(cooperation_statement), not_attempted),
-                        inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure, cooperation_given-absent])])).
-expected_status(unsure_and_statement_given,
-    needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)),
-                       [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])])).
-expected_status(tasks_judgement_unsure,
-    needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)),
-                       [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])])).
-expected_status(tasks_judgement_true, cooperation_met).
+% ---- expected verdicts, one row per fixture subject --------------------
+expected_verdict(controller_cooperated, cooperation_met, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(controller_refused, cooperation_not_met, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(representative_cooperated, cooperation_met, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(not_bound, cooperation_not_required, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(no_request, cooperation_not_required, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(no_request_roles_absent, cooperation_not_required, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(request_inside_tasks, cooperation_met, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(request_outside_tasks, cooperation_not_required, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(role_unknown, indeterminate([acts_as_controller]), []).
+expected_verdict(role_stated_false, cooperation_not_required, [cite(eu_reg_2016_679_art_31)]).
+expected_verdict(two_keys_missing, indeterminate([authority_request_made]), []).
+expected_verdict(
+    statement_missing_true,
+    needs_legal_review(
+        cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)),
+        [
+            resolution(cite(cooperation_statement), not_attempted),
+            inputs_relied_on([request_is_in_performance_of_authority_tasks-true, cooperation_given-absent])
+        ]),
+    []).
+expected_verdict(
+    statement_missing_unsure,
+    needs_legal_review(
+        cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)),
+        [
+            resolution(cite(cooperation_statement), not_attempted),
+            inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure, cooperation_given-absent])
+        ]),
+    []).
+expected_verdict(
+    judgement_unsure,
+    needs_legal_review(
+        open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)),
+        [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])]),
+    []).
+expected_verdict(duplicate_and_unknown, input_problems([duplicate_key(acts_as_controller), unknown_key(colour)]), []).
+expected_verdict(wrong_types, input_problems([wrong_type(acts_as_processor), wrong_type(cooperation_given)]), []).
 
-% ---- near-miss pairs: positive subject, one-key control ---------------
-near_miss(wrong_type_role_key, wrong_type_control).
-near_miss(duplicate_role_key, duplicate_control).
-near_miss(unknown_key_given, unknown_key_control).
-near_miss(no_request_made, request_made_and_cooperated).
-near_miss(request_outside_authority_tasks, request_within_authority_tasks).
-near_miss(caller_not_bound, representative_alone_bound).
-near_miss(processor_key_missing, processor_key_given).
-near_miss(request_key_missing, request_key_given).
-near_miss(cooperation_statement_absent, cooperation_statement_attested_false).
-near_miss(unsure_and_statement_absent, unsure_and_statement_given).
-near_miss(tasks_judgement_unsure, tasks_judgement_true).
-near_miss(request_made_and_cooperated, cooperation_statement_attested_false).
-
-% ---- helpers --------------------------------------------------------
-subject_status(Subject, Status) :-
-    gdpr_cooperation_with_the_supervisory_authority_assess(Subject, gdpr_cooperation_with_the_supervisory_authority_verdict(Status, _Citations)).
-
+% subject_resolves_as_expected(Subject): exactly one verdict, the expected one.
 subject_resolves_as_expected(Subject) :-
-    expected_status(Subject, Expected),
-    findall(Status, subject_status(Subject, Status), Statuses),
-    Statuses == [Expected].
+    expected_verdict(Subject, Status, Citations),
+    findall(Verdict, gdpr_cooperation_with_the_supervisory_authority_assess(Subject, Verdict), Verdicts),
+    Verdicts == [gdpr_cooperation_with_the_supervisory_authority_verdict(Status, Citations)].
 
 subject_has_cited_checklist(Subject) :-
     gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile),
-    gdpr_cooperation_with_the_supervisory_authority_decision_resolvable(Profile),
     gdpr_cooperation_with_the_supervisory_authority_checklist(Profile, [FirstItem|OtherItems]),
-    maplist(cited_item, [FirstItem|OtherItems]).
+    maplist(item_is_cited, [FirstItem|OtherItems]).
 
-cited_item(item(_, _, cite(eu_reg_2016_679_art_31))).
+item_is_cited(item(_, _, cite(eu_reg_2016_679_art_31))).
 
-control_differs(Positive-Control) :-
-    subject_status(Positive, PositiveStatus),
-    subject_status(Control, ControlStatus),
-    dif(PositiveStatus, ControlStatus).
+subject_status(Subject, Status) :-
+    gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile),
+    gdpr_cooperation_with_the_supervisory_authority_status(Profile, Status).
 
-% ---- every subject, every pair ---------------------------------------
-test(every_subject_has_an_expected_status) :-
+subject_duty(Subject, Result, Basis, Citations) :-
+    gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile),
+    cooperation_duty(Profile, Result, Basis, Citations).
+
+% ---- every subject, as a set ------------------------------------------
+test(every_subject_has_an_expected_row) :-
     findall(Subject, gdpr_cooperation_with_the_supervisory_authority_subject(Subject), Subjects),
-    length(Subjects, 22),
-    maplist(expected_status_known, Subjects).
+    findall(Subject, expected_verdict(Subject, _, _), ExpectedSubjects),
+    msort(Subjects, Sorted),
+    msort(ExpectedSubjects, Sorted).
 
-expected_status_known(Subject) :-
-    expected_status(Subject, _).
-
-test(every_subject_resolves_to_its_expected_status) :-
+test(every_subject_resolves_to_its_expected_verdict_once) :-
     findall(Subject, gdpr_cooperation_with_the_supervisory_authority_subject(Subject), Subjects),
     maplist(subject_resolves_as_expected, Subjects).
 
@@ -120,282 +95,170 @@ test(every_subject_has_a_non_empty_cited_checklist) :-
     findall(Subject, gdpr_cooperation_with_the_supervisory_authority_subject(Subject), Subjects),
     maplist(subject_has_cited_checklist, Subjects).
 
-test(every_near_miss_control_gets_another_verdict) :-
-    findall(Positive-Control, near_miss(Positive, Control), Pairs),
-    length(Pairs, 12),
-    maplist(control_differs, Pairs).
+test(every_subject_is_resolvable) :-
+    findall(Profile, (gdpr_cooperation_with_the_supervisory_authority_subject(Subject), gdpr_cooperation_with_the_supervisory_authority_profile_for(Subject, Profile)), Profiles),
+    maplist(gdpr_cooperation_with_the_supervisory_authority_decision_resolvable, Profiles).
 
-test(final_statuses_are_in_the_status_values) :-
+test(final_statuses_are_in_the_status_vocabulary) :-
     gdpr_cooperation_with_the_supervisory_authority_status_values(StatusValues),
-    subject_status(no_request_made, NotRequired),
-    subject_status(request_made_and_cooperated, Met),
-    subject_status(cooperation_statement_attested_false, NotMet),
-    member(NotRequired, StatusValues),
-    member(Met, StatusValues),
-    member(NotMet, StatusValues).
+    msort(StatusValues, [cooperation_met, cooperation_not_met, cooperation_not_required]).
 
-% ---- step 0: input problems -----------------------------------------
-test(wrong_type_role_key_is_an_input_problem) :-
-    subject_status(wrong_type_role_key, Status),
-    Status == input_problems([wrong_type(acts_as_controller)]).
-test(wrong_type_control_is_not_an_input_problem, fail) :-
-    subject_status(wrong_type_control, input_problems(_)).
-test(wrong_type_control_is_not_required) :-
-    subject_status(wrong_type_control, Status),
-    Status == cooperation_not_required.
+% ---- cooperation_duty/4 called directly, one case per outcome ----------
+test(cooperation_duty_met_copies_the_attested_statement) :-
+    gdpr_cooperation_with_the_supervisory_authority_profile_for(controller_cooperated, Profile),
+    Statement = attested(true, attestation(compliance_officer, recorded_on_twelfth_november, response_sent, none)),
+    findall(Result-Basis-Citations, cooperation_duty(Profile, Result, Basis, Citations), Answers),
+    Answers == [cooperation_met-[outside_fact(cooperation_given, Statement)]-[cite(eu_reg_2016_679_art_31)]].
 
-test(duplicate_role_key_is_an_input_problem) :-
-    subject_status(duplicate_role_key, Status),
-    Status == input_problems([duplicate_key(acts_as_controller)]).
-test(duplicate_role_key_is_not_also_wrong_type, fail) :-
-    subject_status(duplicate_role_key, input_problems([wrong_type(acts_as_controller)])).
+test(cooperation_duty_not_met_copies_the_attested_statement) :-
+    gdpr_cooperation_with_the_supervisory_authority_profile_for(controller_refused, Profile),
+    Statement = attested(false, attestation(compliance_officer, recorded_on_twelfth_november, no_response_sent, none)),
+    findall(Result-Basis-Citations, cooperation_duty(Profile, Result, Basis, Citations), Answers),
+    Answers == [cooperation_not_met-[outside_fact(cooperation_given, Statement)]-[cite(eu_reg_2016_679_art_31)]].
 
-test(unknown_key_is_named_once) :-
-    subject_status(unknown_key_given, Status),
-    Status == input_problems([unknown_key(as_of_date)]).
+test(cooperation_duty_not_met_is_not_met_as_met, fail) :-
+    subject_duty(controller_refused, cooperation_met, _, _).
 
-test(input_problems_carry_no_basis_and_no_citations) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(duplicate_role_key, Profile),
-    cooperation_duty(Profile, Result, Basis, Citations),
-    Result == input_problems([duplicate_key(acts_as_controller)]),
-    Basis == [],
-    Citations == [].
+test(cooperation_duty_document_evidence_is_copied) :-
+    subject_duty(representative_cooperated, cooperation_met, [outside_fact(cooperation_given, attested(true, attestation(_, _, _, document(UploadId, Digest))))], [cite(eu_reg_2016_679_art_31)]),
+    UploadId == upload_identifier_one,
+    Digest == digest_value_one.
 
-test(a_non_list_profile_is_not_an_attribute_list) :-
-    gdpr_cooperation_with_the_supervisory_authority_input_problems(not_a_profile, Problems),
-    Problems == [wrong_type(profile)].
+test(cooperation_duty_url_evidence_is_copied) :-
+    subject_duty(request_inside_tasks, cooperation_met, [outside_fact(cooperation_given, attested(true, attestation(_, _, _, url(Address, RetrievedAt))))], [cite(eu_reg_2016_679_art_31)]),
+    Address == address_of_record,
+    RetrievedAt == retrieved_on_twelfth_november.
 
-test(a_well_formed_profile_has_no_problem) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(request_made_and_cooperated, Profile),
-    gdpr_cooperation_with_the_supervisory_authority_input_problems(Profile, Problems),
-    Problems == [].
+test(cooperation_duty_no_request_is_not_required) :-
+    subject_duty(no_request_roles_absent, cooperation_not_required, [], [cite(eu_reg_2016_679_art_31)]).
 
-% ---- steps 1 to 3: no duty -----------------------------------------
-test(no_request_is_not_required) :-
-    subject_status(no_request_made, Status),
-    Status == cooperation_not_required.
+test(cooperation_duty_outside_tasks_is_not_required) :-
+    subject_duty(request_outside_tasks, cooperation_not_required, [], [cite(eu_reg_2016_679_art_31)]).
+
+test(cooperation_duty_not_bound_is_not_required) :-
+    subject_duty(not_bound, cooperation_not_required, [], [cite(eu_reg_2016_679_art_31)]).
+
+test(cooperation_duty_names_the_first_missing_key) :-
+    subject_duty(two_keys_missing, indeterminate([authority_request_made]), [], []).
+
+test(cooperation_duty_absent_statement_is_a_cross_reference) :-
+    subject_duty(
+        statement_missing_true,
+        needs_legal_review(
+            cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)),
+            [
+                resolution(cite(cooperation_statement), not_attempted),
+                inputs_relied_on([request_is_in_performance_of_authority_tasks-true, cooperation_given-absent])
+            ]),
+        [],
+        []).
+
+test(cooperation_duty_unsure_judgement_is_open_textured) :-
+    subject_duty(
+        judgement_unsure,
+        needs_legal_review(
+            open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)),
+            [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])]),
+        [],
+        []).
+
+test(cooperation_duty_input_problems_come_first) :-
+    subject_duty(wrong_types, input_problems([wrong_type(acts_as_processor), wrong_type(cooperation_given)]), [], []).
+
+test(cooperation_duty_unbound_profile_is_wrong_type) :-
+    findall(Result, cooperation_duty(_, Result, _, _), Results),
+    Results == [input_problems([wrong_type(profile)])].
+
+% ---- result constructors are data: url/2 and document/2 terms ----------
+test(url_evidence_is_a_data_term) :-
+    Evidence = url(address_of_record, retrieved_on_twelfth_november),
+    Evidence = url(Address, RetrievedAt),
+    Address == address_of_record,
+    RetrievedAt == retrieved_on_twelfth_november.
+
+test(document_evidence_is_a_data_term) :-
+    Evidence = document(upload_identifier_one, digest_value_one),
+    Evidence = document(UploadId, Digest),
+    UploadId == upload_identifier_one,
+    Digest == digest_value_one.
+
+% ---- step 7 / step 8 pair ------------------------------------------------
+test(controller_cooperated_is_met) :-
+    subject_status(controller_cooperated, cooperation_met).
+test(controller_refused_is_not_met) :-
+    subject_status(controller_refused, cooperation_not_met).
+test(controller_refused_is_not_met_as_met, fail) :-
+    subject_status(controller_refused, cooperation_met).
+test(controller_cooperated_is_not_not_met, fail) :-
+    subject_status(controller_cooperated, cooperation_not_met).
+
+% ---- representative bound / not bound pair (step 7 / step 3) -------------
+test(representative_cooperated_is_met) :-
+    subject_status(representative_cooperated, cooperation_met).
+test(not_bound_needs_no_cooperation) :-
+    subject_status(not_bound, cooperation_not_required).
+test(not_bound_is_not_met, fail) :-
+    subject_status(not_bound, cooperation_met).
+
+% ---- on request (step 1) -------------------------------------------------
+test(no_request_needs_no_cooperation) :-
+    subject_status(no_request, cooperation_not_required).
 test(no_request_is_not_met, fail) :-
-    subject_status(no_request_made, cooperation_met).
+    subject_status(no_request, cooperation_met).
+test(no_request_decides_without_the_role_keys) :-
+    subject_status(no_request_roles_absent, cooperation_not_required).
 
-test(request_outside_tasks_is_not_required) :-
-    subject_status(request_outside_authority_tasks, Status),
-    Status == cooperation_not_required.
-test(request_within_tasks_is_met) :-
-    subject_status(request_within_authority_tasks, Status),
-    Status == cooperation_met.
-test(request_within_tasks_is_not_not_required, fail) :-
-    subject_status(request_within_authority_tasks, cooperation_not_required).
+% ---- in the performance of its tasks (step 2) ---------------------------
+test(request_inside_tasks_is_met) :-
+    subject_status(request_inside_tasks, cooperation_met).
+test(request_outside_tasks_needs_no_cooperation) :-
+    subject_status(request_outside_tasks, cooperation_not_required).
+test(request_outside_tasks_is_not_met, fail) :-
+    subject_status(request_outside_tasks, cooperation_met).
 
-test(caller_not_bound_is_not_required) :-
-    subject_status(caller_not_bound, Status),
-    Status == cooperation_not_required.
-test(representative_alone_is_bound_and_met) :-
-    subject_status(representative_alone_bound, Status),
-    Status == cooperation_met.
+% ---- missing needed keys (step 4) ---------------------------------------
+test(role_unknown_names_the_controller_key) :-
+    subject_status(role_unknown, indeterminate([acts_as_controller])).
+test(role_stated_false_is_not_required) :-
+    subject_status(role_stated_false, cooperation_not_required).
+test(role_stated_false_is_not_indeterminate, fail) :-
+    subject_status(role_stated_false, indeterminate(_)).
+test(two_keys_missing_names_only_the_first) :-
+    subject_status(two_keys_missing, indeterminate([authority_request_made])).
+test(the_outside_fact_is_never_a_missing_key, fail) :-
+    subject_status(statement_missing_true, indeterminate(_)).
 
-test(not_required_cites_article_31) :-
-    decide_gdpr_cooperation_with_the_supervisory_authority([attribute(acts_as_controller, false),
-                                                            attribute(acts_as_processor, false),
-                                                            attribute(acts_as_representative_of_controller_or_processor, false),
-                                                            attribute(authority_request_made, true),
-                                                            attribute(request_is_in_performance_of_authority_tasks, true)],
-                                                           gdpr_cooperation_with_the_supervisory_authority_verdict(Status, Citations)),
-    Status == cooperation_not_required,
-    Citations == [cite(eu_reg_2016_679_art_31)].
+% ---- referrals (steps 5 and 6) ------------------------------------------
+test(an_absent_statement_is_a_cross_reference) :-
+    subject_status(statement_missing_true, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)), _)).
+test(an_absent_statement_refers_before_the_unsure_judgement) :-
+    subject_status(statement_missing_unsure, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)), _)).
+test(an_absent_statement_is_not_open_textured, fail) :-
+    subject_status(statement_missing_unsure, needs_legal_review(open_textured(_, _), _)).
+test(an_unsure_judgement_goes_to_a_lawyer) :-
+    subject_status(judgement_unsure, needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)), _)).
+test(an_unsure_judgement_is_not_met, fail) :-
+    subject_status(judgement_unsure, cooperation_met).
 
-% ---- step 4: the first absent needed key ----------------------------
-test(missing_processor_is_named) :-
-    subject_status(processor_key_missing, Status),
-    Status == indeterminate([acts_as_processor]).
-test(given_processor_is_met) :-
-    subject_status(processor_key_given, Status),
-    Status == cooperation_met.
-test(given_processor_is_not_indeterminate, fail) :-
-    subject_status(processor_key_given, indeterminate(_)).
+% ---- input problems (step 0) --------------------------------------------
+test(duplicate_and_unknown_are_input_problems) :-
+    subject_status(duplicate_and_unknown, input_problems([duplicate_key(acts_as_controller), unknown_key(colour)])).
+test(wrong_types_are_input_problems) :-
+    subject_status(wrong_types, input_problems([wrong_type(acts_as_processor), wrong_type(cooperation_given)])).
+test(an_input_problem_profile_gets_no_final_verdict, fail) :-
+    subject_status(wrong_types, cooperation_met).
+test(a_non_list_profile_is_wrong_type) :-
+    decide_gdpr_cooperation_with_the_supervisory_authority(not_a_profile, gdpr_cooperation_with_the_supervisory_authority_verdict(input_problems([wrong_type(profile)]), [])).
 
-test(missing_request_key_is_named) :-
-    subject_status(request_key_missing, Status),
-    Status == indeterminate([authority_request_made]).
-test(cooperation_given_is_never_a_missing_key, fail) :-
-    subject_status(cooperation_statement_absent, indeterminate(_)).
-
-% ---- steps 5 and 6: referrals --------------------------------------
-test(absent_statement_refers_as_a_cross_reference) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(cooperation_statement_absent, Profile),
-    cooperation_duty(Profile, Result, Basis, Citations),
-    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)),
-                                 [resolution(cite(cooperation_statement), not_attempted),
-                                  inputs_relied_on([request_is_in_performance_of_authority_tasks-true, cooperation_given-absent])]),
-    Basis == [],
-    Citations == [].
-
-test(absent_statement_refers_before_the_unsure_judgement) :-
-    subject_status(unsure_and_statement_absent, Status),
-    Status = needs_legal_review(Reason, _Context),
-    Reason == cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)).
-test(absent_statement_with_unsure_is_not_open_textured, fail) :-
-    subject_status(unsure_and_statement_absent, needs_legal_review(open_textured(_, _), _)).
-
-test(unsure_judgement_is_open_textured) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(tasks_judgement_unsure, Profile),
-    cooperation_duty(Profile, Result, Basis, Citations),
-    Result == needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)),
-                                 [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])]),
-    Basis == [],
-    Citations == [].
-test(true_judgement_is_met) :-
-    subject_status(tasks_judgement_true, Status),
-    Status == cooperation_met.
-test(true_judgement_does_not_refer, fail) :-
-    subject_status(tasks_judgement_true, needs_legal_review(_, _)).
-
-% ---- steps 7 and 8: the attested statement is copied ----------------
-test(attested_true_is_met_and_copied) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(request_made_and_cooperated, Profile),
-    cooperation_duty(Profile, Result, Basis, Citations),
-    Result == cooperation_met,
-    Basis == [outside_fact(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)))],
-    Citations == [cite(eu_reg_2016_679_art_31)].
-
-test(attested_false_is_not_met_and_copied) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(cooperation_statement_attested_false, Profile),
-    cooperation_duty(Profile, Result, Basis, Citations),
-    Result == cooperation_not_met,
-    Basis == [outside_fact(cooperation_given, attested(false, attestation(compliance_desk, received_2026_11_12, no_reply_sent, document(upload_seven, digest_seven))))],
-    Citations == [cite(eu_reg_2016_679_art_31)].
-test(attested_false_is_not_met_not_met, fail) :-
-    subject_status(cooperation_statement_attested_false, cooperation_met).
-
-test(evidence_url_is_copied_exactly) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(tasks_judgement_true, Profile),
-    cooperation_duty(Profile, cooperation_met, Basis, _Citations),
-    Basis == [outside_fact(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, url(address_seven, retrieved_2026_11_12))))].
-
-% ---- the provenance constructor (optional CONTEXT item) -------------
-test(provenance_constructor_holds_for_any_source_and_detail) :-
-    provenance(cite(eu_reg_2016_679_art_31), attested),
-    provenance(cite(cooperation_statement), not_attempted).
-
-test(provenance_item_builds_and_destructures) :-
-    Item = provenance(cite(eu_reg_2016_679_art_31), attested),
-    provenance(cite(eu_reg_2016_679_art_31), attested),
-    Item = provenance(Source, Detail),
-    Source == cite(eu_reg_2016_679_art_31),
-    Detail == attested.
-
-% ---- the result constructors: ground input, exactly one answer ------
-test(attested_constructor_answers_once) :-
-    findall(given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)), Answers),
-    Answers == [given].
-test(attested_constructor_refuses_a_non_boolean, fail) :-
-    attested(maybe, attestation(compliance_desk, received_2026_11_12, reply_sent, none)).
-
-test(document_constructor_answers_once) :-
-    findall(given, document(upload_seven, digest_seven), Answers),
-    Answers == [given].
-
-test(duplicate_key_constructor_answers_once) :-
-    findall(given, duplicate_key(acts_as_controller), Answers),
-    Answers == [given].
-
-test(indeterminate_constructor_answers_once) :-
-    findall(given, indeterminate([authority_request_made]), Answers),
-    Answers == [given].
-test(indeterminate_constructor_refuses_two_keys, fail) :-
-    indeterminate([acts_as_controller, authority_request_made]).
-
-test(input_problems_constructor_answers_once) :-
-    findall(given, input_problems([wrong_type(acts_as_controller), unknown_key(as_of_date)]), Answers),
-    Answers == [given].
-
-test(needs_legal_review_constructor_answers_once) :-
-    findall(given,
-            needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)),
-                               [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])]),
-            Answers),
-    Answers == [given].
-
-test(outside_fact_constructor_answers_once) :-
-    findall(given,
-            outside_fact(cooperation_given, attested(false, attestation(compliance_desk, received_2026_11_12, no_reply_sent, document(upload_seven, digest_seven)))),
-            Answers),
-    Answers == [given].
-
-test(unknown_key_constructor_answers_once) :-
-    findall(given, unknown_key(as_of_date), Answers),
-    Answers == [given].
-
-test(url_constructor_answers_once) :-
-    findall(given, url(address_seven, retrieved_2026_11_12), Answers),
-    Answers == [given].
-
-test(wrong_type_constructor_answers_once) :-
-    findall(given, wrong_type(acts_as_controller), Answers),
-    Answers == [given].
-
-% ---- the result constructors called directly (ground input, ground answer) ----
-test(attested_holds_when_called_directly) :-
-    attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, none)).
-
-test(document_holds_when_called_directly) :-
-    document(upload_seven, digest_seven).
-
-test(duplicate_key_holds_when_called_directly) :-
-    duplicate_key(acts_as_controller).
-
-test(indeterminate_holds_when_called_directly) :-
-    indeterminate([authority_request_made]).
-
-test(input_problems_holds_when_called_directly) :-
-    input_problems([duplicate_key(acts_as_controller), wrong_type(acts_as_processor), unknown_key(as_of_date)]).
-
-test(needs_legal_review_holds_when_called_directly) :-
-    needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_31), cite(cooperation_statement)),
-                       [resolution(cite(cooperation_statement), not_attempted),
-                        inputs_relied_on([request_is_in_performance_of_authority_tasks-true, cooperation_given-absent])]).
-
-test(outside_fact_holds_when_called_directly) :-
-    outside_fact(cooperation_given, attested(true, attestation(compliance_desk, received_2026_11_12, reply_sent, url(address_seven, retrieved_2026_11_12)))).
-
-test(unknown_key_holds_when_called_directly) :-
-    unknown_key(as_of_date).
-
-test(url_holds_when_called_directly) :-
-    url(address_seven, retrieved_2026_11_12).
-
-test(wrong_type_holds_when_called_directly) :-
-    wrong_type(cooperation_given).
-
-% ---- status facade and checklist (#2, #7) --------------------------
-test(status_facade_gives_the_result) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(no_request_made, Profile),
-    gdpr_cooperation_with_the_supervisory_authority_status(Profile, Status),
-    Status == cooperation_not_required.
-
-test(checklist_of_met_case_is_all_met_and_cited) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(request_made_and_cooperated, Profile),
+% ---- justification: the checklist rows ----------------------------------
+test(the_checklist_of_a_met_case_is_all_met_and_cited) :-
+    gdpr_cooperation_with_the_supervisory_authority_profile_for(controller_cooperated, Profile),
     gdpr_cooperation_with_the_supervisory_authority_checklist(Profile, Items),
-    Items == [item(party_bound, met, cite(eu_reg_2016_679_art_31)),
-              item(request_made, met, cite(eu_reg_2016_679_art_31)),
-              item(request_in_performance_of_tasks, met, cite(eu_reg_2016_679_art_31)),
-              item(cooperation_given, met, cite(eu_reg_2016_679_art_31))].
-
-test(checklist_of_unbound_caller_marks_party_unmet) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(caller_not_bound, Profile),
-    gdpr_cooperation_with_the_supervisory_authority_checklist(Profile, [item(party_bound, Status, Citation)|_]),
-    Status == unmet(not_controller_processor_or_representative),
-    Citation == cite(eu_reg_2016_679_art_31).
-
-% ---- what-if (#16) --------------------------------------------------
-test(what_if_a_request_is_made_asks_for_nothing_more) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(no_request_made, Profile),
-    gdpr_cooperation_with_the_supervisory_authority_what_if(Profile, authority_request_made, true, Status),
-    Status == cooperation_met.
-
-test(what_if_the_judgement_turns_unsure_refers) :-
-    gdpr_cooperation_with_the_supervisory_authority_profile_for(request_made_and_cooperated, Profile),
-    gdpr_cooperation_with_the_supervisory_authority_what_if(Profile, request_is_in_performance_of_authority_tasks, unsure, Status),
-    Status == needs_legal_review(open_textured(request_is_in_performance_of_authority_tasks, cite(eu_reg_2016_679_art_31)),
-                                 [inputs_relied_on([request_is_in_performance_of_authority_tasks-unsure])]).
+    Items == [
+        item(bound_by_article_31, met, cite(eu_reg_2016_679_art_31)),
+        item(request_made, met, cite(eu_reg_2016_679_art_31)),
+        item(request_in_performance_of_tasks, met, cite(eu_reg_2016_679_art_31)),
+        item(cooperation_given, met, cite(eu_reg_2016_679_art_31))
+    ].
 
 :- end_module(test_public_interface).

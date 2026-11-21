@@ -1,0 +1,119 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative requests for eu/cra_administrative_fines.
+% A TOP-LAYER consumer: it imports the one slice predicate it calls.
+%
+% A request is infringement(Profile, InfringementDate): Profile an ATTRIBUTE
+% LIST [attribute(Key, Value), ...] (the order's typed input contract) and
+% InfringementDate a date(Y, M, D) term (the query's argument).
+%
+% Every route of THE LIMBS (F0 to F7) has a positive subject and a near-miss
+% control one unit away (named beside it below):
+%   - the date of application, 11 December 2027 (Art 71(2)): the day before
+%     and the day itself, also for an earlier-applying Chapter IV obligation;
+%   - the tier ties (Art 64(2) to (4), reading (6)): highest tier 600000000
+%     euros (2,5 % = 1500000000 cents), one euro below and one and two euros
+%     above (the half cent of an odd turnover dropped); middle and lowest
+%     tiers at 500000000 euros and one euro above;
+%   - the steward derogation (Art 64(10)(b)) in each tier, the highest tier
+%     never reading it (reading (7));
+%   - each missing key and each referral;
+%   - the input check: 29 February 2028 valid and 29 February 2027 invalid,
+%     a float and a negative turnover, a duplicate key, an unknown key, a
+%     provision outside the closed list, a profile and date of no type.
+% The expected answer of each subject is asserted in
+% tests/test_public_interface.clausal.
+% =====================================================================
+
+:- module(fixtures, [
+    cra_administrative_fines_subject/1,
+    cra_administrative_fines_profile_for/2,
+    cra_administrative_fines_assess/2
+]).
+
+:- use_module(eu/cra_administrative_fines/cra_administrative_fines, [decide_cra_administrative_fines/2]).
+
+% ---- fixture_request(Subject, Profile, InfringementDate) ---------------
+
+% (F1) the date of application; control: the application day itself.
+fixture_request(day_before_application_highest_tier, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, false)], date(2027, 12, 10)).
+fixture_request(application_day_highest_tier, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, false)], date(2027, 12, 11)).
+fixture_request(earlier_obligation_date_middle_tier, [attribute(infringed_provision, article_39), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, false)], date(2026, 7, 1)).
+fixture_request(application_day_middle_tier, [attribute(infringed_provision, article_39), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, false)], date(2027, 12, 11)).
+
+% (F2) the provision missing; control: unlisted_provision (present).
+fixture_request(provision_absent, [], date(2028, 1, 1)).
+
+% (F3) a provision Art 64 does not list; control: a listed middle-tier one.
+fixture_request(unlisted_provision, [attribute(infringed_provision, other_provision)], date(2028, 1, 1)).
+fixture_request(listed_provision_middle_tier, [attribute(infringed_provision, article_53), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, false)], date(2028, 1, 1)).
+
+% (F4) the steward derogation; controls: steward false, and the highest tier.
+fixture_request(steward_middle_tier, [attribute(infringed_provision, article_28), attribute(offender_is_open_source_software_steward, true)], date(2028, 1, 1)).
+fixture_request(non_steward_middle_tier, [attribute(infringed_provision, article_28), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, false)], date(2028, 1, 1)).
+fixture_request(steward_lowest_tier, [attribute(infringed_provision, incorrect_incomplete_or_misleading_information_in_reply_to_request), attribute(offender_is_open_source_software_steward, true)], date(2028, 1, 1)).
+fixture_request(non_steward_lowest_tier, [attribute(infringed_provision, incorrect_incomplete_or_misleading_information_in_reply_to_request), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, false)], date(2028, 1, 1)).
+fixture_request(steward_highest_tier_not_read, [attribute(infringed_provision, article_13), attribute(offender_is_open_source_software_steward, true), attribute(offender_is_undertaking, false)], date(2028, 1, 1)).
+fixture_request(steward_absent_middle_tier, [attribute(infringed_provision, article_18), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 1)], date(2028, 1, 1)).
+fixture_request(steward_absent_highest_tier, [attribute(infringed_provision, article_13), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 1)], date(2028, 1, 1)).
+
+% (F5) the undertaking judgement and the turnover behind it.
+fixture_request(undertaking_absent_middle_tier, [attribute(infringed_provision, article_18), attribute(offender_is_open_source_software_steward, false)], date(2028, 1, 1)).
+fixture_request(turnover_absent_undertaking, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true)], date(2028, 1, 1)).
+fixture_request(turnover_absent_unsure_undertaking, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, unsure)], date(2028, 1, 1)).
+fixture_request(turnover_absent_non_undertaking, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, false)], date(2028, 1, 1)).
+
+% (F6) referrals.
+fixture_request(unsure_steward_referral, [attribute(infringed_provision, article_47), attribute(offender_is_open_source_software_steward, unsure), attribute(offender_is_undertaking, false)], date(2028, 1, 1)).
+fixture_request(unsure_steward_and_undertaking_referral, [attribute(infringed_provision, article_47), attribute(offender_is_open_source_software_steward, unsure), attribute(offender_is_undertaking, unsure), attribute(total_worldwide_annual_turnover_in_euros, 100)], date(2028, 1, 1)).
+fixture_request(unsure_undertaking_highest_tier, [attribute(infringed_provision, annex_i_essential_cybersecurity_requirements), attribute(offender_is_open_source_software_steward, unsure), attribute(offender_is_undertaking, unsure), attribute(total_worldwide_annual_turnover_in_euros, 5)], date(2028, 1, 1)).
+fixture_request(unsure_undertaking_middle_tier, [attribute(infringed_provision, article_19), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, unsure), attribute(total_worldwide_annual_turnover_in_euros, 5)], date(2028, 1, 1)).
+fixture_request(unsure_undertaking_lowest_tier, [attribute(infringed_provision, incorrect_incomplete_or_misleading_information_in_reply_to_request), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, unsure), attribute(total_worldwide_annual_turnover_in_euros, 0)], date(2028, 1, 1)).
+
+% (F7) the maximum: the tier ties and their one-euro neighbours.
+fixture_request(highest_tier_one_euro_below_tie, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 599999999)], date(2028, 1, 1)).
+fixture_request(highest_tier_tie, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000000)], date(2028, 1, 1)).
+fixture_request(highest_tier_one_euro_above_tie, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000001)], date(2028, 1, 1)).
+fixture_request(highest_tier_two_euros_above_tie, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000002)], date(2028, 1, 1)).
+fixture_request(middle_tier_tie, [attribute(infringed_provision, article_21), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 500000000)], date(2028, 1, 1)).
+fixture_request(middle_tier_one_euro_above_tie, [attribute(infringed_provision, article_21), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 500000001)], date(2028, 1, 1)).
+fixture_request(lowest_tier_tie, [attribute(infringed_provision, incorrect_incomplete_or_misleading_information_in_reply_to_request), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 500000000)], date(2028, 1, 1)).
+fixture_request(lowest_tier_one_euro_above_tie, [attribute(infringed_provision, incorrect_incomplete_or_misleading_information_in_reply_to_request), attribute(offender_is_open_source_software_steward, false), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 500000001)], date(2028, 1, 1)).
+
+% (F0) input problems, each beside a well-formed control above.
+fixture_request(leap_day_2028, [attribute(infringed_provision, other_provision)], date(2028, 2, 29)).
+fixture_request(non_leap_day_2027, [attribute(infringed_provision, other_provision)], date(2027, 2, 29)).
+% The float turnover is built from the integer, so no float literal is written.
+fixture_request(float_turnover, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, FloatTurnover)], date(2028, 1, 1)) :-
+    FloatTurnover is float(600000000).
+fixture_request(negative_turnover, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, -1)], date(2028, 1, 1)).
+fixture_request(duplicate_undertaking_key, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, true), attribute(offender_is_undertaking, true), attribute(total_worldwide_annual_turnover_in_euros, 600000000)], date(2028, 1, 1)).
+fixture_request(unknown_profile_key, [attribute(infringed_provision, article_14), attribute(offender_is_undertaking, false), attribute(colour, red)], date(2028, 1, 1)).
+fixture_request(provision_outside_closed_list, [attribute(infringed_provision, article_99)], date(2028, 1, 1)).
+fixture_request(not_a_profile_nor_a_date, colour, tomorrow).
+
+% ---- Subject registry ------------------------------------------------
+cra_administrative_fines_subject(Subject) :-
+    fixture_request(Subject, _, _).
+
+% ---- Requests --------------------------------------------------------
+% The facade's request term for each subject.
+cra_administrative_fines_profile_for(Subject, infringement(Profile, InfringementDate)) :-
+    fixture_request(Subject, Profile, InfringementDate).
+
+% ---- Convenience wrapper ---------------------------------------------
+cra_administrative_fines_assess(Subject, Result) :-
+    cra_administrative_fines_profile_for(Subject, Request),
+    decide_cra_administrative_fines(Request, Result).
+
+% ---- tests ------------------------------------------------------------
+test(each_subject_is_registered_once) :-
+    findall(Subject, cra_administrative_fines_subject(Subject), Subjects),
+    length(Subjects, Count),
+    sort(Subjects, DistinctSubjects),
+    length(DistinctSubjects, Count).
+test(each_subject_has_one_request) :-
+    findall(Request, cra_administrative_fines_profile_for(highest_tier_tie, Request), Requests),
+    length(Requests, 1).
+
+:- end_module(fixtures).

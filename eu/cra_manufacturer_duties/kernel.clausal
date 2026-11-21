@@ -1,0 +1,396 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/cra_manufacturer_duties (temporal family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% Exception: the scaffold writes the order's input check
+% cra_manufacturer_duties_input_problems/2 here, exported, for every slice to import.
+%
+% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), pinned original OJ
+% text 32024R2847 (OJ L, 2024/2847, 20.11.2024): Art 71(2) (dates of
+% application), Art 69(2) and (3) (products placed on the market before
+% 11 December 2027), Art 13(8), (9), (13), (18) (support period floor and the
+% periods of availability). The kernel itself decides no statutory condition:
+% it holds the typed input check and the calendar plumbing (real calendar day,
+% date order by year, month, day; the later of two dates) that the slice
+% cra_manufacturer_duties.clausal, queries.clausal and fixtures.clausal call.
+%
+% Atoms and data terms need NO declaration and NO import. The block below only
+% RECORDS the result terms so every file spells them alike.
+%
+% Result term of the one determination slice (cra_manufacturer_duties.clausal):
+%   cra_manufacturer_duties_verdict(VERDICT, CITATIONS)
+%     VERDICT   -- one of
+%       requirements_applicability/4: subject_to_requirements | article_14_only
+%                                     | not_yet_applicable
+%       support_period_minimum/4:     minimum_support_period(MONTHS), MONTHS a bare
+%                                     non-negative integer | not_yet_applicable
+%       retention_end_date/5:         keep_until(date(Y, M, D)), bare integers
+%                                     | not_applicable_outside_support_period
+%                                     | not_yet_applicable
+%       status compounds (never bare): indeterminate([KEY]) (exactly one key),
+%         needs_legal_review(open_textured(KEY, cite(CITATION)),
+%                            [inputs_relied_on([KEY-VALUE, ...])]) (query A only),
+%         input_problems(PROBLEMS), PROBLEMS a list of duplicate_key(KEY),
+%         wrong_type(KEY) and unknown_key(KEY).
+%     CITATIONS -- a list of cite(KEY) terms, KEY from the canonical lexicon
+%       (eu_reg_2024_2847_art_71_2, _art_69_2, _art_69_3, _art_13_8, _art_13_9,
+%        _art_13_13, _art_13_18); [] for every status compound.
+% Checklist rows: item(STEP_ID, STATUS, cite(KEY)), STATUS met | unmet(REASON)
+% | unknown([KEY]).
+%
+% Shared predicates (each called by two or more files):
+%   real_calendar_day/1  -- a ground date(Y, M, D) naming a real Gregorian day;
+%   date_earlier/2       -- strictly earlier, compared year, month, day;
+%   date_not_earlier/2   -- the complement of date_earlier/2;
+%   date_later_of/3      -- the later of two dates (the same date when equal).
+% Dates are compared by integers, never by @< on the compound (a compound
+% named date may order its arguments as strings).
+% =====================================================================
+
+:- module(kernel, [
+    cra_manufacturer_duties_input_problems/2,
+    real_calendar_day/1,
+    date_earlier/2,
+    date_not_earlier/2,
+    date_later_of/3
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% cra_manufacturer_duties_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+cra_manufacturer_duties_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [placing_on_market_date, substantially_modified_on_or_after_application_date, expected_use_time_in_months, security_update_issue_date, support_period_end_date],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(placing_on_market_date, date).
+key_type(substantially_modified_on_or_after_application_date, judgement).
+key_type(expected_use_time_in_months, non_negative_integer).
+key_type(security_update_issue_date, date).
+key_type(support_period_end_date, date).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(date, Value, T) :-
+    calendar_date_t(Value, T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(non_negative_integer, Value, T) :-
+    non_negative_integer_t(Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer and false when it is a
+% float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% calendar_date_t(Value, T): T is true when Value is date(Year, Month, DayNumber), three
+% integers that name a real day of the Gregorian calendar.
+calendar_date_t(date(Year, Month, DayNumber), T) :-
+    integer_t(Year, YearIsInteger),
+    integer_t(Month, MonthIsInteger),
+    integer_t(DayNumber, DayNumberIsInteger),
+    truth_and(YearIsInteger, MonthIsInteger, YearAndMonthAreIntegers),
+    truth_and(YearAndMonthAreIntegers, DayNumberIsInteger, AllAreIntegers),
+    calendar_day_t(AllAreIntegers, Year, Month, DayNumber, T).
+calendar_date_t(Value, false) :-
+    Value \= date(_, _, _).
+
+calendar_day_t(false, _, _, _, false).
+calendar_day_t(true, Year, Month, DayNumber, T) :-
+    between_t(1, 12, Month, IsMonth),
+    day_of_month_t(IsMonth, Year, Month, DayNumber, T).
+
+day_of_month_t(false, _, _, _, false).
+day_of_month_t(true, Year, Month, DayNumber, T) :-
+    month_length(Year, Month, Length),
+    between_t(1, Length, DayNumber, T).
+
+between_t(Lowest, Highest, Number, true) :-
+    Number >= Lowest,
+    Number =< Highest.
+between_t(Lowest, _, Number, false) :-
+    Number < Lowest.
+between_t(_, Highest, Number, false) :-
+    Number > Highest.
+
+month_length(_, 1, 31).
+month_length(Year, 2, Length) :-
+    leap_year_t(Year, IsLeapYear),
+    february_length(IsLeapYear, Length).
+month_length(_, 3, 31).
+month_length(_, 4, 30).
+month_length(_, 5, 31).
+month_length(_, 6, 30).
+month_length(_, 7, 31).
+month_length(_, 8, 31).
+month_length(_, 9, 30).
+month_length(_, 10, 31).
+month_length(_, 11, 30).
+month_length(_, 12, 31).
+
+february_length(true, 29).
+february_length(false, 28).
+
+% The remainders are computed first and compared one at a time.
+leap_year_t(Year, IsLeapYear) :-
+    FourYearRemainder is Year mod 4,
+    CenturyRemainder is Year mod 100,
+    FourCenturyRemainder is Year mod 400,
+    gregorian_leap_year_t(FourYearRemainder, CenturyRemainder, FourCenturyRemainder,
+                          IsLeapYear).
+
+gregorian_leap_year_t(_, _, 0, true).
+gregorian_leap_year_t(0, CenturyRemainder, _, true) :-
+    CenturyRemainder =\= 0.
+gregorian_leap_year_t(_, 0, FourCenturyRemainder, false) :-
+    FourCenturyRemainder =\= 0.
+gregorian_leap_year_t(FourYearRemainder, _, _, false) :-
+    FourYearRemainder =\= 0.
+
+% non_negative_integer_t(Value, T): for a ground Value, T is true when it is an integer of 0 or
+% more.
+non_negative_integer_t(Value, T) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, T).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+% ---- shared calendar plumbing ------------------------------------
+% real_calendar_day(Value): Value is a ground date(Year, Month, DayNumber) of three
+% integers naming a real Gregorian day. It fails, and never raises, for anything
+% else (an unbound or partly unbound term included). Used for the ASSESSMENT_DATE
+% argument check of every query and by queries.clausal and fixtures.clausal.
+real_calendar_day(Value) :-
+    ground(Value),
+    calendar_date_t(Value, true).
+
+% date_earlier(FirstDate, SecondDate): FirstDate is strictly earlier than SecondDate,
+% compared by year, then month, then day (THE LIMBS). Three disjoint clauses; both
+% dates are real calendar days (checked before any query step reads them).
+date_earlier(date(FirstYear, _, _), date(SecondYear, _, _)) :-
+    FirstYear < SecondYear.
+date_earlier(date(FirstYear, FirstMonth, _), date(SecondYear, SecondMonth, _)) :-
+    FirstYear =:= SecondYear,
+    FirstMonth < SecondMonth.
+date_earlier(date(FirstYear, FirstMonth, FirstDay), date(SecondYear, SecondMonth, SecondDay)) :-
+    FirstYear =:= SecondYear,
+    FirstMonth =:= SecondMonth,
+    FirstDay < SecondDay.
+
+% date_not_earlier(FirstDate, SecondDate): the complement of date_earlier/2 (FirstDate
+% is the same day as, or later than, SecondDate). Three disjoint clauses.
+date_not_earlier(date(FirstYear, _, _), date(SecondYear, _, _)) :-
+    FirstYear > SecondYear.
+date_not_earlier(date(FirstYear, FirstMonth, _), date(SecondYear, SecondMonth, _)) :-
+    FirstYear =:= SecondYear,
+    FirstMonth > SecondMonth.
+date_not_earlier(date(FirstYear, FirstMonth, FirstDay), date(SecondYear, SecondMonth, SecondDay)) :-
+    FirstYear =:= SecondYear,
+    FirstMonth =:= SecondMonth,
+    FirstDay >= SecondDay.
+
+% date_later_of(FirstDate, SecondDate, LaterDate): the later of the two dates; equal
+% dates give that date once. Two complementary clauses.
+date_later_of(FirstDate, SecondDate, SecondDate) :-
+    date_earlier(FirstDate, SecondDate).
+date_later_of(FirstDate, SecondDate, FirstDate) :-
+    date_not_earlier(FirstDate, SecondDate).
+
+% ---- tests ---------------------------------------------------------
+test(a_leap_day_is_a_real_calendar_day) :-
+    real_calendar_day(date(2028, 2, 29)).
+test(a_leap_day_outside_a_leap_year_is_not_a_real_day, fail) :-
+    real_calendar_day(date(2027, 2, 29)).
+test(a_partly_unbound_date_is_not_a_real_day, fail) :-
+    real_calendar_day(date(2027, _, 1)).
+test(an_atom_is_not_a_real_day, fail) :-
+    real_calendar_day(tomorrow).
+test(day_two_is_earlier_than_day_fifteen) :-
+    date_earlier(date(2027, 12, 2), date(2027, 12, 15)).
+test(day_fifteen_is_not_earlier_than_day_two, fail) :-
+    date_earlier(date(2027, 12, 15), date(2027, 12, 2)).
+test(the_same_day_is_not_earlier, fail) :-
+    date_earlier(date(2027, 12, 11), date(2027, 12, 11)).
+test(the_same_day_is_not_earlier_holds) :-
+    date_not_earlier(date(2027, 12, 11), date(2027, 12, 11)).
+test(an_earlier_year_wins_over_a_later_month) :-
+    date_earlier(date(2026, 12, 31), date(2027, 1, 1)).
+test(the_later_date_is_given) :-
+    findall(LaterDate, date_later_of(date(2038, 2, 1), date(2040, 6, 30), LaterDate), LaterDates),
+    LaterDates == [date(2040, 6, 30)].
+test(equal_dates_give_one_answer) :-
+    findall(LaterDate, date_later_of(date(2038, 2, 1), date(2038, 2, 1), LaterDate), LaterDates),
+    LaterDates == [date(2038, 2, 1)].
+test(a_well_formed_profile_has_no_problem) :-
+    cra_manufacturer_duties_input_problems([attribute(placing_on_market_date, date(2028, 1, 10)), attribute(substantially_modified_on_or_after_application_date, unsure)], []).
+test(a_duplicate_key_comes_before_an_unknown_key) :-
+    cra_manufacturer_duties_input_problems([attribute(placing_on_market_date, date(2028, 1, 10)), attribute(placing_on_market_date, nonsense), attribute(colour, red)], Problems),
+    Problems == [duplicate_key(placing_on_market_date), unknown_key(colour)].
+test(a_negative_month_count_is_wrong_type) :-
+    cra_manufacturer_duties_input_problems([attribute(expected_use_time_in_months, -1)], Problems),
+    Problems == [wrong_type(expected_use_time_in_months)].
+test(an_atom_is_not_an_attribute_list) :-
+    cra_manufacturer_duties_input_problems(nonsense, Problems),
+    Problems == [wrong_type(profile)].
+
+:- end_module(kernel).

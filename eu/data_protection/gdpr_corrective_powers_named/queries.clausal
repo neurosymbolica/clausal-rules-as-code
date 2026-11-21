@@ -1,0 +1,169 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_corrective_powers_named.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2016/679 (GDPR), Article 58(2), the chapeau and
+% points (a) to (j), pinned unit text of 02016R0679-20160504.
+%
+% Query types this domain serves, and where each is answered:
+%   #1 factual_lookup  corrective_power_named/4 (slice): does the text of
+%                      Article 58(2) name one given power for the stated
+%                      situation, and against whom.
+%   #4 enumeration     corrective_powers_named/3 (slice): every power the
+%                      text names, in the order of the points (a) to (j).
+%   #7 justification   gdpr_corrective_powers_named_checklist/2 (slice): one
+%                      item per point, each carrying its cite(...).
+%   #16 what-if        gdpr_corrective_powers_named_what_if/4 (here).
+%
+% The open-textured judgements (infringement, non-compliance, a ground
+% under Articles 16 to 18, the certification requirements) are handed to
+% the user: unsure refers to a lawyer; no crisp test is invented.
+%
+% gdpr_corrective_powers_named_what_if/4: override one key, re-evaluate
+% gdpr_corrective_powers_named_profile_keys/1: top-level profile key schema
+% gdpr_corrective_powers_named_input_problems/2: the problems a profile has ([] = none)
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the kit's
+% override_key/4 (dict-based) does not apply; the override below is list
+% plumbing over attribute(Key, Value) items and decides nothing statutory.
+%
+% The order's vocabulary atoms and result constructors are exported here
+% (the order lists them in its public interface); they are data, never
+% called as queries, and decide nothing statutory. A result constructor
+% whose arguments are all free is data with no clauses: its fields are
+% named in the constructors declaration below.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_corrective_powers_named_profile_keys/1,
+    gdpr_corrective_powers_named_input_problems/2,
+    gdpr_corrective_powers_named_what_if/4,
+    not_named/0,
+    authority_discretion/0,
+    warning/0,
+    reprimand/0,
+    order_to_comply_with_data_subject_requests/0,
+    order_to_bring_processing_into_compliance/0,
+    order_to_communicate_personal_data_breach/0,
+    limitation_or_ban_on_processing/0,
+    order_of_rectification_erasure_or_restriction/0,
+    withdrawal_or_refusal_of_certification/0,
+    administrative_fine/0,
+    suspension_of_data_flows/0,
+    controller/0,
+    processor/0,
+    certification_body/0,
+    powers_named/2,
+    power/2,
+    named/2,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- constructors([power(measure, addressees), indeterminate(missing_keys), needs_legal_review(reason, context), inputs_relied_on(pairs), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+:- use_module(eu/data_protection/gdpr_corrective_powers_named/kernel, [gdpr_corrective_powers_named_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_corrective_powers_named/gdpr_corrective_powers_named, [gdpr_corrective_powers_named_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_corrective_powers_named_profile_keys([intended_processing_likely_to_infringe, processing_has_infringed, data_subject_request_to_exercise_rights_made, processing_not_in_compliance, personal_data_breach_occurred, rectification_erasure_or_restriction_ground_met, certification_issued_or_applied_for, certification_requirements_not_met, data_flows_to_third_country_or_international_organisation]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% The ORIGINAL profile is checked first: a malformed profile gives its own
+% input problems. Otherwise the key is set (replacing its one value, or
+% added when absent) and the RESULT of corrective_powers_named/3 on the
+% hypothesis is returned; its input check catches a bad key or value.
+% Exactly one solution: the two clauses are complementary on the check.
+gdpr_corrective_powers_named_what_if(Profile, _OverriddenKey, _NewValue, input_problems([Problem|Problems])) :-
+    gdpr_corrective_powers_named_input_problems(Profile, [Problem|Problems]).
+gdpr_corrective_powers_named_what_if(Profile, OverriddenKey, NewValue, NewResult) :-
+    gdpr_corrective_powers_named_input_problems(Profile, []),
+    attribute_overridden(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_corrective_powers_named_status(Hypothesis, NewResult).
+
+% attribute_overridden(Attributes, Key, Value, Hypothesis): Attributes with
+% Key set to Value. Called only on a checked profile, where a contract key
+% occurs at most once. Keys compare by identity (==), never by unification.
+attribute_overridden([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+attribute_overridden([attribute(AttributeKey, AttributeValue)|Attributes], OverriddenKey, NewValue, [attribute(AttributeKey, AttributeValue)|Hypothesis]) :-
+    AttributeKey \== OverriddenKey,
+    attribute_overridden(Attributes, OverriddenKey, NewValue, Hypothesis).
+attribute_overridden([attribute(AttributeKey, _)|Attributes], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|Attributes]) :-
+    AttributeKey == OverriddenKey.
+
+% ---- vocabulary atoms (exported; data, never queries) ----------------------
+% The result atoms, the ten measure atoms (points (a) to (j)) and the three
+% addressee atoms, as the order's public interface lists them.
+not_named.
+authority_discretion.
+warning.
+reprimand.
+order_to_comply_with_data_subject_requests.
+order_to_bring_processing_into_compliance.
+order_to_communicate_personal_data_breach.
+limitation_or_ban_on_processing.
+order_of_rectification_erasure_or_restriction.
+withdrawal_or_refusal_of_certification.
+administrative_fine.
+suspension_of_data_flows.
+controller.
+processor.
+certification_body.
+
+% ---- result constructors (exported; never called as queries) ---------------
+% The two whose second argument is pinned to authority_discretion keep a
+% clause; the others are data with no clauses (constructors declaration).
+powers_named(_Powers, authority_discretion).
+named(_Addressees, authority_discretion).
+
+% ---- tests ---------------------------------------------------------------
+test(override_replaces_a_present_value) :-
+    attribute_overridden([attribute(processing_has_infringed, false)], processing_has_infringed, true, Hypothesis),
+    Hypothesis == [attribute(processing_has_infringed, true)].
+
+test(override_adds_an_absent_key) :-
+    attribute_overridden([attribute(processing_has_infringed, false)], personal_data_breach_occurred, true, Hypothesis),
+    Hypothesis == [attribute(processing_has_infringed, false), attribute(personal_data_breach_occurred, true)].
+
+test(what_if_adds_the_missing_key) :-
+    findall(Result, gdpr_corrective_powers_named_what_if([], intended_processing_likely_to_infringe, true, Result), Results),
+    Results == [indeterminate([processing_has_infringed])].
+
+test(what_if_on_a_malformed_profile_reports_its_problems) :-
+    findall(Result, gdpr_corrective_powers_named_what_if([foo], processing_has_infringed, true, Result), Results),
+    Results == [input_problems([wrong_type(profile)])].
+
+test(what_if_with_a_bad_value_reports_it) :-
+    findall(Result, gdpr_corrective_powers_named_what_if([], personal_data_breach_occurred, unsure, Result), Results),
+    Results == [input_problems([wrong_type(personal_data_breach_occurred)])].
+
+test(what_if_with_an_unknown_key_reports_it) :-
+    findall(Result, gdpr_corrective_powers_named_what_if([], fine_amount, true, Result), Results),
+    Results == [input_problems([unknown_key(fine_amount)])].
+
+test(profile_keys_are_the_nine_contract_keys) :-
+    gdpr_corrective_powers_named_profile_keys(ProfileKeys),
+    length(ProfileKeys, 9).
+
+test(vocabulary_atoms_are_defined) :-
+    not_named,
+    authority_discretion,
+    warning,
+    suspension_of_data_flows,
+    certification_body.
+
+test(named_constructor_carries_authority_discretion) :-
+    named([controller], authority_discretion).
+
+test(named_constructor_refuses_another_second_argument, fail) :-
+    named([controller], must_use).
+
+:- end_module(queries).

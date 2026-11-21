@@ -1,0 +1,154 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% condition changed -> a different verdict), proving the route is
+% LOAD-BEARING. Each pair has three tests: the positive verdict, the
+% control NOT giving it (`fail`), and the control's own verdict (so a
+% misspelt atom in the `fail` test shows up as a failing positive test).
+% Run: python -m clausal.testing eu/dma_art_5_2_data_combination_order/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dma_art_5_2_data_combination_order/kernel, [dma_art_5_2_data_combination_order_input_problems/2]).
+:- use_module(eu/dma_art_5_2_data_combination_order/dma_art_5_2_data_combination_order, [
+    article_5_application_status/4,
+    consent_request_repetition_status/6,
+    dma_art_5_2_data_combination_order_status/2,
+    dma_art_5_2_data_combination_order_status_values/1
+]).
+:- use_module(eu/dma_art_5_2_data_combination_order/fixtures, [dma_art_5_2_data_combination_order_profile_for/2]).
+
+subject_status(Subject, Status) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    dma_art_5_2_data_combination_order_status(Profile, Status).
+
+repetition_result(Subject, RequestDate, Result) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    consent_request_repetition_status(Profile, date(2025, 3, 10), RequestDate, Result, _, _).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    dma_art_5_2_data_combination_order_status_values(StatusValues),
+    StatusValues = [_, _|_].
+
+test(the_near_miss_atoms_are_table_atoms) :-
+    dma_art_5_2_data_combination_order_status_values(StatusValues),
+    member(practice_allowed_with_consent, StatusValues),
+    member(practice_allowed_on_other_legal_basis, StatusValues),
+    member(practice_prohibited, StatusValues),
+    member(practice_outside_article_5_2, StatusValues),
+    member(article_5_obligations_do_not_apply, StatusValues).
+
+% ---- step 6: choice and consent allow -----------------------------------
+test(consent_route_positive) :-
+    subject_status(listed_combining_with_consent, practice_allowed_with_consent).
+test(consent_route_near_miss_is_not_allowed, fail) :-
+    subject_status(listed_combining_consent_refused_control, practice_allowed_with_consent).
+test(consent_route_near_miss_is_prohibited) :-
+    subject_status(listed_combining_consent_refused_control, practice_prohibited).
+
+% ---- step 7: the Article 6(1)(c), (d), (e) basis ------------------------
+test(other_basis_route_positive) :-
+    subject_status(listed_cross_use_no_choice_legal_obligation, practice_allowed_on_other_legal_basis).
+test(other_basis_route_near_miss_is_not_allowed, fail) :-
+    subject_status(listed_cross_use_no_choice_no_basis_control, practice_allowed_on_other_legal_basis).
+test(other_basis_route_near_miss_is_prohibited) :-
+    subject_status(listed_cross_use_no_choice_no_basis_control, practice_prohibited).
+
+% ---- step 8: prohibited ------------------------------------------------
+test(prohibited_route_positive) :-
+    subject_status(listed_sign_in_consent_refused_no_basis, practice_prohibited).
+test(prohibited_route_near_miss_is_not_prohibited, fail) :-
+    subject_status(listed_sign_in_consent_given_control, practice_prohibited).
+test(prohibited_route_near_miss_is_allowed_with_consent) :-
+    subject_status(listed_sign_in_consent_given_control, practice_allowed_with_consent).
+
+% ---- step 5: none of the four practices ---------------------------------
+test(outside_route_positive) :-
+    subject_status(listed_none_of_the_four, practice_outside_article_5_2).
+test(outside_route_near_miss_is_not_outside, fail) :-
+    subject_status(listed_advertising_with_consent_control, practice_outside_article_5_2).
+test(outside_route_near_miss_is_allowed_with_consent) :-
+    subject_status(listed_advertising_with_consent_control, practice_allowed_with_consent).
+
+% ---- step 4: the service is not listed ----------------------------------
+test(not_listed_route_positive) :-
+    subject_status(not_listed_everything_unsure, article_5_obligations_do_not_apply).
+test(not_listed_route_near_miss_applies, fail) :-
+    subject_status(listed_everything_unsure_control, article_5_obligations_do_not_apply).
+test(not_listed_route_near_miss_goes_to_a_lawyer) :-
+    subject_status(listed_everything_unsure_control,
+                   needs_legal_review(open_textured(practice_under_article_5_2, cite(eu_reg_2022_1925_art_5_2)), _)).
+
+% ---- step 10: the choice is named --------------------------------------
+test(choice_named_route_positive) :-
+    subject_status(choice_missing, indeterminate([end_user_presented_with_specific_choice])).
+test(choice_named_route_near_miss_does_not_name_it, fail) :-
+    subject_status(choice_missing_consent_refused_basis_true, indeterminate([end_user_presented_with_specific_choice])).
+test(choice_named_route_near_miss_is_allowed_on_other_basis) :-
+    subject_status(choice_missing_consent_refused_basis_true, practice_allowed_on_other_legal_basis).
+
+% ---- step 12: consent referred -----------------------------------------
+test(consent_referral_route_positive) :-
+    subject_status(consent_absent,
+                   needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_2), cite(digital_markets_end_user_consent_statement)), _)).
+test(consent_referral_route_near_miss_is_not_referred, fail) :-
+    subject_status(consent_absent_choice_false_control, needs_legal_review(_, _)).
+test(consent_referral_route_near_miss_is_prohibited) :-
+    subject_status(consent_absent_choice_false_control, practice_prohibited).
+
+% ---- step 13: the other basis referred ---------------------------------
+test(basis_referral_route_positive) :-
+    subject_status(basis_absent,
+                   needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_2), cite(digital_markets_article_6_1_c_d_e_basis_statement)), _)).
+test(basis_referral_route_near_miss_is_not_referred, fail) :-
+    subject_status(basis_given_control, needs_legal_review(_, _)).
+test(basis_referral_route_near_miss_is_allowed_on_other_basis) :-
+    subject_status(basis_given_control, practice_allowed_on_other_legal_basis).
+
+% ---- Art 5(1): article_5_application_status/4 ---------------------------
+test(application_route_positive) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_listed_not_yet_repeated, Profile),
+    article_5_application_status(Profile, article_5_obligations_apply, _, _).
+test(application_route_near_miss_does_not_apply, fail) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_not_listed, Profile),
+    article_5_application_status(Profile, article_5_obligations_apply, _, _).
+test(application_route_near_miss_is_do_not_apply) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_not_listed, Profile),
+    article_5_application_status(Profile, article_5_obligations_do_not_apply, _, _).
+
+% ---- step 19 / 17: the anniversary ends the period ----------------------
+test(within_period_route_positive) :-
+    repetition_result(repeat_listed_not_yet_repeated, date(2026, 3, 9), repeated_request_permitted).
+test(within_period_route_near_miss_is_not_permitted, fail) :-
+    repetition_result(repeat_listed_not_yet_repeated, date(2026, 3, 10), repeated_request_permitted).
+test(within_period_route_near_miss_is_after_the_period) :-
+    repetition_result(repeat_listed_not_yet_repeated, date(2026, 3, 10), request_after_one_year_period).
+
+% ---- step 18 / 19: one repeated request only ----------------------------
+test(limit_route_positive) :-
+    repetition_result(repeat_listed_already_repeated, date(2025, 9, 1), repeated_request_not_permitted).
+test(limit_route_near_miss_is_not_refused, fail) :-
+    repetition_result(repeat_listed_not_yet_repeated, date(2025, 9, 1), repeated_request_not_permitted).
+test(limit_route_near_miss_is_permitted) :-
+    repetition_result(repeat_listed_not_yet_repeated, date(2025, 9, 1), repeated_request_permitted).
+
+% ---- step 16: not listed, for the repeated request ---------------------
+test(repetition_not_listed_positive) :-
+    repetition_result(repeat_not_listed, date(2025, 9, 1), article_5_obligations_do_not_apply).
+test(repetition_not_listed_near_miss_applies, fail) :-
+    repetition_result(repeat_listed_not_yet_repeated, date(2025, 9, 1), article_5_obligations_do_not_apply).
+
+% ---- step 0: the input check -------------------------------------------
+test(input_route_positive) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(practice_under_article_5_2, combining_personal_data)], Problems),
+    Problems == [].
+test(input_route_near_miss_has_problems, fail) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(practice_under_article_5_2, combining_personal_data),
+                                                       attribute(practice_under_article_5_2, combining_personal_data)],
+                                                      []).
+test(input_route_near_miss_is_a_duplicate) :-
+    dma_art_5_2_data_combination_order_input_problems([attribute(practice_under_article_5_2, combining_personal_data),
+                                                       attribute(practice_under_article_5_2, combining_personal_data)],
+                                                      [duplicate_key(practice_under_article_5_2)]).
+
+:- end_module(test_negative_controls).

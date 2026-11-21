@@ -3,11 +3,7 @@ id: eu/data_protection/gdpr_chapter_v_extras
 shape_family: deontic
 kit_version: "0.1.0"
 # The domain's .clausal file set, in import-DAG order (determination slices
-# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
-# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
-# (per-phase file lists) and auto/gates.py (atom hints) all read it from
-# here. Keep it exact -- a module you drop from this list stops being
-# re-exported by the generated package facade (__init__.clausal).
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
 modules:
   - "kernel"
   - "citations"
@@ -15,17 +11,17 @@ modules:
   - "gdpr_chapter_v_extras"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES only (atoms need no export), grouped
-# per submodule -- keep in sync with the :- module(...) export lists re-exported
-# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade.
+# The result constructors and DUTY argument atoms are listed because the
+# order names them as part of the public interface (queries.clausal records
+# them as constructor facts).
 public_interface:
   # -- kernel.clausal --
+  # (gdpr_chapter_v_extras_input_problems/2 is re-exported by queries.clausal)
   # -- citations.clausal --
   - "citation/2"
   # -- gdpr_chapter_v_extras.clausal --
-  - "second_subparagraph_duty/5"
-  - "foreign_judgment_or_decision_recognition/4"
-  - "onward_transfer_condition/4"
   - "decide_gdpr_chapter_v_extras/2"
   - "gdpr_chapter_v_extras_status/2"
   - "gdpr_chapter_v_extras_checklist/2"
@@ -35,6 +31,9 @@ public_interface:
   - "gdpr_chapter_v_extras_profile_keys/1"
   - "gdpr_chapter_v_extras_input_problems/2"
   - "gdpr_chapter_v_extras_what_if/4"
+  - "second_subparagraph_duty/5"
+  - "foreign_judgment_or_decision_recognition/4"
+  - "onward_transfer_condition/4"
   - "no_second_subparagraph_transfer/0"
   - "not_a_processor_duty/0"
   - "duty_met/0"
@@ -71,42 +70,43 @@ public_interface:
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
-# Reuse-declaration lever: dotted module paths of shared backbone packages this
-# domain imports. This domain imports only the kit (formalize_lib), no
-# shared backbone package.
+# Shared backbone packages imported: none (only the kit's formalize_lib).
 uses: []
 
 scope: >-
-  Beside the GDPR Chapter V cascade (gdpr-chapter-v-transfers), and deciding
-  nothing it decides: for a transfer made under the second subparagraph of
-  Art 49(1) GDPR (supplied as an attested outside fact), whether the controller
-  has met the duty to inform the supervisory authority and the duty to inform
-  the data subject of the transfer and of the compelling legitimate interests
-  pursued (Art 49(1), second subparagraph, second and third sentences; duties
-  of the controller only), and whether the controller or processor has met the
-  duty to document the assessment and the suitable safeguards in its Art 30
-  records (Art 49(6)); whether Art 48 bars the recognition or enforcement of a
-  third-country judgment or decision requiring a transfer or disclosure; and,
-  under Art 44 first sentence, whether an onward transfer may take place, read
-  from the onward transfer's own Chapter V answer supplied as an attested outside
-  fact. Out of scope: whether any transfer has a Chapter V basis (the conditions
-  of the second subparagraph of Art 49(1) included) - gdpr-chapter-v-transfers;
-  whether a record of processing activities is required and what it holds
-  (Art 30) - gdpr-records-and-officer; the information of Articles 13 and 14;
-  the second sentence of Art 44; timing, form and channel of the information
-  given; whether Art 30(5) relieves the Art 49(6) duty (open question Q5).
+  Regulation (EU) 2016/679 (GDPR), beside gdpr-chapter-v-transfers (which it
+  never re-decides). Decided here, from the pinned text only: the controller's
+  two duties to inform (the supervisory authority; the data subject of the
+  transfer and of the compelling legitimate interests) in the second and third
+  sentences of the second subparagraph of Art 49(1), and the Art 49(6) duty of
+  the controller or processor to document the assessment and the suitable
+  safeguards in its Art 30 records, for a transfer made under that
+  subparagraph (second_subparagraph_duty/5); Art 48 as a bar on recognising or
+  enforcing a third-country judgment or decision requiring a transfer or
+  disclosure without an international agreement
+  (foreign_judgment_or_decision_recognition/4); and Art 44, first sentence, for
+  an onward transfer, whose own Chapter V answer is supplied as an outside fact
+  (onward_transfer_condition/4). Out of scope: whether a transfer may take
+  place under Chapter V and on which basis (gdpr-chapter-v-transfers), the
+  conditions of the first sentence of the second subparagraph of Art 49(1),
+  whether an Art 30 record is required and what else it holds
+  (gdpr-records-and-officer, including Art 30(5)), the information of
+  Articles 13 and 14, the second sentence of Art 44, and every lawyer
+  question named in the order (Q1 to Q9). Drafter's reading, not a lawyer's.
 
 sources:
-  - 'Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated text 02016R0679-20160504: Art 44 (first sentence read)'
-  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 48 (transfers or disclosures not authorised by Union law)'
-  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 49(1), second subparagraph (second and third sentences formalised; first sentence read only through an attested outside fact)'
-  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 49(6) (documentation of the assessment and the suitable safeguards)'
-  - 'Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504: Art 30(1) opening words and point (e), Art 30(2) opening words and point (c), Art 30(5) (quoted for reading (6), deferred)'
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504"
+  - "GDPR Art 44 (unit 02016R0679-20160504#art_044), first sentence read by onward_transfer_condition/4"
+  - "GDPR Art 48 (unit 02016R0679-20160504#art_048), read by foreign_judgment_or_decision_recognition/4"
+  - "GDPR Art 49(1), second subparagraph (unit 02016R0679-20160504#parag_049.001), last two sentences read by second_subparagraph_duty/5"
+  - "GDPR Art 49(6) (unit 02016R0679-20160504#parag_049.006), read by second_subparagraph_duty/5 for document_assessment_and_safeguards"
+  - "GDPR Art 30(1)(e), Art 30(2)(c) and Art 30(5) (quoted for reading (6) and Q5; deferred, no limb)"
 
 query_interface:
-  13: "second_subparagraph_duty/5"          # compliance_check: is a duty of the controller or processor met
-  3: "gdpr_chapter_v_extras_status/2"       # status_determination: the facade status over every duty and limb
-  16: "gdpr_chapter_v_extras_what_if/4"     # what_if: re-evaluate under an overridden key
+  2: "gdpr_chapter_v_extras_status/2"                 # facade status (Art 44 onward-transfer limb)
+  3: "foreign_judgment_or_decision_recognition/4"     # status_determination: Art 48 status
+  13: "second_subparagraph_duty/5"                    # compliance_check: is the Art 49(1)/(6) duty met
+  16: "gdpr_chapter_v_extras_what_if/4"               # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings

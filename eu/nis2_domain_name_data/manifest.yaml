@@ -2,6 +2,12 @@
 id: eu/nis2_domain_name_data
 shape_family: deontic
 kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
 modules:
   - "kernel"
   - "citations"
@@ -9,10 +15,14 @@ modules:
   - "nis2_domain_name_data"
   - "queries"
   - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
-  # -- kernel.clausal --
+  # -- kernel.clausal -- (nis2_domain_name_data_input_problems/2, re-exported by queries)
   # -- citations.clausal --
   - "citation/2"
+  - "implements/1"
   # -- nis2_domain_name_data.clausal --
   - "decide_nis2_domain_name_data/2"
   - "nis2_domain_name_data_status/2"
@@ -24,6 +34,20 @@ public_interface:
   - "publication_duty/3"
   - "access_duty/3"
   - "access_reply_timeliness/3"
+  # -- queries.clausal --
+  - "nis2_domain_name_data_profile_keys/1"
+  - "nis2_domain_name_data_input_problems/2"
+  - "nis2_domain_name_data_what_if/4"
+  - "nis2_domain_name_data_reply_deadline/2"
+  - "nis2_domain_name_data_hours_elapsed/3"
+  - "provider_type/0"
+  - "point_of_contact_email_address_differs_from_registrant/0"
+  - "point_of_contact_telephone_number_differs_from_registrant/0"
+  - "registration_data_is_personal_data/0"
+  - "requester_is_legitimate_access_seeker/0"
+  - "request_is_lawful_and_duly_substantiated/0"
+  - "reply_without_undue_delay/0"
+  - "unsure/0"
   - "tld_name_registry/0"
   - "domain_name_registration_service_entity/0"
   - "other/0"
@@ -32,14 +56,6 @@ public_interface:
   - "must_provide_access/0"
   - "no_duty_to_provide_access/0"
   - "on_time/0"
-  - "unsure/0"
-  - "provider_type/0"
-  - "point_of_contact_email_address_differs_from_registrant/0"
-  - "point_of_contact_telephone_number_differs_from_registrant/0"
-  - "registration_data_is_personal_data/0"
-  - "requester_is_legitimate_access_seeker/0"
-  - "request_is_lawful_and_duly_substantiated/0"
-  - "reply_without_undue_delay/0"
   - "indeterminate/1"
   - "needs_legal_review/2"
   - "open_textured/2"
@@ -52,33 +68,31 @@ public_interface:
   - "duty/2"
   - "field/2"
   - "late/1"
-  # -- queries.clausal --
-  - "nis2_domain_name_data_profile_keys/1"
-  - "nis2_domain_name_data_input_problems/2"
-  - "nis2_domain_name_data_what_if/4"
-  - "access_reply_deadline/2"
-  - "access_reply_hours_elapsed/3"
-  - "access_reply_outcome/4"
   # -- fixtures.clausal --
   - "nis2_domain_name_data_subject/1"
   - "nis2_domain_name_data_profile_for/2"
+  - "nis2_domain_name_data_hours_for/2"
   - "nis2_domain_name_data_assess/2"
 
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
-uses:
-  - "formalize_lib"
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib,
+# kit/query_combinators) and library(datetime), none of them a backbone package.
+uses: []
 
-scope: "What Directive (EU) 2022/2555 (NIS 2) Art 28(1) to (6) requires a Member State to require of TLD name registries and entities providing domain name registration services: the nine duties, the registration data to hold (Art 28(2)), whether non-personal data must be published (Art 28(4)), whether access to data must be provided (Art 28(5) first sentence), and whether a reply to an access request was within 72 hours (Art 28(5) second sentence). Out of scope, handed to a lawyer or a sibling order: who is a TLD name registry or registrar (Art 6), GDPR lawfulness, adequacy of procedures and data, national access procedures."
+scope: "Directive (EU) 2022/2555 (NIS 2) Article 28(1) to (6): what a Member State must require of a TLD name registry and of an entity providing domain name registration services as regards domain name registration data. Decided here: the nine duties of Art 28 for an addressed provider and none for any other entity; the registration data the database must hold (Art 28(2)(a) to (d), point (d) read per element); whether the non-personal registration data must be made publicly available (Art 28(4)); whether access to specific registration data must be provided (Art 28(5) first sentence); and whether a reply to any request for access was timely (Art 28(5) second sentence, within 72 hours of receipt, a part of an hour rounded up, and without undue delay). Out of scope: whether an entity is a TLD name registry or registrar (Art 6; the caller states it), lawfulness under Union data protection law, the adequacy of data and procedures, national access procedures, what counts as receipt of a request, and whether publication was in fact without undue delay. Open-textured judgements (personal data, legitimate access seeker, lawful and duly substantiated request, undue delay) are the caller's; an unsure one that decides is referred to a lawyer."
 
 sources:
-  - "Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022, Art 28(1) to (6), unit 32022L2555"
+  - "Directive (EU) 2022/2555 of the European Parliament and of the Council of 14 December 2022 on measures for a high common level of cybersecurity across the Union (NIS 2 Directive), OJ L 333, 27.12.2022 (CELEX 32022L2555), Article 28(1), 28(2)(a) to (d), 28(3), 28(4), 28(5) and 28(6)"
 
 query_interface:
-  2: "nis2_domain_name_data_status/2"
-  7: "nis2_domain_name_data_checklist/2"
-  15: "access_reply_deadline/2"
-  16: "nis2_domain_name_data_what_if/4"
+  2: "decide_nis2_domain_name_data/2"      # eligibility: addressed provider verdict with cited duties
+  7: "nis2_domain_name_data_checklist/2"   # justification: one cited checklist row per duty
+  15: "access_reply_timeliness/3"          # deadline: the Art 28(5) 72-hour reply, late(hour_limit) when missed
+  16: "nis2_domain_name_data_what_if/4"    # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_heading
@@ -116,7 +130,7 @@ excluded_set:
   consequence: The answers say what Art 28 requires; the caller checks separately
     that the processing and the disclosure are lawful under the GDPR.
 - what: adequacy_of_procedures
-  instrument: Directive (EU) 2022/2555 Art 28(1) and (3) and national law
+  instrument: national law of the Member States implementing Art 28(1) and (3)
   cites:
   - 32022L2555#art_036
   reason: Whether the data are accurate and complete, and whether a verification procedure

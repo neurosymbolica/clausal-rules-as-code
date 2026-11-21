@@ -1,0 +1,111 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_state_aid_gber_general_conditions_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_state_aid_gber_general_conditions_gber_general_conditions, [gber_general_conditions_status/2, gber_scope/3, gber_notification_threshold/4, gber_transparency/3, gber_incentive_effect/5, gber_cumulation/7, gber_chapter_i_conditions/10]).
+:- use_module(m__eu_state_aid_gber_general_conditions_kernel, [gber_general_conditions_input_problems/2]).
+:- use_module(m__eu_state_aid_gber_general_conditions_fixtures, [gber_general_conditions_profile_for/2]).
+
+subject_status(Subject, Status) :-
+    gber_general_conditions_profile_for(Subject, SubjectCase),
+    gber_general_conditions_status(SubjectCase, Status).
+
+in_scope_profile([attribute(scheme_excluded_by_article_1_2_a_or_b, false), attribute(export_or_domestic_goods_aid, false), attribute(aided_sector, other_sector), attribute(article_13_regional_aid_category, false), attribute(also_active_in_excluded_sector, false), attribute(recovery_order_exclusion_applies, false), attribute(undertaking_in_difficulty, false), attribute(non_severable_violation_of_union_law, false)]).
+
+unbound_key_reported_as_given :-
+    gber_general_conditions_input_problems([attribute(UnboundKey, grant)], Problems),
+    Problems == [unknown_key(UnboundKey)].
+
+test(the_compliant_case_holds_with_met_bound) :-
+    subject_status(compliant_sme_grant, tested_chapter_i_conditions_met).
+test(the_same_day_case_holds_with_not_met_bound) :-
+    subject_status(same_day_application, chapter_i_conditions_not_met).
+test(the_other_category_case_holds_with_partly_untested_bound) :-
+    subject_status(other_category_row, chapter_i_conditions_partly_untested).
+test(the_empty_profile_holds_with_its_missing_key_bound) :-
+    subject_status(empty_profile, indeterminate([scheme_excluded_by_article_1_2_a_or_b])).
+test(the_scope_holds_with_within_scope_bound) :-
+    in_scope_profile(Profile),
+    gber_scope(Profile, within_scope, _).
+test(the_threshold_holds_with_within_bound_at_the_figure) :-
+    gber_notification_threshold([attribute(article_4_category, training)], 300000000, within_threshold, _).
+test(the_transparency_holds_with_its_answer_bound) :-
+    gber_transparency([attribute(aid_form, interest_rate_subsidy)], transparent_aid, _).
+test(the_incentive_effect_with_no_application_is_none) :-
+    gber_incentive_effect([attribute(article_6_5_category_conditions_met, false), attribute(tax_measure_conditions_met, false)], no_application, date(2024, 2, 1), no_incentive_effect, _).
+test(the_cumulation_holds_with_its_citations_bound) :-
+    gber_cumulation([attribute(identifiable_eligible_costs, true)], 1000, 500, 0, 5000, cumulation_allowed, [cite(eu_reg_651_2014_art_8_3), cite(eu_reg_651_2014_art_8_3_a), cite(eu_reg_651_2014_art_8_3_b)]).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    gber_general_conditions_input_problems(_, [wrong_type(profile)]).
+test(a_partial_list_is_not_an_attribute_list) :-
+    gber_general_conditions_input_problems([attribute(aid_form, grant)|_], [wrong_type(profile)]).
+test(a_pair_element_is_not_an_attribute) :-
+    gber_general_conditions_input_problems([aid_form - grant], [wrong_type(profile)]).
+test(an_atom_is_not_a_profile) :-
+    gber_scope(not_a_list, input_problems([wrong_type(profile)]), []).
+test(an_unknown_key_is_named) :-
+    gber_general_conditions_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+test(a_repeated_unknown_key_is_named_once) :-
+    gber_general_conditions_input_problems([attribute(colour, red), attribute(colour, blue)], [unknown_key(colour)]).
+test(an_integer_key_is_unknown) :-
+    gber_general_conditions_input_problems([attribute(7, grant)], [unknown_key(7)]).
+test(a_compound_key_is_unknown_as_given) :-
+    gber_general_conditions_input_problems([attribute(sector(other), grant)], Problems),
+    Problems == [unknown_key(sector(other))].
+test(an_unbound_key_is_unknown_as_given) :-
+    unbound_key_reported_as_given.
+test(an_unbound_value_is_a_wrong_type) :-
+    gber_general_conditions_input_problems([attribute(aid_form, _)], [wrong_type(aid_form)]).
+test(a_value_outside_the_enumeration_is_a_wrong_type) :-
+    gber_general_conditions_input_problems([attribute(aid_form, gift)], [wrong_type(aid_form)]).
+test(unsure_is_not_a_boolean) :-
+    gber_general_conditions_input_problems([attribute(recovery_order_exclusion_applies, unsure)], [wrong_type(recovery_order_exclusion_applies)]).
+test(unsure_is_a_judgement) :-
+    gber_general_conditions_input_problems([attribute(undertaking_in_difficulty, unsure)], []).
+test(not_an_enterprise_is_not_a_size_class) :-
+    gber_general_conditions_input_problems([attribute(size_class, not_an_enterprise)], [wrong_type(size_class)]).
+test(a_duplicate_key_is_never_also_a_wrong_type) :-
+    gber_general_conditions_input_problems([attribute(aid_form, gift), attribute(aid_form, gift)], [duplicate_key(aid_form)]).
+test(contract_problems_come_before_unknown_keys) :-
+    gber_general_conditions_input_problems([attribute(colour, red), attribute(size_class, huge), attribute(aid_form, gift)], [wrong_type(aid_form), wrong_type(size_class), unknown_key(colour)]).
+test(a_negative_amount_is_an_input_problem) :-
+    gber_notification_threshold([], -1, input_problems([wrong_type(project_aid_cents)]), []).
+test(a_float_amount_is_an_input_problem) :-
+    gber_notification_threshold([], 1.5, input_problems([wrong_type(project_aid_cents)]), []).
+test(a_non_leap_day_is_an_input_problem_after_the_profile) :-
+    gber_incentive_effect([attribute(aid_form, gift)], no_application, date(2023, 2, 29), input_problems([wrong_type(aid_form), wrong_type(work_start_date)]), []).
+test(an_unbound_application_date_is_an_input_problem) :-
+    gber_incentive_effect([], _, date(2024, 2, 1), input_problems([wrong_type(application_date)]), []).
+test(the_cumulation_arguments_are_checked_in_order) :-
+    gber_cumulation([], -1, 0, -1, 0, input_problems([wrong_type(eligible_costs_cents), wrong_type(same_costs_de_minimis_cents)]), []).
+test(the_joined_query_reports_profile_then_argument_problems) :-
+    gber_chapter_i_conditions([attribute(colour, red)], -5, no_application, date(2024, 2, 1), 1, 1, 1, 1, input_problems([unknown_key(colour), wrong_type(project_aid_cents)]), []).
+
+test(the_compliant_case_rejects_not_met_bound, fail) :-
+    subject_status(compliant_sme_grant, chapter_i_conditions_not_met).
+test(the_compliant_case_rejects_partly_untested_bound, fail) :-
+    subject_status(compliant_sme_grant, chapter_i_conditions_partly_untested).
+test(the_same_day_case_rejects_met_bound, fail) :-
+    subject_status(same_day_application, tested_chapter_i_conditions_met).
+test(the_other_category_case_rejects_met_bound, fail) :-
+    subject_status(other_category_row, tested_chapter_i_conditions_met).
+test(the_empty_profile_rejects_another_missing_key, fail) :-
+    subject_status(empty_profile, indeterminate([aid_form])).
+test(the_scope_rejects_excluded_bound, fail) :-
+    in_scope_profile(Profile),
+    gber_scope(Profile, excluded_from_scope, _).
+test(the_threshold_rejects_exceeded_bound_at_the_figure, fail) :-
+    gber_notification_threshold([attribute(article_4_category, training)], 300000000, threshold_exceeded, _).
+test(the_incentive_effect_with_no_application_is_not_an_effect, fail) :-
+    gber_incentive_effect([attribute(article_6_5_category_conditions_met, false), attribute(tax_measure_conditions_met, false)], no_application, date(2024, 2, 1), incentive_effect, _).
+
+cp_test_names([the_compliant_case_holds_with_met_bound, the_same_day_case_holds_with_not_met_bound, the_other_category_case_holds_with_partly_untested_bound, the_empty_profile_holds_with_its_missing_key_bound, the_scope_holds_with_within_scope_bound, the_threshold_holds_with_within_bound_at_the_figure, the_transparency_holds_with_its_answer_bound, the_incentive_effect_with_no_application_is_none, the_cumulation_holds_with_its_citations_bound, an_unbound_profile_is_not_an_attribute_list, a_partial_list_is_not_an_attribute_list, a_pair_element_is_not_an_attribute, an_atom_is_not_a_profile, an_unknown_key_is_named, a_repeated_unknown_key_is_named_once, an_integer_key_is_unknown, a_compound_key_is_unknown_as_given, an_unbound_key_is_unknown_as_given, an_unbound_value_is_a_wrong_type, a_value_outside_the_enumeration_is_a_wrong_type, unsure_is_not_a_boolean, unsure_is_a_judgement, not_an_enterprise_is_not_a_size_class, a_duplicate_key_is_never_also_a_wrong_type, contract_problems_come_before_unknown_keys, a_negative_amount_is_an_input_problem, a_float_amount_is_an_input_problem, a_non_leap_day_is_an_input_problem_after_the_profile, an_unbound_application_date_is_an_input_problem, the_cumulation_arguments_are_checked_in_order, the_joined_query_reports_profile_then_argument_problems]).
+cp_test_fail_names([the_compliant_case_rejects_not_met_bound, the_compliant_case_rejects_partly_untested_bound, the_same_day_case_rejects_met_bound, the_other_category_case_rejects_met_bound, the_empty_profile_rejects_another_missing_key, the_scope_rejects_excluded_bound, the_threshold_rejects_exceeded_bound_at_the_figure, the_incentive_effect_with_no_application_is_not_an_effect]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

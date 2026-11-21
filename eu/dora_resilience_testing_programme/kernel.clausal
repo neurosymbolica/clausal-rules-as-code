@@ -1,0 +1,332 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/dora_resilience_testing_programme (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% Exception: the scaffold writes the order's input check
+% dora_resilience_testing_programme_input_problems/2 here, exported, for
+% every slice to import.
+% deontic family: STATUS is a modal vocabulary (cf. eu/procurement/exclusion_grounds).
+%
+% Source: Regulation (EU) 2022/2554 (Digital Operational Resilience Act,
+% DORA), Article 24 (general requirements for the performance of digital
+% operational resilience testing) and Article 25 (testing of ICT tools and
+% systems), pinned text 32022R2554, the original OJ text as published
+% (OJ L 333, 27.12.2022, p. 1). The kernel itself decides no statutory
+% condition: it holds the typed input check and profile plumbing only.
+%
+% Shared predicates (called by the slice dora_resilience_testing_programme
+% and by queries.clausal):
+%   dora_resilience_testing_programme_input_problems(Profile, Problems)
+%       the typed input check (INTERFACE - THE INPUT CHECK);
+%   contract_key(Position, Key)
+%       the fourteen profile keys in root_exports / input_contract order;
+%   present_pairs(Profile, Pairs)
+%       every present contract key as Key-Value, in root_exports order,
+%       the value exactly as given (the PAIRS of inputs_relied_on/1).
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them
+% alike.
+%
+% Result terms of the slice dora_resilience_testing_programme:
+%   dora_resilience_testing_programme_verdict(Status, Citations)
+%     Status    the RESULT of resilience_testing_duties_complete/3:
+%               complete | incomplete | indeterminate([Key])
+%               | needs_legal_review(open_textured(Key, cite(Citation)),
+%                                    [inputs_relied_on(Pairs)])
+%               | input_problems(Problems);
+%     Citations a list of cite(Key) terms ([] for every status compound).
+%   Query RESULT forms (each query yields exactly one solution):
+%     required(Duties)        Duties a non-empty list of duty atoms in
+%                             duty order (resilience_testing_duties_required/3);
+%     complete | incomplete   (resilience_testing_duties_complete/3);
+%     none_outstanding | outstanding(Duties)
+%                             (resilience_testing_duties_outstanding/3);
+%     indeterminate([Key])    exactly one bare key atom; the bare atom
+%                             indeterminate is never written;
+%     needs_legal_review(open_textured(Key, cite(Citation)), Context)
+%                             Context [inputs_relied_on(Pairs)], optionally
+%                             followed by one provenance(Clause, Citations);
+%     input_problems(Problems)
+%                             Problems a list of duplicate_key(Key),
+%                             wrong_type(Key) and unknown_key(Key) terms,
+%                             or [wrong_type(profile)].
+%   Duty atoms, in duty order: resilience_testing_programme,
+%   range_of_assessments_and_tests, risk_based_testing_approach,
+%   independent_testers, internal_tester_resources_and_conflicts_of_interest,
+%   issue_prioritisation_classification_and_remedy,
+%   internal_validation_methodologies, yearly_testing_of_critical_ict_systems,
+%   execution_of_appropriate_tests, vulnerability_assessments_before_deployment,
+%   microenterprise_risk_based_planned_testing.
+%   Judgement value besides true and false: unsure.
+% =====================================================================
+
+:- module(kernel, [
+    dora_resilience_testing_programme_input_problems/2,
+    contract_key/2,
+    present_pairs/2
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+
+% ---- the contract keys, in root_exports / input_contract order ------
+contract_key(1, financial_entity_is_microenterprise).
+contract_key(2, dora_entity_type).
+contract_key(3, tests_undertaken_by_internal_tester).
+contract_key(4, resilience_testing_programme_established_maintained_and_reviewed).
+contract_key(5, programme_includes_range_of_assessments_and_tests).
+contract_key(6, programme_conducted_on_risk_based_approach).
+contract_key(7, tests_undertaken_by_independent_parties).
+contract_key(8, internal_tester_resourced_and_conflicts_of_interest_avoided).
+contract_key(9, procedures_to_prioritise_classify_and_remedy_issues_established).
+contract_key(10, internal_validation_methodologies_established).
+contract_key(11, critical_ict_systems_tested_at_least_yearly).
+contract_key(12, programme_provides_for_appropriate_tests).
+contract_key(13, vulnerability_assessments_performed_before_deployment).
+contract_key(14, microenterprise_tests_risk_based_and_planned).
+
+% ---- PAIRS: every present contract key, in root_exports order -------
+% Called only on a profile with no input problem, so each present key has
+% exactly one value. Read with profile_has/2 / profile_lacks/2 (presence
+% first) and profile_get/3 (value): complementary clauses.
+present_pairs(Profile, Pairs) :-
+    findall(Key, contract_key(_, Key), Keys),
+    keys_present_pairs(Keys, Profile, Pairs).
+
+keys_present_pairs([], _, []).
+keys_present_pairs([Key|Keys], Profile, [Key-Value|Pairs]) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value),
+    keys_present_pairs(Keys, Profile, Pairs).
+keys_present_pairs([Key|Keys], Profile, Pairs) :-
+    profile_lacks(Profile, Key),
+    keys_present_pairs(Keys, Profile, Pairs).
+
+% ---- input checks: the problems a profile has, if any -----------
+% dora_resilience_testing_programme_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+dora_resilience_testing_programme_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [financial_entity_is_microenterprise, dora_entity_type, tests_undertaken_by_internal_tester, resilience_testing_programme_established_maintained_and_reviewed, programme_includes_range_of_assessments_and_tests, programme_conducted_on_risk_based_approach, tests_undertaken_by_independent_parties, internal_tester_resourced_and_conflicts_of_interest_avoided, procedures_to_prioritise_classify_and_remedy_issues_established, internal_validation_methodologies_established, critical_ict_systems_tested_at_least_yearly, programme_provides_for_appropriate_tests, vulnerability_assessments_performed_before_deployment, microenterprise_tests_risk_based_and_planned],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(financial_entity_is_microenterprise, fact).
+key_type(dora_entity_type, entity_type).
+key_type(tests_undertaken_by_internal_tester, fact).
+key_type(resilience_testing_programme_established_maintained_and_reviewed, judgement).
+key_type(programme_includes_range_of_assessments_and_tests, judgement).
+key_type(programme_conducted_on_risk_based_approach, judgement).
+key_type(tests_undertaken_by_independent_parties, judgement).
+key_type(internal_tester_resourced_and_conflicts_of_interest_avoided, judgement).
+key_type(procedures_to_prioritise_classify_and_remedy_issues_established, judgement).
+key_type(internal_validation_methodologies_established, judgement).
+key_type(critical_ict_systems_tested_at_least_yearly, judgement).
+key_type(programme_provides_for_appropriate_tests, judgement).
+key_type(vulnerability_assessments_performed_before_deployment, judgement).
+key_type(microenterprise_tests_risk_based_and_planned, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(fact, Value, T) :-
+    in_type_t(boolean, Value, T).
+
+in_type_t(entity_type, Value, T) :-
+    in_type_t(enum([credit_institution, institution_exempted_pursuant_to_directive_2013_36, payment_institution, exempted_payment_institution, account_information_service_provider, electronic_money_institution, exempted_electronic_money_institution, investment_firm, crypto_asset_service_provider, issuer_of_asset_referenced_tokens, central_securities_depository, central_counterparty, trading_venue, trade_repository, manager_of_alternative_investment_funds, management_company, data_reporting_service_provider, insurance_undertaking, reinsurance_undertaking, insurance_intermediary, reinsurance_intermediary, ancillary_insurance_intermediary, institution_for_occupational_retirement_provision, credit_rating_agency, administrator_of_critical_benchmarks, crowdfunding_service_provider, securitisation_repository, ict_third_party_service_provider, none_of_the_listed_types]), Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% ---- tests -----------------------------------------------------------
+test(a_well_formed_profile_has_no_problem) :-
+    dora_resilience_testing_programme_input_problems(
+        [attribute(financial_entity_is_microenterprise, false),
+         attribute(dora_entity_type, central_counterparty),
+         attribute(programme_conducted_on_risk_based_approach, unsure)],
+        Problems),
+    Problems == [].
+test(the_empty_profile_has_no_problem) :-
+    dora_resilience_testing_programme_input_problems([], []).
+test(a_repeated_key_is_a_duplicate_only) :-
+    dora_resilience_testing_programme_input_problems(
+        [attribute(financial_entity_is_microenterprise, true),
+         attribute(financial_entity_is_microenterprise, unsure)],
+        Problems),
+    Problems == [duplicate_key(financial_entity_is_microenterprise)].
+test(unsure_is_the_wrong_type_for_a_fact) :-
+    dora_resilience_testing_programme_input_problems(
+        [attribute(tests_undertaken_by_internal_tester, unsure)],
+        Problems),
+    Problems == [wrong_type(tests_undertaken_by_internal_tester)].
+test(unsure_is_a_judgement_value) :-
+    dora_resilience_testing_programme_input_problems(
+        [attribute(microenterprise_tests_risk_based_and_planned, unsure)],
+        []).
+test(an_unknown_key_comes_after_the_contract_keys) :-
+    dora_resilience_testing_programme_input_problems(
+        [attribute(colour, red),
+         attribute(dora_entity_type, bank)],
+        Problems),
+    Problems == [wrong_type(dora_entity_type), unknown_key(colour)].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    dora_resilience_testing_programme_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(present_pairs_follow_the_contract_order) :-
+    present_pairs(
+        [attribute(tests_undertaken_by_internal_tester, false),
+         attribute(financial_entity_is_microenterprise, false)],
+        Pairs),
+    Pairs == [financial_entity_is_microenterprise-false,
+              tests_undertaken_by_internal_tester-false].
+test(the_first_contract_key) :-
+    contract_key(1, financial_entity_is_microenterprise).
+test(the_first_contract_key_is_not_the_type, fail) :-
+    contract_key(1, dora_entity_type).
+
+:- end_module(kernel).

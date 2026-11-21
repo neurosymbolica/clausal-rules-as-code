@@ -1,0 +1,138 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dma_art_5_2_data_combination_order_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_dma_art_5_2_data_combination_order, [article_5_application_status/4, personal_data_practice_status/4, consent_request_repetition_status/6, decide_dma_art_5_2_data_combination_order/2, dma_art_5_2_data_combination_order_status/2, dma_art_5_2_data_combination_order_checklist/2]).
+:- use_module(m__eu_dma_art_5_2_data_combination_order_fixtures, [dma_art_5_2_data_combination_order_profile_for/2]).
+
+stated(Truth, attested(Truth, attestation(host_operator, attested_on_2026_11_19, caller_statement, none))).
+
+single_practice_answer(Subject, Result, Basis, SortedCitations) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    findall(answer(OneResult, OneBasis, OneCitations), personal_data_practice_status(Profile, OneResult, OneBasis, OneCitations), [answer(Result, Basis, Citations)]),
+    sort(Citations, SortedCitations).
+
+single_repetition_answer(Subject, RefusalDate, RequestDate, Result, Basis, SortedCitations) :-
+    dma_art_5_2_data_combination_order_profile_for(Subject, Profile),
+    findall(answer(OneResult, OneBasis, OneCitations), consent_request_repetition_status(Profile, RefusalDate, RequestDate, OneResult, OneBasis, OneCitations), [answer(Result, Basis, Citations)]),
+    sort(Citations, SortedCitations).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_combining_with_consent, Profile),
+    findall(Status, dma_art_5_2_data_combination_order_status(Profile, Status), Statuses),
+    Statuses == [practice_allowed_with_consent].
+test(the_verdict_carries_a_citation) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_combining_with_consent, Profile),
+    decide_dma_art_5_2_data_combination_order(Profile, dma_art_5_2_data_combination_order_verdict(_Status, [_FirstCitation|_OtherCitations])).
+test(application_listed_output) :-
+    dma_art_5_2_data_combination_order_profile_for(repeat_listed_not_yet_repeated, Profile),
+    stated(true, Designation),
+    findall(answer(Result, Basis, Citations), article_5_application_status(Profile, Result, Basis, Citations), Answers),
+    Answers == [answer(article_5_obligations_apply, [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)], [cite(eu_reg_2022_1925_art_5_1)])].
+test(application_absent_output) :-
+    findall(answer(Result, Basis, Citations), article_5_application_status([], Result, Basis, Citations), Answers),
+    Answers == [answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service - absent])]), [], [])].
+test(allowed_with_consent_output) :-
+    single_practice_answer(listed_combining_with_consent, Result, Basis, Citations),
+    stated(true, Attested),
+    Result == practice_allowed_with_consent,
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Attested), outside_fact(end_user_consent_given, Attested)],
+    sort([cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), cite(eu_reg_2022_1925_art_5_2_b), cite(eu_reg_2022_1925_art_2_32)], Expected),
+    Citations == Expected.
+test(allowed_with_consent_cites_point_a) :-
+    single_practice_answer(listed_advertising_with_consent_control, practice_allowed_with_consent, _, Citations),
+    sort([cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), cite(eu_reg_2022_1925_art_5_2_a), cite(eu_reg_2022_1925_art_2_32)], Expected),
+    Citations == Expected.
+test(allowed_on_other_legal_basis_output) :-
+    single_practice_answer(listed_cross_use_no_choice_legal_obligation, Result, Basis, Citations),
+    stated(true, Attested),
+    Result == practice_allowed_on_other_legal_basis,
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Attested), outside_fact(gatekeeper_may_rely_on_article_6_1_c_d_or_e, Attested)],
+    sort([cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), cite(eu_reg_2022_1925_art_5_2_c)], Expected),
+    Citations == Expected.
+test(prohibited_output_does_not_copy_the_consent_statement) :-
+    single_practice_answer(listed_sign_in_consent_refused_no_basis, Result, Basis, Citations),
+    stated(true, Designation),
+    stated(false, OtherBasis),
+    Result == practice_prohibited,
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation), outside_fact(gatekeeper_may_rely_on_article_6_1_c_d_or_e, OtherBasis)],
+    sort([cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2), cite(eu_reg_2022_1925_art_5_2_d)], Expected),
+    Citations == Expected.
+test(outside_article_5_2_output) :-
+    single_practice_answer(listed_none_of_the_four, Result, Basis, Citations),
+    stated(true, Designation),
+    Result == practice_outside_article_5_2,
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)],
+    sort([cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)], Expected),
+    Citations == Expected.
+test(not_listed_output) :-
+    single_practice_answer(not_listed_everything_unsure, Result, Basis, Citations),
+    stated(false, Designation),
+    Result == article_5_obligations_do_not_apply,
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)],
+    Citations == [cite(eu_reg_2022_1925_art_5_1)].
+test(practice_named_output) :-
+    single_practice_answer(practice_missing, Result, Basis, Citations),
+    Result == indeterminate([practice_under_article_5_2]),
+    Basis == [],
+    Citations == [].
+test(designation_referral_output) :-
+    single_practice_answer(designation_absent_complete, Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service - absent, practice_under_article_5_2 - combining_personal_data, end_user_presented_with_specific_choice - true])]).
+test(consent_referral_output) :-
+    single_practice_answer(consent_absent, Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_2), cite(digital_markets_end_user_consent_statement)), [resolution(cite(digital_markets_end_user_consent_statement), not_attempted), inputs_relied_on([practice_under_article_5_2 - combining_personal_data, end_user_presented_with_specific_choice - true, end_user_consent_given - absent])]).
+test(other_basis_referral_output) :-
+    single_practice_answer(basis_absent, Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_2), cite(digital_markets_article_6_1_c_d_e_basis_statement)), [resolution(cite(digital_markets_article_6_1_c_d_e_basis_statement), not_attempted), inputs_relied_on([practice_under_article_5_2 - combining_personal_data, end_user_presented_with_specific_choice - false, gatekeeper_may_rely_on_article_6_1_c_d_or_e - absent])]).
+test(unsure_practice_output) :-
+    single_practice_answer(listed_everything_unsure_control, Result, [], []),
+    Result == needs_legal_review(open_textured(practice_under_article_5_2, cite(eu_reg_2022_1925_art_5_2)), [inputs_relied_on([practice_under_article_5_2 - unsure, end_user_presented_with_specific_choice - unsure])]).
+test(unsure_practice_complete_output) :-
+    single_practice_answer(practice_unsure_complete, Result, [], []),
+    Result == needs_legal_review(open_textured(practice_under_article_5_2, cite(eu_reg_2022_1925_art_5_2)), [inputs_relied_on([practice_under_article_5_2 - unsure, end_user_presented_with_specific_choice - true])]).
+test(unsure_choice_output) :-
+    single_practice_answer(choice_unsure_consent_true, Result, [], []),
+    Result == needs_legal_review(open_textured(end_user_presented_with_specific_choice, cite(eu_reg_2022_1925_art_5_2)), [inputs_relied_on([practice_under_article_5_2 - combining_personal_data, end_user_presented_with_specific_choice - unsure])]).
+test(the_day_before_the_anniversary_is_within) :-
+    single_repetition_answer(repeat_listed_not_yet_repeated, date(2025, 3, 10), date(2026, 3, 9), Result, Basis, Citations),
+    stated(true, Designation),
+    Result == repeated_request_permitted,
+    Basis == [outside_fact(designated_as_gatekeeper_for_core_platform_service, Designation)],
+    sort([cite(eu_reg_2022_1925_art_5_1), cite(eu_reg_2022_1925_art_5_2)], Expected),
+    Citations == Expected.
+test(the_anniversary_is_after_the_period) :-
+    single_repetition_answer(repeat_listed_already_repeated, date(2025, 3, 10), date(2026, 3, 10), Result, _, _),
+    Result == request_after_one_year_period.
+test(a_second_repeat_within_the_year) :-
+    single_repetition_answer(repeat_listed_already_repeated, date(2025, 3, 10), date(2025, 3, 10), Result, _, _),
+    Result == repeated_request_not_permitted.
+test(a_leap_day_refusal_ends_on_28_february) :-
+    single_repetition_answer(repeat_listed_not_yet_repeated, date(2024, 2, 29), date(2025, 2, 27), BeforeResult, _, _),
+    single_repetition_answer(repeat_listed_not_yet_repeated, date(2024, 2, 29), date(2025, 2, 28), OnResult, _, _),
+    BeforeResult == repeated_request_permitted,
+    OnResult == request_after_one_year_period.
+test(repetition_not_listed_output) :-
+    single_repetition_answer(repeat_not_listed, date(2025, 3, 10), date(2025, 6, 1), Result, _, Citations),
+    Result == article_5_obligations_do_not_apply,
+    Citations == [cite(eu_reg_2022_1925_art_5_1)].
+test(repetition_designation_referral_output) :-
+    single_repetition_answer(repeat_designation_absent, date(2025, 3, 10), date(2025, 6, 1), Result, [], []),
+    Result == needs_legal_review(cross_reference_unresolved(cite(eu_reg_2022_1925_art_5_1), cite(commission_designation_decision)), [resolution(cite(commission_designation_decision), not_attempted), inputs_relied_on([designated_as_gatekeeper_for_core_platform_service - absent])]).
+test(checklist_output_has_five_cited_items) :-
+    dma_art_5_2_data_combination_order_profile_for(listed_cross_use_no_choice_legal_obligation, Profile),
+    findall(Items, dma_art_5_2_data_combination_order_checklist(Profile, Items), [Items]),
+    length(Items, 5),
+    member(item(practice_under_article_5_2, met, cite(eu_reg_2022_1925_art_5_2_c)), Items),
+    member(item(other_legal_basis, met, cite(eu_reg_2022_1925_art_5_2)), Items).
+
+cp_test_names([the_baseline_profile_yields_exactly_one_status, the_verdict_carries_a_citation, application_listed_output, application_absent_output, allowed_with_consent_output, allowed_with_consent_cites_point_a, allowed_on_other_legal_basis_output, prohibited_output_does_not_copy_the_consent_statement, outside_article_5_2_output, not_listed_output, practice_named_output, designation_referral_output, consent_referral_output, other_basis_referral_output, unsure_practice_output, unsure_practice_complete_output, unsure_choice_output, the_day_before_the_anniversary_is_within, the_anniversary_is_after_the_period, a_second_repeat_within_the_year, a_leap_day_refusal_ends_on_28_february, repetition_not_listed_output, repetition_designation_referral_output, checklist_output_has_five_cited_items]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

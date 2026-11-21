@@ -1,5 +1,5 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2, duty_argument_problems/2, outside_fact_reference/3, absent_referral/2]).
+:- module(m__eu_data_protection_gdpr_chapter_v_extras_kernel, [gdpr_chapter_v_extras_input_problems/2]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
@@ -143,42 +143,3 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
-
-duty_argument_problems(Duty, [wrong_type(duty)]) :-
-    var(Duty).
-duty_argument_problems(Duty, Problems) :-
-    nonvar(Duty),
-    memberd_t(Duty, [inform_supervisory_authority, inform_data_subject, document_assessment_and_safeguards], IsDuty),
-    duty_problems(IsDuty, Problems).
-
-duty_problems(true, []).
-duty_problems(false, [wrong_type(duty)]).
-
-outside_fact_reference(transfer_relies_on_article_49_1_second_subparagraph, cite(eu_reg_2016_679_art_49_1_second_subpara), cite(second_subparagraph_transfer_statement)).
-outside_fact_reference(third_country_judgment_or_decision_requires_transfer, cite(eu_reg_2016_679_art_48), cite(foreign_judgment_requires_transfer_statement)).
-outside_fact_reference(international_agreement_basis_for_judgment_or_decision, cite(eu_reg_2016_679_art_48), cite(international_agreement_basis_statement)).
-outside_fact_reference(transfer_is_onward_transfer, cite(eu_reg_2016_679_art_44), cite(onward_transfer_statement)).
-outside_fact_reference(onward_transfer_has_chapter_v_basis, cite(eu_reg_2016_679_art_44), cite(onward_transfer_chapter_v_basis_statement)).
-
-absent_referral(Key, needs_legal_review(cross_reference_unresolved(Citation, Target), [resolution(Target, not_attempted), inputs_relied_on([Key - absent])])) :-
-    outside_fact_reference(Key, Citation, Target).
-
-test(an_empty_profile_has_no_problem) :-
-    gdpr_chapter_v_extras_input_problems([], []).
-test(a_bare_boolean_outside_fact_is_wrong_type) :-
-    gdpr_chapter_v_extras_input_problems([attribute(transfer_is_onward_transfer, true)], [wrong_type(transfer_is_onward_transfer)]).
-test(a_known_duty_has_no_problem) :-
-    duty_argument_problems(inform_data_subject, []).
-test(an_unbound_duty_is_wrong_type) :-
-    findall(Problems, duty_argument_problems(_, Problems), All),
-    All == [[wrong_type(duty)]].
-test(an_unknown_duty_is_wrong_type) :-
-    duty_argument_problems(inform_everyone, [wrong_type(duty)]).
-test(the_referral_on_the_onward_transfer_statement) :-
-    findall(Result, absent_referral(transfer_is_onward_transfer, Result), All),
-    All == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_44), cite(onward_transfer_statement)), [resolution(cite(onward_transfer_statement), not_attempted), inputs_relied_on([transfer_is_onward_transfer - absent])])].
-
-test(an_unknown_duty_has_problems, fail) :-
-    duty_argument_problems(inform_everyone, []).
-test(a_crisp_key_has_no_referral, fail) :-
-    absent_referral(party_role, _).

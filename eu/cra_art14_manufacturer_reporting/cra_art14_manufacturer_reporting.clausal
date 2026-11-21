@@ -1,542 +1,459 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% cra_art14_manufacturer_reporting.clausal -- the "cra_art14_manufacturer_reporting"
-% DETERMINATION for eu/cra_art14_manufacturer_reporting, self-contained top
-% to bottom: its statutory VALUE facts, its derived arithmetic, its per-rule
-% tests, its checklist and its verdict assembly.
+% cra_art14_manufacturer_reporting.clausal -- the "cra_art14_manufacturer_reporting" DETERMINATION for
+% eu/cra_art14_manufacturer_reporting, self-contained top to bottom: its statutory VALUE facts,
+% its derived arithmetic, its per-rule tests, its checklist and its verdict assembly.
 %
-% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), pinned unit text
-% of 32024R2847 (original OJ text, OJ L, 2024/2847, 20.11.2024):
-%   Art 3(1), (13), (40), (42), (43), (44) -- the definitions read as the
-%                          caller's classification (markers only);
-%   Art 14(1) and (3)   -- the two duties (markers only);
-%   Art 14(2)(a)-(c)    -- the steps for an actively exploited vulnerability;
-%   Art 14(4)(a)-(c)    -- the steps for a severe incident;
-%   Art 14(5)(a), (b)   -- severity of an incident (an OR of the two limbs);
-%   Art 14(6)           -- the intermediate report on request;
-%   Art 71(2)           -- Article 14 applies from 11 September 2026.
-% Every reading is the a reading, not a lawyer's (see the order).
+% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), Article 14(1) to (6)
+% (reporting obligations of manufacturers), Article 71(2) second sentence (Article 14
+% applies from 11 September 2026); pinned unit text of 32024R2847, OJ L, 2024/2847,
+% 20.11.2024. Every reading is the drafter's reading, not a lawyer's.
 %
-% Public queries (the order's contract):
-%   severe_incident_status(Profile, Status, Citations)
+% Public queries (the order's called contract):
+%   severe_incident_status(Profile, Status, Citations)          Art 14(5)
 %   manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps)
+%                                                               Art 14(2), (4), (6), 71(2)
 %   manufacturer_reporting_step_timeliness(Profile, Event, Step, HoursElapsed, Result)
-% Each yields exactly ONE solution: every step below is complementary
-% clauses, and no list is built with member/2 over duplicates.
-%
-% Judgement keys are tri-state (true, false, unsure) and may be absent; a
-% key is read by presence first (profile_has/2, profile_lacks/2) and then by
-% value (profile_get/3). The input check of the kernel runs first, so a
-% contract key occurs at most once when a key is read.
-%
-% Dates: AWARENESS_DATE is a date(Y, M, D) term. It is compared with the
-% date of application by its (year, month, day) order, as an integer
-% Y * 10000 + M * 100 + D, which is the calendar order for real days.
-% The calendar periods (14 days, one month) are LISTED, never computed
-% (reading (8)); the hour clocks are compared as whole hours already rounded
-% up by the caller (reading (5), RULINGS ruling 6).
+%                                                               Art 14(2)(a)(b), (4)(a)(b)
+% Each query runs the input check first and yields exactly ONE solution.
+% HoursElapsed is the caller's count from becoming aware, a partial hour rounded UP
+% A step is within its limit when HoursElapsed =< the limit.
+% Calendar periods (14 days, one month) are LISTED, never computed (excluded set).
 % =====================================================================
 
 :- module(cra_art14_manufacturer_reporting, [
-    severe_incident_status/3,
-    manufacturer_reporting_steps/4,
-    manufacturer_reporting_step_timeliness/5,
     decide_cra_art14_manufacturer_reporting/2,
     cra_art14_manufacturer_reporting_status/2,
     cra_art14_manufacturer_reporting_checklist/2,
     cra_art14_manufacturer_reporting_decision_resolvable/1,
-    cra_art14_manufacturer_reporting_status_values/1
+    cra_art14_manufacturer_reporting_status_values/1,
+    severe_incident_status/3,
+    manufacturer_reporting_steps/4,
+    manufacturer_reporting_step_timeliness/5,
+    severe/0,
+    not_severe/0,
+    on_time/0,
+    unsure/0,
+    affects_protection_of_sensitive_or_important_data_or_functions/0,
+    leads_to_malicious_code_in_product_or_user_systems/0,
+    early_warning_without_undue_delay/0,
+    notification_without_undue_delay/0,
+    actively_exploited_vulnerability/0,
+    incident_impacting_product_security/0,
+    early_warning/0,
+    notification/0,
+    date/3,
+    step_due/3,
+    hours_after_awareness/1,
+    days_after_measure_available/1,
+    months_after_notification/1,
+    late/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
 ]).
 
 :- use_module(library(clpz)).
 :- use_module(library(reif), [memberd_t/3]).
+:- use_module(library(datetime), [days_between/3]).
 :- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(kit/deadline_lib, [month_last_day/3]).
 :- use_module(eu/cra_art14_manufacturer_reporting/kernel, [cra_art14_manufacturer_reporting_input_problems/2]).
 :- use_module(eu/cra_art14_manufacturer_reporting/citations, [implements/1]).
 
-% ---- statutory VALUE facts owned by this determination ---------------
-% Art 71(2): 'However, Article 14 shall apply from 11 September 2026'.
-:- constant_value(article_14_application_year, 2026).
-:- constant_value(article_14_application_month, 9).
-:- constant_value(article_14_application_day, 11).
-% Art 14(2)(a), (4)(a): 'within 24 hours of the manufacturer becoming aware'.
-:- constant_value(early_warning_limit_hours, 24).
-% Art 14(2)(b), (4)(b): 'within 72 hours of the manufacturer becoming aware'.
-:- constant_value(notification_limit_hours, 72).
-% Art 14(2)(c): 'no later than 14 days after a corrective or mitigating measure is available'.
-:- constant_value(vulnerability_final_report_days, 14).
-% Art 14(4)(c): 'within one month after the submission of the incident notification'.
-:- constant_value(incident_final_report_months, 1).
+% ---- result constructors (data, no clauses) ---------------------------
+:- constructors([
+    date(y, m, d),
+    step_due(step, limit, cite),
+    hours_after_awareness(n),
+    days_after_measure_available(days),
+    months_after_notification(months),
+    late(requirement),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, cite),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
 
-% The verdict vocabulary of the facade (severe_incident_status/3 final values).
+% ---- root exports (atoms) --------------------------------------------
+severe.
+not_severe.
+on_time.
+unsure.
+affects_protection_of_sensitive_or_important_data_or_functions.
+leads_to_malicious_code_in_product_or_user_systems.
+early_warning_without_undue_delay.
+notification_without_undue_delay.
+actively_exploited_vulnerability.
+incident_impacting_product_security.
+early_warning.
+notification.
+
+% ---- statutory VALUE facts owned by this determination ---------------
 cra_art14_manufacturer_reporting_status_values([severe, not_severe]).
 
-% ---- the reporting steps, one row per step, in the order of reading (4) ----
-% reporting_step_row(Event, Step, Limit, cite(Key)): the rows of one Event,
-% in clause order, are the steps listed for it.
-reporting_step_row(actively_exploited_vulnerability, early_warning, hours_after_awareness(Hours), cite(eu_reg_2024_2847_art_14_2_a)) :-
-    implements(eu_reg_2024_2847_art_14_2_a),
-    Hours #= constant(early_warning_limit_hours).
-reporting_step_row(actively_exploited_vulnerability, notification, hours_after_awareness(Hours), cite(eu_reg_2024_2847_art_14_2_b)) :-
-    implements(eu_reg_2024_2847_art_14_2_b),
-    Hours #= constant(notification_limit_hours).
-reporting_step_row(actively_exploited_vulnerability, final_report, days_after_measure_available(Days), cite(eu_reg_2024_2847_art_14_2_c)) :-
-    implements(eu_reg_2024_2847_art_14_2_c),
-    Days #= constant(vulnerability_final_report_days).
-reporting_step_row(incident_impacting_product_security, early_warning, hours_after_awareness(Hours), cite(eu_reg_2024_2847_art_14_4_a)) :-
-    implements(eu_reg_2024_2847_art_14_4_a),
-    Hours #= constant(early_warning_limit_hours).
-reporting_step_row(incident_impacting_product_security, notification, hours_after_awareness(Hours), cite(eu_reg_2024_2847_art_14_4_b)) :-
-    implements(eu_reg_2024_2847_art_14_4_b),
-    Hours #= constant(notification_limit_hours).
-reporting_step_row(incident_impacting_product_security, final_report, months_after_notification(Months), cite(eu_reg_2024_2847_art_14_4_c)) :-
-    implements(eu_reg_2024_2847_art_14_4_c),
-    Months #= constant(incident_final_report_months).
-reporting_step_row(Event, intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6)) :-
-    implements(eu_reg_2024_2847_art_14_6),
-    reporting_event(Event).
+% Art 71(2) second sentence: Article 14 applies from 11 September 2026.
+article_14_application_date(date(2026, 9, 11), cite(eu_reg_2024_2847_art_71_2)).
 
-reporting_event(actively_exploited_vulnerability).
-reporting_event(incident_impacting_product_security).
+% The reporting steps, in the order the order fixes (early warning,
+% notification, final report, intermediate report), with their limits.
+reporting_step_row(actively_exploited_vulnerability, early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)).
+reporting_step_row(actively_exploited_vulnerability, notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_2_b)).
+reporting_step_row(actively_exploited_vulnerability, final_report, days_after_measure_available(14), cite(eu_reg_2024_2847_art_14_2_c)).
+reporting_step_row(actively_exploited_vulnerability, intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6)).
+reporting_step_row(incident_impacting_product_security, early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_4_a)).
+reporting_step_row(incident_impacting_product_security, notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_4_b)).
+reporting_step_row(incident_impacting_product_security, final_report, months_after_notification(1), cite(eu_reg_2024_2847_art_14_4_c)).
+reporting_step_row(incident_impacting_product_security, intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6)).
 
-% listed_steps(Event, Steps): the rows of Event, in order, as step_due/3 terms.
-listed_steps(Event, Steps) :-
-    findall(step_due(Step, Limit, Citation),
-            reporting_step_row(Event, Step, Limit, Citation),
-            Steps).
+% The undue-delay judgement key of each step with an hour limit.
+undue_delay_key(early_warning, early_warning_without_undue_delay).
+undue_delay_key(notification, notification_without_undue_delay).
 
-% ---- reading a judgement key: absent, or its value --------------------
-judgement_state(Profile, Key, absent) :-
-    profile_lacks(Profile, Key).
-judgement_state(Profile, Key, Value) :-
-    profile_has(Profile, Key),
-    profile_get(Profile, Key, Value).
+% ---- reading the judgement keys (profile plumbing) --------------------
+% After the input check each key occurs at most once with a value in its type.
+judgement_reading(Profile, JudgementKey, absent) :-
+    profile_lacks(Profile, JudgementKey).
+judgement_reading(Profile, JudgementKey, KeyValue) :-
+    profile_has(Profile, JudgementKey),
+    profile_get(Profile, JudgementKey, KeyValue).
 
-not_true_judgement(false).
-not_true_judgement(unsure).
-not_true_judgement(absent).
+severity_readings(Profile, ProtectionValue, MaliciousCodeValue) :-
+    judgement_reading(Profile, affects_protection_of_sensitive_or_important_data_or_functions, ProtectionValue),
+    judgement_reading(Profile, leads_to_malicious_code_in_product_or_user_systems, MaliciousCodeValue).
 
-given_not_true_judgement(false).
-given_not_true_judgement(unsure).
-
-% ---- Art 14(5): severity, steps (S1) to (S4) of THE LIMBS ------------
-% severity_route(Protection, MaliciousCode, Route): the sixteen combinations
-% of the two limbs (true, false, unsure, absent) each fall in exactly one
-% clause.
-% (S1) a true limb decides severe, whatever the other limb is.
-severity_route(true, _, severe) :-
+% ---- Art 14(5): severity, steps (S1) to (S4) --------------------------
+% Disjoint over the two readings (true, false, unsure, absent): one route each.
+severity_route(true, _, severe, [cite(eu_reg_2024_2847_art_14_5)]) :-
     implements(eu_reg_2024_2847_art_14_5).
-severity_route(Protection, true, severe) :-
+severity_route(ProtectionValue, true, severe, [cite(eu_reg_2024_2847_art_14_5)]) :-
     implements(eu_reg_2024_2847_art_14_5),
-    not_true_judgement(Protection).
-% (S2) neither true: the first absent limb, A before B.
-severity_route(absent, MaliciousCode, missing(affects_protection_of_sensitive_or_important_data_or_functions)) :-
-    implements(eu_reg_2024_2847_art_14_5),
-    not_true_judgement(MaliciousCode).
-severity_route(Protection, absent, missing(leads_to_malicious_code_in_product_or_user_systems)) :-
-    implements(eu_reg_2024_2847_art_14_5),
-    given_not_true_judgement(Protection).
-% (S3) both present, neither true, one unsure: the first unsure limb refers.
-severity_route(unsure, MaliciousCode, refer(affects_protection_of_sensitive_or_important_data_or_functions)) :-
+    member(ProtectionValue, [false, unsure, absent]).
+severity_route(absent, MaliciousCodeValue, indeterminate([affects_protection_of_sensitive_or_important_data_or_functions]), []) :-
     implements(eu_reg_2024_2847_art_14_5_a),
-    given_not_true_judgement(MaliciousCode).
-severity_route(false, unsure, refer(leads_to_malicious_code_in_product_or_user_systems)) :-
-    implements(eu_reg_2024_2847_art_14_5_b).
-% (S4) both limbs false.
-severity_route(false, false, not_severe) :-
+    member(MaliciousCodeValue, [false, unsure, absent]).
+severity_route(ProtectionValue, absent, indeterminate([leads_to_malicious_code_in_product_or_user_systems]), []) :-
+    implements(eu_reg_2024_2847_art_14_5_b),
+    member(ProtectionValue, [false, unsure]).
+severity_route(unsure, MaliciousCodeValue, needs_legal_review(open_textured(affects_protection_of_sensitive_or_important_data_or_functions, cite(eu_reg_2024_2847_art_14_5_a)), [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions-unsure, leads_to_malicious_code_in_product_or_user_systems-MaliciousCodeValue])]), []) :-
     implements(eu_reg_2024_2847_art_14_5_a),
+    member(MaliciousCodeValue, [false, unsure]).
+severity_route(false, unsure, needs_legal_review(open_textured(leads_to_malicious_code_in_product_or_user_systems, cite(eu_reg_2024_2847_art_14_5_b)), [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions-false, leads_to_malicious_code_in_product_or_user_systems-unsure])]), []) :-
     implements(eu_reg_2024_2847_art_14_5_b).
+severity_route(false, false, not_severe, [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]) :-
+    implements(eu_reg_2024_2847_art_14_5).
 
-severity_limb_citation(affects_protection_of_sensitive_or_important_data_or_functions, cite(eu_reg_2024_2847_art_14_5_a)).
-severity_limb_citation(leads_to_malicious_code_in_product_or_user_systems, cite(eu_reg_2024_2847_art_14_5_b)).
-
-% severity_status(Route, Protection, MaliciousCode, Status, Citations).
-severity_status(severe, _, _, severe, [cite(eu_reg_2024_2847_art_14_5)]).
-severity_status(not_severe, _, _, not_severe, [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]).
-severity_status(missing(Key), _, _, indeterminate([Key]), []).
-severity_status(refer(Key),
-                Protection,
-                MaliciousCode,
-                needs_legal_review(open_textured(Key, Citation),
-                                   [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions-Protection,
-                                                      leads_to_malicious_code_in_product_or_user_systems-MaliciousCode])]),
-                []) :-
-    severity_limb_citation(Key, Citation).
-
-% profile_severity(Profile, Status, Citations): for a profile with no problem.
-profile_severity(Profile, Status, Citations) :-
-    judgement_state(Profile, affects_protection_of_sensitive_or_important_data_or_functions, Protection),
-    judgement_state(Profile, leads_to_malicious_code_in_product_or_user_systems, MaliciousCode),
-    severity_route(Protection, MaliciousCode, Route),
-    severity_status(Route, Protection, MaliciousCode, Status, Citations).
-
-% ---- query (A): severe_incident_status/3 ------------------------------
+severe_incident_status(Profile, input_problems([Problem|Problems]), []) :-
+    cra_art14_manufacturer_reporting_input_problems(Profile, [Problem|Problems]).
 severe_incident_status(Profile, Status, Citations) :-
-    cra_art14_manufacturer_reporting_input_problems(Profile, Problems),
-    severity_answer(Problems, Profile, Status, Citations).
+    cra_art14_manufacturer_reporting_input_problems(Profile, []),
+    severity_readings(Profile, ProtectionValue, MaliciousCodeValue),
+    severity_route(ProtectionValue, MaliciousCodeValue, Status, Citations).
 
-% (S0) input problems first.
-severity_answer([], Profile, Status, Citations) :-
-    profile_severity(Profile, Status, Citations).
-severity_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
-
-% ---- argument checks (THE INPUT CHECK, THE ARGUMENTS) -----------------
-argument_problem(true, _, []).
-argument_problem(false, Name, [wrong_type(Name)]).
-
-event_problems(Event, [wrong_type(event)]) :-
-    var(Event).
-event_problems(Event, Problems) :-
-    nonvar(Event),
-    memberd_t(Event, [actively_exploited_vulnerability, incident_impacting_product_security], Known),
-    argument_problem(Known, event, Problems).
-
-step_problems(Step, [wrong_type(step)]) :-
-    var(Step).
-step_problems(Step, Problems) :-
-    nonvar(Step),
-    memberd_t(Step, [early_warning, notification], Known),
-    argument_problem(Known, step, Problems).
-
-hours_elapsed_problems(HoursElapsed, [wrong_type(hours_elapsed)]) :-
-    var(HoursElapsed).
-hours_elapsed_problems(HoursElapsed, Problems) :-
-    nonvar(HoursElapsed),
-    integer_t(HoursElapsed, IsInteger),
-    non_negative_integer_t(IsInteger, HoursElapsed, Valid),
-    argument_problem(Valid, hours_elapsed, Problems).
-
-non_negative_integer_t(false, _, false).
-non_negative_integer_t(true, HoursElapsed, Valid) :-
-    NonNegativeBit #<==> (HoursElapsed #>= 0),
-    bit_truth(NonNegativeBit, Valid).
-
-% integer_t(Term, T): T is true for an integer, false for any other bound term.
-integer_t(Term, Truth) :-
-    catch((must_be(integer, Term), Truth = true),
-          error(_, _),
-          Truth = false).
-
-bit_truth(1, true).
-bit_truth(0, false).
-
-truth_and(true, Truth, Truth).
-truth_and(false, _, false).
-
-% The awareness date: a ground date(Y, M, D) of a real calendar day.
-awareness_date_problems(AwarenessDate, Problems) :-
-    calendar_date_t(AwarenessDate, Valid),
-    argument_problem(Valid, awareness_date, Problems).
-
-calendar_date_t(Date, false) :-
-    term_variables(Date, [_|_]).
-calendar_date_t(Date, Valid) :-
-    term_variables(Date, []),
-    date_term_t(Date, Valid).
-
-date_term_t(Date, false) :-
-    Date \= date(_, _, _).
-date_term_t(date(Year, Month, Day), Valid) :-
-    integer_t(Year, YearInteger),
-    integer_t(Month, MonthInteger),
-    integer_t(Day, DayInteger),
-    truth_and(YearInteger, MonthInteger, YearMonthIntegers),
-    truth_and(YearMonthIntegers, DayInteger, Integers),
-    calendar_day_t(Integers, Year, Month, Day, Valid).
-
-calendar_day_t(false, _, _, _, false).
-calendar_day_t(true, Year, Month, Day, Valid) :-
-    MonthBit #<==> (Month #>= 1 #/\ Month #=< 12),
-    bit_truth(MonthBit, MonthValid),
-    day_of_month_t(MonthValid, Year, Month, Day, Valid).
-
-day_of_month_t(false, _, _, _, false).
-day_of_month_t(true, Year, Month, Day, Valid) :-
-    month_length(Year, Month, Length),
-    DayBit #<==> (Day #>= 1 #/\ Day #=< Length),
-    bit_truth(DayBit, Valid).
-
-month_length(_, 1, 31).
-month_length(Year, 2, Length) :-
-    leap_year_t(Year, Leap),
-    february_length(Leap, Length).
-month_length(_, 3, 31).
-month_length(_, 4, 30).
-month_length(_, 5, 31).
-month_length(_, 6, 30).
-month_length(_, 7, 31).
-month_length(_, 8, 31).
-month_length(_, 9, 30).
-month_length(_, 10, 31).
-month_length(_, 11, 30).
-month_length(_, 12, 31).
-
-% A leap year: divisible by 4 and not by 100, or divisible by 400.
-leap_year_t(Year, Leap) :-
-    LeapBit #<==> ((Year mod 4 #= 0 #/\ Year mod 100 #> 0) #\/ Year mod 400 #= 0),
-    bit_truth(LeapBit, Leap).
-
-february_length(true, 29).
-february_length(false, 28).
-
-% ---- Art 71(2): the date of application of Article 14 -----------------
-% (R1) awareness before 11 September 2026: Article 14 does not yet apply;
-% on that day or later it applies (reading (11)).
-application_of_article_14(date(Year, Month, Day), not_yet_applicable) :-
+% ---- Art 71(2): application of Article 14 (native datetime) ------------
+application_status(AwarenessDate, not_yet_applicable) :-
     implements(eu_reg_2024_2847_art_71_2),
-    DateOrder #= Year * 10000 + Month * 100 + Day,
-    DateOrder #< constant(article_14_application_year) * 10000 + constant(article_14_application_month) * 100 + constant(article_14_application_day).
-application_of_article_14(date(Year, Month, Day), applicable) :-
+    article_14_application_date(ApplicationDate, _Citation),
+    days_between(AwarenessDate, ApplicationDate, DaysFromApplication),
+    DaysFromApplication #< 0.
+application_status(AwarenessDate, applicable) :-
     implements(eu_reg_2024_2847_art_71_2),
-    DateOrder #= Year * 10000 + Month * 100 + Day,
-    DateOrder #>= constant(article_14_application_year) * 10000 + constant(article_14_application_month) * 100 + constant(article_14_application_day).
+    article_14_application_date(ApplicationDate, _Citation),
+    days_between(AwarenessDate, ApplicationDate, DaysFromApplication),
+    DaysFromApplication #>= 0.
 
-% ---- query (B): manufacturer_reporting_steps/4 ------------------------
-manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps) :-
-    cra_art14_manufacturer_reporting_input_problems(Profile, ProfileProblems),
-    event_problems(Event, EventProblems),
-    awareness_date_problems(AwarenessDate, DateProblems),
-    append(EventProblems, DateProblems, ArgumentProblems),
-    append(ProfileProblems, ArgumentProblems, Problems),
-    steps_answer(Problems, Profile, Event, AwarenessDate, Steps).
-
-% (R0) input problems first.
-steps_answer([], Profile, Event, AwarenessDate, Steps) :-
-    application_of_article_14(AwarenessDate, Application),
-    steps_in_application(Application, Profile, Event, Steps).
-steps_answer([Problem|Problems], _, _, _, input_problems([Problem|Problems])).
-
-steps_in_application(not_yet_applicable, _, _, []).
-steps_in_application(applicable, Profile, Event, Steps) :-
-    event_steps(Event, Profile, Steps).
-
-% (R2) an actively exploited vulnerability: four steps, no key is read.
-% The event is the caller's classification under Art 3(1), (13), (40) and
-% (42) (readings (1) and (2)); the markers record that presupposition.
-event_steps(actively_exploited_vulnerability, _, Steps) :-
+% ---- Art 14(2), (4), (6): the steps, steps (R1) to (R3) ---------------
+% The EVENT atoms are the caller's classification under the definitions of
+% Art 3(1), (13) (manufacturer of a product with digital elements) and
+% Art 3(40), (42) (actively exploited vulnerability) or Art 3(43), (44)
+% (incident having an impact on the security of the product); readings (1), (2).
+event_steps(actively_exploited_vulnerability, Steps) :-
     implements(eu_reg_2024_2847_art_14_1),
     implements(eu_reg_2024_2847_art_3_1),
     implements(eu_reg_2024_2847_art_3_13),
     implements(eu_reg_2024_2847_art_3_40),
     implements(eu_reg_2024_2847_art_3_42),
-    listed_steps(actively_exploited_vulnerability, Steps).
-% (R3) an incident: the severity decides first. The event is the caller's
-% classification under Art 3(1), (13), (43) and (44).
-event_steps(incident_impacting_product_security, Profile, Steps) :-
+    findall(step_due(ReportingStep, Limit, Citation),
+            reporting_step_row(actively_exploited_vulnerability, ReportingStep, Limit, Citation),
+            Steps).
+event_steps(incident_impacting_product_security, Steps) :-
     implements(eu_reg_2024_2847_art_14_3),
     implements(eu_reg_2024_2847_art_3_1),
     implements(eu_reg_2024_2847_art_3_13),
     implements(eu_reg_2024_2847_art_3_43),
     implements(eu_reg_2024_2847_art_3_44),
-    profile_severity(Profile, Status, _),
-    incident_steps(Status, Steps).
+    findall(step_due(ReportingStep, Limit, Citation),
+            reporting_step_row(incident_impacting_product_security, ReportingStep, Limit, Citation),
+            Steps).
 
 incident_steps(severe, Steps) :-
     implements(eu_reg_2024_2847_art_14_3),
-    listed_steps(incident_impacting_product_security, Steps).
+    event_steps(incident_impacting_product_security, Steps).
 incident_steps(not_severe, []) :-
     implements(eu_reg_2024_2847_art_14_3).
 incident_steps(indeterminate(MissingKeys), indeterminate(MissingKeys)).
 incident_steps(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
 
-% ---- query (C): manufacturer_reporting_step_timeliness/5 --------------
-manufacturer_reporting_step_timeliness(Profile, Event, Step, HoursElapsed, Result) :-
+reporting_steps_route(_Profile, _Event, AwarenessDate, []) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_status(AwarenessDate, not_yet_applicable).
+reporting_steps_route(_Profile, actively_exploited_vulnerability, AwarenessDate, Steps) :-
+    implements(eu_reg_2024_2847_art_14_1),
+    application_status(AwarenessDate, applicable),
+    event_steps(actively_exploited_vulnerability, Steps).
+reporting_steps_route(Profile, incident_impacting_product_security, AwarenessDate, Steps) :-
+    implements(eu_reg_2024_2847_art_14_3),
+    application_status(AwarenessDate, applicable),
+    severity_readings(Profile, ProtectionValue, MaliciousCodeValue),
+    severity_route(ProtectionValue, MaliciousCodeValue, Status, _Citations),
+    incident_steps(Status, Steps).
+
+manufacturer_reporting_steps(Profile, Event, AwarenessDate, input_problems([Problem|Problems])) :-
+    steps_input_problems(Profile, Event, AwarenessDate, [Problem|Problems]).
+manufacturer_reporting_steps(Profile, Event, AwarenessDate, Steps) :-
+    steps_input_problems(Profile, Event, AwarenessDate, []),
+    reporting_steps_route(Profile, Event, AwarenessDate, Steps).
+
+% ---- Art 14(2)(a)(b), (4)(a)(b): timeliness, steps (T1) and (T2) -------
+step_hour_limit(actively_exploited_vulnerability, early_warning, HoursLimit, Citation) :-
+    implements(eu_reg_2024_2847_art_14_2_a),
+    reporting_step_row(actively_exploited_vulnerability, early_warning, hours_after_awareness(HoursLimit), Citation).
+step_hour_limit(actively_exploited_vulnerability, notification, HoursLimit, Citation) :-
+    implements(eu_reg_2024_2847_art_14_2_b),
+    reporting_step_row(actively_exploited_vulnerability, notification, hours_after_awareness(HoursLimit), Citation).
+step_hour_limit(incident_impacting_product_security, early_warning, HoursLimit, Citation) :-
+    implements(eu_reg_2024_2847_art_14_4_a),
+    reporting_step_row(incident_impacting_product_security, early_warning, hours_after_awareness(HoursLimit), Citation).
+step_hour_limit(incident_impacting_product_security, notification, HoursLimit, Citation) :-
+    implements(eu_reg_2024_2847_art_14_4_b),
+    reporting_step_row(incident_impacting_product_security, notification, hours_after_awareness(HoursLimit), Citation).
+
+% The projection of the undue-delay judgement into a result.
+undue_delay_result(absent, JudgementKey, _Citation, indeterminate([JudgementKey])).
+undue_delay_result(true, _JudgementKey, _Citation, on_time).
+undue_delay_result(false, _JudgementKey, _Citation, late(without_undue_delay)).
+undue_delay_result(unsure, JudgementKey, Citation, needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on([JudgementKey-unsure])])).
+
+% Late is late: after the hour limit no key is read (reading (6)).
+timeliness_route(_Profile, actively_exploited_vulnerability, ReportingStep, HoursElapsed, late(hour_limit)) :-
+    implements(eu_reg_2024_2847_art_14_1),
+    step_hour_limit(actively_exploited_vulnerability, ReportingStep, HoursLimit, _Citation),
+    HoursElapsed #> HoursLimit.
+timeliness_route(Profile, actively_exploited_vulnerability, ReportingStep, HoursElapsed, Result) :-
+    implements(eu_reg_2024_2847_art_14_1),
+    step_hour_limit(actively_exploited_vulnerability, ReportingStep, HoursLimit, Citation),
+    HoursElapsed #=< HoursLimit,
+    undue_delay_key(ReportingStep, JudgementKey),
+    judgement_reading(Profile, JudgementKey, KeyValue),
+    undue_delay_result(KeyValue, JudgementKey, Citation, Result).
+timeliness_route(_Profile, incident_impacting_product_security, ReportingStep, HoursElapsed, late(hour_limit)) :-
+    implements(eu_reg_2024_2847_art_14_3),
+    step_hour_limit(incident_impacting_product_security, ReportingStep, HoursLimit, _Citation),
+    HoursElapsed #> HoursLimit.
+timeliness_route(Profile, incident_impacting_product_security, ReportingStep, HoursElapsed, Result) :-
+    implements(eu_reg_2024_2847_art_14_3),
+    step_hour_limit(incident_impacting_product_security, ReportingStep, HoursLimit, Citation),
+    HoursElapsed #=< HoursLimit,
+    undue_delay_key(ReportingStep, JudgementKey),
+    judgement_reading(Profile, JudgementKey, KeyValue),
+    undue_delay_result(KeyValue, JudgementKey, Citation, Result).
+
+manufacturer_reporting_step_timeliness(Profile, Event, ReportingStep, HoursElapsed, input_problems([Problem|Problems])) :-
+    timeliness_input_problems(Profile, Event, ReportingStep, HoursElapsed, [Problem|Problems]).
+manufacturer_reporting_step_timeliness(Profile, Event, ReportingStep, HoursElapsed, Result) :-
+    timeliness_input_problems(Profile, Event, ReportingStep, HoursElapsed, []),
+    timeliness_route(Profile, Event, ReportingStep, HoursElapsed, Result).
+
+% ---- argument checks (step 0, after the profile problems) -------------
+steps_input_problems(Profile, Event, AwarenessDate, Problems) :-
     cra_art14_manufacturer_reporting_input_problems(Profile, ProfileProblems),
     event_problems(Event, EventProblems),
-    step_problems(Step, StepProblems),
-    hours_elapsed_problems(HoursElapsed, HoursProblems),
-    append(StepProblems, HoursProblems, StepHoursProblems),
-    append(EventProblems, StepHoursProblems, ArgumentProblems),
-    append(ProfileProblems, ArgumentProblems, Problems),
-    timeliness_answer(Problems, Profile, Event, Step, HoursElapsed, Result).
+    awareness_date_problems(AwarenessDate, DateProblems),
+    append([ProfileProblems, EventProblems, DateProblems], Problems).
 
-% (T0) input problems first.
-timeliness_answer([], Profile, Event, Step, HoursElapsed, Result) :-
-    hour_limit_route(Event, Step, HoursElapsed, Route),
-    timeliness_result(Route, Profile, Event, Step, Result).
-timeliness_answer([Problem|Problems], _, _, _, _, input_problems([Problem|Problems])).
+timeliness_input_problems(Profile, Event, ReportingStep, HoursElapsed, Problems) :-
+    cra_art14_manufacturer_reporting_input_problems(Profile, ProfileProblems),
+    event_problems(Event, EventProblems),
+    step_problems(ReportingStep, StepProblems),
+    hours_problems(HoursElapsed, HoursProblems),
+    append([ProfileProblems, EventProblems, StepProblems, HoursProblems], Problems).
 
-% (T1) the hour limit: 24 or 72 is within; one hour more is late (reading (5)).
-hour_limit_route(Event, early_warning, HoursElapsed, beyond_hour_limit) :-
-    implements(eu_reg_2024_2847_art_14_2_a),
-    implements(eu_reg_2024_2847_art_14_4_a),
-    reporting_step_row(Event, early_warning, hours_after_awareness(LimitHours), _),
-    HoursElapsed #> LimitHours.
-hour_limit_route(Event, early_warning, HoursElapsed, within_hour_limit) :-
-    implements(eu_reg_2024_2847_art_14_2_a),
-    implements(eu_reg_2024_2847_art_14_4_a),
-    reporting_step_row(Event, early_warning, hours_after_awareness(LimitHours), _),
-    HoursElapsed #=< LimitHours.
-hour_limit_route(Event, notification, HoursElapsed, beyond_hour_limit) :-
-    implements(eu_reg_2024_2847_art_14_2_b),
-    implements(eu_reg_2024_2847_art_14_4_b),
-    reporting_step_row(Event, notification, hours_after_awareness(LimitHours), _),
-    HoursElapsed #> LimitHours.
-hour_limit_route(Event, notification, HoursElapsed, within_hour_limit) :-
-    implements(eu_reg_2024_2847_art_14_2_b),
-    implements(eu_reg_2024_2847_art_14_4_b),
-    reporting_step_row(Event, notification, hours_after_awareness(LimitHours), _),
-    HoursElapsed #=< LimitHours.
+event_problems(Event, []) :-
+    atom_in_set_t(Event, [actively_exploited_vulnerability, incident_impacting_product_security], true).
+event_problems(Event, [wrong_type(event)]) :-
+    atom_in_set_t(Event, [actively_exploited_vulnerability, incident_impacting_product_security], false).
 
-% (T1) late is late: no key is read (reading (6)).
-timeliness_result(beyond_hour_limit, _, _, _, late(hour_limit)).
-% (T2) within the limit: the step's own undue-delay judgement (reading (7)).
-timeliness_result(within_hour_limit, Profile, Event, early_warning, Result) :-
-    implements(eu_reg_2024_2847_art_14_2_a),
-    implements(eu_reg_2024_2847_art_14_4_a),
-    judgement_state(Profile, early_warning_without_undue_delay, State),
-    reporting_step_row(Event, early_warning, _, Citation),
-    undue_delay_result(State, early_warning_without_undue_delay, Citation, Result).
-timeliness_result(within_hour_limit, Profile, Event, notification, Result) :-
-    implements(eu_reg_2024_2847_art_14_2_b),
-    implements(eu_reg_2024_2847_art_14_4_b),
-    judgement_state(Profile, notification_without_undue_delay, State),
-    reporting_step_row(Event, notification, _, Citation),
-    undue_delay_result(State, notification_without_undue_delay, Citation, Result).
+step_problems(ReportingStep, []) :-
+    atom_in_set_t(ReportingStep, [early_warning, notification], true).
+step_problems(ReportingStep, [wrong_type(step)]) :-
+    atom_in_set_t(ReportingStep, [early_warning, notification], false).
 
-undue_delay_result(absent, Key, _, indeterminate([Key])).
-undue_delay_result(true, _, _, on_time).
-undue_delay_result(false, _, _, late(without_undue_delay)).
-undue_delay_result(unsure, Key, Citation, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on([Key-unsure])])).
+hours_problems(HoursElapsed, []) :-
+    non_negative_integer_t(HoursElapsed, true).
+hours_problems(HoursElapsed, [wrong_type(hours_elapsed)]) :-
+    non_negative_integer_t(HoursElapsed, false).
 
-% ---- facade: verdict, projection, checklist ---------------------------
+awareness_date_problems(AwarenessDate, []) :-
+    calendar_date_t(AwarenessDate, true).
+awareness_date_problems(AwarenessDate, [wrong_type(awareness_date)]) :-
+    calendar_date_t(AwarenessDate, false).
+
+atom_in_set_t(Argument, _Allowed, false) :-
+    var(Argument).
+atom_in_set_t(Argument, Allowed, Truth) :-
+    term_variables(Argument, []),
+    memberd_t(Argument, Allowed, Truth).
+atom_in_set_t(Argument, _Allowed, false) :-
+    nonvar(Argument),
+    term_variables(Argument, [_|_]).
+
+integer_t(Candidate, Truth) :-
+    catch(integer_truth(Candidate, Truth), _Error, Truth = false).
+
+integer_truth(Candidate, true) :-
+    must_be(integer, Candidate).
+
+non_negative_integer_t(Candidate, false) :-
+    term_variables(Candidate, [_|_]).
+non_negative_integer_t(Candidate, Truth) :-
+    term_variables(Candidate, []),
+    integer_t(Candidate, IsInteger),
+    non_negative_t(IsInteger, Candidate, Truth).
+
+non_negative_t(false, _Candidate, false).
+non_negative_t(true, Candidate, true) :-
+    Candidate #>= 0.
+non_negative_t(true, Candidate, false) :-
+    Candidate #< 0.
+
+truth_conjunction(true, Truth, Truth).
+truth_conjunction(false, _Truth, false).
+
+calendar_date_t(DateTerm, false) :-
+    term_variables(DateTerm, [_|_]).
+calendar_date_t(DateTerm, Truth) :-
+    term_variables(DateTerm, []),
+    date_shape_t(DateTerm, Truth).
+
+date_shape_t(DateTerm, false) :-
+    DateTerm \= date(_, _, _).
+date_shape_t(date(YearNumber, MonthNumber, DayNumber), Truth) :-
+    integer_t(YearNumber, YearIsInteger),
+    integer_t(MonthNumber, MonthIsInteger),
+    integer_t(DayNumber, DayIsInteger),
+    truth_conjunction(YearIsInteger, MonthIsInteger, YearAndMonth),
+    truth_conjunction(YearAndMonth, DayIsInteger, AllIntegers),
+    calendar_month_t(AllIntegers, YearNumber, MonthNumber, DayNumber, Truth).
+
+calendar_month_t(false, _YearNumber, _MonthNumber, _DayNumber, false).
+calendar_month_t(true, YearNumber, MonthNumber, DayNumber, Truth) :-
+    month_in_range_t(MonthNumber, InRange),
+    calendar_day_t(InRange, YearNumber, MonthNumber, DayNumber, Truth).
+
+month_in_range_t(MonthNumber, true) :-
+    MonthNumber #>= 1,
+    MonthNumber #=< 12.
+month_in_range_t(MonthNumber, false) :-
+    MonthNumber #< 1.
+month_in_range_t(MonthNumber, false) :-
+    MonthNumber #> 12.
+
+calendar_day_t(false, _YearNumber, _MonthNumber, _DayNumber, false).
+calendar_day_t(true, YearNumber, MonthNumber, DayNumber, Truth) :-
+    month_last_day(YearNumber, MonthNumber, LastDay),
+    day_in_range_t(DayNumber, LastDay, Truth).
+
+day_in_range_t(DayNumber, LastDay, true) :-
+    DayNumber #>= 1,
+    DayNumber #=< LastDay.
+day_in_range_t(DayNumber, _LastDay, false) :-
+    DayNumber #< 1.
+day_in_range_t(DayNumber, LastDay, false) :-
+    DayNumber #> LastDay.
+
+% ---- facade: verdict, status projection, checklist --------------------
 decide_cra_art14_manufacturer_reporting(Profile, cra_art14_manufacturer_reporting_verdict(Status, Citations)) :-
     severe_incident_status(Profile, Status, Citations).
 
 cra_art14_manufacturer_reporting_status(Profile, Status) :-
     decide_cra_art14_manufacturer_reporting(Profile, cra_art14_manufacturer_reporting_verdict(Status, _Citations)).
 
-% One row per limb of Art 14(5); a profile with problems gives one row.
-cra_art14_manufacturer_reporting_checklist(Profile, Items) :-
-    cra_art14_manufacturer_reporting_input_problems(Profile, Problems),
-    checklist_items(Problems, Profile, Items).
+limb_status(true, _JudgementKey, met).
+limb_status(false, _JudgementKey, unmet(limb_not_met)).
+limb_status(unsure, JudgementKey, unknown([JudgementKey])).
+limb_status(absent, JudgementKey, unknown([JudgementKey])).
 
-checklist_items([Problem|Problems], _, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2024_2847_art_14_5))]).
-checklist_items([],
-                Profile,
-                [item(severity_protection_of_data_or_functions, ProtectionStatus, cite(eu_reg_2024_2847_art_14_5_a)),
-                 item(severity_malicious_code, MaliciousCodeStatus, cite(eu_reg_2024_2847_art_14_5_b))]) :-
-    judgement_state(Profile, affects_protection_of_sensitive_or_important_data_or_functions, Protection),
-    judgement_state(Profile, leads_to_malicious_code_in_product_or_user_systems, MaliciousCode),
-    limb_item_status(Protection, affects_protection_of_sensitive_or_important_data_or_functions, ProtectionStatus),
-    limb_item_status(MaliciousCode, leads_to_malicious_code_in_product_or_user_systems, MaliciousCodeStatus).
-
-limb_item_status(true, _, met) :-
-    implements(eu_reg_2024_2847_art_14_5).
-limb_item_status(false, _, unmet(limb_not_met)) :-
-    implements(eu_reg_2024_2847_art_14_5).
-limb_item_status(unsure, Key, unknown([Key])).
-limb_item_status(absent, Key, unknown([Key])).
+cra_art14_manufacturer_reporting_checklist(Profile, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2024_2847_art_14_5))]) :-
+    cra_art14_manufacturer_reporting_input_problems(Profile, [Problem|Problems]).
+cra_art14_manufacturer_reporting_checklist(Profile, [item(severity_protection_of_data_or_functions, ProtectionStatus, cite(eu_reg_2024_2847_art_14_5_a)), item(severity_malicious_code, MaliciousCodeStatus, cite(eu_reg_2024_2847_art_14_5_b))]) :-
+    cra_art14_manufacturer_reporting_input_problems(Profile, []),
+    severity_readings(Profile, ProtectionValue, MaliciousCodeValue),
+    limb_status(ProtectionValue, affects_protection_of_sensitive_or_important_data_or_functions, ProtectionStatus),
+    limb_status(MaliciousCodeValue, leads_to_malicious_code_in_product_or_user_systems, MaliciousCodeStatus).
 
 cra_art14_manufacturer_reporting_decision_resolvable(Profile) :-
     decide_cra_art14_manufacturer_reporting(Profile, _Verdict).
 
-% ---- tests -------------------------------------------------------------
-test(protection_limb_true_is_severe_once) :-
-    findall(Status-Citations,
-            severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true)], Status, Citations),
-            Answers),
-    Answers == [severe-[cite(eu_reg_2024_2847_art_14_5)]].
-test(malicious_code_true_beside_unsure_is_severe) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure),
-                            attribute(leads_to_malicious_code_in_product_or_user_systems, true)],
-                           severe,
-                           [cite(eu_reg_2024_2847_art_14_5)]).
-test(unsure_beside_absent_names_the_absent_key) :-
-    findall(Status,
-            severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure)], Status, []),
-            Statuses),
-    Statuses == [indeterminate([leads_to_malicious_code_in_product_or_user_systems])].
-test(absent_protection_beside_false_names_protection) :-
-    severe_incident_status([attribute(leads_to_malicious_code_in_product_or_user_systems, false)],
-                           indeterminate([affects_protection_of_sensitive_or_important_data_or_functions]),
-                           []).
-test(unsure_protection_refers_with_both_pairs) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure),
-                            attribute(leads_to_malicious_code_in_product_or_user_systems, false)],
-                           Status,
-                           []),
-    Status == needs_legal_review(open_textured(affects_protection_of_sensitive_or_important_data_or_functions, cite(eu_reg_2024_2847_art_14_5_a)),
-                                 [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions-unsure,
-                                                    leads_to_malicious_code_in_product_or_user_systems-false])]).
-test(unsure_malicious_code_refers_on_point_b) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
-                            attribute(leads_to_malicious_code_in_product_or_user_systems, unsure)],
-                           needs_legal_review(open_textured(leads_to_malicious_code_in_product_or_user_systems, cite(eu_reg_2024_2847_art_14_5_b)), _),
-                           []).
+% ---- tests ------------------------------------------------------------
+test(protection_limb_true_is_severe) :-
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true)], severe, [cite(eu_reg_2024_2847_art_14_5)]).
+test(malicious_code_limb_true_is_severe) :-
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure), attribute(leads_to_malicious_code_in_product_or_user_systems, true)], severe, [cite(eu_reg_2024_2847_art_14_5)]).
+test(both_limbs_true_answer_once) :-
+    findall(Status, severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true), attribute(leads_to_malicious_code_in_product_or_user_systems, true)], Status, _Citations), Statuses),
+    Statuses == [severe].
 test(both_limbs_false_is_not_severe) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
-                            attribute(leads_to_malicious_code_in_product_or_user_systems, false)],
-                           not_severe,
-                           [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]).
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false), attribute(leads_to_malicious_code_in_product_or_user_systems, false)], not_severe, [cite(eu_reg_2024_2847_art_14_5_a), cite(eu_reg_2024_2847_art_14_5_b)]).
 test(both_limbs_false_is_not_severe_as_severe, fail) :-
-    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
-                            attribute(leads_to_malicious_code_in_product_or_user_systems, false)],
-                           severe,
-                           _).
-test(unknown_key_is_an_input_problem) :-
-    severe_incident_status([attribute(colour, red)], input_problems([unknown_key(colour)]), []).
-test(vulnerability_before_application_has_no_step) :-
-    findall(Steps, manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 10), Steps), Answers),
-    Answers == [[]].
-test(vulnerability_on_application_day_has_four_steps) :-
-    findall(Steps, manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 11), Steps), Answers),
-    Answers == [[step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)),
-                 step_due(notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_2_b)),
-                 step_due(final_report, days_after_measure_available(14), cite(eu_reg_2024_2847_art_14_2_c)),
-                 step_due(intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6))]].
-test(severe_incident_has_four_steps) :-
-    manufacturer_reporting_steps([attribute(leads_to_malicious_code_in_product_or_user_systems, true)],
-                                 incident_impacting_product_security,
-                                 date(2027, 1, 5),
-                                 [step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_4_a)),
-                                  step_due(notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_4_b)),
-                                  step_due(final_report, months_after_notification(1), cite(eu_reg_2024_2847_art_14_4_c)),
-                                  step_due(intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6))]).
-test(incident_not_severe_has_no_step) :-
-    manufacturer_reporting_steps([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false),
-                                  attribute(leads_to_malicious_code_in_product_or_user_systems, false)],
-                                 incident_impacting_product_security,
-                                 date(2027, 1, 5),
-                                 []).
-test(incident_with_no_judgement_is_indeterminate) :-
-    manufacturer_reporting_steps([], incident_impacting_product_security, date(2027, 1, 5),
-                                 indeterminate([affects_protection_of_sensitive_or_important_data_or_functions])).
-test(february_29_in_a_common_year_is_wrong) :-
-    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2027, 2, 29),
-                                 input_problems([wrong_type(awareness_date)])).
-test(february_29_in_a_leap_year_is_a_day) :-
-    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2028, 2, 29), [_, _, _, _]).
-test(bad_event_and_date_follow_profile_problem) :-
-    manufacturer_reporting_steps(oops, breach, date(2027, 13, 1),
-                                 input_problems([wrong_type(profile), wrong_type(event), wrong_type(awareness_date)])).
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false), attribute(leads_to_malicious_code_in_product_or_user_systems, false)], severe, _Citations).
+test(unsure_protection_and_absent_code_names_the_code_key) :-
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure)], indeterminate([leads_to_malicious_code_in_product_or_user_systems]), []).
+test(absent_protection_and_false_code_names_the_protection_key) :-
+    severe_incident_status([attribute(leads_to_malicious_code_in_product_or_user_systems, false)], indeterminate([affects_protection_of_sensitive_or_important_data_or_functions]), []).
+test(unsure_protection_refers) :-
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, unsure), attribute(leads_to_malicious_code_in_product_or_user_systems, false)], needs_legal_review(open_textured(affects_protection_of_sensitive_or_important_data_or_functions, cite(eu_reg_2024_2847_art_14_5_a)), [inputs_relied_on([affects_protection_of_sensitive_or_important_data_or_functions-unsure, leads_to_malicious_code_in_product_or_user_systems-false])]), []).
+test(duplicate_key_is_an_input_problem) :-
+    severe_incident_status([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true), attribute(affects_protection_of_sensitive_or_important_data_or_functions, true)], input_problems([duplicate_key(affects_protection_of_sensitive_or_important_data_or_functions)]), []).
+test(before_application_no_step) :-
+    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 10), []).
+test(application_day_lists_vulnerability_steps) :-
+    findall(Steps, manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2026, 9, 11), Steps), Solutions),
+    Solutions == [[step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_2_a)), step_due(notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_2_b)), step_due(final_report, days_after_measure_available(14), cite(eu_reg_2024_2847_art_14_2_c)), step_due(intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6))]].
+test(severe_incident_lists_incident_steps) :-
+    findall(Steps, manufacturer_reporting_steps([attribute(leads_to_malicious_code_in_product_or_user_systems, true)], incident_impacting_product_security, date(2027, 1, 5), Steps), Solutions),
+    Solutions == [[step_due(early_warning, hours_after_awareness(24), cite(eu_reg_2024_2847_art_14_4_a)), step_due(notification, hours_after_awareness(72), cite(eu_reg_2024_2847_art_14_4_b)), step_due(final_report, months_after_notification(1), cite(eu_reg_2024_2847_art_14_4_c)), step_due(intermediate_report, on_request_of_coordinator_csirt, cite(eu_reg_2024_2847_art_14_6))]].
+test(not_severe_incident_lists_no_step) :-
+    manufacturer_reporting_steps([attribute(affects_protection_of_sensitive_or_important_data_or_functions, false), attribute(leads_to_malicious_code_in_product_or_user_systems, false)], incident_impacting_product_security, date(2027, 1, 5), []).
+test(open_severity_is_passed_on) :-
+    manufacturer_reporting_steps([], incident_impacting_product_security, date(2027, 1, 5), indeterminate([affects_protection_of_sensitive_or_important_data_or_functions])).
+test(bad_event_and_impossible_date_are_named) :-
+    manufacturer_reporting_steps([], breach, date(2026, 2, 29), input_problems([wrong_type(event), wrong_type(awareness_date)])).
+test(leap_day_is_a_real_date) :-
+    manufacturer_reporting_steps([], actively_exploited_vulnerability, date(2028, 2, 29), [_|_]).
+test(early_warning_at_24_hours_without_undue_delay_is_on_time) :-
+    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], actively_exploited_vulnerability, early_warning, 24, on_time).
 test(early_warning_at_25_hours_is_late) :-
-    findall(Result, manufacturer_reporting_step_timeliness([], actively_exploited_vulnerability, early_warning, 25, Result), Results),
-    Results == [late(hour_limit)].
-test(early_warning_at_24_hours_without_delay_is_on_time) :-
-    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)],
-                                           incident_impacting_product_security, early_warning, 24, on_time).
-test(early_warning_at_24_hours_is_not_late, fail) :-
-    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)],
-                                           incident_impacting_product_security, early_warning, 24, late(_)).
-test(notification_within_limit_with_undue_delay_is_late) :-
-    manufacturer_reporting_step_timeliness([attribute(notification_without_undue_delay, false)],
-                                           actively_exploited_vulnerability, notification, 72, late(without_undue_delay)).
-test(notification_without_key_is_indeterminate) :-
-    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)],
-                                           actively_exploited_vulnerability, notification, 30,
-                                           indeterminate([notification_without_undue_delay])).
-test(unsure_notification_refers_on_incident_point_b) :-
-    manufacturer_reporting_step_timeliness([attribute(notification_without_undue_delay, unsure)],
-                                           incident_impacting_product_security, notification, 10, Result),
-    Result == needs_legal_review(open_textured(notification_without_undue_delay, cite(eu_reg_2024_2847_art_14_4_b)),
-                                 [inputs_relied_on([notification_without_undue_delay-unsure])]).
-test(bad_step_and_negative_hours_are_problems) :-
-    manufacturer_reporting_step_timeliness([], actively_exploited_vulnerability, final_report, -1,
-                                           input_problems([wrong_type(step), wrong_type(hours_elapsed)])).
-test(checklist_has_one_row_per_limb) :-
-    cra_art14_manufacturer_reporting_checklist([attribute(affects_protection_of_sensitive_or_important_data_or_functions, true)],
-                                               [item(severity_protection_of_data_or_functions, met, _),
-                                                item(severity_malicious_code, unknown([leads_to_malicious_code_in_product_or_user_systems]), _)]).
+    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], actively_exploited_vulnerability, early_warning, 25, late(hour_limit)).
+test(early_warning_at_25_hours_is_not_on_time, fail) :-
+    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, true)], actively_exploited_vulnerability, early_warning, 25, on_time).
+test(notification_with_undue_delay_is_late) :-
+    manufacturer_reporting_step_timeliness([attribute(notification_without_undue_delay, false)], incident_impacting_product_security, notification, 72, late(without_undue_delay)).
+test(unsure_undue_delay_refers_with_incident_citation) :-
+    manufacturer_reporting_step_timeliness([attribute(early_warning_without_undue_delay, unsure)], incident_impacting_product_security, early_warning, 3, needs_legal_review(open_textured(early_warning_without_undue_delay, cite(eu_reg_2024_2847_art_14_4_a)), [inputs_relied_on([early_warning_without_undue_delay-unsure])])).
+test(absent_undue_delay_key_is_named) :-
+    manufacturer_reporting_step_timeliness([], actively_exploited_vulnerability, notification, 10, indeterminate([notification_without_undue_delay])).
+test(negative_hours_is_wrong_type) :-
+    manufacturer_reporting_step_timeliness([], actively_exploited_vulnerability, final_report, -1, input_problems([wrong_type(step), wrong_type(hours_elapsed)])).
 
 :- end_module(cra_art14_manufacturer_reporting).

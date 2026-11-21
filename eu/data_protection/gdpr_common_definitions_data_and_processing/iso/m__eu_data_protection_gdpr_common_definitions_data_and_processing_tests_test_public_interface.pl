@@ -4,152 +4,256 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_gdpr_common_definitions_data_and_processing, [decide_gdpr_common_definitions_data_and_processing/2, gdpr_common_definitions_data_and_processing_status/2, gdpr_common_definitions_data_and_processing_checklist/2, personal_data/2, processing/2, restriction_of_processing/2, profiling/2, pseudonymisation/2, filing_system/2, receiving_body_is_recipient/2, receiving_body_is_third_party/2, consent_elements/2, personal_data_breach/2, information_society_service/2, international_organisation/2, data_and_processing_outside_facts/2]).
-:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_queries, [gdpr_common_definitions_data_and_processing_what_if/4]).
-:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_kernel, [gdpr_common_definitions_data_and_processing_input_problems/2]).
-:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_fixtures, [gdpr_common_definitions_data_and_processing_profile_for/2, gdpr_common_definitions_data_and_processing_assess/2]).
+:- use_module(clausal_lists_extra, [last/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_gdpr_common_definitions_data_and_processing, [decide_gdpr_common_definitions_data_and_processing/2, gdpr_common_definitions_data_and_processing_status/2, gdpr_common_definitions_data_and_processing_checklist/2, gdpr_common_definitions_data_and_processing_decision_resolvable/1, gdpr_common_definitions_data_and_processing_status_values/1, data_and_processing_outside_facts/2, provenance/2, url/2, document/2]).
+:- use_module(m__eu_data_protection_gdpr_common_definitions_data_and_processing_fixtures, [gdpr_common_definitions_data_and_processing_subject/1, gdpr_common_definitions_data_and_processing_profile_for/2, gdpr_common_definitions_data_and_processing_assess/2]).
 
-test(personal_data_met_for_an_identified_person) :-
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
-    personal_data(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_1)]).
-test(personal_data_not_met_when_not_about_a_person) :-
-    gdpr_common_definitions_data_and_processing_profile_for(not_about_a_person, Profile),
-    personal_data(Profile, Answer),
-    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_1)]).
-test(personal_data_has_exactly_one_solution) :-
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
-    findall(Answer, personal_data(Profile, Answer), Answers),
-    length(Answers, 1).
-test(unsure_identifiability_refers_to_the_lawyer) :-
-    gdpr_common_definitions_data_and_processing_profile_for(identifiability_unsure, Profile),
-    personal_data(Profile, Answer),
-    Answer == definition_answer(needs_legal_review(open_textured(natural_person_identifiable, cite(eu_reg_2016_679_art_4_1)), [inputs_relied_on([information_relates_to_natural_person - true, natural_person_identified - false, natural_person_identifiable - unsure])]), none, [cite(eu_reg_2016_679_art_4_1)]).
-test(processing_met_for_an_identified_person) :-
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
-    processing(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_2)]).
-test(processing_missing_the_operation_is_indeterminate) :-
-    gdpr_common_definitions_data_and_processing_profile_for(operation_missing, Profile),
-    processing(Profile, Answer),
-    Answer == definition_answer(indeterminate([operation_performed_on_the_data]), none, [cite(eu_reg_2016_679_art_4_2)]).
-test(restriction_met_and_not_met_when_not_personal_data) :-
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
-    restriction_of_processing(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_3)]),
-    gdpr_common_definitions_data_and_processing_profile_for(not_about_a_person, Control),
-    restriction_of_processing(Control, ControlAnswer),
-    ControlAnswer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_3)]).
-test(filing_system_met_for_a_structured_set) :-
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
-    filing_system(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_6)]).
-test(profiling_met_for_automated_evaluation) :-
-    gdpr_common_definitions_data_and_processing_profile_for(automated_evaluation, Profile),
-    profiling(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_4)]).
-test(profiling_not_met_for_manual_evaluation) :-
-    gdpr_common_definitions_data_and_processing_profile_for(manual_evaluation, Profile),
-    profiling(Profile, Answer),
-    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_4)]).
-test(pseudonymisation_met_with_measures) :-
-    gdpr_common_definitions_data_and_processing_profile_for(pseudonymised_data, Profile),
-    pseudonymisation(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_5)]).
-test(pseudonymisation_not_met_without_measures) :-
-    gdpr_common_definitions_data_and_processing_profile_for(attribution_without_measures, Profile),
-    pseudonymisation(Profile, Answer),
-    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_5)]).
-test(recipient_met_when_disclosed_to_another_body) :-
-    gdpr_common_definitions_data_and_processing_profile_for(disclosed_to_other_body, Profile),
-    receiving_body_is_recipient(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_9)]).
-test(recipient_not_met_for_an_inquiry_authority) :-
-    gdpr_common_definitions_data_and_processing_profile_for(inquiry_authority, Profile),
-    receiving_body_is_recipient(Profile, Answer),
-    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_9)]).
-test(third_party_met_for_an_unrelated_body) :-
-    gdpr_common_definitions_data_and_processing_profile_for(disclosed_to_other_body, Profile),
-    receiving_body_is_third_party(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_10)]).
-test(third_party_not_met_for_the_processor) :-
-    gdpr_common_definitions_data_and_processing_profile_for(own_processor, Profile),
-    receiving_body_is_third_party(Profile, Answer),
-    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_10)]).
-test(consent_met_with_all_five_elements) :-
-    gdpr_common_definitions_data_and_processing_profile_for(full_consent, Profile),
-    consent_elements(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_11)]).
-test(consent_names_every_element_given_false) :-
-    gdpr_common_definitions_data_and_processing_profile_for(consent_without_specificity, Profile),
-    consent_elements(Profile, Answer),
-    Answer == definition_answer(not_met, unmet_elements([indication_specific, indication_unambiguous]), [cite(eu_reg_2016_679_art_4_11)]).
-test(breach_met_for_a_listed_outcome) :-
-    gdpr_common_definitions_data_and_processing_profile_for(breach_of_personal_data, Profile),
-    personal_data_breach(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_12)]).
-test(breach_control_without_a_breach_is_not_met) :-
-    gdpr_common_definitions_data_and_processing_profile_for(breach_of_personal_data, Profile),
-    gdpr_common_definitions_data_and_processing_what_if(Profile, information_relates_to_natural_person, false, Status),
-    Status == not_met,
-    personal_data_breach([attribute(information_relates_to_natural_person, false)|Profile], Answer),
-    Answer == definition_answer(input_problems([duplicate_key(information_relates_to_natural_person)]), none, []).
-test(information_society_service_met_when_attested) :-
-    gdpr_common_definitions_data_and_processing_profile_for(attested_service, Profile),
-    information_society_service(Profile, Answer),
-    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_25)]).
-test(information_society_service_not_met_when_attested_false) :-
-    gdpr_common_definitions_data_and_processing_profile_for(ordinary_service, Profile),
-    information_society_service(Profile, Answer),
-    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_25)]).
-test(information_society_service_refers_when_unattested) :-
-    gdpr_common_definitions_data_and_processing_profile_for(unattested_service, Profile),
-    information_society_service(Profile, Answer),
-    Answer == definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_25), cite(eu_dir_2015_1535_art_1_1_b)), [resolution(cite(eu_dir_2015_1535_art_1_1_b), not_attempted), inputs_relied_on([])]), none, [cite(eu_reg_2016_679_art_4_25), cite(eu_dir_2015_1535_art_1_1_b)]).
-test(international_organisation_met_by_public_international_law) :-
-    gdpr_common_definitions_data_and_processing_profile_for(public_international_organisation, Profile),
-    international_organisation(Profile, Answer),
-    Answer == definition_answer(met, governed_by_public_international_law, [cite(eu_reg_2016_679_art_4_26)]).
-test(international_organisation_met_by_agreement) :-
-    gdpr_common_definitions_data_and_processing_profile_for(set_up_by_agreement, Profile),
-    international_organisation(Profile, Answer),
-    Answer == definition_answer(met, set_up_by_agreement_between_countries, [cite(eu_reg_2016_679_art_4_26)]).
-test(international_organisation_refers_when_unattested) :-
-    gdpr_common_definitions_data_and_processing_profile_for(unattested_organisation, Profile),
-    international_organisation(Profile, Answer),
-    Answer == definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_26), cite(public_international_law_governing_organisation)), [resolution(cite(public_international_law_governing_organisation), not_attempted), inputs_relied_on([body_set_up_by_agreement_between_countries - false])]), none, [cite(eu_reg_2016_679_art_4_26), cite(public_international_law_governing_organisation)]).
-test(outside_facts_list_the_attested_term_or_absent) :-
-    gdpr_common_definitions_data_and_processing_profile_for(public_international_organisation, Profile),
-    data_and_processing_outside_facts(Profile, Facts),
-    Facts == [outside_fact(service_is_information_society_service, absent), outside_fact(organisation_governed_by_public_international_law, attested(true, attestation(fixture_host, fixture_clock, fixture_reason, none)))].
-test(a_malformed_profile_gives_input_problems) :-
-    gdpr_common_definitions_data_and_processing_profile_for(malformed_profile, Profile),
-    personal_data(Profile, Answer),
-    Answer == definition_answer(input_problems([wrong_type(natural_person_identified)]), none, []),
-    data_and_processing_outside_facts(Profile, Facts),
-    Facts == input_problems([wrong_type(natural_person_identified)]).
-test(the_decision_and_status_project_personal_data) :-
-    gdpr_common_definitions_data_and_processing_assess(person_identified, Verdict),
-    Verdict == gdpr_common_definitions_data_and_processing_verdict(met, [cite(eu_reg_2016_679_art_4_1)]),
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
-    gdpr_common_definitions_data_and_processing_status(Profile, Status),
-    Status == met.
-test(the_checklist_has_one_cited_row_per_relation) :-
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
+answer_of(Subject, Relation, Answer) :-
+    gdpr_common_definitions_data_and_processing_assess(Subject, gdpr_common_definitions_data_and_processing_verdict(classification(DefinitionRows), _Citations)),
+    member(definition(Relation, Answer), DefinitionRows).
+
+problems_of(Subject, Problems, Citations) :-
+    gdpr_common_definitions_data_and_processing_assess(Subject, gdpr_common_definitions_data_and_processing_verdict(input_problems(Problems), Citations)).
+
+item_carries_citation(item(input_check, _, [])).
+item_carries_citation(item(RelationName, _, [_|_])) :-
+    dif(RelationName, input_check).
+
+status_is_known(StatusValues, item(_, Status, _)) :-
+    functor(Status, StatusName, _),
+    member(StatusName, StatusValues).
+
+test(the_public_interface_resolves_on_the_baseline_fixture) :-
+    gdpr_common_definitions_data_and_processing_profile_for(identified_customer_record, Profile),
+    decide_gdpr_common_definitions_data_and_processing(Profile, gdpr_common_definitions_data_and_processing_verdict(classification(DefinitionRows), [_|_])),
+    length(DefinitionRows, 12).
+test(checklist_and_resolvable_hold_on_the_baseline_fixture) :-
+    gdpr_common_definitions_data_and_processing_profile_for(identified_customer_record, Profile),
+    gdpr_common_definitions_data_and_processing_decision_resolvable(Profile),
+    gdpr_common_definitions_data_and_processing_checklist(Profile, [_|_]).
+test(every_subject_gets_exactly_one_verdict) :-
+    findall(Subject, gdpr_common_definitions_data_and_processing_subject(Subject), Subjects),
+    length(Subjects, 35),
+    maplist(single_verdict, Subjects).
+test(every_subject_has_a_cited_checklist_of_known_statuses) :-
+    findall(Subject, gdpr_common_definitions_data_and_processing_subject(Subject), Subjects),
+    gdpr_common_definitions_data_and_processing_status_values(StatusValues),
+    maplist(cited_checklist(StatusValues), Subjects).
+test(a_good_profile_has_twelve_checklist_items) :-
+    gdpr_common_definitions_data_and_processing_profile_for(stolen_laptop_breach, Profile),
     gdpr_common_definitions_data_and_processing_checklist(Profile, Items),
     length(Items, 12),
-    Items = [item(personal_data, met, [cite(eu_reg_2016_679_art_4_1)])|_].
-test(what_if_flips_the_status) :-
-    gdpr_common_definitions_data_and_processing_profile_for(not_about_a_person, Profile),
-    gdpr_common_definitions_data_and_processing_what_if(Profile, information_relates_to_natural_person, true, Status),
-    Status == met.
-test(the_input_check_is_exposed) :-
-    gdpr_common_definitions_data_and_processing_profile_for(person_identified, Profile),
-    gdpr_common_definitions_data_and_processing_input_problems(Profile, Problems),
-    Problems == [].
+    member(item(personal_data_breach, met, [cite(eu_reg_2016_679_art_4_12)]), Items).
+test(status_projects_the_classification) :-
+    gdpr_common_definitions_data_and_processing_profile_for(identified_customer_record, Profile),
+    gdpr_common_definitions_data_and_processing_status(Profile, classification(DefinitionRows)),
+    length(DefinitionRows, 12).
+test(status_projects_input_problems) :-
+    gdpr_common_definitions_data_and_processing_profile_for(wrong_type_profile, Profile),
+    gdpr_common_definitions_data_and_processing_status(Profile, Status),
+    Status == input_problems([wrong_type(natural_person_identified)]).
+test(identified_customer_record_is_personal_data) :-
+    answer_of(identified_customer_record, personal_data, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_1)]).
+test(unrelated_statistics_is_not_personal_data) :-
+    answer_of(unrelated_statistics, personal_data, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_1)]).
+test(pseudonymous_device_identifier_is_personal_data) :-
+    answer_of(pseudonymous_device_identifier, personal_data, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_1)]).
+test(anonymous_aggregate_is_not_personal_data) :-
+    answer_of(anonymous_aggregate, personal_data, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_1)]).
+test(unsure_identifiability_refers_personal_data) :-
+    answer_of(identifiability_unsure, personal_data, Answer),
+    Answer == definition_answer(needs_legal_review(open_textured(natural_person_identifiable, cite(eu_reg_2016_679_art_4_1)), [inputs_relied_on([information_relates_to_natural_person - true, natural_person_identified - false, natural_person_identifiable - unsure])]), none, [cite(eu_reg_2016_679_art_4_1)]).
+test(unsure_identifiability_refers_profiling_to_point_one) :-
+    answer_of(identifiability_unsure, profiling, Answer),
+    Answer == definition_answer(needs_legal_review(open_textured(natural_person_identifiable, cite(eu_reg_2016_679_art_4_1)), [inputs_relied_on([information_relates_to_natural_person - true, natural_person_identified - false, natural_person_identifiable - unsure])]), none, [cite(eu_reg_2016_679_art_4_1)]).
+test(empty_profile_lists_every_missing_personal_data_key) :-
+    answer_of(empty_profile, personal_data, Answer),
+    Answer == definition_answer(indeterminate([information_relates_to_natural_person, natural_person_identified, natural_person_identifiable]), none, [cite(eu_reg_2016_679_art_4_1)]).
+test(customer_record_consulted_is_processing) :-
+    answer_of(customer_record_consulted, processing, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_2)]).
+test(customer_record_untouched_is_not_processing) :-
+    answer_of(customer_record_untouched, processing, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_2)]).
+test(restricted_stored_record_is_restriction) :-
+    answer_of(restricted_stored_record, restriction_of_processing, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_3)]).
+test(unmarked_stored_record_is_not_restriction) :-
+    answer_of(unmarked_stored_record, restriction_of_processing, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_3)]).
+test(partially_automated_profiling_is_profiling) :-
+    answer_of(partially_automated_profiling, profiling, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_4)]).
+test(manual_evaluation_is_not_profiling_despite_unsure_evaluation) :-
+    answer_of(manual_evaluation, profiling, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_4)]).
+test(pseudonymised_research_set_is_pseudonymisation) :-
+    answer_of(pseudonymised_research_set, pseudonymisation, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_5)]).
+test(research_set_key_held_together_is_not_pseudonymisation) :-
+    answer_of(research_set_key_held_together, pseudonymisation, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_5)]).
+test(paper_card_index_is_filing_system) :-
+    answer_of(paper_card_index, filing_system, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_6)]).
+test(loose_correspondence_is_not_filing_system) :-
+    answer_of(loose_correspondence, filing_system, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_6)]).
+test(loosely_sorted_bundle_refers_filing_system) :-
+    answer_of(loosely_sorted_bundle, filing_system, Answer),
+    Answer == definition_answer(needs_legal_review(open_textured(structured_set_accessible_by_specific_criteria, cite(eu_reg_2016_679_art_4_6)), [inputs_relied_on([structured_set_accessible_by_specific_criteria - unsure])]), none, [cite(eu_reg_2016_679_art_4_6)]).
+test(disclosure_to_service_provider_is_recipient) :-
+    answer_of(disclosure_to_service_provider, receiving_body_is_recipient, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_9)]).
+test(inquiry_authority_is_not_recipient) :-
+    answer_of(inquiry_authority, receiving_body_is_recipient, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_9)]).
+test(independent_marketing_partner_is_third_party) :-
+    answer_of(independent_marketing_partner, receiving_body_is_third_party, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_10)]).
+test(processor_receiving_body_is_not_third_party) :-
+    answer_of(processor_receiving_body, receiving_body_is_third_party, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_10)]).
+test(empty_profile_lists_every_missing_exclusion) :-
+    answer_of(empty_profile, receiving_body_is_third_party, Answer),
+    Answer == definition_answer(indeterminate([receiving_body_is_data_subject, receiving_body_is_controller_or_processor, receiving_body_authorised_under_direct_authority]), none, [cite(eu_reg_2016_679_art_4_10)]).
+test(clear_affirmative_agreement_meets_consent_elements) :-
+    answer_of(clear_affirmative_agreement, consent_elements, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_11)]).
+test(default_ticked_box_names_the_unmet_elements) :-
+    answer_of(default_ticked_box, consent_elements, Answer),
+    Answer == definition_answer(not_met, unmet_elements([indication_unambiguous, agreement_by_statement_or_clear_affirmative_action]), [cite(eu_reg_2016_679_art_4_11)]).
+test(stolen_laptop_breach_is_personal_data_breach) :-
+    answer_of(stolen_laptop_breach, personal_data_breach, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_12)]).
+test(blocked_intrusion_attempt_is_not_personal_data_breach) :-
+    answer_of(blocked_intrusion_attempt, personal_data_breach, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_12)]).
+test(attested_online_marketplace_is_information_society_service) :-
+    answer_of(attested_online_marketplace, information_society_service, Answer),
+    Answer == definition_answer(met, none, [cite(eu_reg_2016_679_art_4_25)]).
+test(attested_in_person_service_is_not_information_society_service) :-
+    answer_of(attested_in_person_service, information_society_service, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_25)]).
+test(empty_profile_refers_information_society_service) :-
+    answer_of(empty_profile, information_society_service, Answer),
+    Answer == definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_25), cite(eu_dir_2015_1535_art_1_1_b)), [resolution(cite(eu_dir_2015_1535_art_1_1_b), not_attempted), inputs_relied_on([])]), none, [cite(eu_reg_2016_679_art_4_25), cite(eu_dir_2015_1535_art_1_1_b)]).
+test(treaty_body_is_international_organisation_by_agreement) :-
+    answer_of(treaty_body, international_organisation, Answer),
+    Answer == definition_answer(met, set_up_by_agreement_between_countries, [cite(eu_reg_2016_679_art_4_26)]).
+test(attested_organisation_is_governed_by_public_international_law) :-
+    answer_of(attested_organisation, international_organisation, Answer),
+    Answer == definition_answer(met, governed_by_public_international_law, [cite(eu_reg_2016_679_art_4_26)]).
+test(organisation_attested_not_governed_is_not_international) :-
+    answer_of(organisation_attested_not_governed, international_organisation, Answer),
+    Answer == definition_answer(not_met, none, [cite(eu_reg_2016_679_art_4_26)]).
+test(body_not_treaty_unattested_refers) :-
+    answer_of(body_not_treaty_unattested, international_organisation, Answer),
+    Answer == definition_answer(needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_4_26), cite(public_international_law_governing_organisation)), [resolution(cite(public_international_law_governing_organisation), not_attempted), inputs_relied_on([body_set_up_by_agreement_between_countries - false])]), none, [cite(eu_reg_2016_679_art_4_26), cite(public_international_law_governing_organisation)]).
+test(empty_profile_names_the_missing_agreement_key_first) :-
+    answer_of(empty_profile, international_organisation, Answer),
+    Answer == definition_answer(indeterminate([body_set_up_by_agreement_between_countries]), none, [cite(eu_reg_2016_679_art_4_26)]).
+test(outside_facts_list_the_attested_term_and_mark_the_absent_one) :-
+    gdpr_common_definitions_data_and_processing_profile_for(attested_organisation, Profile),
+    data_and_processing_outside_facts(Profile, OutsideFacts),
+    OutsideFacts == [outside_fact(service_is_information_society_service, absent), outside_fact(organisation_governed_by_public_international_law, attested(true, attestation(host, moment, reason, none)))].
+test(outside_facts_of_an_empty_profile_are_both_absent) :-
+    gdpr_common_definitions_data_and_processing_profile_for(empty_profile, Profile),
+    data_and_processing_outside_facts(Profile, OutsideFacts),
+    OutsideFacts == [outside_fact(service_is_information_society_service, absent), outside_fact(organisation_governed_by_public_international_law, absent)].
+test(outside_facts_of_a_bad_profile_are_input_problems) :-
+    gdpr_common_definitions_data_and_processing_profile_for(not_a_list_profile, Profile),
+    data_and_processing_outside_facts(Profile, OutsideFacts),
+    OutsideFacts == input_problems([wrong_type(profile)]).
+test(outside_facts_give_exactly_one_answer) :-
+    gdpr_common_definitions_data_and_processing_profile_for(attested_online_marketplace, Profile),
+    findall(OutsideFacts, data_and_processing_outside_facts(Profile, OutsideFacts), Answers),
+    length(Answers, 1).
+test(provenance_recognises_a_clause_and_its_citations) :-
+    provenance(deciding_clause, [cite(eu_reg_2016_679_art_4_1)]).
+test(url_recognises_an_address_and_retrieval_moment) :-
+    url('https://eur-lex.europa.eu/', retrieved_moment).
+test(document_recognises_an_upload_and_digest) :-
+    document(upload_identifier, digest_value).
+test(empty_profile_verdict_cites_in_vocabulary_order_target_last) :-
+    gdpr_common_definitions_data_and_processing_assess(empty_profile, gdpr_common_definitions_data_and_processing_verdict(classification(_DefinitionRows), Citations)),
+    Citations = [cite(eu_reg_2016_679_art_4_1)|_],
+    last(Citations, cite(eu_dir_2015_1535_art_1_1_b)).
+test(duplicate_key_profile_is_an_input_problem) :-
+    problems_of(duplicate_key_profile, Problems, Citations),
+    Problems == [duplicate_key(processing_automated)],
+    Citations == [].
+test(wrong_type_profile_is_an_input_problem) :-
+    problems_of(wrong_type_profile, Problems, Citations),
+    Problems == [wrong_type(natural_person_identified)],
+    Citations == [].
+test(unknown_and_unbound_keys_are_named_in_order) :-
+    problems_of(unknown_and_unbound_key_profile, Problems, _Citations),
+    Problems = [unknown_key(customer_loyalty_tier), unknown_key(UnboundKey)],
+    var(UnboundKey).
+test(not_a_list_profile_is_wrong_type_profile) :-
+    problems_of(not_a_list_profile, Problems, _Citations),
+    Problems == [wrong_type(profile)].
+test(a_problem_profile_checklist_is_the_input_check) :-
+    gdpr_common_definitions_data_and_processing_profile_for(not_a_list_profile, Profile),
+    gdpr_common_definitions_data_and_processing_checklist(Profile, Items),
+    Items == [item(input_check, input_problems([wrong_type(profile)]), [])].
 
-cp_test_names([personal_data_met_for_an_identified_person, personal_data_not_met_when_not_about_a_person, personal_data_has_exactly_one_solution, unsure_identifiability_refers_to_the_lawyer, processing_met_for_an_identified_person, processing_missing_the_operation_is_indeterminate, restriction_met_and_not_met_when_not_personal_data, filing_system_met_for_a_structured_set, profiling_met_for_automated_evaluation, profiling_not_met_for_manual_evaluation, pseudonymisation_met_with_measures, pseudonymisation_not_met_without_measures, recipient_met_when_disclosed_to_another_body, recipient_not_met_for_an_inquiry_authority, third_party_met_for_an_unrelated_body, third_party_not_met_for_the_processor, consent_met_with_all_five_elements, consent_names_every_element_given_false, breach_met_for_a_listed_outcome, breach_control_without_a_breach_is_not_met, information_society_service_met_when_attested, information_society_service_not_met_when_attested_false, information_society_service_refers_when_unattested, international_organisation_met_by_public_international_law, international_organisation_met_by_agreement, international_organisation_refers_when_unattested, outside_facts_list_the_attested_term_or_absent, a_malformed_profile_gives_input_problems, the_decision_and_status_project_personal_data, the_checklist_has_one_cited_row_per_relation, what_if_flips_the_status, the_input_check_is_exposed]).
-cp_test_fail_names([]).
+single_verdict(Subject) :-
+    findall(Verdict, gdpr_common_definitions_data_and_processing_assess(Subject, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+cited_checklist(StatusValues, Subject) :-
+    gdpr_common_definitions_data_and_processing_profile_for(Subject, Profile),
+    gdpr_common_definitions_data_and_processing_decision_resolvable(Profile),
+    gdpr_common_definitions_data_and_processing_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(item_carries_citation, [FirstItem|OtherItems]),
+    maplist(status_is_known(StatusValues), [FirstItem|OtherItems]).
+
+test(unrelated_statistics_is_not_personal_data_met, fail) :-
+    answer_of(unrelated_statistics, personal_data, definition_answer(met, _, _)).
+test(anonymous_aggregate_is_not_personal_data_met, fail) :-
+    answer_of(anonymous_aggregate, personal_data, definition_answer(met, _, _)).
+test(customer_record_untouched_is_not_processing_met, fail) :-
+    answer_of(customer_record_untouched, processing, definition_answer(met, _, _)).
+test(unmarked_stored_record_is_not_restriction_met, fail) :-
+    answer_of(unmarked_stored_record, restriction_of_processing, definition_answer(met, _, _)).
+test(manual_evaluation_is_not_profiling_met, fail) :-
+    answer_of(manual_evaluation, profiling, definition_answer(met, _, _)).
+test(research_set_key_held_together_is_not_pseudonymisation_met, fail) :-
+    answer_of(research_set_key_held_together, pseudonymisation, definition_answer(met, _, _)).
+test(loose_correspondence_is_not_filing_system_met, fail) :-
+    answer_of(loose_correspondence, filing_system, definition_answer(met, _, _)).
+test(inquiry_authority_is_not_recipient_met, fail) :-
+    answer_of(inquiry_authority, receiving_body_is_recipient, definition_answer(met, _, _)).
+test(processor_receiving_body_is_not_third_party_met, fail) :-
+    answer_of(processor_receiving_body, receiving_body_is_third_party, definition_answer(met, _, _)).
+test(default_ticked_box_is_not_consent_met, fail) :-
+    answer_of(default_ticked_box, consent_elements, definition_answer(met, _, _)).
+test(blocked_intrusion_attempt_is_not_breach_met, fail) :-
+    answer_of(blocked_intrusion_attempt, personal_data_breach, definition_answer(met, _, _)).
+test(attested_in_person_service_is_not_service_met, fail) :-
+    answer_of(attested_in_person_service, information_society_service, definition_answer(met, _, _)).
+test(organisation_attested_not_governed_is_not_met, fail) :-
+    answer_of(organisation_attested_not_governed, international_organisation, definition_answer(met, _, _)).
+test(outside_facts_of_a_bad_profile_are_not_a_list, fail) :-
+    gdpr_common_definitions_data_and_processing_profile_for(not_a_list_profile, Profile),
+    data_and_processing_outside_facts(Profile, [_|_]).
+test(provenance_without_a_clause_is_not_recognised, fail) :-
+    provenance(_, [cite(eu_reg_2016_679_art_4_1)]).
+test(url_without_an_address_is_not_recognised, fail) :-
+    url(_, retrieved_moment).
+test(document_without_an_upload_is_not_recognised, fail) :-
+    document(_, digest_value).
+test(a_problem_profile_gets_no_classification, fail) :-
+    gdpr_common_definitions_data_and_processing_assess(wrong_type_profile, gdpr_common_definitions_data_and_processing_verdict(classification(_), _)).
+
+cp_test_names([the_public_interface_resolves_on_the_baseline_fixture, checklist_and_resolvable_hold_on_the_baseline_fixture, every_subject_gets_exactly_one_verdict, every_subject_has_a_cited_checklist_of_known_statuses, a_good_profile_has_twelve_checklist_items, status_projects_the_classification, status_projects_input_problems, identified_customer_record_is_personal_data, unrelated_statistics_is_not_personal_data, pseudonymous_device_identifier_is_personal_data, anonymous_aggregate_is_not_personal_data, unsure_identifiability_refers_personal_data, unsure_identifiability_refers_profiling_to_point_one, empty_profile_lists_every_missing_personal_data_key, customer_record_consulted_is_processing, customer_record_untouched_is_not_processing, restricted_stored_record_is_restriction, unmarked_stored_record_is_not_restriction, partially_automated_profiling_is_profiling, manual_evaluation_is_not_profiling_despite_unsure_evaluation, pseudonymised_research_set_is_pseudonymisation, research_set_key_held_together_is_not_pseudonymisation, paper_card_index_is_filing_system, loose_correspondence_is_not_filing_system, loosely_sorted_bundle_refers_filing_system, disclosure_to_service_provider_is_recipient, inquiry_authority_is_not_recipient, independent_marketing_partner_is_third_party, processor_receiving_body_is_not_third_party, empty_profile_lists_every_missing_exclusion, clear_affirmative_agreement_meets_consent_elements, default_ticked_box_names_the_unmet_elements, stolen_laptop_breach_is_personal_data_breach, blocked_intrusion_attempt_is_not_personal_data_breach, attested_online_marketplace_is_information_society_service, attested_in_person_service_is_not_information_society_service, empty_profile_refers_information_society_service, treaty_body_is_international_organisation_by_agreement, attested_organisation_is_governed_by_public_international_law, organisation_attested_not_governed_is_not_international, body_not_treaty_unattested_refers, empty_profile_names_the_missing_agreement_key_first, outside_facts_list_the_attested_term_and_mark_the_absent_one, outside_facts_of_an_empty_profile_are_both_absent, outside_facts_of_a_bad_profile_are_input_problems, outside_facts_give_exactly_one_answer, provenance_recognises_a_clause_and_its_citations, url_recognises_an_address_and_retrieval_moment, document_recognises_an_upload_and_digest, empty_profile_verdict_cites_in_vocabulary_order_target_last, duplicate_key_profile_is_an_input_problem, wrong_type_profile_is_an_input_problem, unknown_and_unbound_keys_are_named_in_order, not_a_list_profile_is_wrong_type_profile, a_problem_profile_checklist_is_the_input_check]).
+cp_test_fail_names([unrelated_statistics_is_not_personal_data_met, anonymous_aggregate_is_not_personal_data_met, customer_record_untouched_is_not_processing_met, unmarked_stored_record_is_not_restriction_met, manual_evaluation_is_not_profiling_met, research_set_key_held_together_is_not_pseudonymisation_met, loose_correspondence_is_not_filing_system_met, inquiry_authority_is_not_recipient_met, processor_receiving_body_is_not_third_party_met, default_ticked_box_is_not_consent_met, blocked_intrusion_attempt_is_not_breach_met, attested_in_person_service_is_not_service_met, organisation_attested_not_governed_is_not_met, outside_facts_of_a_bad_profile_are_not_a_list, provenance_without_a_clause_is_not_recognised, url_without_an_address_is_not_recognised, document_without_an_upload_is_not_recognised, a_problem_profile_gets_no_classification]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

@@ -1,82 +1,79 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_input_mode.clausal -- INPUT MODE: public predicates called with the
-% result argument BOUND, and the input check over malformed profiles.
+% result argument BOUND (answer given, not read out), and INPUT TOLERANCE:
+% the shapes of profile the input check accepts and refuses.
+% (The unbound-KEY, unbound-VALUE and unbound-PROFILE cases, whose answers
+% are not ground, are tested in kernel.clausal only.)
 % Run: python -m clausal.testing eu/data_protection/gdpr_common_definitions_roles_and_establishments/tests/test_input_mode.clausal
 % =====================================================================
 :- module(test_input_mode, []).
+:- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/kernel, [gdpr_common_definitions_roles_and_establishments_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/gdpr_common_definitions_roles_and_establishments, [
-    genetic_data/2,
-    roles_and_establishments_outside_facts/2,
-    gdpr_common_definitions_roles_and_establishments_status/2
+    party_is_controller/2,
+    party_is_processor/2,
+    main_establishment/2,
+    supervisory_authority_concerned/2,
+    relevant_and_reasoned_objection/2,
+    roles_and_establishments_outside_facts/2
 ]).
 :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/fixtures, [gdpr_common_definitions_roles_and_establishments_profile_for/2]).
-:- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/queries, [gdpr_common_definitions_roles_and_establishments_input_problems/2]).
 
-test(status_holds_with_the_verdict_bound) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    gdpr_common_definitions_roles_and_establishments_status(Profile, met).
+% ---- bound answers ----------------------------------------------------
+test(a_bound_met_answer_is_accepted) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_judgement, Profile),
+    party_is_controller(Profile, definition_answer(met, determines_purposes_and_means, [cite(eu_reg_2016_679_art_4_7)])).
+test(a_bound_wrong_ground_is_rejected, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_judgement, Profile),
+    party_is_controller(Profile, definition_answer(met, provided_for_by_law, _)).
+test(a_bound_wrong_status_is_rejected, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_judgement, Profile),
+    party_is_controller(Profile, definition_answer(not_met, _, _)).
+test(a_bound_partial_answer_unifies) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(complaint_only_authority, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(met, point_c, _)).
+test(key_order_in_the_profile_does_not_matter) :-
+    main_establishment([attribute(other_establishment_can_have_decisions_implemented, true), attribute(decisions_taken_in_other_union_establishment, true), attribute(established_in_more_than_one_member_state, true), attribute(party_role, controller)], definition_answer(met, establishment_taking_decisions, [cite(eu_reg_2016_679_art_4_16), cite(eu_reg_2016_679_art_4_16_a)])).
+test(absent_is_not_false) :-
+    relevant_and_reasoned_objection([attribute(objection_to_draft_decision, true), attribute(objection_concerns_infringement_or_envisaged_action, true)], definition_answer(indeterminate([objection_demonstrates_significance_of_risks]), none, [cite(eu_reg_2016_679_art_4_24)])).
+test(absent_is_not_read_as_not_met, fail) :-
+    relevant_and_reasoned_objection([attribute(objection_to_draft_decision, true), attribute(objection_concerns_infringement_or_envisaged_action, true)], definition_answer(not_met, _, _)).
 
-test(the_wrong_bound_status_is_rejected, fail) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    gdpr_common_definitions_roles_and_establishments_status(Profile, not_met).
-
-test(bound_answer_for_genetic_data) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, Profile),
-    genetic_data(Profile, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_13)])).
-
-test(a_key_the_relation_does_not_read_changes_nothing) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, Base),
-    genetic_data([attribute(party_role, controller), attribute(objection_to_draft_decision, false)|Base], definition_answer(met, none, [cite(eu_reg_2016_679_art_4_13)])).
-
-test(a_bad_value_of_an_unread_key_still_gives_input_problems) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(genetic_data_met, Base),
-    genetic_data([attribute(party_role, banker)|Base], definition_answer(input_problems([wrong_type(party_role)]), none, [])).
-
-test(an_empty_profile_has_no_problem) :-
+% ---- input tolerance --------------------------------------------------
+test(an_empty_profile_is_well_formed) :-
     gdpr_common_definitions_roles_and_establishments_input_problems([], []).
-
-test(an_absent_key_is_not_a_problem) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_determines, Profile),
-    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, []).
-
-test(an_unknown_key_is_named) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(unknown_key_profile, Profile),
-    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, [unknown_key(not_a_contract_key)]).
-
-test(a_bad_enum_is_a_wrong_type) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(wrong_type_profile, Profile),
-    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, [wrong_type(party_role)]).
-
-test(a_non_list_is_not_a_profile) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(not_an_attribute_list, Profile),
-    gdpr_common_definitions_roles_and_establishments_input_problems(Profile, [wrong_type(profile)]).
-
-test(unsure_is_not_a_crisp_value) :-
-    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(purposes_and_means_determined_by_law, unsure)], [wrong_type(purposes_and_means_determined_by_law)]).
-
-test(a_bare_boolean_is_not_an_outside_fact) :-
+test(a_non_list_profile_is_wrong_type) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems(not_a_profile, [wrong_type(profile)]).
+test(a_list_of_pairs_is_not_an_attribute_list) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([party_role-controller], [wrong_type(profile)]).
+test(a_non_list_profile_gets_input_problems_from_a_relation) :-
+    party_is_processor(not_a_profile, definition_answer(input_problems([wrong_type(profile)]), none, [])).
+test(a_capitalised_boolean_is_wrong_type) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(complaint_lodged_with_authority, 'True')], [wrong_type(complaint_lodged_with_authority)]).
+test(a_string_value_is_wrong_type) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, "controller")], [wrong_type(party_role)]).
+test(unsure_is_allowed_for_a_judgement) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(entity_engaged_in_economic_activity, unsure)], []).
+test(unsure_is_wrong_for_a_crisp_key) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(objection_to_draft_decision, unsure)], [wrong_type(objection_to_draft_decision)]).
+test(a_bare_boolean_outside_fact_is_wrong_type) :-
     gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_provided_for_as_controller_by_law, true)], [wrong_type(party_provided_for_as_controller_by_law)]).
-
-test(a_duplicate_key_is_named_once_whatever_the_values) :-
-    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, controller), attribute(party_role, processor)], [duplicate_key(party_role)]).
-
-test(a_repeated_unknown_key_is_named_once) :-
-    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(zzz, true), attribute(zzz, false)], [unknown_key(zzz)]).
-
+test(an_unsure_attested_value_is_wrong_type) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_provided_for_as_controller_by_law, attested(unsure, attestation(by, at, reason, none)))], [wrong_type(party_provided_for_as_controller_by_law)]).
+test(an_attested_value_with_document_evidence_is_well_formed) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_provided_for_as_controller_by_law, attested(true, attestation(host, moment, statute, document(upload_one, digest_one))))], []).
+test(an_unread_ill_typed_key_still_blocks_every_relation) :-
+    party_is_processor([attribute(party_processes_on_behalf_of_controller, true), attribute(complaint_lodged_with_authority, unsure)], definition_answer(input_problems([wrong_type(complaint_lodged_with_authority)]), none, [])).
 test(problems_follow_contract_order_then_unknown_keys) :-
-    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(zzz, true), attribute(party_role, banker), attribute(data_are_personal_data, maybe)], [wrong_type(data_are_personal_data), wrong_type(party_role), unknown_key(zzz)]).
-
-test(outside_facts_absent) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_nothing_stated, Profile),
-    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, absent)]).
-
-test(outside_facts_attested) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(controller_by_law, Profile),
-    roles_and_establishments_outside_facts(Profile, [outside_fact(party_provided_for_as_controller_by_law, attested(true, attestation(host_layer, attested_2026_11_07, operator_ruling, none)))]).
-
-test(outside_facts_input_problems) :-
-    gdpr_common_definitions_roles_and_establishments_profile_for(not_an_attribute_list, Profile),
-    roles_and_establishments_outside_facts(Profile, input_problems([wrong_type(profile)])).
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(stray_two, 1), attribute(objection_to_draft_decision, unsure), attribute(data_are_personal_data, maybe), attribute(stray_one, 1), attribute(stray_two, 2)], [wrong_type(data_are_personal_data), wrong_type(objection_to_draft_decision), unknown_key(stray_two), unknown_key(stray_one)]).
+test(a_duplicate_key_is_not_also_wrong_type) :-
+    gdpr_common_definitions_roles_and_establishments_input_problems([attribute(party_role, bogus), attribute(party_role, bogus)], [duplicate_key(party_role)]).
+test(the_malformed_fixture_is_answered_only_with_its_problems) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(malformed_profile_duplicate_and_unknown, Profile),
+    supervisory_authority_concerned(Profile, definition_answer(input_problems([duplicate_key(party_role), unknown_key(stray)]), none, [])),
+    roles_and_establishments_outside_facts(Profile, input_problems([duplicate_key(party_role), unknown_key(stray)])).
+test(the_malformed_fixture_gets_no_final_answer, fail) :-
+    gdpr_common_definitions_roles_and_establishments_profile_for(malformed_profile_duplicate_and_unknown, Profile),
+    main_establishment(Profile, definition_answer(met, _, _)).
 
 :- end_module(test_input_mode).

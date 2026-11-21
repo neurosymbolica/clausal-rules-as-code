@@ -1,414 +1,724 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% nis2_jurisdiction_registration.clausal -- the jurisdiction and registration
-% DETERMINATION for eu/nis2_jurisdiction_registration.
-% Source: Directive (EU) 2022/2555 (NIS 2), Art 26(1)-(3), Art 27(2)-(3), Art 3(4).
+% nis2_jurisdiction_registration.clausal -- the nis2_jurisdiction_registration
+% DETERMINATION for eu/nis2_jurisdiction_registration, self-contained top to
+% bottom: its statutory VALUE facts (the item tables of Art 27(2) and Art 3(4),
+% the change limits of Art 27(3) and Art 3(4) second subparagraph), its
+% decision routes, its per-rule tests, its checklist and its verdict assembly.
 %
-% The Directive binds the Member States; this file states what it requires.
-% Verdict (eligibility query): eligible when a jurisdiction basis is found,
-% ineligible when Art 26 gives no rule, indeterminate(Keys) when a needed key
-% is absent, input_problems(Problems) when the profile is malformed.
+% Source: Directive (EU) 2022/2555 (NIS 2 Directive), original OJ text
+% (OJ L 333, 27.12.2022), Art 26(1), (2), (3) (jurisdiction and main
+% establishment), Art 27(1), (2), (3) (registry information and changes),
+% Art 3(3), (4) (the Member States' list of entities).
+%
+% The five scored queries (THE LIMBS of the order):
+%   jurisdiction_basis/3, main_establishment_rule/3,
+%   registry_submission_items/2, entity_list_submission_items/2,
+%   change_notification_limits/2.
+% Each first runs the kernel's input check; a profile with problems gives
+% input_problems(Problems) (and Citations [] where the query has them).
+% Each query yields exactly ONE solution: every step is a set of
+% complementary clauses over the reading of one key (absent or given(Value)).
+%
+% The facade verdict nis2_jurisdiction_registration_verdict(Status, Citations)
+% reads a five-row checklist (one row per query): an unsure judgement is
+% handed to the user as unknown([Key]), never decided by a crisp test.
 % =====================================================================
 
 :- module(nis2_jurisdiction_registration, [
-    decide_nis2_jurisdiction_registration/2,
-    nis2_jurisdiction_registration_status/2,
-    nis2_jurisdiction_registration_checklist/2,
-    nis2_jurisdiction_registration_decision_resolvable/1,
-    nis2_jurisdiction_registration_status_values/1,
     jurisdiction_basis/3,
     main_establishment_rule/3,
     registry_submission_items/2,
     entity_list_submission_items/2,
     change_notification_limits/2,
-    entity_category/0,
-    established_in_union/0,
-    offers_services_in_union/0,
-    representative_designated_in_union/0,
-    decisions_predominantly_taken_in_one_union_member_state/0,
-    cybersecurity_operations_carried_out_in_one_union_member_state/0,
-    sector_and_subsector_applicable/0,
-    member_states_list_applicable/0,
-    general_entity/0,
-    public_electronic_communications_provider/0,
-    main_establishment_provider/0,
-    public_administration_entity/0,
-    state_of_establishment/0,
-    state_where_services_are_provided/0,
-    state_of_main_establishment/0,
-    state_that_established_the_entity/0,
-    state_of_representative/0,
-    any_member_state_where_services_are_provided_may_take_legal_action/0,
-    no_rule_in_article_26/0,
-    state_where_cybersecurity_risk_management_decisions_are_taken/0,
-    state_where_cybersecurity_operations_are_carried_out/0,
-    state_of_establishment_with_most_employees_in_the_union/0,
-    unsure/0,
-    indeterminate/1,
-    needs_legal_review/2,
-    open_textured/2,
-    inputs_relied_on/1,
-    provenance/2,
-    input_problems/1,
-    unknown_key/1,
-    wrong_type/1,
-    duplicate_key/1,
-    item/2,
-    limit/3,
-    months_after_change/1,
-    weeks_after_change/1
+    decide_nis2_jurisdiction_registration/2,
+    nis2_jurisdiction_registration_status/2,
+    nis2_jurisdiction_registration_checklist/2,
+    nis2_jurisdiction_registration_decision_resolvable/1,
+    nis2_jurisdiction_registration_status_values/1
 ]).
 
-:- use_module(formalize_lib, [
-    profile_get/3,
-    profile_has/2,
-    profile_lacks/2
-]).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
 :- use_module(eu/nis2_jurisdiction_registration/kernel, [nis2_jurisdiction_registration_input_problems/2]).
 :- use_module(eu/nis2_jurisdiction_registration/citations, [implements/1]).
 
-:- constructors([
-    indeterminate(missing_keys),
-    needs_legal_review(reason, context),
-    open_textured(input, citation),
-    inputs_relied_on(pairs),
-    provenance(clause, citations),
-    input_problems(problems),
-    unknown_key(key),
-    wrong_type(key),
-    duplicate_key(key),
-    item(name, citation),
-    limit(regime, period, citation),
-    months_after_change(count),
-    weeks_after_change(count)
+% ---- statutory VALUE facts owned by this determination ---------------
+% The verdict vocabulary as a ground table (used by the property tests).
+nis2_jurisdiction_registration_status_values([
+    registration_position_settled,
+    registration_position_open,
+    no_single_member_state_jurisdiction,
+    profile_rejected
 ]).
 
-% ---- vocabulary atoms exported as root attributes ----------------------
-entity_category.
-established_in_union.
-offers_services_in_union.
-representative_designated_in_union.
-decisions_predominantly_taken_in_one_union_member_state.
-cybersecurity_operations_carried_out_in_one_union_member_state.
-sector_and_subsector_applicable.
-member_states_list_applicable.
-general_entity.
-public_electronic_communications_provider.
-main_establishment_provider.
-public_administration_entity.
-state_of_establishment.
-state_where_services_are_provided.
-state_of_main_establishment.
-state_that_established_the_entity.
-state_of_representative.
-any_member_state_where_services_are_provided_may_take_legal_action.
-no_rule_in_article_26.
-state_where_cybersecurity_risk_management_decisions_are_taken.
-state_where_cybersecurity_operations_are_carried_out.
-state_of_establishment_with_most_employees_in_the_union.
-unsure.
+% Art 27(2) points (a) to (f), in the order of the text: the item, the
+% condition under which it is owed, its point.
+registry_item_row(entity_name, always, cite(eu_dir_2022_2555_art_27_2_a)).
+registry_item_row(sector_subsector_and_type_of_entity, when_sector_and_subsector_applicable, cite(eu_dir_2022_2555_art_27_2_b)).
+registry_item_row(address_of_main_establishment_and_other_legal_establishments_in_the_union, when_established_in_union, cite(eu_dir_2022_2555_art_27_2_c)).
+registry_item_row(address_of_representative, when_represented_from_outside_the_union, cite(eu_dir_2022_2555_art_27_2_c)).
+registry_item_row(contact_details_of_entity, always, cite(eu_dir_2022_2555_art_27_2_d)).
+registry_item_row(contact_details_of_representative, when_represented_from_outside_the_union, cite(eu_dir_2022_2555_art_27_2_d)).
+registry_item_row(member_states_where_services_are_provided, always, cite(eu_dir_2022_2555_art_27_2_e)).
+registry_item_row(ip_ranges, always, cite(eu_dir_2022_2555_art_27_2_f)).
 
-nis2_jurisdiction_registration_status_values([eligible, ineligible, indeterminate]).
+% Art 3(4) points (a) to (d), in the order of the text.
+entity_list_item_row(entity_name, always, cite(eu_dir_2022_2555_art_3_4_a)).
+entity_list_item_row(address_and_contact_details_including_email_addresses_ip_ranges_and_telephone_numbers, always, cite(eu_dir_2022_2555_art_3_4_b)).
+entity_list_item_row(sector_and_subsector, when_sector_and_subsector_applicable, cite(eu_dir_2022_2555_art_3_4_c)).
+entity_list_item_row(member_states_where_services_in_scope_are_provided, when_member_states_list_applicable, cite(eu_dir_2022_2555_art_3_4_d)).
 
-% ---- small plumbing -----------------------------------------------------
-maybe_missing(Profile, Key, [Key]) :-
+% Art 27(3): three months; Art 3(4) second subparagraph: two weeks.
+change_limit_row(registry_information, months_after_change(3), cite(eu_dir_2022_2555_art_27_3)).
+change_limit_row(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4)).
+
+% ---- profile plumbing: presence first, then value --------------------
+key_reading(Profile, Key, absent) :-
     profile_lacks(Profile, Key).
-maybe_missing(Profile, Key, []) :-
-    profile_has(Profile, Key).
+key_reading(Profile, Key, given(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
 
-% =====================================================================
-% (A) jurisdiction_basis/3
-% =====================================================================
+% ---- JURISDICTION_BASIS (Art 26(1), (2), (3)) -------------------------
 jurisdiction_basis(Profile, Basis, Citations) :-
     nis2_jurisdiction_registration_input_problems(Profile, Problems),
-    basis_route(Problems, Profile, Basis, Citations).
+    checked_jurisdiction_basis(Problems, Profile, Basis, Citations).
 
-basis_route([Problem|Problems], _, input_problems([Problem|Problems]), []).
-basis_route([], Profile, Basis, Citations) :-
-    basis_category_step(Profile, Basis, Citations).
-
-basis_category_step(Profile, indeterminate([entity_category]), []) :-
-    profile_lacks(Profile, entity_category).
-basis_category_step(Profile, Basis, Citations) :-
-    profile_get(Profile, entity_category, Category),
+checked_jurisdiction_basis([Problem|Problems], _, input_problems([Problem|Problems]), []).
+checked_jurisdiction_basis([], Profile, Basis, Citations) :-
+    key_reading(Profile, entity_category, Category),
     basis_for_category(Category, Profile, Basis, Citations).
 
-basis_for_category(general_entity, _, state_of_establishment, [cite(eu_dir_2022_2555_art_26_1)]) :-
+basis_for_category(absent, _, indeterminate([entity_category]), []).
+basis_for_category(given(general_entity),
+                   _,
+                   state_of_establishment,
+                   [cite(eu_dir_2022_2555_art_26_1)]) :-
     implements(eu_dir_2022_2555_art_26_1).
-basis_for_category(public_electronic_communications_provider, _, state_where_services_are_provided, [cite(eu_dir_2022_2555_art_26_1_a)]) :-
+basis_for_category(given(public_electronic_communications_provider),
+                   _,
+                   state_where_services_are_provided,
+                   [cite(eu_dir_2022_2555_art_26_1_a)]) :-
     implements(eu_dir_2022_2555_art_26_1_a).
-basis_for_category(public_administration_entity, _, state_that_established_the_entity, [cite(eu_dir_2022_2555_art_26_1_c)]) :-
+basis_for_category(given(public_administration_entity),
+                   _,
+                   state_that_established_the_entity,
+                   [cite(eu_dir_2022_2555_art_26_1_c)]) :-
     implements(eu_dir_2022_2555_art_26_1_c).
-basis_for_category(main_establishment_provider, Profile, Basis, Citations) :-
-    provider_basis_step(Profile, Basis, Citations).
-
-provider_basis_step(Profile, indeterminate([established_in_union]), []) :-
-    profile_lacks(Profile, established_in_union).
-provider_basis_step(Profile, state_of_main_establishment, [cite(eu_dir_2022_2555_art_26_1_b), cite(eu_dir_2022_2555_art_26_2)]) :-
+basis_for_category(given(main_establishment_provider), Profile, Basis, Citations) :-
     implements(eu_dir_2022_2555_art_26_1_b),
-    profile_get(Profile, established_in_union, true).
-provider_basis_step(Profile, Basis, Citations) :-
-    profile_get(Profile, established_in_union, false),
-    offers_basis_step(Profile, Basis, Citations).
+    key_reading(Profile, established_in_union, Established),
+    basis_for_establishment(Established, Profile, Basis, Citations).
 
-offers_basis_step(Profile, indeterminate([offers_services_in_union]), []) :-
-    profile_lacks(Profile, offers_services_in_union).
-offers_basis_step(Profile, no_rule_in_article_26, [cite(eu_dir_2022_2555_art_26_3)]) :-
+basis_for_establishment(absent, _, indeterminate([established_in_union]), []).
+basis_for_establishment(given(true),
+                        _,
+                        state_of_main_establishment,
+                        [cite(eu_dir_2022_2555_art_26_1_b), cite(eu_dir_2022_2555_art_26_2)]) :-
+    implements(eu_dir_2022_2555_art_26_2).
+basis_for_establishment(given(false), Profile, Basis, Citations) :-
     implements(eu_dir_2022_2555_art_26_3),
-    profile_get(Profile, offers_services_in_union, false).
-offers_basis_step(Profile, Basis, Citations) :-
-    profile_get(Profile, offers_services_in_union, true),
-    representative_basis_step(Profile, Basis, Citations).
+    key_reading(Profile, offers_services_in_union, Offers),
+    basis_for_services_offer(Offers, Profile, Basis, Citations).
 
-representative_basis_step(Profile, indeterminate([representative_designated_in_union]), []) :-
-    profile_lacks(Profile, representative_designated_in_union).
-representative_basis_step(Profile, state_of_representative, [cite(eu_dir_2022_2555_art_26_3)]) :-
+basis_for_services_offer(absent, _, indeterminate([offers_services_in_union]), []).
+basis_for_services_offer(given(false),
+                         _,
+                         no_rule_in_article_26,
+                         [cite(eu_dir_2022_2555_art_26_3)]) :-
+    implements(eu_dir_2022_2555_art_26_3).
+basis_for_services_offer(given(true), Profile, Basis, Citations) :-
     implements(eu_dir_2022_2555_art_26_3),
-    profile_get(Profile, representative_designated_in_union, true).
-representative_basis_step(Profile, any_member_state_where_services_are_provided_may_take_legal_action, [cite(eu_dir_2022_2555_art_26_3)]) :-
-    implements(eu_dir_2022_2555_art_26_3),
-    profile_get(Profile, representative_designated_in_union, false).
+    key_reading(Profile, representative_designated_in_union, Representative),
+    basis_for_representative(Representative, Basis, Citations).
 
-% =====================================================================
-% (B) main_establishment_rule/3
-% =====================================================================
+basis_for_representative(absent, indeterminate([representative_designated_in_union]), []).
+basis_for_representative(given(true),
+                         state_of_representative,
+                         [cite(eu_dir_2022_2555_art_26_3)]) :-
+    implements(eu_dir_2022_2555_art_26_3).
+basis_for_representative(given(false),
+                         any_member_state_where_services_are_provided_may_take_legal_action,
+                         [cite(eu_dir_2022_2555_art_26_3)]) :-
+    implements(eu_dir_2022_2555_art_26_3).
+
+% ---- MAIN_ESTABLISHMENT_RULE (Art 26(2)) ------------------------------
+% Presupposes a main_establishment_provider established in the Union
+% (open question Q10): entity_category and established_in_union are not read.
 main_establishment_rule(Profile, Result, Citations) :-
     nis2_jurisdiction_registration_input_problems(Profile, Problems),
-    main_establishment_route(Problems, Profile, Result, Citations).
+    checked_main_establishment_rule(Problems, Profile, Result, Citations).
 
-main_establishment_route([Problem|Problems], _, input_problems([Problem|Problems]), []).
-main_establishment_route([], Profile, Result, Citations) :-
-    decisions_step(Profile, Result, Citations).
+checked_main_establishment_rule([Problem|Problems], _, input_problems([Problem|Problems]), []).
+checked_main_establishment_rule([], Profile, Result, Citations) :-
+    key_reading(Profile, decisions_predominantly_taken_in_one_union_member_state, Decisions),
+    main_establishment_for_decisions(Decisions, Profile, Result, Citations).
 
-decisions_step(Profile, indeterminate([decisions_predominantly_taken_in_one_union_member_state]), []) :-
-    profile_lacks(Profile, decisions_predominantly_taken_in_one_union_member_state).
-decisions_step(Profile, state_where_cybersecurity_risk_management_decisions_are_taken, [cite(eu_dir_2022_2555_art_26_2)]) :-
+main_establishment_for_decisions(absent,
+                                 _,
+                                 indeterminate([decisions_predominantly_taken_in_one_union_member_state]),
+                                 []).
+main_establishment_for_decisions(given(true),
+                                 _,
+                                 state_where_cybersecurity_risk_management_decisions_are_taken,
+                                 [cite(eu_dir_2022_2555_art_26_2)]) :-
+    implements(eu_dir_2022_2555_art_26_2).
+main_establishment_for_decisions(given(unsure), Profile, Result, Citations) :-
     implements(eu_dir_2022_2555_art_26_2),
-    profile_get(Profile, decisions_predominantly_taken_in_one_union_member_state, true).
-decisions_step(Profile, needs_legal_review(open_textured(decisions_predominantly_taken_in_one_union_member_state, cite(eu_dir_2022_2555_art_26_2)), [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-unsure])]), []) :-
+    key_reading(Profile, cybersecurity_operations_carried_out_in_one_union_member_state, Operations),
+    main_establishment_for_unsure_decisions(Operations, Result, Citations).
+main_establishment_for_decisions(given(false), Profile, Result, Citations) :-
     implements(eu_dir_2022_2555_art_26_2),
-    profile_get(Profile, decisions_predominantly_taken_in_one_union_member_state, unsure).
-decisions_step(Profile, Result, Citations) :-
-    profile_get(Profile, decisions_predominantly_taken_in_one_union_member_state, false),
-    operations_step(Profile, Result, Citations).
+    key_reading(Profile, cybersecurity_operations_carried_out_in_one_union_member_state, Operations),
+    main_establishment_for_operations(Operations, Result, Citations).
 
-operations_step(Profile, indeterminate([cybersecurity_operations_carried_out_in_one_union_member_state]), []) :-
-    profile_lacks(Profile, cybersecurity_operations_carried_out_in_one_union_member_state).
-operations_step(Profile, state_where_cybersecurity_operations_are_carried_out, [cite(eu_dir_2022_2555_art_26_2)]) :-
-    implements(eu_dir_2022_2555_art_26_2),
-    profile_get(Profile, cybersecurity_operations_carried_out_in_one_union_member_state, true).
-operations_step(Profile, needs_legal_review(open_textured(cybersecurity_operations_carried_out_in_one_union_member_state, cite(eu_dir_2022_2555_art_26_2)), [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-false, cybersecurity_operations_carried_out_in_one_union_member_state-unsure])]), []) :-
-    implements(eu_dir_2022_2555_art_26_2),
-    profile_get(Profile, cybersecurity_operations_carried_out_in_one_union_member_state, unsure).
-operations_step(Profile, state_of_establishment_with_most_employees_in_the_union, [cite(eu_dir_2022_2555_art_26_2)]) :-
-    implements(eu_dir_2022_2555_art_26_2),
-    profile_get(Profile, cybersecurity_operations_carried_out_in_one_union_member_state, false).
+% Reading (10): the operations key would decide if the decisions test were
+% decided false, so an absent operations key is named before the referral.
+main_establishment_for_unsure_decisions(absent,
+                                        indeterminate([cybersecurity_operations_carried_out_in_one_union_member_state]),
+                                        []).
+main_establishment_for_unsure_decisions(given(_),
+                                        needs_legal_review(open_textured(decisions_predominantly_taken_in_one_union_member_state, cite(eu_dir_2022_2555_art_26_2)),
+                                                           [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-unsure])]),
+                                        []) :-
+    implements(eu_dir_2022_2555_art_26_2).
 
-% =====================================================================
-% (C) registry_submission_items/2  (Art 27(2))
-% =====================================================================
+main_establishment_for_operations(absent,
+                                  indeterminate([cybersecurity_operations_carried_out_in_one_union_member_state]),
+                                  []).
+main_establishment_for_operations(given(true),
+                                  state_where_cybersecurity_operations_are_carried_out,
+                                  [cite(eu_dir_2022_2555_art_26_2)]) :-
+    implements(eu_dir_2022_2555_art_26_2).
+main_establishment_for_operations(given(unsure),
+                                  needs_legal_review(open_textured(cybersecurity_operations_carried_out_in_one_union_member_state, cite(eu_dir_2022_2555_art_26_2)),
+                                                     [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-false, cybersecurity_operations_carried_out_in_one_union_member_state-unsure])]),
+                                  []) :-
+    implements(eu_dir_2022_2555_art_26_2).
+main_establishment_for_operations(given(false),
+                                  state_of_establishment_with_most_employees_in_the_union,
+                                  [cite(eu_dir_2022_2555_art_26_2)]) :-
+    implements(eu_dir_2022_2555_art_26_2).
+
+% ---- REGISTRY_SUBMISSION_ITEMS (Art 27(1), (2)) -----------------------
 registry_submission_items(Profile, Items) :-
     nis2_jurisdiction_registration_input_problems(Profile, Problems),
-    registry_route(Problems, Profile, Items).
+    checked_registry_submission_items(Problems, Profile, Items).
 
-registry_route([Problem|Problems], _, input_problems([Problem|Problems])).
-registry_route([], Profile, Items) :-
-    registry_category_step(Profile, Items).
-
-registry_category_step(Profile, indeterminate([entity_category])) :-
-    profile_lacks(Profile, entity_category).
-registry_category_step(Profile, Items) :-
-    profile_get(Profile, entity_category, Category),
+checked_registry_submission_items([Problem|Problems], _, input_problems([Problem|Problems])).
+checked_registry_submission_items([], Profile, Items) :-
+    key_reading(Profile, entity_category, Category),
     registry_for_category(Category, Profile, Items).
 
-registry_for_category(general_entity, _, []).
-registry_for_category(public_electronic_communications_provider, _, []).
-registry_for_category(public_administration_entity, _, []).
-registry_for_category(main_establishment_provider, Profile, Items) :-
+% Art 27(1) names the provider types of Art 26(1)(b): only those entities
+% are addressed by Art 27(2) (reading (6)).
+registry_for_category(absent, _, indeterminate([entity_category])).
+registry_for_category(given(main_establishment_provider), Profile, Items) :-
+    implements(eu_dir_2022_2555_art_27_1),
+    key_reading(Profile, established_in_union, Established),
+    registry_for_establishment(Established, Profile, Items).
+registry_for_category(given(general_entity), _, []) :-
+    implements(eu_dir_2022_2555_art_27_1).
+registry_for_category(given(public_electronic_communications_provider), _, []) :-
+    implements(eu_dir_2022_2555_art_27_1).
+registry_for_category(given(public_administration_entity), _, []) :-
+    implements(eu_dir_2022_2555_art_27_1).
+
+registry_for_establishment(absent, _, indeterminate([established_in_union])).
+registry_for_establishment(given(true), Profile, Items) :-
+    key_reading(Profile, sector_and_subsector_applicable, Sector),
+    registry_for_sector(Sector, inside_the_union, Items).
+registry_for_establishment(given(false), Profile, Items) :-
+    key_reading(Profile, representative_designated_in_union, Representative),
+    registry_for_representative(Representative, Profile, Items).
+
+registry_for_representative(absent, _, indeterminate([representative_designated_in_union])).
+registry_for_representative(given(true), Profile, Items) :-
+    key_reading(Profile, sector_and_subsector_applicable, Sector),
+    registry_for_sector(Sector, outside_the_union_with_representative, Items).
+registry_for_representative(given(false), Profile, Items) :-
+    key_reading(Profile, sector_and_subsector_applicable, Sector),
+    registry_for_sector(Sector, outside_the_union_without_representative, Items).
+
+registry_for_sector(absent, _, indeterminate([sector_and_subsector_applicable])).
+registry_for_sector(given(Sector), Establishment, Items) :-
     implements(eu_dir_2022_2555_art_27_2),
-    registry_missing_keys(Profile, Missing),
-    registry_main_result(Missing, Profile, Items).
+    establishment_conditions(Establishment, EstablishmentConditions),
+    registry_sector_conditions(Sector, SectorConditions),
+    append([always|SectorConditions], EstablishmentConditions, HeldConditions),
+    findall(item(ItemName, Citation),
+            owed_registry_item(HeldConditions, ItemName, Citation),
+            Items).
 
-registry_main_result([Key|Keys], _, indeterminate([Key|Keys])).
-registry_main_result([], Profile, Items) :-
-    registry_items(Profile, Items).
+owed_registry_item(HeldConditions, ItemName, Citation) :-
+    registry_item_row(ItemName, Condition, Citation),
+    memberd_t(Condition, HeldConditions, true).
 
-registry_missing_keys(Profile, [established_in_union|Missing]) :-
-    profile_lacks(Profile, established_in_union),
-    maybe_missing(Profile, sector_and_subsector_applicable, Missing).
-registry_missing_keys(Profile, Missing) :-
-    profile_get(Profile, established_in_union, true),
-    maybe_missing(Profile, sector_and_subsector_applicable, Missing).
-registry_missing_keys(Profile, Missing) :-
-    profile_get(Profile, established_in_union, false),
-    maybe_missing(Profile, representative_designated_in_union, RepresentativeMissing),
-    maybe_missing(Profile, sector_and_subsector_applicable, SectorMissing),
-    append(RepresentativeMissing, SectorMissing, Missing).
+% Art 27(2)(c), (d): the Union establishments, or the representative.
+establishment_conditions(inside_the_union, [when_established_in_union]) :-
+    implements(eu_dir_2022_2555_art_27_2_c).
+establishment_conditions(outside_the_union_with_representative, [when_represented_from_outside_the_union]) :-
+    implements(eu_dir_2022_2555_art_27_2_c).
+establishment_conditions(outside_the_union_without_representative, []) :-
+    implements(eu_dir_2022_2555_art_27_2_c).
 
-registry_items(Profile, Items) :-
-    profile_get(Profile, sector_and_subsector_applicable, Applicable),
-    registry_sector_items(Applicable, SectorItems),
-    registry_establishment_items(Profile, AddressItems, ContactItems),
-    append([
-        [item(entity_name, cite(eu_dir_2022_2555_art_27_2_a))],
-        SectorItems,
-        AddressItems,
-        [item(contact_details_of_entity, cite(eu_dir_2022_2555_art_27_2_d))],
-        ContactItems,
-        [item(member_states_where_services_are_provided, cite(eu_dir_2022_2555_art_27_2_e)),
-         item(ip_ranges, cite(eu_dir_2022_2555_art_27_2_f))]
-    ], Items).
-
-registry_sector_items(true, [item(sector_subsector_and_type_of_entity, cite(eu_dir_2022_2555_art_27_2_b))]) :-
+% Art 27(2)(b) where applicable.
+registry_sector_conditions(true, [when_sector_and_subsector_applicable]) :-
     implements(eu_dir_2022_2555_art_27_2_b).
-registry_sector_items(false, []).
+registry_sector_conditions(false, []) :-
+    implements(eu_dir_2022_2555_art_27_2_b).
 
-registry_establishment_items(Profile, [item(address_of_main_establishment_and_other_legal_establishments_in_the_union, cite(eu_dir_2022_2555_art_27_2_c))], []) :-
-    implements(eu_dir_2022_2555_art_27_2_c),
-    profile_get(Profile, established_in_union, true).
-registry_establishment_items(Profile, [item(address_of_representative, cite(eu_dir_2022_2555_art_27_2_c))], [item(contact_details_of_representative, cite(eu_dir_2022_2555_art_27_2_d))]) :-
-    implements(eu_dir_2022_2555_art_27_2_c),
-    profile_get(Profile, established_in_union, false),
-    profile_get(Profile, representative_designated_in_union, true).
-registry_establishment_items(Profile, [], []) :-
-    profile_get(Profile, established_in_union, false),
-    profile_get(Profile, representative_designated_in_union, false).
-
-% =====================================================================
-% (D) entity_list_submission_items/2  (Art 3(4))
-% =====================================================================
+% ---- ENTITY_LIST_SUBMISSION_ITEMS (Art 3(3), (4)) ---------------------
 entity_list_submission_items(Profile, Items) :-
     nis2_jurisdiction_registration_input_problems(Profile, Problems),
-    list_route(Problems, Profile, Items).
+    checked_entity_list_submission_items(Problems, Profile, Items).
 
-list_route([Problem|Problems], _, input_problems([Problem|Problems])).
-list_route([], Profile, Items) :-
-    maybe_missing(Profile, sector_and_subsector_applicable, SectorMissing),
-    maybe_missing(Profile, member_states_list_applicable, ListMissing),
-    append(SectorMissing, ListMissing, Missing),
-    list_result(Missing, Profile, Items).
+checked_entity_list_submission_items([Problem|Problems], _, input_problems([Problem|Problems])).
+checked_entity_list_submission_items([], Profile, Items) :-
+    key_reading(Profile, sector_and_subsector_applicable, Sector),
+    entity_list_for_sector(Sector, Profile, Items).
 
-list_result([Key|Keys], _, indeterminate([Key|Keys])).
-list_result([], Profile, Items) :-
-    profile_get(Profile, sector_and_subsector_applicable, SectorApplicable),
-    profile_get(Profile, member_states_list_applicable, ListApplicable),
-    list_sector_items(SectorApplicable, SectorItems),
-    list_member_state_items(ListApplicable, MemberStateItems),
-    append([
-        [item(entity_name, cite(eu_dir_2022_2555_art_3_4_a)),
-         item(address_and_contact_details_including_email_addresses_ip_ranges_and_telephone_numbers, cite(eu_dir_2022_2555_art_3_4_b))],
-        SectorItems,
-        MemberStateItems
-    ], Items).
+entity_list_for_sector(absent, _, indeterminate([sector_and_subsector_applicable])).
+entity_list_for_sector(given(Sector), Profile, Items) :-
+    key_reading(Profile, member_states_list_applicable, MemberStates),
+    entity_list_for_member_states(MemberStates, Sector, Items).
 
-list_sector_items(true, [item(sector_and_subsector, cite(eu_dir_2022_2555_art_3_4_c))]) :-
+entity_list_for_member_states(absent, _, indeterminate([member_states_list_applicable])).
+entity_list_for_member_states(given(MemberStates), Sector, Items) :-
+    implements(eu_dir_2022_2555_art_3_3),
+    list_sector_conditions(Sector, SectorConditions),
+    member_states_conditions(MemberStates, MemberStatesConditions),
+    append([always|SectorConditions], MemberStatesConditions, HeldConditions),
+    findall(item(ItemName, Citation),
+            owed_entity_list_item(HeldConditions, ItemName, Citation),
+            Items).
+
+owed_entity_list_item(HeldConditions, ItemName, Citation) :-
+    entity_list_item_row(ItemName, Condition, Citation),
+    memberd_t(Condition, HeldConditions, true).
+
+% Art 3(4)(c) where applicable.
+list_sector_conditions(true, [when_sector_and_subsector_applicable]) :-
     implements(eu_dir_2022_2555_art_3_4_c).
-list_sector_items(false, []).
+list_sector_conditions(false, []) :-
+    implements(eu_dir_2022_2555_art_3_4_c).
 
-list_member_state_items(true, [item(member_states_where_services_in_scope_are_provided, cite(eu_dir_2022_2555_art_3_4_d))]) :-
+% Art 3(4)(d) where applicable.
+member_states_conditions(true, [when_member_states_list_applicable]) :-
     implements(eu_dir_2022_2555_art_3_4_d).
-list_member_state_items(false, []).
+member_states_conditions(false, []) :-
+    implements(eu_dir_2022_2555_art_3_4_d).
 
-% =====================================================================
-% (E) change_notification_limits/2  (Art 27(3), Art 3(4))
-% =====================================================================
+% ---- CHANGE_NOTIFICATION_LIMITS (Art 27(3), Art 3(4)) -----------------
+% The limits are LISTED, not computed from a change date (reading (8)).
 change_notification_limits(Profile, Limits) :-
     nis2_jurisdiction_registration_input_problems(Profile, Problems),
-    limits_route(Problems, Profile, Limits).
+    checked_change_notification_limits(Problems, Profile, Limits).
 
-limits_route([Problem|Problems], _, input_problems([Problem|Problems])).
-limits_route([], Profile, Limits) :-
-    limits_category_step(Profile, Limits).
-
-limits_category_step(Profile, indeterminate([entity_category])) :-
-    profile_lacks(Profile, entity_category).
-limits_category_step(Profile, Limits) :-
-    profile_get(Profile, entity_category, Category),
+checked_change_notification_limits([Problem|Problems], _, input_problems([Problem|Problems])).
+checked_change_notification_limits([], Profile, Limits) :-
+    key_reading(Profile, entity_category, Category),
     limits_for_category(Category, Limits).
 
-limits_for_category(main_establishment_provider, [
-    limit(registry_information, months_after_change(3), cite(eu_dir_2022_2555_art_27_3)),
-    limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))
-]) :-
-    implements(eu_dir_2022_2555_art_27_3),
+limits_for_category(absent, indeterminate([entity_category])).
+limits_for_category(given(Category), Limits) :-
+    change_regimes(Category, Regimes),
+    findall(limit(Regime, Period, Citation),
+            regime_limit(Regimes, Regime, Period, Citation),
+            Limits).
+
+regime_limit(Regimes, Regime, Period, Citation) :-
+    member(Regime, Regimes),
+    change_limit_row(Regime, Period, Citation).
+
+change_regimes(main_establishment_provider, [registry_information, entity_list_information]) :-
+    implements(eu_dir_2022_2555_art_27_3).
+change_regimes(general_entity, [entity_list_information]) :-
     implements(eu_dir_2022_2555_art_3_4).
-limits_for_category(general_entity, [
-    limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))
-]) :-
+change_regimes(public_electronic_communications_provider, [entity_list_information]) :-
     implements(eu_dir_2022_2555_art_3_4).
-limits_for_category(public_electronic_communications_provider, [
-    limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))
-]) :-
-    implements(eu_dir_2022_2555_art_3_4).
-limits_for_category(public_administration_entity, [
-    limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))
-]) :-
+change_regimes(public_administration_entity, [entity_list_information]) :-
     implements(eu_dir_2022_2555_art_3_4).
 
-% =====================================================================
-% Verdict (eligibility): a jurisdiction basis was found or not
-% =====================================================================
+% ---- checklist: one row per query -------------------------------------
+% Row statuses: met, unmet(Reason), unknown([Key]) (an absent key, or an
+% unsure judgement handed to the user), inapplicable.
+nis2_jurisdiction_registration_checklist(Profile, Items) :-
+    nis2_jurisdiction_registration_input_problems(Profile, Problems),
+    checklist_for_problems(Problems, Profile, Items).
+
+checklist_for_problems([Problem|Problems],
+                       _,
+                       [item(input_check, unmet(input_problems([Problem|Problems])), [])]).
+checklist_for_problems([],
+                       Profile,
+                       [item(jurisdiction_basis, BasisStatus, BasisRowCitations),
+                        MainEstablishmentItem,
+                        item(registry_submission, RegistryStatus, RegistryRowCitations),
+                        item(entity_list_submission, EntityListStatus, EntityListRowCitations),
+                        item(change_notification, ChangeStatus, ChangeRowCitations)]) :-
+    jurisdiction_basis(Profile, Basis, BasisCitations),
+    basis_row_status(Basis, BasisStatus),
+    row_citations(jurisdiction_basis, BasisCitations, BasisRowCitations),
+    main_establishment_row(Basis, Profile, MainEstablishmentItem),
+    registry_submission_items(Profile, RegistryItems),
+    answer_row_status(RegistryItems, RegistryStatus),
+    findall(Citation, member(item(_, Citation), RegistryItems), RegistryCitations),
+    row_citations(registry_submission, RegistryCitations, RegistryRowCitations),
+    entity_list_submission_items(Profile, EntityListItems),
+    answer_row_status(EntityListItems, EntityListStatus),
+    findall(Citation, member(item(_, Citation), EntityListItems), EntityListCitations),
+    row_citations(entity_list_submission, EntityListCitations, EntityListRowCitations),
+    change_notification_limits(Profile, Limits),
+    answer_row_status(Limits, ChangeStatus),
+    findall(Citation, member(limit(_, _, Citation), Limits), ChangeCitations),
+    row_citations(change_notification, ChangeCitations, ChangeRowCitations).
+
+basis_row_status(state_of_establishment, met).
+basis_row_status(state_where_services_are_provided, met).
+basis_row_status(state_of_main_establishment, met).
+basis_row_status(state_that_established_the_entity, met).
+basis_row_status(state_of_representative, met).
+basis_row_status(no_rule_in_article_26, unmet(no_rule_in_article_26)).
+basis_row_status(any_member_state_where_services_are_provided_may_take_legal_action,
+                 unmet(any_member_state_where_services_are_provided_may_take_legal_action)).
+basis_row_status(indeterminate(MissingKeys), unknown(MissingKeys)).
+
+main_establishment_row(state_of_main_establishment,
+                       Profile,
+                       item(main_establishment, Status, RowCitations)) :-
+    main_establishment_rule(Profile, Result, Citations),
+    result_row_status(Result, Status),
+    row_citations(main_establishment, Citations, RowCitations).
+main_establishment_row(Basis,
+                       _,
+                       item(main_establishment, inapplicable, [cite(eu_dir_2022_2555_art_26_2)])) :-
+    dif(Basis, state_of_main_establishment).
+
+result_row_status(state_where_cybersecurity_risk_management_decisions_are_taken, met).
+result_row_status(state_where_cybersecurity_operations_are_carried_out, met).
+result_row_status(state_of_establishment_with_most_employees_in_the_union, met).
+result_row_status(indeterminate(MissingKeys), unknown(MissingKeys)).
+result_row_status(needs_legal_review(open_textured(Key, _), _), unknown([Key])).
+
+answer_row_status([], met).
+answer_row_status([_|_], met).
+answer_row_status(indeterminate(MissingKeys), unknown(MissingKeys)).
+
+row_citations(Row, [], Citations) :-
+    row_default_citations(Row, Citations).
+row_citations(_, [Citation|Citations], SortedCitations) :-
+    sort([Citation|Citations], SortedCitations).
+
+row_default_citations(jurisdiction_basis, [cite(eu_dir_2022_2555_art_26_1)]).
+row_default_citations(main_establishment, [cite(eu_dir_2022_2555_art_26_2)]).
+row_default_citations(registry_submission, [cite(eu_dir_2022_2555_art_27_2_a)]).
+row_default_citations(entity_list_submission, [cite(eu_dir_2022_2555_art_3_4_a)]).
+row_default_citations(change_notification, [cite(eu_dir_2022_2555_art_3_4)]).
+
+% ---- verdict assembly -------------------------------------------------
+decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(profile_rejected, [])) :-
+    nis2_jurisdiction_registration_input_problems(Profile, [_|_]).
 decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(Status, Citations)) :-
-    jurisdiction_basis(Profile, Basis, Citations),
-    verdict_status(Basis, Status).
+    nis2_jurisdiction_registration_input_problems(Profile, []),
+    nis2_jurisdiction_registration_checklist(Profile, Items),
+    findall(Reason, member(item(_, unmet(Reason), _), Items), UnmetReasons),
+    findall(MissingKeys, member(item(_, unknown(MissingKeys), _), Items), UnknownKeys),
+    status_from_rows(UnmetReasons, UnknownKeys, Status),
+    findall(Citation, row_citation(Items, Citation), AllCitations),
+    sort(AllCitations, Citations).
 
-verdict_status(input_problems(Problems), input_problems(Problems)).
-verdict_status(indeterminate(Keys), indeterminate(Keys)).
-verdict_status(state_of_establishment, eligible).
-verdict_status(state_where_services_are_provided, eligible).
-verdict_status(state_of_main_establishment, eligible).
-verdict_status(state_that_established_the_entity, eligible).
-verdict_status(state_of_representative, eligible).
-verdict_status(any_member_state_where_services_are_provided_may_take_legal_action, eligible).
-verdict_status(no_rule_in_article_26, ineligible).
+row_citation(Items, Citation) :-
+    member(item(_, _, RowCitations), Items),
+    member(Citation, RowCitations).
 
+status_from_rows([_|_], _, no_single_member_state_jurisdiction).
+status_from_rows([], [_|_], registration_position_open).
+status_from_rows([], [], registration_position_settled).
+
+% ---- projection: Status only ------------------------------------------
 nis2_jurisdiction_registration_status(Profile, Status) :-
-    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(Status, _Citations)).
-
-% Checklist: one row, carrying the citations of the deciding provision.
-nis2_jurisdiction_registration_checklist(Profile, [item(overall, Status, Citations)]) :-
-    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(Status, Citations)).
+    decide_nis2_jurisdiction_registration(Profile, nis2_jurisdiction_registration_verdict(Status, _)).
 
 nis2_jurisdiction_registration_decision_resolvable(Profile) :-
-    decide_nis2_jurisdiction_registration(Profile, _Verdict).
+    decide_nis2_jurisdiction_registration(Profile, _).
 
-% ---- tests ---------------------------------------------------------------
-test(general_entity_basis) :-
-    jurisdiction_basis([attribute(entity_category, general_entity)], state_of_establishment, [cite(eu_dir_2022_2555_art_26_1)]).
-test(general_entity_verdict) :-
-    nis2_jurisdiction_registration_status([attribute(entity_category, general_entity)], eligible).
-test(missing_category) :-
+% ---- tests: jurisdiction_basis ----------------------------------------
+test(general_entity_is_state_of_establishment) :-
+    jurisdiction_basis([attribute(entity_category, general_entity)],
+                       state_of_establishment,
+                       [cite(eu_dir_2022_2555_art_26_1)]).
+test(general_entity_is_not_main_establishment, fail) :-
+    jurisdiction_basis([attribute(entity_category, general_entity)], state_of_main_establishment, _).
+test(communications_provider_is_state_where_services_are_provided) :-
+    jurisdiction_basis([attribute(entity_category, public_electronic_communications_provider)],
+                       state_where_services_are_provided,
+                       [cite(eu_dir_2022_2555_art_26_1_a)]).
+test(public_administration_is_state_that_established_it) :-
+    jurisdiction_basis([attribute(entity_category, public_administration_entity)],
+                       state_that_established_the_entity,
+                       [cite(eu_dir_2022_2555_art_26_1_c)]).
+test(absent_category_is_indeterminate) :-
     jurisdiction_basis([], indeterminate([entity_category]), []).
-test(provider_not_established_no_services) :-
-    jurisdiction_basis([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, false)], no_rule_in_article_26, [cite(eu_dir_2022_2555_art_26_3)]).
-test(provider_no_rule_is_ineligible) :-
-    nis2_jurisdiction_registration_status([attribute(entity_category, main_establishment_provider), attribute(established_in_union, false), attribute(offers_services_in_union, false)], ineligible).
-test(unknown_key_is_a_problem) :-
-    jurisdiction_basis([attribute(bogus, true)], input_problems([unknown_key(bogus)]), []).
-test(decisions_true) :-
-    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, true)], state_where_cybersecurity_risk_management_decisions_are_taken, [cite(eu_dir_2022_2555_art_26_2)]).
-test(operations_fallback_employees) :-
-    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false), attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)], state_of_establishment_with_most_employees_in_the_union, [cite(eu_dir_2022_2555_art_26_2)]).
-test(decisions_unsure_refers) :-
-    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)], needs_legal_review(open_textured(decisions_predominantly_taken_in_one_union_member_state, cite(eu_dir_2022_2555_art_26_2)), [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-unsure])]), []).
-test(other_category_registry_empty) :-
+test(established_provider_is_main_establishment) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider),
+                        attribute(established_in_union, true)],
+                       state_of_main_establishment,
+                       [cite(eu_dir_2022_2555_art_26_1_b), cite(eu_dir_2022_2555_art_26_2)]).
+test(provider_without_establishment_key_is_indeterminate) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider)],
+                       indeterminate([established_in_union]),
+                       []).
+test(provider_outside_union_without_offer_key) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider),
+                        attribute(established_in_union, false)],
+                       indeterminate([offers_services_in_union]),
+                       []).
+test(provider_outside_union_offering_nothing_has_no_rule) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider),
+                        attribute(established_in_union, false),
+                        attribute(offers_services_in_union, false)],
+                       no_rule_in_article_26,
+                       [cite(eu_dir_2022_2555_art_26_3)]).
+test(provider_with_representative) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider),
+                        attribute(established_in_union, false),
+                        attribute(offers_services_in_union, true),
+                        attribute(representative_designated_in_union, true)],
+                       state_of_representative,
+                       [cite(eu_dir_2022_2555_art_26_3)]).
+test(provider_without_representative) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider),
+                        attribute(established_in_union, false),
+                        attribute(offers_services_in_union, true),
+                        attribute(representative_designated_in_union, false)],
+                       any_member_state_where_services_are_provided_may_take_legal_action,
+                       [cite(eu_dir_2022_2555_art_26_3)]).
+test(provider_with_representative_key_absent) :-
+    jurisdiction_basis([attribute(entity_category, main_establishment_provider),
+                        attribute(established_in_union, false),
+                        attribute(offers_services_in_union, true)],
+                       indeterminate([representative_designated_in_union]),
+                       []).
+test(general_entity_ignores_establishment_keys) :-
+    jurisdiction_basis([attribute(entity_category, general_entity),
+                        attribute(established_in_union, false)],
+                       state_of_establishment,
+                       _).
+test(basis_has_exactly_one_solution) :-
+    findall(Basis-Citations,
+            jurisdiction_basis([attribute(entity_category, main_establishment_provider),
+                                attribute(established_in_union, true)],
+                               Basis,
+                               Citations),
+            Answers),
+    length(Answers, 1).
+
+% ---- tests: input problems --------------------------------------------
+test(wrong_type_and_unknown_key_come_first) :-
+    jurisdiction_basis([attribute(entity_category, bogus), attribute(colour, red)],
+                       input_problems([wrong_type(entity_category), unknown_key(colour)]),
+                       []).
+test(duplicate_key_is_reported_by_every_query) :-
+    registry_submission_items([attribute(established_in_union, true),
+                               attribute(established_in_union, true)],
+                              input_problems([duplicate_key(established_in_union)])).
+test(non_list_profile_is_wrong_type) :-
+    change_notification_limits(not_a_list, input_problems([wrong_type(profile)])).
+test(unsure_crisp_key_is_wrong_type) :-
+    main_establishment_rule([attribute(sector_and_subsector_applicable, unsure)],
+                            input_problems([wrong_type(sector_and_subsector_applicable)]),
+                            []).
+test(unsure_crisp_key_gets_no_result, fail) :-
+    main_establishment_rule([attribute(sector_and_subsector_applicable, unsure)],
+                            indeterminate(_),
+                            _).
+
+% ---- tests: main_establishment_rule -----------------------------------
+test(decisions_absent_names_decisions_only) :-
+    main_establishment_rule([],
+                            indeterminate([decisions_predominantly_taken_in_one_union_member_state]),
+                            []).
+test(decisions_determined) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, true)],
+                            state_where_cybersecurity_risk_management_decisions_are_taken,
+                            [cite(eu_dir_2022_2555_art_26_2)]).
+test(unsure_decisions_with_operations_absent_names_operations) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)],
+                            indeterminate([cybersecurity_operations_carried_out_in_one_union_member_state]),
+                            []).
+test(unsure_decisions_with_operations_present_refers) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, unsure),
+                             attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)],
+                            needs_legal_review(open_textured(decisions_predominantly_taken_in_one_union_member_state, cite(eu_dir_2022_2555_art_26_2)),
+                                               [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-unsure])]),
+                            []).
+test(decisions_failed_operations_absent) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false)],
+                            indeterminate([cybersecurity_operations_carried_out_in_one_union_member_state]),
+                            []).
+test(decisions_failed_operations_determined) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+                             attribute(cybersecurity_operations_carried_out_in_one_union_member_state, true)],
+                            state_where_cybersecurity_operations_are_carried_out,
+                            [cite(eu_dir_2022_2555_art_26_2)]).
+test(decisions_failed_operations_unsure_refers) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+                             attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure)],
+                            needs_legal_review(open_textured(cybersecurity_operations_carried_out_in_one_union_member_state, cite(eu_dir_2022_2555_art_26_2)),
+                                               [inputs_relied_on([decisions_predominantly_taken_in_one_union_member_state-false,
+                                                                  cybersecurity_operations_carried_out_in_one_union_member_state-unsure])]),
+                            []).
+test(both_failed_is_most_employees) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+                             attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)],
+                            state_of_establishment_with_most_employees_in_the_union,
+                            [cite(eu_dir_2022_2555_art_26_2)]).
+test(both_failed_is_not_operations, fail) :-
+    main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+                             attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)],
+                            state_where_cybersecurity_operations_are_carried_out,
+                            _).
+test(main_establishment_has_exactly_one_solution) :-
+    findall(Result,
+            main_establishment_rule([attribute(decisions_predominantly_taken_in_one_union_member_state, unsure),
+                                     attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure)],
+                                    Result,
+                                    _),
+            Results),
+    length(Results, 1).
+
+% ---- tests: registry_submission_items ---------------------------------
+test(registry_absent_category) :-
+    registry_submission_items([], indeterminate([entity_category])).
+test(registry_not_owed_by_general_entity) :-
     registry_submission_items([attribute(entity_category, general_entity)], []).
-test(registry_missing_keys_named) :-
-    registry_submission_items([attribute(entity_category, main_establishment_provider)], indeterminate([established_in_union, sector_and_subsector_applicable])).
-test(registry_established_without_sector) :-
-    registry_submission_items([attribute(entity_category, main_establishment_provider), attribute(established_in_union, true), attribute(sector_and_subsector_applicable, false)], [
-        item(entity_name, cite(eu_dir_2022_2555_art_27_2_a)),
-        item(address_of_main_establishment_and_other_legal_establishments_in_the_union, cite(eu_dir_2022_2555_art_27_2_c)),
-        item(contact_details_of_entity, cite(eu_dir_2022_2555_art_27_2_d)),
-        item(member_states_where_services_are_provided, cite(eu_dir_2022_2555_art_27_2_e)),
-        item(ip_ranges, cite(eu_dir_2022_2555_art_27_2_f))
-    ]).
+test(registry_full_list_for_established_provider) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider),
+                               attribute(established_in_union, true),
+                               attribute(sector_and_subsector_applicable, true)],
+                              [item(entity_name, cite(eu_dir_2022_2555_art_27_2_a)),
+                               item(sector_subsector_and_type_of_entity, cite(eu_dir_2022_2555_art_27_2_b)),
+                               item(address_of_main_establishment_and_other_legal_establishments_in_the_union, cite(eu_dir_2022_2555_art_27_2_c)),
+                               item(contact_details_of_entity, cite(eu_dir_2022_2555_art_27_2_d)),
+                               item(member_states_where_services_are_provided, cite(eu_dir_2022_2555_art_27_2_e)),
+                               item(ip_ranges, cite(eu_dir_2022_2555_art_27_2_f))]).
+test(registry_list_with_representative) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider),
+                               attribute(established_in_union, false),
+                               attribute(representative_designated_in_union, true),
+                               attribute(sector_and_subsector_applicable, false)],
+                              [item(entity_name, cite(eu_dir_2022_2555_art_27_2_a)),
+                               item(address_of_representative, cite(eu_dir_2022_2555_art_27_2_c)),
+                               item(contact_details_of_entity, cite(eu_dir_2022_2555_art_27_2_d)),
+                               item(contact_details_of_representative, cite(eu_dir_2022_2555_art_27_2_d)),
+                               item(member_states_where_services_are_provided, cite(eu_dir_2022_2555_art_27_2_e)),
+                               item(ip_ranges, cite(eu_dir_2022_2555_art_27_2_f))]).
+test(registry_list_without_representative_has_no_address) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider),
+                               attribute(established_in_union, false),
+                               attribute(representative_designated_in_union, false),
+                               attribute(sector_and_subsector_applicable, false)],
+                              [item(entity_name, cite(eu_dir_2022_2555_art_27_2_a)),
+                               item(contact_details_of_entity, cite(eu_dir_2022_2555_art_27_2_d)),
+                               item(member_states_where_services_are_provided, cite(eu_dir_2022_2555_art_27_2_e)),
+                               item(ip_ranges, cite(eu_dir_2022_2555_art_27_2_f))]).
+test(registry_names_establishment_first) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider)],
+                              indeterminate([established_in_union])).
+test(registry_names_representative_before_sector) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider),
+                               attribute(established_in_union, false)],
+                              indeterminate([representative_designated_in_union])).
+test(registry_names_sector_when_established) :-
+    registry_submission_items([attribute(entity_category, main_establishment_provider),
+                               attribute(established_in_union, true)],
+                              indeterminate([sector_and_subsector_applicable])).
+test(registry_has_exactly_one_solution) :-
+    findall(Items,
+            registry_submission_items([attribute(entity_category, main_establishment_provider),
+                                       attribute(established_in_union, true),
+                                       attribute(sector_and_subsector_applicable, true)],
+                                      Items),
+            Answers),
+    length(Answers, 1).
+
+% ---- tests: entity_list_submission_items ------------------------------
+test(entity_list_names_sector_first) :-
+    entity_list_submission_items([], indeterminate([sector_and_subsector_applicable])).
+test(entity_list_names_member_states_list) :-
+    entity_list_submission_items([attribute(sector_and_subsector_applicable, true)],
+                                 indeterminate([member_states_list_applicable])).
+test(entity_list_full) :-
+    entity_list_submission_items([attribute(sector_and_subsector_applicable, true),
+                                  attribute(member_states_list_applicable, true)],
+                                 [item(entity_name, cite(eu_dir_2022_2555_art_3_4_a)),
+                                  item(address_and_contact_details_including_email_addresses_ip_ranges_and_telephone_numbers, cite(eu_dir_2022_2555_art_3_4_b)),
+                                  item(sector_and_subsector, cite(eu_dir_2022_2555_art_3_4_c)),
+                                  item(member_states_where_services_in_scope_are_provided, cite(eu_dir_2022_2555_art_3_4_d))]).
 test(entity_list_minimal) :-
-    entity_list_submission_items([attribute(sector_and_subsector_applicable, false), attribute(member_states_list_applicable, false)], [
-        item(entity_name, cite(eu_dir_2022_2555_art_3_4_a)),
-        item(address_and_contact_details_including_email_addresses_ip_ranges_and_telephone_numbers, cite(eu_dir_2022_2555_art_3_4_b))
-    ]).
-test(limits_for_other_category) :-
-    change_notification_limits([attribute(entity_category, general_entity)], [limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))]).
+    entity_list_submission_items([attribute(sector_and_subsector_applicable, false),
+                                  attribute(member_states_list_applicable, false)],
+                                 [item(entity_name, cite(eu_dir_2022_2555_art_3_4_a)),
+                                  item(address_and_contact_details_including_email_addresses_ip_ranges_and_telephone_numbers, cite(eu_dir_2022_2555_art_3_4_b))]).
+
+% ---- tests: change_notification_limits --------------------------------
+test(limits_absent_category) :-
+    change_notification_limits([], indeterminate([entity_category])).
+test(limits_for_provider) :-
+    change_notification_limits([attribute(entity_category, main_establishment_provider)],
+                               [limit(registry_information, months_after_change(3), cite(eu_dir_2022_2555_art_27_3)),
+                                limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))]).
+test(limits_for_general_entity) :-
+    change_notification_limits([attribute(entity_category, general_entity)],
+                               [limit(entity_list_information, weeks_after_change(2), cite(eu_dir_2022_2555_art_3_4))]).
+test(general_entity_has_no_registry_limit, fail) :-
+    change_notification_limits([attribute(entity_category, general_entity)],
+                               [limit(registry_information, _, _)|_]).
+
+% ---- tests: facade verdict --------------------------------------------
+test(general_entity_position_settled) :-
+    decide_nis2_jurisdiction_registration([attribute(entity_category, general_entity),
+                                           attribute(sector_and_subsector_applicable, false),
+                                           attribute(member_states_list_applicable, false)],
+                                          nis2_jurisdiction_registration_verdict(registration_position_settled, Citations)),
+    member(cite(eu_dir_2022_2555_art_26_1), Citations).
+test(general_entity_without_list_keys_is_open) :-
+    nis2_jurisdiction_registration_status([attribute(entity_category, general_entity)],
+                                          registration_position_open).
+test(general_entity_without_list_keys_is_not_settled, fail) :-
+    nis2_jurisdiction_registration_status([attribute(entity_category, general_entity)],
+                                          registration_position_settled).
+test(unsure_judgement_is_handed_to_the_user) :-
+    nis2_jurisdiction_registration_checklist([attribute(entity_category, main_establishment_provider),
+                                              attribute(established_in_union, true),
+                                              attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+                                              attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure),
+                                              attribute(sector_and_subsector_applicable, true),
+                                              attribute(member_states_list_applicable, true)],
+                                             Items),
+    member(item(main_establishment, unknown([cybersecurity_operations_carried_out_in_one_union_member_state]), _), Items).
+test(provider_without_union_presence_has_no_single_state) :-
+    nis2_jurisdiction_registration_status([attribute(entity_category, main_establishment_provider),
+                                           attribute(established_in_union, false),
+                                           attribute(offers_services_in_union, false),
+                                           attribute(representative_designated_in_union, false),
+                                           attribute(sector_and_subsector_applicable, false),
+                                           attribute(member_states_list_applicable, false)],
+                                          no_single_member_state_jurisdiction).
+test(bad_profile_is_rejected) :-
+    decide_nis2_jurisdiction_registration([attribute(colour, red)],
+                                          nis2_jurisdiction_registration_verdict(profile_rejected, [])).
+test(verdict_has_exactly_one_solution) :-
+    findall(Verdict,
+            decide_nis2_jurisdiction_registration([attribute(entity_category, main_establishment_provider),
+                                                   attribute(established_in_union, true),
+                                                   attribute(decisions_predominantly_taken_in_one_union_member_state, true),
+                                                   attribute(sector_and_subsector_applicable, true),
+                                                   attribute(member_states_list_applicable, true)],
+                                                  Verdict),
+            Verdicts),
+    length(Verdicts, 1).
 
 :- end_module(nis2_jurisdiction_registration).

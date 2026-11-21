@@ -1,0 +1,330 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_proportionality_and_simplified_framework
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - kernel
+  - citations
+  - parameters
+  - dora_proportionality_and_simplified_framework
+  - queries
+  - fixtures
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - citation/2
+  # -- dora_proportionality_and_simplified_framework.clausal --
+  - simplified_framework_qualification/3
+  - simplified_framework_duties_required/3
+  - simplified_framework_duties_complete/3
+  - simplified_framework_duties_outstanding/3
+  - article_16_1_entity/0
+  - not_article_16_1_entity/0
+  - out_of_scope/0
+  - not_a_financial_entity/0
+  - complete/0
+  - incomplete/0
+  - none_outstanding/0
+  - required/1
+  - outstanding/1
+  - indeterminate/1
+  - needs_legal_review/2
+  - open_textured/2
+  - inputs_relied_on/1
+  - provenance/2
+  - input_problems/1
+  - unknown_key/1
+  - wrong_type/1
+  - duplicate_key/1
+  - decide_dora_proportionality_and_simplified_framework/2
+  - dora_proportionality_and_simplified_framework_status/2
+  - dora_proportionality_and_simplified_framework_checklist/2
+  - dora_proportionality_and_simplified_framework_decision_resolvable/1
+  - dora_proportionality_and_simplified_framework_status_values/1
+  # -- queries.clausal --
+  - dora_proportionality_and_simplified_framework_profile_keys/1
+  - dora_proportionality_and_simplified_framework_input_problems/2
+  - dora_proportionality_and_simplified_framework_what_if/4
+  # -- fixtures.clausal --
+  - dora_proportionality_and_simplified_framework_subject/1
+  - dora_proportionality_and_simplified_framework_profile_for/2
+  - dora_proportionality_and_simplified_framework_assess/2
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only the kit's formalize_lib, which is
+# not a backbone package.
+uses: []
+
+scope: >-
+  Regulation (EU) 2022/2554 (Digital Operational Resilience Act, DORA), pinned
+  original OJ text 32022R2554 (OJ L 333, 27.12.2022, p. 1). For ONE entity of
+  ONE entity type this order decides: whether the entity is one of those
+  referred to in Article 16(1), first subparagraph, to which Articles 5 to 15
+  do not apply (simplified_framework_qualification/3, reading Art 2(1)(u),
+  Art 2(2), Art 2(3)(c), Art 2(4), first sentence, and Article 3, points (32),
+  (34), (36), (39) and (53)); which duties of the simplified ICT risk
+  management framework of Art 16(1), second subparagraph, points (a) to (h)
+  (point (h) as two duties), and Art 16(2) apply to it
+  (simplified_framework_duties_required/3); whether it has performed all of
+  them (simplified_framework_duties_complete/3, the compliance check); and
+  which of them are outstanding (simplified_framework_duties_outstanding/3).
+  The principle of proportionality of Art 4(1) is read inside the caller's
+  judgement of each duty and removes no duty. This order gives the rule for
+  the gate key financial_entity_is_article_16_1_entity of the other DORA
+  orders. Out of scope: Articles 5 to 15 (their own orders), Art 4(2) and (3),
+  Art 16(3) and the regulatory technical standards on the simplified
+  framework (Commission Delegated Regulation (EU) 2024/1774), the conditions
+  of Article 12(1) of Regulation (EU) 2019/2033, and the date of application;
+  scope of the Regulation is presupposed except where a key read for
+  Article 16(1) settles it. A duty the caller cannot judge (unsure) is handed
+  to a lawyer as needs_legal_review; the readings are the drafter's, not a
+  lawyer's.
+
+sources:
+  - >-
+    Regulation (EU) 2022/2554 of the European Parliament and of the Council of
+    14 December 2022 on digital operational resilience for the financial
+    sector (DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554, original OJ
+    text): Article 16(1), first and second subparagraphs, points (a) to (h);
+    Article 16(2); Article 4(1).
+  - >-
+    Regulation (EU) 2022/2554 (DORA), OJ L 333, 27.12.2022, p. 1: Article 2(1),
+    lead words and point (u); Article 2(2); Article 2(3)(c); Article 2(4),
+    first sentence; Article 3, points (32), (34), (36), (39) and (53).
+
+query_interface:
+  2: simplified_framework_qualification/3        # eligibility: Article 16(1) entity or not, cited
+  7: dora_proportionality_and_simplified_framework_checklist/2    # justification: cited checklist per duty
+  13: simplified_framework_duties_complete/3     # compliance_check: complete | incomplete
+  16: dora_proportionality_and_simplified_framework_what_if/4     # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  - 32022R2554#art_004
+  - 32022R2554#art_016
+  reason: The headings of Articles 2, 4 and 16, and the heading and lead words of
+    Article 3 ('For the purposes of this Regulation, the following definitions shall
+    apply'), carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: member_state_notice_and_publication
+  units:
+  - 32022R2554#parag_002.004
+  partial: true
+  reason: 'Art 2(4) is PARTLY FORMALISED. Its first sentence (a Member State may exclude
+    the institutions of Article 2(5), points (4) to (23), of Directive 2013/36/EU)
+    is read through the key exempted_from_dora_scope_by_member_state (reading (6)).
+    Not formalised: its second and third sentences, by which the Member State informs
+    the Commission and the Commission publishes the information.'
+  consequence: No answer depends on whether the Commission was informed or the information
+    published.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable but institutional; the deferral stands for this order (open question
+    (Q3)).
+- what: scope_rules_formalised_in_the_scope_order
+  units:
+  - 32022R2554#point_002.001_a
+  - 32022R2554#point_002.001_b
+  - 32022R2554#point_002.001_c
+  - 32022R2554#point_002.001_d
+  - 32022R2554#point_002.001_e
+  - 32022R2554#point_002.001_f
+  - 32022R2554#point_002.001_g
+  - 32022R2554#point_002.001_h
+  - 32022R2554#point_002.001_i
+  - 32022R2554#point_002.001_j
+  - 32022R2554#point_002.001_k
+  - 32022R2554#point_002.001_l
+  - 32022R2554#point_002.001_m
+  - 32022R2554#point_002.001_n
+  - 32022R2554#point_002.001_o
+  - 32022R2554#point_002.001_p
+  - 32022R2554#point_002.001_q
+  - 32022R2554#point_002.001_r
+  - 32022R2554#point_002.001_s
+  - 32022R2554#point_002.001_t
+  - 32022R2554#parag_002.003
+  - 32022R2554#point_002.003_a
+  - 32022R2554#point_002.003_b
+  - 32022R2554#point_002.003_d
+  - 32022R2554#point_002.003_e
+  - 32022R2554#point_002.003_f
+  reason: The points of Art 2(1) other than point (u), the lead words of Art 2(3)
+    and its points other than point (c) are formalised in the DORA order on scope
+    and entity types. This order reads Art 2(1), points (a) to (t), only as the source
+    of the entity type atoms of that order, and presupposes that the exclusions of
+    Art 2(3), points (a), (b), (d), (e) and (f), do not apply (reading (1)).
+  consequence: The answers presuppose an entity in scope and not excluded by those
+    points (open question (Q1)).
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised in the DORA order on scope and entity types; the deferral stands
+    for this order.
+- what: definitions_this_order_does_not_read
+  units:
+  - 32022R2554#point_003_1
+  - 32022R2554#point_003_2
+  - 32022R2554#point_003_3
+  - 32022R2554#point_003_4
+  - 32022R2554#point_003_5
+  - 32022R2554#point_003_6
+  - 32022R2554#point_003_7
+  - 32022R2554#point_003_8
+  - 32022R2554#point_003_9
+  - 32022R2554#point_003_10
+  - 32022R2554#point_003_11
+  - 32022R2554#point_003_12
+  - 32022R2554#point_003_13
+  - 32022R2554#point_003_14
+  - 32022R2554#point_003_15
+  - 32022R2554#point_003_16
+  - 32022R2554#point_003_17
+  - 32022R2554#point_003_18
+  - 32022R2554#point_003_19
+  - 32022R2554#point_003_20
+  - 32022R2554#point_003_21
+  - 32022R2554#point_003_22
+  - 32022R2554#point_003_23
+  - 32022R2554#point_003_24
+  - 32022R2554#point_003_25
+  - 32022R2554#point_003_26
+  - 32022R2554#point_003_27
+  - 32022R2554#point_003_28
+  - 32022R2554#point_003_29
+  - 32022R2554#point_003_30
+  - 32022R2554#point_003_31
+  - 32022R2554#point_003_33
+  - 32022R2554#point_003_35
+  - 32022R2554#point_003_37
+  - 32022R2554#point_003_38
+  - 32022R2554#point_003_40
+  - 32022R2554#point_003_41
+  - 32022R2554#point_003_42
+  - 32022R2554#point_003_43
+  - 32022R2554#point_003_44
+  - 32022R2554#point_003_45
+  - 32022R2554#point_003_46
+  - 32022R2554#point_003_47
+  - 32022R2554#point_003_48
+  - 32022R2554#point_003_49
+  - 32022R2554#point_003_50
+  - 32022R2554#point_003_51
+  - 32022R2554#point_003_52
+  - 32022R2554#point_003_54
+  - 32022R2554#point_003_55
+  - 32022R2554#point_003_56
+  - 32022R2554#point_003_57
+  - 32022R2554#point_003_58
+  - 32022R2554#point_003_59
+  - 32022R2554#point_003_60
+  - 32022R2554#point_003_61
+  - 32022R2554#point_003_62
+  - 32022R2554#point_003_63
+  - 32022R2554#point_003_64
+  - 32022R2554#point_003_65
+  reason: The points of Article 3 other than points (32), (34), (36), (39) and (53)
+    define terms this order does not read; the definitions of the entity types are
+    those of the DORA order on scope and entity types, and the other terms are read
+    in the orders on the articles that use them.
+  consequence: 'None for these answers: no limb reads those terms.'
+  declaration: not_an_exception
+  debt: true
+  open: read where used, in the other DORA orders; the deferral stands for this order.
+- what: proportionality_other_chapters_and_authorities
+  units:
+  - 32022R2554#parag_004.002
+  - 32022R2554#parag_004.003
+  reason: Art 4(2) applies the principle of proportionality to Chapters III, IV and
+    V, Section I, which this order does not formalise; Art 4(3) binds the competent
+    authorities when they review the framework on the reports of Article 6(5) and
+    Article 16(2) (reading (15)).
+  consequence: No answer of this order depends on them (open question (Q14)).
+  declaration: answered_with_caveat
+  debt: true
+  instrument: Regulation (EU) 2022/2554 Article 4(2) and (3)
+  open: Art 4(2) is read inside the judgements of the orders on Chapters III, IV and
+    V, Section I; Art 4(3) gives the entity no duty; the deferral stands for this
+    order.
+- what: technical_standards_mandate
+  units:
+  - 32022R2554#parag_016.003
+  - 32022R2554#point_016.003_a
+  - 32022R2554#point_016.003_b
+  - 32022R2554#point_016.003_c
+  - 32022R2554#point_016.003_d
+  - 32022R2554#point_016.003_e
+  reason: Art 16(3) gives the European Supervisory Authorities a mandate to draft
+    regulatory technical standards on the simplified framework, and the Commission
+    power to adopt them.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+
+excluded_set:
+- what: referenced_classification_rules
+  instrument: Regulation (EU) 2019/2033 Article 12(1); Directive (EU) 2015/2366 Article
+    32(1); Directive 2009/110/EC Article 9(1); Directive 2013/36/EU Article 2(5)
+  cites:
+  - 32019R2033#art_012
+  - 32015L2366#art_032
+  - 32009L0110#art_009
+  - 32013L0036#art_002
+  reason: Not pinned. The definitions of Article 3, points (32), (34), (36) and (39),
+    point to these provisions; whether an entity meets them is the caller's classification,
+    stated in the entity type and in investment_firm_is_small_and_non_interconnected
+    (readings (3), (4)).
+  consequence: The order does not check those conditions (open question (Q5)).
+- what: ict_risk_management_articles
+  instrument: Regulation (EU) 2022/2554 Articles 5 to 15
+  cites:
+  - 32022R2554#art_005
+  - 32022R2554#art_006
+  - 32022R2554#art_007
+  - 32022R2554#art_008
+  - 32022R2554#art_009
+  - 32022R2554#art_010
+  - 32022R2554#art_011
+  - 32022R2554#art_012
+  - 32022R2554#art_013
+  - 32022R2554#art_014
+  - 32022R2554#art_015
+  reason: Not pinned in this domain. Articles 5 to 15 do not apply to the entities
+    of Article 16(1); for other financial entities they are formalised, or to be formalised,
+    in their own orders (readings (2), (12)).
+  consequence: not_article_16_1_entity says only that Article 16 does not apply; it
+    gives none of the duties of Articles 5 to 15 (open question (Q8)).
+- what: date_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64
+  cites:
+  - 32022R2554#art_064
+  reason: Not pinned in this domain. The Regulation applies from 17 January 2025;
+    the order answers on the Regulation as it applies and reads no date (reading (19)).
+  consequence: No answer depends on a date (open question (Q18)).
+- what: simplified_framework_technical_standards
+  instrument: Commission Delegated Regulation (EU) 2024/1774, Title III (the simplified
+    ICT risk management framework)
+  cites:
+  - 32024R1774#art_028
+  reason: Not pinned in this domain. It specifies the simplified ICT risk management
+    framework of Article 16 in detail; the order reads it as part of the caller's
+    judgement (reading (16)).
+  consequence: The order does not check the detail of the technical standards (open
+    question (Q15)).

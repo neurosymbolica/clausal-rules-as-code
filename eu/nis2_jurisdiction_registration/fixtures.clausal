@@ -1,115 +1,229 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % fixtures.clausal -- representative profiles for eu/nis2_jurisdiction_registration.
-% Profiles are attribute lists [attribute(Key, Value), ...].
-% Every route has a positive case and a near-miss control.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). This order has no numeric threshold, so the
+% near-miss controls are ONE-KEY edits: each positive subject is paired with
+% a control that differs from it in exactly one key (one value changed, or
+% one key dropped) and gets a different verdict.
+%
+% Pairs (positive -> one-key control):
+%   general_entity_settled -> general_entity_member_states_list_absent
+%     (member_states_list_applicable dropped: open)
+%   general_entity_settled -> category_absent (entity_category dropped: open)
+%   provider_established_decisions_determined ->
+%     provider_established_decisions_unsure_operations_false (D true -> unsure
+%     with O false: referral on D, open)
+%   provider_established_decisions_unsure_operations_false ->
+%     provider_established_decisions_unsure_operations_absent (O dropped:
+%     O named as missing, reading (10))
+%   provider_established_decisions_false_operations_false ->
+%     provider_established_decisions_false_operations_unsure (O false ->
+%     unsure: referral on O, open)
+%   provider_established_decisions_false_operations_false ->
+%     provider_established_decisions_false_operations_true (the operations
+%     step instead of the employees step; both settled)
+%   provider_established_decisions_determined -> provider_established_key_absent
+%     (established_in_union dropped: open)
+%   provider_outside_union_with_representative ->
+%     provider_outside_union_without_representative (representative true ->
+%     false: no single Member State)
+%   provider_outside_union_with_representative ->
+%     provider_outside_union_representative_key_absent (representative
+%     dropped: open)
+%   provider_outside_union_without_representative ->
+%     provider_outside_union_offering_no_services (offers true -> false:
+%     no rule in Art 26)
+% Input-check subjects (each rejected): duplicate_and_wrong_type,
+% unknown_keys_repeated, crisp_key_given_unsure, not_an_attribute_list,
+% non_attribute_element.
 % =====================================================================
 
 :- module(fixtures, [
     nis2_jurisdiction_registration_subject/1,
     nis2_jurisdiction_registration_profile_for/2,
-    nis2_jurisdiction_registration_assess/2,
-    nis2_jurisdiction_registration_fixtures/1
+    nis2_jurisdiction_registration_assess/2
 ]).
 
 :- use_module(eu/nis2_jurisdiction_registration/nis2_jurisdiction_registration, [decide_nis2_jurisdiction_registration/2]).
 
 % ---- Subject registry ------------------------------------------------
-nis2_jurisdiction_registration_subject(general_entity_established).
-nis2_jurisdiction_registration_subject(category_missing).
-nis2_jurisdiction_registration_subject(public_electronic_communications_provider_established).
-nis2_jurisdiction_registration_subject(public_administration_established).
-nis2_jurisdiction_registration_subject(provider_established_in_union).
-nis2_jurisdiction_registration_subject(provider_established_missing).
-nis2_jurisdiction_registration_subject(provider_non_union_with_representative).
-nis2_jurisdiction_registration_subject(provider_non_union_without_representative).
-nis2_jurisdiction_registration_subject(provider_non_union_no_services).
-nis2_jurisdiction_registration_subject(provider_non_union_offers_missing).
-nis2_jurisdiction_registration_subject(main_establishment_decisions).
-nis2_jurisdiction_registration_subject(main_establishment_operations).
-nis2_jurisdiction_registration_subject(main_establishment_employees).
-nis2_jurisdiction_registration_subject(main_establishment_decisions_unsure).
-nis2_jurisdiction_registration_subject(main_establishment_operations_unsure).
-nis2_jurisdiction_registration_subject(main_establishment_decisions_missing).
-nis2_jurisdiction_registration_subject(malformed_unknown_key).
+nis2_jurisdiction_registration_subject(general_entity_settled).
+nis2_jurisdiction_registration_subject(general_entity_member_states_list_absent).
+nis2_jurisdiction_registration_subject(communications_provider_settled).
+nis2_jurisdiction_registration_subject(public_administration_settled).
+nis2_jurisdiction_registration_subject(category_absent).
+nis2_jurisdiction_registration_subject(provider_established_decisions_determined).
+nis2_jurisdiction_registration_subject(provider_established_decisions_unsure_operations_false).
+nis2_jurisdiction_registration_subject(provider_established_decisions_unsure_operations_absent).
+nis2_jurisdiction_registration_subject(provider_established_decisions_false_operations_unsure).
+nis2_jurisdiction_registration_subject(provider_established_decisions_false_operations_false).
+nis2_jurisdiction_registration_subject(provider_established_decisions_false_operations_true).
+nis2_jurisdiction_registration_subject(provider_established_key_absent).
+nis2_jurisdiction_registration_subject(provider_outside_union_with_representative).
+nis2_jurisdiction_registration_subject(provider_outside_union_without_representative).
+nis2_jurisdiction_registration_subject(provider_outside_union_representative_key_absent).
+nis2_jurisdiction_registration_subject(provider_outside_union_offering_no_services).
+nis2_jurisdiction_registration_subject(duplicate_and_wrong_type).
+nis2_jurisdiction_registration_subject(unknown_keys_repeated).
+nis2_jurisdiction_registration_subject(crisp_key_given_unsure).
+nis2_jurisdiction_registration_subject(not_an_attribute_list).
+nis2_jurisdiction_registration_subject(non_attribute_element).
 
 % ---- Profiles --------------------------------------------------------
-nis2_jurisdiction_registration_profile_for(general_entity_established, [
-    attribute(entity_category, general_entity)
+% Art 26(1) opening words: the general rule; both list keys given.
+nis2_jurisdiction_registration_profile_for(general_entity_settled, [
+    attribute(entity_category, general_entity),
+    attribute(sector_and_subsector_applicable, false),
+    attribute(member_states_list_applicable, false)
 ]).
-nis2_jurisdiction_registration_profile_for(category_missing, []).
-nis2_jurisdiction_registration_profile_for(public_electronic_communications_provider_established, [
-    attribute(entity_category, public_electronic_communications_provider)
+% Control: Art 3(4)(d) where-applicable key dropped.
+nis2_jurisdiction_registration_profile_for(general_entity_member_states_list_absent, [
+    attribute(entity_category, general_entity),
+    attribute(sector_and_subsector_applicable, false)
 ]).
-nis2_jurisdiction_registration_profile_for(public_administration_established, [
-    attribute(entity_category, public_administration_entity)
-]).
-nis2_jurisdiction_registration_profile_for(provider_established_in_union, [
-    attribute(entity_category, main_establishment_provider),
-    attribute(established_in_union, true),
+% Art 26(1)(a).
+nis2_jurisdiction_registration_profile_for(communications_provider_settled, [
+    attribute(entity_category, public_electronic_communications_provider),
     attribute(sector_and_subsector_applicable, true),
     attribute(member_states_list_applicable, true)
 ]).
-nis2_jurisdiction_registration_profile_for(provider_established_missing, [
-    attribute(entity_category, main_establishment_provider),
-    attribute(sector_and_subsector_applicable, true)
+% Art 26(1)(c).
+nis2_jurisdiction_registration_profile_for(public_administration_settled, [
+    attribute(entity_category, public_administration_entity),
+    attribute(sector_and_subsector_applicable, false),
+    attribute(member_states_list_applicable, true)
 ]).
-nis2_jurisdiction_registration_profile_for(provider_non_union_with_representative, [
+% Control: the category dropped.
+nis2_jurisdiction_registration_profile_for(category_absent, [
+    attribute(sector_and_subsector_applicable, false),
+    attribute(member_states_list_applicable, false)
+]).
+% Art 26(1)(b), (2): the decisions step.
+nis2_jurisdiction_registration_profile_for(provider_established_decisions_determined, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, true),
+    attribute(decisions_predominantly_taken_in_one_union_member_state, true),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+% Control: decisions unsure, operations present: referral on decisions.
+nis2_jurisdiction_registration_profile_for(provider_established_decisions_unsure_operations_false, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, true),
+    attribute(decisions_predominantly_taken_in_one_union_member_state, unsure),
+    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+% Control: decisions unsure, operations absent: operations named (reading (10)).
+nis2_jurisdiction_registration_profile_for(provider_established_decisions_unsure_operations_absent, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, true),
+    attribute(decisions_predominantly_taken_in_one_union_member_state, unsure),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+% Art 26(2) second sentence, operations unsure: referral on operations.
+nis2_jurisdiction_registration_profile_for(provider_established_decisions_false_operations_unsure, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, true),
+    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+% Art 26(2) third sentence: the employees step.
+nis2_jurisdiction_registration_profile_for(provider_established_decisions_false_operations_false, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, true),
+    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+% Art 26(2) second sentence: the operations step.
+nis2_jurisdiction_registration_profile_for(provider_established_decisions_false_operations_true, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, true),
+    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
+    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, true),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+% Control: established_in_union dropped.
+nis2_jurisdiction_registration_profile_for(provider_established_key_absent, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(sector_and_subsector_applicable, true),
+    attribute(member_states_list_applicable, true)
+]).
+% Art 26(3): the representative.
+nis2_jurisdiction_registration_profile_for(provider_outside_union_with_representative, [
     attribute(entity_category, main_establishment_provider),
     attribute(established_in_union, false),
     attribute(offers_services_in_union, true),
     attribute(representative_designated_in_union, true),
     attribute(sector_and_subsector_applicable, false),
-    attribute(member_states_list_applicable, false)
+    attribute(member_states_list_applicable, true)
 ]).
-nis2_jurisdiction_registration_profile_for(provider_non_union_without_representative, [
+% Control: no representative: any Member State may take legal action.
+nis2_jurisdiction_registration_profile_for(provider_outside_union_without_representative, [
     attribute(entity_category, main_establishment_provider),
     attribute(established_in_union, false),
     attribute(offers_services_in_union, true),
-    attribute(representative_designated_in_union, false)
+    attribute(representative_designated_in_union, false),
+    attribute(sector_and_subsector_applicable, false),
+    attribute(member_states_list_applicable, true)
 ]).
-nis2_jurisdiction_registration_profile_for(provider_non_union_no_services, [
+% Control: the representative key dropped.
+nis2_jurisdiction_registration_profile_for(provider_outside_union_representative_key_absent, [
+    attribute(entity_category, main_establishment_provider),
+    attribute(established_in_union, false),
+    attribute(offers_services_in_union, true),
+    attribute(sector_and_subsector_applicable, false),
+    attribute(member_states_list_applicable, true)
+]).
+% Control: no services in the Union: no rule in Art 26.
+nis2_jurisdiction_registration_profile_for(provider_outside_union_offering_no_services, [
     attribute(entity_category, main_establishment_provider),
     attribute(established_in_union, false),
     attribute(offers_services_in_union, false),
-    attribute(representative_designated_in_union, false)
+    attribute(representative_designated_in_union, false),
+    attribute(sector_and_subsector_applicable, false),
+    attribute(member_states_list_applicable, false)
 ]).
-nis2_jurisdiction_registration_profile_for(provider_non_union_offers_missing, [
-    attribute(entity_category, main_establishment_provider),
+% Input check: an out-of-type category and a repeated key with differing values.
+nis2_jurisdiction_registration_profile_for(duplicate_and_wrong_type, [
+    attribute(entity_category, foo),
+    attribute(established_in_union, true),
     attribute(established_in_union, false)
 ]).
-nis2_jurisdiction_registration_profile_for(main_establishment_decisions, [
-    attribute(decisions_predominantly_taken_in_one_union_member_state, true)
+% Input check: keys outside the contract, one repeated.
+nis2_jurisdiction_registration_profile_for(unknown_keys_repeated, [
+    attribute(entity_category, general_entity),
+    attribute(head_office, paris),
+    attribute(employee_count, many),
+    attribute(head_office, lyon)
 ]).
-nis2_jurisdiction_registration_profile_for(main_establishment_operations, [
-    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
-    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, true)
+% Input check: a crisp key given the judgement value unsure.
+nis2_jurisdiction_registration_profile_for(crisp_key_given_unsure, [
+    attribute(sector_and_subsector_applicable, unsure)
 ]).
-nis2_jurisdiction_registration_profile_for(main_establishment_employees, [
-    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
-    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, false)
-]).
-nis2_jurisdiction_registration_profile_for(main_establishment_decisions_unsure, [
-    attribute(decisions_predominantly_taken_in_one_union_member_state, unsure)
-]).
-nis2_jurisdiction_registration_profile_for(main_establishment_operations_unsure, [
-    attribute(decisions_predominantly_taken_in_one_union_member_state, false),
-    attribute(cybersecurity_operations_carried_out_in_one_union_member_state, unsure)
-]).
-nis2_jurisdiction_registration_profile_for(main_establishment_decisions_missing, []).
-nis2_jurisdiction_registration_profile_for(malformed_unknown_key, [
-    attribute(bogus, true)
+% Input check: not a list at all.
+nis2_jurisdiction_registration_profile_for(not_an_attribute_list, not_a_profile).
+% Input check: a list holding a non-attribute element.
+nis2_jurisdiction_registration_profile_for(non_attribute_element, [
+    attribute(entity_category, general_entity),
+    foo(bar)
 ]).
 
-% ---- Convenience wrappers --------------------------------------------
+% ---- Convenience wrapper ---------------------------------------------
 nis2_jurisdiction_registration_assess(Subject, Result) :-
     nis2_jurisdiction_registration_profile_for(Subject, Profile),
     decide_nis2_jurisdiction_registration(Profile, Result).
-
-nis2_jurisdiction_registration_fixtures(Fixtures) :-
-    findall(
-        Subject-Profile,
-        nis2_jurisdiction_registration_profile_for(Subject, Profile),
-        Fixtures).
 
 :- end_module(fixtures).

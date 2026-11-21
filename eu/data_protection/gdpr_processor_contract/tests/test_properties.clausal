@@ -1,9 +1,12 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_properties.clausal -- structural PROPERTIES over the subject set.
-% Totality, determinism (exactly one verdict), closed vocabulary,
-% citation vocabulary, alignment of MISSING and CITATIONS, and
-% irrelevance of keys a limb does not read.
+% Totality: every registered subject yields a verdict. Determinism: every
+% public query yields exactly one solution per subject. Invariants: the
+% verdict shape per status, the projections agree with the verdict, the
+% checklist is independent of the role gates, the outside fact and unread
+% keys never change the status. Each invariant has a falsifier below so it
+% is not vacuous.
 % Run: python -m clausal.testing eu/data_protection/gdpr_processor_contract/tests/test_properties.clausal
 % =====================================================================
 :- module(test_properties, []).
@@ -11,151 +14,137 @@
 :- use_module(eu/data_protection/gdpr_processor_contract/processor_contract_status, [
     decide_processor_contract/2,
     processor_contract_status/2,
-    contract_checklist/2
+    contract_missing_stipulations/2,
+    contract_checklist/2,
+    processor_contract_outside_facts/2,
+    decide_processor_contract_status/2,
+    processor_contract_status_status_values/1
 ]).
-:- use_module(eu/data_protection/gdpr_processor_contract/queries, [gdpr_processor_contract_what_if/4]).
 :- use_module(eu/data_protection/gdpr_processor_contract/fixtures, [
     gdpr_processor_contract_subject/1,
     gdpr_processor_contract_profile_for/2
 ]).
 
-subject_verdict(Subject, Verdict) :-
+subject_classifies(Subject) :-
     gdpr_processor_contract_subject(Subject),
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    decide_processor_contract_status(Profile, _Verdict).
+
+solution_count(Template, Goal, Count) :-
+    findall(Template, Goal, Solutions),
+    length(Solutions, Count).
+
+answers_once(Subject) :-
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    solution_count(Verdict, decide_processor_contract(Profile, Verdict), 1),
+    solution_count(Status, processor_contract_status(Profile, Status), 1),
+    solution_count(Missing, contract_missing_stipulations(Profile, Missing), 1),
+    solution_count(Items, contract_checklist(Profile, Items), 1),
+    solution_count(OutsideFacts, processor_contract_outside_facts(Profile, OutsideFacts), 1).
+
+projections_agree(Subject) :-
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(Status, Missing, _)),
+    processor_contract_status(Profile, Status),
+    contract_missing_stipulations(Profile, Missing).
+
+% The shape the order gives each status.
+verdict_invariant(processor_contract_verdict(eligible, [], [Citation|Citations])) :-
+    not_member(cite(eu_reg_2016_679_art_4_8), [Citation|Citations]),
+    not_member(cite(eu_reg_2016_679_art_28_10), [Citation|Citations]).
+verdict_invariant(processor_contract_verdict(ineligible, [Key|Keys], Citations)) :-
+    same_length([Key|Keys], Citations).
+verdict_invariant(processor_contract_verdict(not_applicable, [], [cite(eu_reg_2016_679_art_4_8)])).
+verdict_invariant(processor_contract_verdict(indeterminate([_|_]), [], [])).
+verdict_invariant(processor_contract_verdict(needs_legal_review(Reason, [inputs_relied_on(_)]), [], [])) :-
+    referral_reason(Reason).
+verdict_invariant(processor_contract_verdict(input_problems([_|_]), [], [])).
+
+referral_reason(open_textured(_, cite(_))).
+referral_reason(deferred_provision(cite(_))).
+
+subject_verdict_invariant(Subject) :-
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    decide_processor_contract(Profile, Verdict),
+    verdict_invariant(Verdict).
+
+item_well_formed(checklist_item(Key, cite(Citation), State)) :-
+    atom(Key),
+    atom(Citation),
+    member(State, [met, unmet, open_by_absence, open_by_judgement]).
+
+subject_checklist_well_formed(Subject) :-
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    contract_checklist(Profile, Items),
+    maplist(item_well_formed, Items).
+
+checklist_of(Subject, Items) :-
+    gdpr_processor_contract_profile_for(Subject, Profile),
+    contract_checklist(Profile, Items).
+
+verdict_of(Subject, Verdict) :-
     gdpr_processor_contract_profile_for(Subject, Profile),
     decide_processor_contract(Profile, Verdict).
 
-subject_classifies(Subject) :-
-    subject_verdict(Subject, _Verdict).
-
-subject_has_one_verdict(Subject) :-
-    gdpr_processor_contract_subject(Subject),
-    gdpr_processor_contract_profile_for(Subject, Profile),
-    findall(Verdict, decide_processor_contract(Profile, Verdict), Verdicts),
-    length(Verdicts, 1).
-
-status_allowed(eligible).
-status_allowed(ineligible).
-status_allowed(not_applicable).
-status_allowed(indeterminate(_)).
-status_allowed(needs_legal_review(_, _)).
-status_allowed(input_problems(_)).
-
-allowed_citation(eu_reg_2016_679_art_4_8).
-allowed_citation(eu_reg_2016_679_art_28_1).
-allowed_citation(eu_reg_2016_679_art_28_2).
-allowed_citation(eu_reg_2016_679_art_28_3).
-allowed_citation(eu_reg_2016_679_art_28_3_a).
-allowed_citation(eu_reg_2016_679_art_28_3_b).
-allowed_citation(eu_reg_2016_679_art_28_3_c).
-allowed_citation(eu_reg_2016_679_art_28_3_d).
-allowed_citation(eu_reg_2016_679_art_28_3_e).
-allowed_citation(eu_reg_2016_679_art_28_3_f).
-allowed_citation(eu_reg_2016_679_art_28_3_g).
-allowed_citation(eu_reg_2016_679_art_28_3_h).
-allowed_citation(eu_reg_2016_679_art_28_3_second_subpara).
-allowed_citation(eu_reg_2016_679_art_28_4).
-allowed_citation(eu_reg_2016_679_art_28_9).
-allowed_citation(eu_reg_2016_679_art_28_10).
-
-citation_keys([
-    eu_reg_2016_679_art_4_8,
-    eu_reg_2016_679_art_28_1,
-    eu_reg_2016_679_art_28_2,
-    eu_reg_2016_679_art_28_3,
-    eu_reg_2016_679_art_28_3_a,
-    eu_reg_2016_679_art_28_3_b,
-    eu_reg_2016_679_art_28_3_c,
-    eu_reg_2016_679_art_28_3_d,
-    eu_reg_2016_679_art_28_3_e,
-    eu_reg_2016_679_art_28_3_f,
-    eu_reg_2016_679_art_28_3_g,
-    eu_reg_2016_679_art_28_3_h,
-    eu_reg_2016_679_art_28_3_second_subpara,
-    eu_reg_2016_679_art_28_4,
-    eu_reg_2016_679_art_28_9,
-    eu_reg_2016_679_art_28_10
-]).
-
+% sort/2 collapses a subject that classifies more than once.
 test(totality_every_subject_classifies) :-
     findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
     sort(Subjects, SubjectSet),
     findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
     sort(ClassifiedSubjects, SubjectSet).
-
-test(there_are_subjects) :-
+test(determinism_every_query_answers_once) :-
     findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
-    length(Subjects, Count),
-    Count > 10.
-
-test(determinism_every_subject_has_exactly_one_verdict) :-
+    maplist(answers_once, Subjects).
+test(projections_agree_with_the_verdict) :-
     findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
-    sort(Subjects, SubjectSet),
-    findall(Subject, subject_has_one_verdict(Subject), OneVerdictSubjects),
-    sort(OneVerdictSubjects, SubjectSet).
-
-test(every_status_is_in_the_closed_vocabulary) :-
+    maplist(projections_agree, Subjects).
+test(every_verdict_has_the_shape_of_its_status) :-
     findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
-    sort(Subjects, SubjectSet),
-    findall(Subject, (subject_verdict(Subject, processor_contract_verdict(Status, _, _)), status_allowed(Status)), AllowedSubjects),
-    sort(AllowedSubjects, SubjectSet).
-
-test(every_ineligible_verdict_has_aligned_nonempty_lists) :-
-    findall(Subject, subject_verdict(Subject, processor_contract_verdict(ineligible, _, _)), IneligibleSubjects),
-    IneligibleSubjects = [_|_],
-    findall(Subject, (subject_verdict(Subject, processor_contract_verdict(ineligible, Missing, Citations)), length(Missing, Count), length(Citations, Count), Count > 0), AlignedSubjects),
-    AlignedSubjects == IneligibleSubjects.
-
-test(only_ineligible_has_a_missing_list) :-
-    subject_verdict(compliant_without_subprocessor, processor_contract_verdict(eligible, [], _)),
-    subject_verdict(not_a_processor, processor_contract_verdict(not_applicable, [], _)),
-    subject_verdict(in_writing_unestablished, processor_contract_verdict(indeterminate(_), [], [])).
-
-test(a_non_ineligible_verdict_with_a_missing_list_does_not_exist, fail) :-
-    subject_verdict(_, processor_contract_verdict(Status, [_|_], _)),
-    status_allowed(Status),
-    Status \== ineligible.
-
-test(only_eligible_and_not_applicable_and_ineligible_carry_citations, fail) :-
-    subject_verdict(_, processor_contract_verdict(Status, _, [_|_])),
-    Status \== eligible,
-    Status \== ineligible,
-    Status \== not_applicable.
-
-test(no_citation_outside_the_closed_vocabulary, fail) :-
-    subject_verdict(_, processor_contract_verdict(_, _, Citations)),
-    member(cite(Key), Citations),
-    citation_keys(Keys),
-    not_member(Key, Keys).
-
-test(the_citation_vocabulary_is_nonvacuous) :-
-    subject_verdict(audit_clause_missing, processor_contract_verdict(ineligible, _, [cite(Key)])),
-    allowed_citation(Key).
-
-test(every_checklist_item_carries_a_cite_term, fail) :-
+    maplist(subject_verdict_invariant, Subjects).
+test(every_checklist_item_is_cited_and_stated) :-
+    findall(Subject, gdpr_processor_contract_subject(Subject), Subjects),
+    maplist(subject_checklist_well_formed, Subjects).
+test(the_checklist_is_independent_of_the_first_gate) :-
+    checklist_of(eligible_without_subprocessor, Base),
+    checklist_of(not_applicable_not_on_behalf, Gated),
+    Base == Gated.
+test(the_checklist_is_independent_of_the_second_gate) :-
+    checklist_of(eligible_without_subprocessor, Base),
+    checklist_of(role_controller_deferred, Gated),
+    Base == Gated.
+test(the_outside_fact_never_changes_the_verdict) :-
+    verdict_of(eligible_without_subprocessor, Without),
+    verdict_of(eligible_with_standard_clauses_recorded, With),
+    Without == With.
+test(unread_keys_never_change_the_verdict) :-
+    verdict_of(eligible_without_subprocessor, Base),
+    verdict_of(unread_keys_ignored, Unread),
+    Base == Unread.
+test(the_status_table_is_the_bare_vocabulary) :-
+    processor_contract_status_status_values(Values),
+    Values == [eligible, ineligible, not_applicable].
+test(the_bare_indeterminate_is_never_a_status, fail) :-
     gdpr_processor_contract_subject(Subject),
     gdpr_processor_contract_profile_for(Subject, Profile),
-    contract_checklist(Profile, Items),
-    member(checklist_item(_, Citation, _), Items),
-    Citation \= cite(_).
+    processor_contract_status(Profile, indeterminate).
+test(the_bare_indeterminate_has_a_compound_twin) :-
+    gdpr_processor_contract_profile_for(role_processing_absent, Profile),
+    processor_contract_status(Profile, indeterminate([processing_on_behalf_of_controller])).
 
-test(the_checklist_is_nonempty_for_a_valid_subject) :-
-    gdpr_processor_contract_profile_for(audit_clause_missing, Profile),
-    contract_checklist(Profile, [_|_]).
-
-test(unread_subprocessor_keys_do_not_change_the_answer) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
-    gdpr_processor_contract_what_if(Profile, subprocessor_obligations_same, false, eligible),
-    gdpr_processor_contract_what_if(Profile, subprocessor_authorisation, none, eligible).
-
-test(unread_general_keys_do_not_change_a_specific_authorisation) :-
-    gdpr_processor_contract_profile_for(compliant_with_specific_subprocessor, Profile),
-    gdpr_processor_contract_what_if(Profile, processor_informed_controller_of_intended_changes, false, eligible),
-    gdpr_processor_contract_what_if(Profile, controller_given_opportunity_to_object, false, eligible).
-
-test(the_outside_fact_never_decides_the_status) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
-    processor_contract_status(Profile, BareStatus),
-    gdpr_processor_contract_what_if(Profile, standard_clauses_adopted, attested(true, attestation(decision_layer, recorded_at_review, user_confirmed, none)), BareStatus),
-    gdpr_processor_contract_what_if(Profile, standard_clauses_adopted, attested(false, attestation(decision_layer, recorded_at_review, user_confirmed, none)), BareStatus).
+% ---- falsifiers: the invariant rejects a malformed verdict ------------------
+test(invariant_rejects_ineligible_without_missing, fail) :-
+    verdict_invariant(processor_contract_verdict(ineligible, [], [])).
+test(invariant_rejects_misaligned_citations, fail) :-
+    verdict_invariant(processor_contract_verdict(ineligible, [contract_in_writing], [])).
+test(invariant_rejects_a_gate_citation_in_eligible, fail) :-
+    verdict_invariant(processor_contract_verdict(eligible, [], [cite(eu_reg_2016_679_art_28_3), cite(eu_reg_2016_679_art_4_8)])).
+test(invariant_rejects_an_empty_missing_key_list, fail) :-
+    verdict_invariant(processor_contract_verdict(indeterminate([]), [], [])).
+test(invariant_accepts_a_well_formed_eligible) :-
+    verdict_invariant(processor_contract_verdict(eligible, [], [cite(eu_reg_2016_679_art_28_3)])).
+test(item_check_rejects_an_unknown_state, fail) :-
+    item_well_formed(checklist_item(contract_in_writing, cite(eu_reg_2016_679_art_28_9), unknown)).
+test(item_check_accepts_a_known_state) :-
+    item_well_formed(checklist_item(contract_in_writing, cite(eu_reg_2016_679_art_28_9), open_by_absence)).
 
 :- end_module(test_properties).

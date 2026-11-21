@@ -1,0 +1,172 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for us/texas_tdpsa.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Dates are query ARGUMENTS, never profile keys, so
+% the dated subjects carry only the keys their query reads; the tests
+% supply the dates (boundary day and the day after).
+%
+% Every route has a positive subject and a one-unit near-miss control:
+%   applicability (Sec. 541.002)
+%     in_scope_controller            -> in_scope
+%     small_business_attested        -> out_of_scope (one key flipped)
+%     nonprofit_excluded             -> out_of_scope (one key flipped)
+%     not_processing_personal_data   -> out_of_scope (one key flipped)
+%     not_conducting_business        -> out_of_scope (one key flipped)
+%     entity_category_missing        -> indeterminate([entity_category])
+%     sba_absent_referral            -> cross_reference_unresolved referral
+%     conducts_business_unsure       -> open_textured referral
+%     malformed_duplicate_key        -> input_problems([duplicate_key(...)])
+%   extension (Sec. 541.052(b))
+%     extension_granted / extension_notice_late /
+%     extension_necessity_unsure / extension_notice_missing
+%   attorney general action (Secs. 541.154, 541.155(a))
+%     cure_completed / statement_breached / cure_not_achieved /
+%     cure_keys_missing
+%   civil penalty (Sec. 541.155(a))
+%     penalty_three_violations / penalty_zero_violations /
+%     penalty_no_ground / penalty_count_missing
+% =====================================================================
+
+:- module(fixtures, [
+    texas_tdpsa_subject/1,
+    texas_tdpsa_profile_for/2,
+    texas_tdpsa_assess/2
+]).
+
+:- use_module(us/texas_tdpsa/texas_tdpsa, [decide_texas_tdpsa/2]).
+
+% ---- Subject registry ------------------------------------------------
+texas_tdpsa_subject(in_scope_controller).
+texas_tdpsa_subject(small_business_attested).
+texas_tdpsa_subject(nonprofit_excluded).
+texas_tdpsa_subject(not_processing_personal_data).
+texas_tdpsa_subject(not_conducting_business).
+texas_tdpsa_subject(entity_category_missing).
+texas_tdpsa_subject(sba_absent_referral).
+texas_tdpsa_subject(conducts_business_unsure).
+texas_tdpsa_subject(malformed_duplicate_key).
+texas_tdpsa_subject(extension_granted).
+texas_tdpsa_subject(extension_notice_late).
+texas_tdpsa_subject(extension_necessity_unsure).
+texas_tdpsa_subject(extension_notice_missing).
+texas_tdpsa_subject(cure_completed).
+texas_tdpsa_subject(statement_breached).
+texas_tdpsa_subject(cure_not_achieved).
+texas_tdpsa_subject(cure_keys_missing).
+texas_tdpsa_subject(penalty_three_violations).
+texas_tdpsa_subject(penalty_zero_violations).
+texas_tdpsa_subject(penalty_no_ground).
+texas_tdpsa_subject(penalty_count_missing).
+
+% ---- Profiles: applicability -----------------------------------------
+texas_tdpsa_profile_for(in_scope_controller, [
+    attribute(entity_category, none_of_the_excluded_categories),
+    attribute(processes_or_sells_personal_data, true),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, true),
+    attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, none)))
+]).
+texas_tdpsa_profile_for(small_business_attested, [
+    attribute(entity_category, none_of_the_excluded_categories),
+    attribute(processes_or_sells_personal_data, true),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, true),
+    attribute(small_business_as_defined_by_sba, attested(true, attestation(host_user, host_time, size_review, none)))
+]).
+texas_tdpsa_profile_for(nonprofit_excluded, [
+    attribute(entity_category, nonprofit_organization),
+    attribute(processes_or_sells_personal_data, true),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, true),
+    attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, none)))
+]).
+texas_tdpsa_profile_for(not_processing_personal_data, [
+    attribute(entity_category, none_of_the_excluded_categories),
+    attribute(processes_or_sells_personal_data, false),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, true),
+    attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, none)))
+]).
+texas_tdpsa_profile_for(not_conducting_business, [
+    attribute(entity_category, none_of_the_excluded_categories),
+    attribute(processes_or_sells_personal_data, true),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, false),
+    attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, none)))
+]).
+texas_tdpsa_profile_for(entity_category_missing, [
+    attribute(processes_or_sells_personal_data, true),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, true),
+    attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, none)))
+]).
+texas_tdpsa_profile_for(sba_absent_referral, [
+    attribute(entity_category, none_of_the_excluded_categories),
+    attribute(processes_or_sells_personal_data, true),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, true)
+]).
+texas_tdpsa_profile_for(conducts_business_unsure, [
+    attribute(entity_category, none_of_the_excluded_categories),
+    attribute(processes_or_sells_personal_data, true),
+    attribute(conducts_business_in_texas_or_serves_texas_residents, unsure),
+    attribute(small_business_as_defined_by_sba, attested(false, attestation(host_user, host_time, size_review, none)))
+]).
+texas_tdpsa_profile_for(malformed_duplicate_key, [
+    attribute(entity_category, none_of_the_excluded_categories),
+    attribute(entity_category, nonprofit_organization),
+    attribute(processes_or_sells_personal_data, true)
+]).
+
+% ---- Profiles: extension of the response period ----------------------
+texas_tdpsa_profile_for(extension_granted, [
+    attribute(extension_reasonably_necessary, true),
+    attribute(extension_notice_given_within_initial_period, true)
+]).
+texas_tdpsa_profile_for(extension_notice_late, [
+    attribute(extension_reasonably_necessary, true),
+    attribute(extension_notice_given_within_initial_period, false)
+]).
+texas_tdpsa_profile_for(extension_necessity_unsure, [
+    attribute(extension_reasonably_necessary, unsure),
+    attribute(extension_notice_given_within_initial_period, true)
+]).
+texas_tdpsa_profile_for(extension_notice_missing, [
+    attribute(extension_reasonably_necessary, true)
+]).
+
+% ---- Profiles: the attorney general's action -------------------------
+texas_tdpsa_profile_for(cure_completed, [
+    attribute(cured_within_cure_period, true),
+    attribute(written_statement_provided, true),
+    attribute(written_statement_breached, false)
+]).
+texas_tdpsa_profile_for(statement_breached, [
+    attribute(cured_within_cure_period, true),
+    attribute(written_statement_provided, true),
+    attribute(written_statement_breached, true)
+]).
+texas_tdpsa_profile_for(cure_not_achieved, [
+    attribute(cured_within_cure_period, false)
+]).
+texas_tdpsa_profile_for(cure_keys_missing, []).
+
+% ---- Profiles: the civil penalty -------------------------------------
+texas_tdpsa_profile_for(penalty_three_violations, [
+    attribute(violation_after_cure_period_or_statement_breach, true),
+    attribute(violation_count, 3)
+]).
+texas_tdpsa_profile_for(penalty_zero_violations, [
+    attribute(violation_after_cure_period_or_statement_breach, true),
+    attribute(violation_count, 0)
+]).
+texas_tdpsa_profile_for(penalty_no_ground, [
+    attribute(violation_after_cure_period_or_statement_breach, false),
+    attribute(violation_count, 3)
+]).
+texas_tdpsa_profile_for(penalty_count_missing, [
+    attribute(violation_after_cure_period_or_statement_breach, true)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+texas_tdpsa_assess(Subject, Result) :-
+    texas_tdpsa_profile_for(Subject, Profile),
+    decide_texas_tdpsa(Profile, Result).
+
+:- end_module(fixtures).

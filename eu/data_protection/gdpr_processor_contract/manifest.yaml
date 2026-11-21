@@ -3,7 +3,11 @@ id: eu/data_protection/gdpr_processor_contract
 shape_family: deontic
 kit_version: "0.1.0"
 # The domain's .clausal file set, in import-DAG order (determination slices
-# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list.
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
 modules:
   - "kernel"
   - "citations"
@@ -11,9 +15,12 @@ modules:
   - "processor_contract_status"
   - "queries"
   - "fixtures"
-# public_interface: name/arity PREDICATES only (atoms need no export).
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
 public_interface:
   # -- kernel.clausal --
+  # (gdpr_processor_contract_input_problems/2 is re-exported by queries.clausal)
   # -- citations.clausal --
   - "citation/2"
   # -- processor_contract_status.clausal --
@@ -27,7 +34,10 @@ public_interface:
   - "processor_contract_status_checklist/2"
   - "processor_contract_status_decision_resolvable/1"
   - "processor_contract_status_status_values/1"
-  # -- result constructors --
+  # -- queries.clausal --
+  - "gdpr_processor_contract_profile_keys/1"
+  - "gdpr_processor_contract_input_problems/2"
+  - "gdpr_processor_contract_what_if/4"
   - "processor_contract_verdict/3"
   - "checklist_item/3"
   - "input_problems/1"
@@ -45,31 +55,49 @@ public_interface:
   - "attestation/4"
   - "url/2"
   - "document/2"
-  # -- queries.clausal --
-  - "gdpr_processor_contract_profile_keys/1"
-  - "gdpr_processor_contract_input_problems/2"
-  - "gdpr_processor_contract_what_if/4"
   # -- fixtures.clausal --
   - "gdpr_processor_contract_subject/1"
   - "gdpr_processor_contract_profile_for/2"
   - "gdpr_processor_contract_assess/2"
 
-# Independence classification: no external scorer yet.
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only the kit (formalize_lib), which is
+# not a backbone package.
 uses: []
 
-scope: "Whether the contract or other legal act between a controller and a processor meets Article 28 of Regulation (EU) 2016/679, as a checklist: sufficient guarantees (Art 28(1)); binding, Union or Member State law and writing (Art 28(3), (9)); the seven content elements and the eight stipulations (a) to (h) of Art 28(3) plus the notice of an infringing instruction (second subparagraph); and, when another processor is engaged, the conditions of Art 28(2) and (4). The role gates (Art 4(8) processor, Art 28(10) processor that becomes a controller) are evaluated first. Out of scope and deferred: Art 29 conduct, the Art 28(4) liability sentence, Art 28(5) codes and certification as a limb, the content of standard clauses (Art 28(6) to (8), recorded only as the outside fact standard_clauses_adopted), Art 6 lawfulness and Chapter V transfers."
+scope: >-
+  Regulation (EU) 2016/679 (GDPR) Article 28, as a checklist over a profile of a
+  controller-processor arrangement: whether the contract or other legal act has
+  the content Art 28 requires -- sufficient guarantees (Art 28(1)); binding on the
+  processor and governed by Union or Member State law (Art 28(3), first sentence);
+  in writing including electronic form (Art 28(9)); the seven content elements and
+  the stipulations of points (a) to (h) of Art 28(3) and its second subparagraph;
+  and, when another processor is engaged, the conditions of Art 28(2) and (4). The
+  answer lists every missing limb cited to its point. Two role judgements gate the
+  checklist: processing on behalf of a controller (Art 4(8), else not_applicable)
+  and a processor determining purposes and means (Art 28(10), referred as a
+  deferred provision). Adopted standard contractual clauses (Art 28(6) to (8)) are
+  recorded as an attested outside fact and never change the status. Out of scope:
+  the processor's conduct (Art 29), the Art 28(4) liability sentence, the Art
+  28(10) consequences (Art 26, Arts 82 to 84), the content of Arts 32 to 36 and
+  Chapter III, Art 6 lawfulness and Chapter V transfers (sibling orders), and the
+  content of standard clauses.
 
 sources:
-  - "Regulation (EU) 2016/679 (GDPR), consolidated text 02016R0679-20160504, Art 28(1) to (10)"
-  - "Regulation (EU) 2016/679 Art 29"
-  - "Regulation (EU) 2016/679 Art 4(1), (2), (7), (8)"
+  - "Regulation (EU) 2016/679 of the European Parliament and of the Council of 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1; consolidated text 02016R0679-20160504 including the 2018 corrigendum: Article 28(1) to (10)"
+  - "Regulation (EU) 2016/679, Article 4(1), (2), (7) and (8) (personal data, processing, controller, processor)"
+  - "Regulation (EU) 2016/679, Article 29 (quoted to tie reading 10; deferred)"
+  - "EDPB Guidelines 07/2020 on the concepts of controller and processor in the GDPR, para 112 (authority for ruling Q4: a stipulation is present only when the whole point is stipulated)"
 
 query_interface:
-  3: "processor_contract_status/2"             # status_determination
-  7: "contract_checklist/2"                   # justification: checklist with cite(...) per item
-  13: "gdpr_processor_contract_what_if/4"     # compliance_check: is the arrangement allowed if this key changes
+  13: "decide_processor_contract/2"           # compliance_check: may the controller use this processor under this arrangement
+  3: "processor_contract_status/2"            # status_determination: the STATUS field
+  7: "contract_checklist/2"                   # justification: checklist items, each with cite(...)
+  16: "gdpr_processor_contract_what_if/4"     # what_if: re-evaluate under a replaced key
 
 deferred_set:
 - what: article_headings
@@ -126,6 +154,7 @@ deferred_set:
   what: art_28_5_code_of_conduct_and_certification
   units:
   - 02016R0679-20160504#parag_028.005
+  partial: true
   reason: 'Art 28(5) says adherence to an approved code of conduct (Art 40) or certification
     (Art 42) MAY be used as an element to demonstrate sufficient guarantees. It informs
     the judgement processor_provides_sufficient_guarantees and is not a condition:
@@ -138,6 +167,7 @@ deferred_set:
 - what: art_28_8_adoption_power
   units:
   - 02016R0679-20160504#parag_028.008
+  partial: true
   reason: 'Art 28(8) (a supervisory authority, consistency mechanism of Art 63) is
     a power to adopt standard clauses; the procedure and the content of the clauses
     are not formalized (see standard_clause_content). Quoted to tie reading (9). Art
@@ -164,6 +194,7 @@ deferred_set:
   what: art_29_processing_on_instructions
   units:
   - 02016R0679-20160504#art_029
+  partial: true
   reason: Art 29 (the processor and any person acting under its authority process
     the data only on the controller's instructions, unless Union or Member State law
     requires) is a duty of CONDUCT. The order tests the arrangement; the contract
@@ -221,32 +252,25 @@ deferred_set:
   consequence: 'An eligible answer does not mean the processing is lawful or that
     a transfer is permitted: the caller must check Art 6 and Chapter V separately.'
   declaration: not_an_exception
-- what: art_28_6_and_28_7_standard_clauses_basis
-  units:
-  - 02016R0679-20160504#parag_028.006
-  - 02016R0679-20160504#parag_028.007
-  reason: Art 28(6) (the contract may be based, in whole or in part, on standard contractual
-    clauses) and Art 28(7) (the Commission may lay down such clauses) are permissive
-    and are not conditions of the checklist. Whether the contract adopts such clauses
-    is the outside fact standard_clauses_adopted, recorded only and never deciding
-    the status (reading 9, RULED Q1); the content and the procedure are not formalized.
-  consequence: 'Adopting standard clauses does not settle the checklist: the caller
-    must set each stipulation flag from the signed document, annexes included.'
-  declaration: not_an_exception
-  not_formalized_because: institutional
-- what: art_4_definitions_quoted_for_context
+- debt: true
+  what: definitions_informing_the_role_judgements
   units:
   - 02016R0679-20160504#point_004_1
   - 02016R0679-20160504#point_004_2
   - 02016R0679-20160504#point_004_7
-  reason: The Art 4 definitions of personal data (1), processing (2) and controller
-    (7) are quoted to give the vocabulary of Art 28(3) and the role gates; no limb
-    reads them as a condition. The role gate itself rests on Art 4(8) and the judgement
-    processing_on_behalf_of_controller.
-  consequence: 'None for a caller: the definitions are context for the user''s judgements,
-    not tests applied by the answer.'
+  reason: 'The definitions of personal data (Art 4(1)), processing (Art 4(2)) and
+    controller (Art 4(7)) give meaning to the scope of Art 28 and to the role gates,
+    but no limb tests them crisply: whether the party processes personal data on behalf
+    of a controller and whether it determines the purposes and means are the user''s
+    judgements processing_on_behalf_of_controller and processor_determines_purposes_and_means
+    (readings 8 and 10). The order names no citation key for these units, so they
+    are accounted for here.'
+  consequence: 'The answer does not check that the data are personal data, that the
+    operations are processing or who the controller is: the caller must apply Art
+    4(1), 4(2) and 4(7) when setting the two role judgements.'
   declaration: not_an_exception
-  not_formalized_because: structural
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
 
 excluded_set:
 - what: processor_performance_of_the_contract

@@ -1,0 +1,298 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_tlpt_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_dora_tlpt_dora_tlpt, [tlpt_identification_basis/3, tlpt_duty/3, decide_dora_tlpt/2, dora_tlpt_status/2, dora_tlpt_checklist/2, dora_tlpt_decision_resolvable/1, dora_tlpt_status_values/1]).
+:- use_module(m__eu_dora_tlpt_kernel, [dora_tlpt_input_problems/2]).
+:- use_module(m__eu_dora_tlpt_queries, [dora_tlpt_what_if/4]).
+:- use_module(m__eu_dora_tlpt_fixtures, [dora_tlpt_subject/1, dora_tlpt_profile_for/2, dora_tlpt_assess/2]).
+
+expected_outcome(article_16_1_entity_identified, excluded_from_tlpt(article_16_1_entity), no_tlpt_duty(article_16_1_entity)).
+expected_outcome(microenterprise_identified, excluded_from_tlpt(microenterprise), no_tlpt_duty(microenterprise)).
+expected_outcome(article_16_1_fact_missing, indeterminate([financial_entity_is_article_16_1_entity]), indeterminate([financial_entity_is_article_16_1_entity])).
+expected_outcome(microenterprise_fact_missing, indeterminate([financial_entity_is_microenterprise]), indeterminate([financial_entity_is_microenterprise])).
+expected_outcome(entity_type_missing_not_identified, indeterminate([dora_entity_type]), no_tlpt_duty(not_identified)).
+expected_outcome(central_securities_depository_identified_standard_frequency, listed_for_tlpt(point_d), tlpt_required(at_least_every_three_years)).
+expected_outcome(central_securities_depository_identified_changed_frequency, listed_for_tlpt(point_d), tlpt_required(frequency_set_by_competent_authority)).
+expected_outcome(central_securities_depository_identification_missing, listed_for_tlpt(point_d), indeterminate([identified_by_tlpt_authority_as_required_to_perform_tlpt])).
+expected_outcome(central_securities_depository_frequency_missing, listed_for_tlpt(point_d), indeterminate([tlpt_frequency_changed_by_competent_authority])).
+expected_outcome(central_counterparty_not_identified, listed_for_tlpt(point_e), no_tlpt_duty(not_identified)).
+expected_outcome(trade_repository_identified, not_listed_for_tlpt, tlpt_required(at_least_every_three_years)).
+expected_outcome(systemic_credit_institution, listed_for_tlpt(point_a), no_tlpt_duty(not_identified)).
+expected_outcome(non_systemic_credit_institution, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(payment_institution_above_threshold_both_years, listed_for_tlpt(point_b), no_tlpt_duty(not_identified)).
+expected_outcome(payment_institution_at_threshold_first_year, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(payment_institution_second_year_missing, indeterminate([payment_transactions_total_value_eur_second_preceding_calendar_year]), no_tlpt_duty(not_identified)).
+expected_outcome(electronic_money_institution_mixed_figures, listed_for_tlpt(point_c), no_tlpt_duty(not_identified)).
+expected_outcome(electronic_money_institution_at_money_threshold, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(trading_venue_electronic_national_leader, listed_for_tlpt(point_f), no_tlpt_duty(not_identified)).
+expected_outcome(trading_venue_without_electronic_system, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(life_insurer_above_subset_share, listed_for_tlpt(point_g), no_tlpt_duty(not_identified)).
+expected_outcome(life_insurer_at_subset_share, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(non_life_insurer_above_second_list_share, listed_for_tlpt(point_g), no_tlpt_duty(not_identified)).
+expected_outcome(non_life_insurer_at_second_list_share, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_above_second_list_provisions, listed_for_tlpt(point_g), no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_at_second_list_provisions, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_above_subset_premium, listed_for_tlpt(point_g), no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_at_subset_premium, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_above_subset_provisions, listed_for_tlpt(point_g), no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_at_subset_provisions, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_above_second_list_premium, listed_for_tlpt(point_g), no_tlpt_duty(not_identified)).
+expected_outcome(reinsurer_at_second_list_premium, not_listed_for_tlpt, no_tlpt_duty(not_identified)).
+expected_outcome(float_premium_figure, input_problems([wrong_type(gross_written_premium_eur)]), input_problems([wrong_type(gross_written_premium_eur)])).
+expected_outcome(unknown_key_present, input_problems([unknown_key(colour_of_logo)]), input_problems([unknown_key(colour_of_logo)])).
+
+point_citation(point_a, eu_reg_2025_1190_art_2_2_a).
+point_citation(point_b, eu_reg_2025_1190_art_2_2_b).
+point_citation(point_c, eu_reg_2025_1190_art_2_2_c).
+point_citation(point_d, eu_reg_2025_1190_art_2_2_d).
+point_citation(point_e, eu_reg_2025_1190_art_2_2_e).
+point_citation(point_f, eu_reg_2025_1190_art_2_2_f).
+point_citation(point_g, eu_reg_2025_1190_art_2_2_g).
+
+expected_citations(excluded_from_tlpt(_), [cite(eu_reg_2022_2554_art_26_1)]).
+expected_citations(listed_for_tlpt(Point), [cite(eu_reg_2025_1190_art_2_2), cite(PointKey)]) :-
+    point_citation(Point, PointKey).
+expected_citations(not_listed_for_tlpt, [cite(eu_reg_2022_2554_art_26_8), cite(eu_reg_2025_1190_art_2_1), cite(eu_reg_2025_1190_art_2_2)]).
+expected_citations(no_tlpt_duty(article_16_1_entity), [cite(eu_reg_2022_2554_art_26_1)]).
+expected_citations(no_tlpt_duty(microenterprise), [cite(eu_reg_2022_2554_art_26_1)]).
+expected_citations(no_tlpt_duty(not_identified), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]).
+expected_citations(tlpt_required(_), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]).
+expected_citations(indeterminate(_), []).
+expected_citations(input_problems(_), []).
+
+same_citation_set(ActualCitations, ExpectedCitations) :-
+    clausal_msort(ActualCitations, SortedActual),
+    clausal_msort(ExpectedCitations, SortedExpected),
+    SortedActual == SortedExpected.
+
+subject_resolves(Subject) :-
+    expected_outcome(Subject, ExpectedBasis, ExpectedDuty),
+    dora_tlpt_profile_for(Subject, Profile),
+    findall(Basis - BasisCitations, tlpt_identification_basis(Profile, Basis, BasisCitations), BasisAnswers),
+    BasisAnswers = [ActualBasis - ActualBasisCitations],
+    ActualBasis == ExpectedBasis,
+    expected_citations(ExpectedBasis, ExpectedBasisCitations),
+    same_citation_set(ActualBasisCitations, ExpectedBasisCitations),
+    findall(DutyResult - DutyCitations, tlpt_duty(Profile, DutyResult, DutyCitations), DutyAnswers),
+    DutyAnswers = [ActualDuty - ActualDutyCitations],
+    ActualDuty == ExpectedDuty,
+    expected_citations(ExpectedDuty, ExpectedDutyCitations),
+    same_citation_set(ActualDutyCitations, ExpectedDutyCitations),
+    findall(Verdict, decide_dora_tlpt(Profile, Verdict), Verdicts),
+    Verdicts = [dora_tlpt_verdict(VerdictStatus, _)],
+    VerdictStatus == ExpectedDuty,
+    dora_tlpt_status(Profile, ProjectedStatus),
+    ProjectedStatus == ExpectedDuty,
+    dora_tlpt_assess(Subject, dora_tlpt_verdict(AssessedStatus, _)),
+    AssessedStatus == ExpectedDuty.
+
+base_profile([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false)]).
+
+test(every_subject_has_an_expected_row) :-
+    findall(Subject, dora_tlpt_subject(Subject), Subjects),
+    findall(Subject, expected_outcome(Subject, _, _), ExpectedSubjects),
+    clausal_msort(Subjects, SortedSubjects),
+    clausal_msort(ExpectedSubjects, SortedExpectedSubjects),
+    SortedSubjects == SortedExpectedSubjects.
+test(every_subject_resolves_to_a_status_of_the_vocabulary) :-
+    dora_tlpt_status_values(StatusValues),
+    findall(Subject, dora_tlpt_subject(Subject), Subjects),
+    findall(Subject, (dora_tlpt_subject(Subject), dora_tlpt_assess(Subject, dora_tlpt_verdict(Status, _)), functor(Status, StatusName, 1), member(StatusName, StatusValues)), CoveredSubjects),
+    Subjects == CoveredSubjects.
+test(every_subject_is_resolvable) :-
+    findall(Subject, dora_tlpt_subject(Subject), Subjects),
+    findall(Subject, (dora_tlpt_subject(Subject), dora_tlpt_profile_for(Subject, Profile), dora_tlpt_decision_resolvable(Profile)), ResolvableSubjects),
+    Subjects == ResolvableSubjects.
+test(an_identified_article_16_1_entity_is_excluded) :-
+    subject_resolves(article_16_1_entity_identified).
+test(an_identified_microenterprise_is_excluded) :-
+    subject_resolves(microenterprise_identified).
+test(the_article_16_1_fact_is_asked_first_even_beside_a_microenterprise) :-
+    subject_resolves(article_16_1_fact_missing).
+test(the_microenterprise_fact_is_asked_next) :-
+    subject_resolves(microenterprise_fact_missing).
+test(the_type_is_asked_after_the_carve_outs) :-
+    subject_resolves(entity_type_missing_not_identified).
+test(an_identified_depository_tests_at_least_every_three_years) :-
+    subject_resolves(central_securities_depository_identified_standard_frequency).
+test(a_changed_frequency_is_set_by_the_competent_authority) :-
+    subject_resolves(central_securities_depository_identified_changed_frequency).
+test(a_listed_depository_without_the_identification_fact_names_it) :-
+    subject_resolves(central_securities_depository_identification_missing).
+test(an_identified_depository_without_the_frequency_fact_names_it) :-
+    subject_resolves(central_securities_depository_frequency_missing).
+test(a_listed_counterparty_not_identified_has_no_duty) :-
+    subject_resolves(central_counterparty_not_identified).
+test(an_identified_unlisted_trade_repository_must_test) :-
+    subject_resolves(trade_repository_identified).
+test(a_systemic_credit_institution_is_listed_under_point_a) :-
+    subject_resolves(systemic_credit_institution).
+test(a_non_systemic_credit_institution_is_not_listed) :-
+    subject_resolves(non_systemic_credit_institution).
+test(a_payment_institution_above_the_threshold_both_years_is_listed) :-
+    subject_resolves(payment_institution_above_threshold_both_years).
+test(a_payment_institution_at_the_threshold_is_not_listed) :-
+    subject_resolves(payment_institution_at_threshold_first_year).
+test(a_payment_institution_missing_its_second_year_names_it) :-
+    subject_resolves(payment_institution_second_year_missing).
+test(an_electronic_money_institution_with_either_figure_each_year_is_listed) :-
+    subject_resolves(electronic_money_institution_mixed_figures).
+test(an_electronic_money_institution_at_the_money_threshold_is_not_listed) :-
+    subject_resolves(electronic_money_institution_at_money_threshold).
+test(an_electronic_national_leader_trading_venue_is_listed) :-
+    subject_resolves(trading_venue_electronic_national_leader).
+test(a_trading_venue_without_an_electronic_system_is_not_listed) :-
+    subject_resolves(trading_venue_without_electronic_system).
+test(a_life_insurer_above_the_subset_share_is_listed) :-
+    subject_resolves(life_insurer_above_subset_share).
+test(a_life_insurer_at_the_subset_share_is_not_listed) :-
+    subject_resolves(life_insurer_at_subset_share).
+test(a_non_life_insurer_above_the_second_list_share_is_listed) :-
+    subject_resolves(non_life_insurer_above_second_list_share).
+test(a_non_life_insurer_at_the_second_list_share_is_not_listed) :-
+    subject_resolves(non_life_insurer_at_second_list_share).
+test(a_reinsurer_above_the_second_list_provisions_is_listed) :-
+    subject_resolves(reinsurer_above_second_list_provisions).
+test(a_reinsurer_at_the_second_list_provisions_is_not_listed) :-
+    subject_resolves(reinsurer_at_second_list_provisions).
+test(a_reinsurer_above_the_subset_premium_is_listed) :-
+    subject_resolves(reinsurer_above_subset_premium).
+test(a_reinsurer_at_the_subset_premium_is_not_listed) :-
+    subject_resolves(reinsurer_at_subset_premium).
+test(a_reinsurer_above_the_subset_provisions_is_listed) :-
+    subject_resolves(reinsurer_above_subset_provisions).
+test(a_reinsurer_at_the_subset_provisions_is_not_listed) :-
+    subject_resolves(reinsurer_at_subset_provisions).
+test(a_reinsurer_above_the_second_list_premium_is_listed) :-
+    subject_resolves(reinsurer_above_second_list_premium).
+test(a_reinsurer_at_the_second_list_premium_is_not_listed) :-
+    subject_resolves(reinsurer_at_second_list_premium).
+test(a_float_figure_is_an_input_problem) :-
+    subject_resolves(float_premium_figure).
+test(an_unknown_key_is_an_input_problem) :-
+    subject_resolves(unknown_key_present).
+test(the_problems_come_in_contract_order_then_unknown_keys) :-
+    dora_tlpt_input_problems([attribute(foo, 1), attribute(dora_entity_type, bank), attribute(financial_entity_is_microenterprise, unsure), attribute(foo, 2), attribute(financial_entity_is_article_16_1_entity, true), attribute(financial_entity_is_article_16_1_entity, false)], Problems),
+    Problems == [duplicate_key(financial_entity_is_article_16_1_entity), wrong_type(financial_entity_is_microenterprise), wrong_type(dora_entity_type), unknown_key(foo)].
+test(an_unbound_key_is_named_as_given) :-
+    dora_tlpt_input_problems([attribute(UnboundKey, 1)], Problems),
+    Problems = [unknown_key(NamedKey)],
+    NamedKey == UnboundKey.
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    dora_tlpt_input_problems(_UnboundProfile, Problems),
+    Problems == [wrong_type(profile)].
+test(a_list_of_atoms_is_not_an_attribute_list) :-
+    dora_tlpt_input_problems([a], [wrong_type(profile)]).
+test(a_negative_figure_is_wrong_type) :-
+    dora_tlpt_input_problems([attribute(technical_provisions_eur, -1)], [wrong_type(technical_provisions_eur)]).
+test(the_empty_profile_has_no_problem) :-
+    dora_tlpt_input_problems([], []).
+test(the_empty_profile_asks_the_article_16_1_fact) :-
+    tlpt_duty([], indeterminate([financial_entity_is_article_16_1_entity]), []).
+test(the_input_check_yields_one_solution) :-
+    findall(Problems, dora_tlpt_input_problems([attribute(colour_of_logo, blue), attribute(colour_of_logo, red)], Problems), Answers),
+    Answers == [[unknown_key(colour_of_logo)]].
+test(every_well_formed_subject_has_a_cited_checklist_of_four_items) :-
+    findall(Subject, (dora_tlpt_subject(Subject), dora_tlpt_profile_for(Subject, Profile), dora_tlpt_input_problems(Profile, [])), WellFormedSubjects),
+    findall(Subject, (member(Subject, WellFormedSubjects), dora_tlpt_profile_for(Subject, Profile), dora_tlpt_checklist(Profile, Items), length(Items, 4)), CheckedSubjects),
+    WellFormedSubjects == CheckedSubjects.
+test(every_checklist_item_carries_a_citation) :-
+    findall(ChecklistItem, (dora_tlpt_subject(Subject), dora_tlpt_profile_for(Subject, Profile), dora_tlpt_checklist(Profile, Items), member(ChecklistItem, Items)), AllItems),
+    findall(ChecklistItem, (member(ChecklistItem, AllItems), ChecklistItem = item(_, _, cite(_))), CitedItems),
+    length(AllItems, AllCount),
+    length(CitedItems, CitedCount),
+    AllCount == CitedCount,
+    AllCount > 0.
+test(an_identified_listed_depository_meets_every_item) :-
+    dora_tlpt_profile_for(central_securities_depository_identified_standard_frequency, Profile),
+    dora_tlpt_checklist(Profile, [item(not_article_16_1_entity, met, cite(eu_reg_2022_2554_art_26_1)), item(not_microenterprise, met, cite(eu_reg_2022_2554_art_26_1)), item(listed_in_article_2_2, met, cite(eu_reg_2025_1190_art_2_2)), item(identified_by_tlpt_authority, met, cite(eu_reg_2022_2554_art_26_8))]).
+test(an_identified_unlisted_entity_shows_the_list_unmet) :-
+    dora_tlpt_profile_for(trade_repository_identified, Profile),
+    dora_tlpt_checklist(Profile, Items),
+    member(item(listed_in_article_2_2, unmet(not_listed_for_tlpt), cite(eu_reg_2025_1190_art_2_2)), Items),
+    member(item(identified_by_tlpt_authority, met, cite(eu_reg_2022_2554_art_26_8)), Items).
+test(a_not_identified_counterparty_shows_the_identification_unmet) :-
+    dora_tlpt_profile_for(central_counterparty_not_identified, Profile),
+    dora_tlpt_checklist(Profile, Items),
+    member(item(identified_by_tlpt_authority, unmet(not_identified), cite(eu_reg_2022_2554_art_26_8)), Items).
+test(the_what_if_supplies_the_identification) :-
+    dora_tlpt_profile_for(central_securities_depository_identification_missing, Profile),
+    dora_tlpt_what_if(Profile, identified_by_tlpt_authority_as_required_to_perform_tlpt, true, indeterminate([tlpt_frequency_changed_by_competent_authority])).
+test(the_what_if_replaces_the_frequency) :-
+    dora_tlpt_profile_for(central_securities_depository_identified_standard_frequency, Profile),
+    dora_tlpt_what_if(Profile, tlpt_frequency_changed_by_competent_authority, true, tlpt_required(frequency_set_by_competent_authority)).
+test(the_what_if_of_a_carve_out_removes_the_duty) :-
+    dora_tlpt_profile_for(central_securities_depository_identified_standard_frequency, Profile),
+    dora_tlpt_what_if(Profile, financial_entity_is_article_16_1_entity, true, no_tlpt_duty(article_16_1_entity)).
+test(the_duty_needs_no_type) :-
+    base_profile(BaseProfile),
+    append(BaseProfile, [attribute(identified_by_tlpt_authority_as_required_to_perform_tlpt, true), attribute(tlpt_frequency_changed_by_competent_authority, false)], Profile),
+    tlpt_duty(Profile, tlpt_required(at_least_every_three_years), [cite(eu_reg_2022_2554_art_26_1), cite(eu_reg_2022_2554_art_26_8)]).
+
+test(an_identified_article_16_1_entity_has_no_required_test, fail) :-
+    dora_tlpt_profile_for(article_16_1_entity_identified, Profile),
+    tlpt_duty(Profile, tlpt_required(_), _).
+test(an_identified_microenterprise_has_no_required_test, fail) :-
+    dora_tlpt_profile_for(microenterprise_identified, Profile),
+    tlpt_duty(Profile, tlpt_required(_), _).
+test(an_identified_depository_is_not_carved_out, fail) :-
+    dora_tlpt_profile_for(central_securities_depository_identified_standard_frequency, Profile),
+    tlpt_duty(Profile, no_tlpt_duty(_), _).
+test(a_listed_counterparty_not_identified_is_not_required, fail) :-
+    dora_tlpt_profile_for(central_counterparty_not_identified, Profile),
+    tlpt_duty(Profile, tlpt_required(_), _).
+test(a_trade_repository_is_not_listed, fail) :-
+    dora_tlpt_profile_for(trade_repository_identified, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_non_systemic_credit_institution_is_not_listed_under_point_a, fail) :-
+    dora_tlpt_profile_for(non_systemic_credit_institution, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_payment_institution_at_the_threshold_is_not_listed_under_point_b, fail) :-
+    dora_tlpt_profile_for(payment_institution_at_threshold_first_year, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(an_electronic_money_institution_at_the_money_threshold_is_not_listed_under_point_c, fail) :-
+    dora_tlpt_profile_for(electronic_money_institution_at_money_threshold, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_trading_venue_without_an_electronic_system_is_not_listed_under_point_f, fail) :-
+    dora_tlpt_profile_for(trading_venue_without_electronic_system, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_life_insurer_at_the_subset_share_is_not_listed_under_point_g, fail) :-
+    dora_tlpt_profile_for(life_insurer_at_subset_share, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_non_life_insurer_at_the_second_list_share_is_not_listed_under_point_g, fail) :-
+    dora_tlpt_profile_for(non_life_insurer_at_second_list_share, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_reinsurer_at_the_second_list_provisions_is_not_listed_under_point_g, fail) :-
+    dora_tlpt_profile_for(reinsurer_at_second_list_provisions, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_reinsurer_at_the_subset_premium_is_not_listed_under_point_g, fail) :-
+    dora_tlpt_profile_for(reinsurer_at_subset_premium, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_reinsurer_at_the_subset_provisions_is_not_listed_under_point_g, fail) :-
+    dora_tlpt_profile_for(reinsurer_at_subset_provisions, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_reinsurer_at_the_second_list_premium_is_not_listed_under_point_g, fail) :-
+    dora_tlpt_profile_for(reinsurer_at_second_list_premium, Profile),
+    tlpt_identification_basis(Profile, listed_for_tlpt(_), _).
+test(a_float_figure_gets_no_normal_answer, fail) :-
+    dora_tlpt_profile_for(float_premium_figure, Profile),
+    tlpt_identification_basis(Profile, not_listed_for_tlpt, _).
+test(a_profile_with_input_problems_has_no_checklist, fail) :-
+    dora_tlpt_profile_for(float_premium_figure, Profile),
+    dora_tlpt_checklist(Profile, _).
+test(the_what_if_of_a_carve_out_is_not_required, fail) :-
+    dora_tlpt_profile_for(central_securities_depository_identified_standard_frequency, Profile),
+    dora_tlpt_what_if(Profile, financial_entity_is_article_16_1_entity, true, tlpt_required(_)).
+
+cp_test_names([every_subject_has_an_expected_row, every_subject_resolves_to_a_status_of_the_vocabulary, every_subject_is_resolvable, an_identified_article_16_1_entity_is_excluded, an_identified_microenterprise_is_excluded, the_article_16_1_fact_is_asked_first_even_beside_a_microenterprise, the_microenterprise_fact_is_asked_next, the_type_is_asked_after_the_carve_outs, an_identified_depository_tests_at_least_every_three_years, a_changed_frequency_is_set_by_the_competent_authority, a_listed_depository_without_the_identification_fact_names_it, an_identified_depository_without_the_frequency_fact_names_it, a_listed_counterparty_not_identified_has_no_duty, an_identified_unlisted_trade_repository_must_test, a_systemic_credit_institution_is_listed_under_point_a, a_non_systemic_credit_institution_is_not_listed, a_payment_institution_above_the_threshold_both_years_is_listed, a_payment_institution_at_the_threshold_is_not_listed, a_payment_institution_missing_its_second_year_names_it, an_electronic_money_institution_with_either_figure_each_year_is_listed, an_electronic_money_institution_at_the_money_threshold_is_not_listed, an_electronic_national_leader_trading_venue_is_listed, a_trading_venue_without_an_electronic_system_is_not_listed, a_life_insurer_above_the_subset_share_is_listed, a_life_insurer_at_the_subset_share_is_not_listed, a_non_life_insurer_above_the_second_list_share_is_listed, a_non_life_insurer_at_the_second_list_share_is_not_listed, a_reinsurer_above_the_second_list_provisions_is_listed, a_reinsurer_at_the_second_list_provisions_is_not_listed, a_reinsurer_above_the_subset_premium_is_listed, a_reinsurer_at_the_subset_premium_is_not_listed, a_reinsurer_above_the_subset_provisions_is_listed, a_reinsurer_at_the_subset_provisions_is_not_listed, a_reinsurer_above_the_second_list_premium_is_listed, a_reinsurer_at_the_second_list_premium_is_not_listed, a_float_figure_is_an_input_problem, an_unknown_key_is_an_input_problem, the_problems_come_in_contract_order_then_unknown_keys, an_unbound_key_is_named_as_given, an_unbound_profile_is_not_an_attribute_list, a_list_of_atoms_is_not_an_attribute_list, a_negative_figure_is_wrong_type, the_empty_profile_has_no_problem, the_empty_profile_asks_the_article_16_1_fact, the_input_check_yields_one_solution, every_well_formed_subject_has_a_cited_checklist_of_four_items, every_checklist_item_carries_a_citation, an_identified_listed_depository_meets_every_item, an_identified_unlisted_entity_shows_the_list_unmet, a_not_identified_counterparty_shows_the_identification_unmet, the_what_if_supplies_the_identification, the_what_if_replaces_the_frequency, the_what_if_of_a_carve_out_removes_the_duty, the_duty_needs_no_type]).
+cp_test_fail_names([an_identified_article_16_1_entity_has_no_required_test, an_identified_microenterprise_has_no_required_test, an_identified_depository_is_not_carved_out, a_listed_counterparty_not_identified_is_not_required, a_trade_repository_is_not_listed, a_non_systemic_credit_institution_is_not_listed_under_point_a, a_payment_institution_at_the_threshold_is_not_listed_under_point_b, an_electronic_money_institution_at_the_money_threshold_is_not_listed_under_point_c, a_trading_venue_without_an_electronic_system_is_not_listed_under_point_f, a_life_insurer_at_the_subset_share_is_not_listed_under_point_g, a_non_life_insurer_at_the_second_list_share_is_not_listed_under_point_g, a_reinsurer_at_the_second_list_provisions_is_not_listed_under_point_g, a_reinsurer_at_the_subset_premium_is_not_listed_under_point_g, a_reinsurer_at_the_subset_provisions_is_not_listed_under_point_g, a_reinsurer_at_the_second_list_premium_is_not_listed_under_point_g, a_float_figure_gets_no_normal_answer, a_profile_with_input_problems_has_no_checklist, the_what_if_of_a_carve_out_is_not_required]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

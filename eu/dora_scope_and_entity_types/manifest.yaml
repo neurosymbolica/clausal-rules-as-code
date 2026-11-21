@@ -1,0 +1,285 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_scope_and_entity_types
+shape_family: eligibility
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_scope_and_entity_types"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The zero-arity entries of queries.clausal are the
+# order's root_exports (the nine profile key atoms, the twenty-nine atoms of
+# dora_entity_type and the result atoms out_of_scope and financial_entity).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_scope_and_entity_types.clausal --
+  - "dora_scope_decision/3"
+  - "dora_entity_category/3"
+  - "decide_dora_scope_and_entity_types/2"
+  - "dora_scope_and_entity_types_status/2"
+  - "dora_scope_and_entity_types_checklist/2"
+  - "dora_scope_and_entity_types_decision_resolvable/1"
+  - "dora_scope_and_entity_types_status_values/1"
+  # -- queries.clausal --
+  - "dora_scope_and_entity_types_profile_keys/1"
+  - "dora_scope_and_entity_types_input_problems/2"
+  - "dora_scope_and_entity_types_what_if/4"
+  - "in_scope/1"
+  - "indeterminate/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "out_of_scope/0"
+  - "financial_entity/0"
+  - "dora_entity_type/0"
+  - "aifm_under_article_3_2_of_directive_2011_61/0"
+  - "undertaking_under_article_4_of_directive_2009_138/0"
+  - "iorp_pension_scheme_members_total/0"
+  - "exempted_under_articles_2_and_3_of_directive_2014_65/0"
+  - "financial_entity_is_microenterprise/0"
+  - "financial_entity_is_small_or_medium_sized_enterprise/0"
+  - "post_office_giro_institution_under_article_2_5_3_of_directive_2013_36/0"
+  - "exempted_from_dora_scope_by_member_state/0"
+  - "credit_institution/0"
+  - "institution_exempted_pursuant_to_directive_2013_36/0"
+  - "payment_institution/0"
+  - "exempted_payment_institution/0"
+  - "account_information_service_provider/0"
+  - "electronic_money_institution/0"
+  - "exempted_electronic_money_institution/0"
+  - "investment_firm/0"
+  - "crypto_asset_service_provider/0"
+  - "issuer_of_asset_referenced_tokens/0"
+  - "central_securities_depository/0"
+  - "central_counterparty/0"
+  - "trading_venue/0"
+  - "trade_repository/0"
+  - "manager_of_alternative_investment_funds/0"
+  - "management_company/0"
+  - "data_reporting_service_provider/0"
+  - "insurance_undertaking/0"
+  - "reinsurance_undertaking/0"
+  - "insurance_intermediary/0"
+  - "reinsurance_intermediary/0"
+  - "ancillary_insurance_intermediary/0"
+  - "institution_for_occupational_retirement_provision/0"
+  - "credit_rating_agency/0"
+  - "administrator_of_critical_benchmarks/0"
+  - "crowdfunding_service_provider/0"
+  - "securitisation_repository/0"
+  - "ict_third_party_service_provider/0"
+  - "none_of_the_listed_types/0"
+  # -- fixtures.clausal --
+  - "dora_scope_and_entity_types_subject/1"
+  - "dora_scope_and_entity_types_profile_for/2"
+  - "dora_scope_and_entity_types_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only the kit's formalize_lib and
+# library(reif) / library(clpz), none of which is a backbone package.
+uses: []
+
+scope: >-
+  Who is within the scope of Regulation (EU) 2022/2554 (the Digital Operational
+  Resilience Act, DORA), and as which type of entity, from the original OJ text
+  (32022R2554): Article 2(1) points (a) to (u), Article 2(2) (financial
+  entities), the exclusions of Article 2(3) points (a) to (f) and the option of
+  the Member States in the first sentence of Article 2(4), read with Article 3
+  points (19), (32), (36), (39), (60), (63) and (64). For ONE entity of ONE type
+  stated by the caller, dora_scope_decision/3 answers in_scope(TYPE) or
+  out_of_scope, and dora_entity_category/3 answers financial_entity,
+  ict_third_party_service_provider or out_of_scope, each with fixed citations;
+  an absent key the answer needs gives indeterminate([KEY]) and a badly formed
+  profile gives input_problems(PROBLEMS). Out of scope: whether an entity meets
+  the definition of a type in the Union act Article 3 refers to (the caller's
+  classification), the relation to Article 4 of Directive (EU) 2022/2555 (NIS2),
+  the duties of an entity in scope, the notice and publication duties of
+  Article 2(4), second and third sentences, and the date of application
+  (Article 64). Every reading is the drafter's, not a lawyer's.
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554), original text: Article 2(1) points (a) to (u), Article 2(2), Article 2(3) points (a) to (f), Article 2(4) first sentence"
+  - "Regulation (EU) 2022/2554 (DORA), Article 3, points (19) ICT third-party service provider, (32) institution exempted pursuant to Directive 2013/36/EU, (36) payment institution exempted pursuant to Directive (EU) 2015/2366, (39) electronic money institution exempted pursuant to Directive 2009/110/EC, (60) microenterprise, (63) small enterprise, (64) medium-sized enterprise"
+
+query_interface:
+  2: "dora_scope_decision/3"                        # eligibility: in_scope(TYPE) / out_of_scope / statuses, cited
+  7: "dora_scope_and_entity_types_checklist/2"      # justification: checklist items carry cite(...) provenance
+  16: "dora_scope_and_entity_types_what_if/4"       # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: The heading of Article 2, and the heading of Article 3 with the words introducing
+    the definitions, carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: member_state_notice_and_publication
+  units:
+  - 32022R2554#parag_002.004
+  partial: true
+  reason: 'Art 2(4), first sentence, the option of a Member State to exclude the institutions
+    of Article 2(5), points (4) to (23), of Directive 2013/36/EU located in its territory,
+    is formalised through exempted_from_dora_scope_by_member_state (reading (8)).
+    Not formalised: the second sentence (the Member State informs the Commission of
+    its use of the option and of later changes) and the third sentence (the Commission
+    makes that information publicly available).'
+  consequence: The answers take the exclusion as the caller states it; the order does
+    not check the notice to the Commission or its publication.
+  declaration: answered_with_caveat
+  debt: true
+  open: duties of the Member State and the Commission with no output for the entity;
+    the deferral stands for this run.
+- what: type_definitions_by_reference
+  units:
+  - 32022R2554#point_003_31
+  - 32022R2554#point_003_33
+  - 32022R2554#point_003_35
+  - 32022R2554#point_003_37
+  - 32022R2554#point_003_38
+  - 32022R2554#point_003_40
+  - 32022R2554#point_003_41
+  - 32022R2554#point_003_42
+  - 32022R2554#point_003_43
+  - 32022R2554#point_003_44
+  - 32022R2554#point_003_45
+  - 32022R2554#point_003_46
+  - 32022R2554#point_003_47
+  - 32022R2554#point_003_48
+  - 32022R2554#point_003_49
+  - 32022R2554#point_003_50
+  - 32022R2554#point_003_51
+  - 32022R2554#point_003_52
+  - 32022R2554#point_003_54
+  - 32022R2554#point_003_55
+  - 32022R2554#point_003_56
+  - 32022R2554#point_003_57
+  - 32022R2554#point_003_58
+  - 32022R2554#point_003_59
+  reason: These points of Article 3 define the types of Art 2(1) (credit institution,
+    investment firm, payment institution, account information service provider, electronic
+    money institution, central counterparty, trade repository, central securities
+    depository, trading venue, manager of alternative investment funds, management
+    company, data reporting service provider, insurance and reinsurance undertaking,
+    the three kinds of insurance intermediary, institution for occupational retirement
+    provision, credit rating agency, crypto-asset service provider, issuer of asset-referenced
+    tokens, administrator of critical benchmarks, crowdfunding service provider and
+    securitisation repository) by reference to other Union acts, which are not pinned
+    here. Whether an entity meets one of them is the caller's classification, stated
+    in dora_entity_type (reading (2)).
+  consequence: The order takes the type as given; it does not test the definition
+    in the act referred to.
+  declaration: answered_with_caveat
+  debt: true
+  open: each definition needs its Union act pinned; the deferral stands for this run
+    (open question (Q1)).
+- what: definitions_this_order_does_not_read
+  units:
+  - 32022R2554#point_003_1
+  - 32022R2554#point_003_2
+  - 32022R2554#point_003_3
+  - 32022R2554#point_003_4
+  - 32022R2554#point_003_5
+  - 32022R2554#point_003_6
+  - 32022R2554#point_003_7
+  - 32022R2554#point_003_8
+  - 32022R2554#point_003_9
+  - 32022R2554#point_003_10
+  - 32022R2554#point_003_11
+  - 32022R2554#point_003_12
+  - 32022R2554#point_003_13
+  - 32022R2554#point_003_14
+  - 32022R2554#point_003_15
+  - 32022R2554#point_003_16
+  - 32022R2554#point_003_17
+  - 32022R2554#point_003_18
+  - 32022R2554#point_003_20
+  - 32022R2554#point_003_21
+  - 32022R2554#point_003_22
+  - 32022R2554#point_003_23
+  - 32022R2554#point_003_24
+  - 32022R2554#point_003_25
+  - 32022R2554#point_003_26
+  - 32022R2554#point_003_27
+  - 32022R2554#point_003_28
+  - 32022R2554#point_003_29
+  - 32022R2554#point_003_30
+  - 32022R2554#point_003_34
+  - 32022R2554#point_003_53
+  - 32022R2554#point_003_61
+  - 32022R2554#point_003_62
+  - 32022R2554#point_003_65
+  reason: The other points of Article 3 define words that no limb of this order reads
+    (for example digital operational resilience, ICT risk, ICT-related incident, ICT
+    services, critical or important function, critical ICT third-party service provider,
+    management body, small and non-interconnected investment firm, small institution
+    for occupational retirement provision, Lead Overseer, public authority). Other
+    DORA orders read some of them.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: exclusion_lead_words
+  units:
+  - 32022R2554#parag_002.003
+  reason: The lead words of Art 2(3) ('This Regulation does not apply to:') introduce
+    points (a) to (f) and carry no rule of their own; each point is formalised in
+    THE EXCLUSION TABLE and cited where it decides (readings (1), (6)).
+  consequence: None for a caller; each out_of_scope answer of an exclusion cites the
+    point of Art 2(3) that decides.
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: referenced_union_acts
+  instrument: the Union acts Article 3 refers to for the types of Art 2(1) and the
+    acts Art 2(3) names (Directives 2011/61/EU, 2009/138/EC, 2014/65/EU, 2013/36/EU,
+    (EU) 2015/2366, 2009/110/EC, (EU) 2016/97, (EU) 2016/2341; Regulations (EU) No
+    575/2013, No 648/2012, No 909/2014, No 600/2014, (EC) No 1060/2009, (EU) 2016/1011,
+    (EU) 2020/1503, (EU) 2017/2402 and the Regulation on markets in crypto-assets)
+  cites:
+  - 32013L0036#art_002
+  reason: Not pinned in this domain. The type and the exclusion facts are the caller's
+    classification (readings (2), (6)).
+  consequence: The answers take the type and the exclusion facts as given.
+- what: nis2_article_4
+  instrument: Directive (EU) 2022/2555 Article 4
+  cites:
+  - 32022L2555#art_004
+  reason: Not pinned in this domain. How DORA relates to NIS2 as a sector-specific
+    Union legal act is named for a lawyer (reading (11)).
+  consequence: in_scope says nothing about the NIS2 duties of the entity (open question
+    (Q5)).
+- what: sme_recommendation
+  instrument: Commission Recommendation 2003/361/EC
+  cites:
+  - 32003H0361#art_002
+  reason: 'Not read: Art 2(3)(e) is read with the Regulation''s own size definitions,
+    Article 3, points (60), (63) and (64) (reading (7)).'
+  consequence: The caller states the size by the Regulation's definitions (open question
+    (Q3)).
+- what: date_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64
+  cites:
+  - 32022R2554#art_064
+  reason: Not pinned in this domain. The Regulation applies from 17 January 2025;
+    the order reads no date (reading (14)).
+  consequence: No answer depends on a date (open question (Q11)).

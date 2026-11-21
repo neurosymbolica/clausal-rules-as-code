@@ -1,42 +1,45 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_chapter_v_extras.
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_chapter_v_extras.
 % A TOP-LAYER consumer: it imports the determination slice's PUBLIC
 % predicates it calls, and nothing else.
 %
-% Source: Regulation (EU) 2016/679 (GDPR), consolidated text
-% 02016R0679-20160504: Art 44 (first sentence), Art 48, Art 49(1) second
-% subparagraph (second and third sentences) and Art 49(6). author's
-% reading, not a lawyer's.
+% Source: Regulation (EU) 2016/679 (GDPR), pinned unit text of
+% 02016R0679-20160504. Drafter's reading, not a lawyer's.
 %
-% Query types this domain serves, and where:
-%   #13 compliance_check     -> second_subparagraph_duty/5,
-%                               foreign_judgment_or_decision_recognition/4,
-%                               onward_transfer_condition/4 (the slice; the
-%                               package facade re-exports them)
-%   #3  status_determination -> gdpr_chapter_v_extras_status/2 (the slice)
-%   #16 what-if              -> gdpr_chapter_v_extras_what_if/4 (here)
-%   schema                   -> gdpr_chapter_v_extras_profile_keys/1 (here)
-%   input check              -> gdpr_chapter_v_extras_input_problems/2 (the
-%                               kernel's check, re-exported here as written)
+% The called contract, re-exported from the slice (each yields exactly ONE
+% solution for every input):
+%   second_subparagraph_duty/5                 (#13 compliance_check:
+%       is one Art 49(1) second-subparagraph or Art 49(6) duty met)
+%   foreign_judgment_or_decision_recognition/4 (#3 status_determination:
+%       the Art 48 status of a third-country judgment or decision)
+%   onward_transfer_condition/4                (compliance check of an onward
+%       transfer, Art 44 first sentence; also the facade status #2)
+%   gdpr_chapter_v_extras_input_problems/2     (the input check, from the kernel)
 %
-% The profile is an ATTRIBUTE LIST, not a dict, so the what-if replaces the
-% attribute(Key, _) entries of the overridden key and adds the new one; the
-% revised profile passes through the input check like any other. This
-% layer decides nothing statutory, so it carries no implements/1 marker.
-% Open-textured judgement is handed to the caller: this order has no
-% judgement key, and every determination under law arrives attested.
+% Facade helpers:
+%   gdpr_chapter_v_extras_what_if/4      (#16 what-if): override one key -> re-evaluate
+%   gdpr_chapter_v_extras_profile_keys/1: top-level profile key schema
 %
-% ROOT EXPORTS: the result atoms and the three DUTY argument atoms of the
-% order are declared here as facts, so the package root resolves every
-% name the scorer reads. The result constructors are data: they are
-% exported and declared with constructors/1, and have no clauses.
+% No open-textured judgement is decided here: every legal determination
+% arrives as an attested outside fact supplied by the caller, and an absent
+% one is referred (needs_legal_review), never guessed. The profile is an
+% ATTRIBUTE LIST, not a dict, so the what-if override is done on the list
+% (query_combinators' override_key/4 works on dicts only).
+%
+% RESULT CONSTRUCTORS AND ARGUMENT ATOMS: the order names each result term
+% and each DUTY atom as part of the public interface. The arity-0 atoms are
+% recorded as facts; the compound result constructors are DATA with no
+% clauses, their fields named by the constructors declaration below.
 % =====================================================================
 
 :- module(queries, [
     gdpr_chapter_v_extras_profile_keys/1,
     gdpr_chapter_v_extras_input_problems/2,
     gdpr_chapter_v_extras_what_if/4,
+    second_subparagraph_duty/5,
+    foreign_judgment_or_decision_recognition/4,
+    onward_transfer_condition/4,
     no_second_subparagraph_transfer/0,
     not_a_processor_duty/0,
     duty_met/0,
@@ -66,15 +69,11 @@
     duplicate_key/1
 ]).
 
-:- use_module(eu/data_protection/gdpr_chapter_v_extras/kernel, [gdpr_chapter_v_extras_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_chapter_v_extras/gdpr_chapter_v_extras, [gdpr_chapter_v_extras_status/2]).
-
-% ---- result constructors (data, no clauses) ---------------------------
 :- constructors([
     indeterminate(missing_keys),
     needs_legal_review(reason, context),
     cross_reference_unresolved(citation, target),
-    resolution(target, outcome),
+    resolution(target, status),
     inputs_relied_on(pairs),
     outside_fact(key, attested),
     attested(value, attestation),
@@ -87,25 +86,42 @@
     duplicate_key(key)
 ]).
 
-% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+:- use_module(eu/data_protection/gdpr_chapter_v_extras/kernel, [gdpr_chapter_v_extras_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_chapter_v_extras/gdpr_chapter_v_extras, [
+    second_subparagraph_duty/5,
+    foreign_judgment_or_decision_recognition/4,
+    onward_transfer_condition/4,
+    gdpr_chapter_v_extras_status/2
+]).
+
+% ---- schema of top-level profile keys ----------------------------------
+% The keys of the order's typed input contract, in its order.
 gdpr_chapter_v_extras_profile_keys([transfer_relies_on_article_49_1_second_subparagraph, party_role, supervisory_authority_informed_of_transfer, data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests, assessment_documented_in_records, suitable_safeguards_documented_in_records, third_country_judgment_or_decision_requires_transfer, international_agreement_basis_for_judgment_or_decision, transfer_is_onward_transfer, onward_transfer_has_chapter_v_basis]).
 
-% #16 what-if: re-evaluate the facade status with one key hypothetically
-% overridden (every existing entry for the key is replaced by the new one).
+% ---- #16 what-if --------------------------------------------------------
+% Re-evaluate the facade status with one key hypothetically overridden (or
+% added, when absent). A profile with input problems cannot be judged, and
+% its status (input_problems(...)) is returned unchanged. One solution.
 gdpr_chapter_v_extras_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    revised_profile(Profile, OverriddenKey, NewValue, RevisedProfile),
-    gdpr_chapter_v_extras_status(RevisedProfile, NewStatus).
+    gdpr_chapter_v_extras_input_problems(Profile, Problems),
+    what_if_status(Problems, Profile, OverriddenKey, NewValue, NewStatus).
 
-% revised_profile(Profile, Key, Value, Revised): plumbing, no provision.
-revised_profile(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|KeptAttributes]) :-
-    exclude(attribute_for_key(OverriddenKey), Profile, KeptAttributes).
+what_if_status([], Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_chapter_v_extras_status(Hypothesis, NewStatus).
+what_if_status([_|_], Profile, _, _, NewStatus) :-
+    gdpr_chapter_v_extras_status(Profile, NewStatus).
 
-attribute_for_key(OverriddenKey, Element) :-
-    nonvar(Element),
-    Element = attribute(ElementKey, _),
+% override_attribute(Profile, Key, Value, Hypothesis): every attribute of Key
+% dropped, then attribute(Key, Value) appended (list plumbing, no statute).
+override_attribute(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_with_key(OverriddenKey), Profile, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attribute_with_key(OverriddenKey, attribute(ElementKey, _)) :-
     ElementKey == OverriddenKey.
 
-% ---- result atoms (the RESULT values of the three queries) ------------
+% ---- result atoms and argument atoms (data, never queries) --------------
 no_second_subparagraph_transfer.
 not_a_processor_duty.
 duty_met.
@@ -116,28 +132,66 @@ not_recognisable_or_enforceable.
 not_an_onward_transfer.
 onward_transfer_may_take_place.
 onward_transfer_may_not_take_place.
-
-% ---- argument atoms (the three DUTY inputs, never results) ------------
 inform_supervisory_authority.
 inform_data_subject.
 document_assessment_and_safeguards.
 
-test(the_schema_has_eleven_keys) :-
-    gdpr_chapter_v_extras_profile_keys(Keys),
-    length(Keys, 11).
-test(a_what_if_on_an_onward_basis_clears_the_breach) :-
-    Attestation = attestation(host_user, host_timestamp, fixture_statement, none),
-    Profile = [attribute(transfer_is_onward_transfer, attested(true, Attestation)), attribute(onward_transfer_has_chapter_v_basis, attested(false, Attestation))],
-    findall(Status, gdpr_chapter_v_extras_what_if(Profile, onward_transfer_has_chapter_v_basis, attested(true, Attestation), Status), Statuses),
-    Statuses == [more_input_needed].
-test(a_what_if_with_a_bare_boolean_outside_fact_is_an_input_problem) :-
-    gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, true, input_problems([wrong_type(transfer_is_onward_transfer)])).
-test(a_what_if_with_a_bare_boolean_is_not_clear, fail) :-
-    gdpr_chapter_v_extras_what_if([], transfer_is_onward_transfer, true, no_condition_breached).
-test(the_result_atoms_are_declared) :-
+% ---- tests ----------------------------------------------------------------
+
+test(profile_keys_are_the_eleven_contract_keys) :-
+    gdpr_chapter_v_extras_profile_keys(ProfileKeys),
+    length(ProfileKeys, 11).
+
+test(what_if_flips_the_onward_basis) :-
+    findall(Status,
+        gdpr_chapter_v_extras_what_if(
+            [attribute(transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none))),
+             attribute(onward_transfer_has_chapter_v_basis, attested(false, attestation(by, at, reason, none)))],
+            onward_transfer_has_chapter_v_basis,
+            attested(true, attestation(by, at, reason, none)),
+            Status),
+        Statuses),
+    Statuses == [onward_transfer_may_take_place].
+
+test(what_if_adds_an_absent_key) :-
+    findall(Status,
+        gdpr_chapter_v_extras_what_if(
+            [],
+            transfer_is_onward_transfer,
+            attested(false, attestation(by, at, reason, none)),
+            Status),
+        Statuses),
+    Statuses == [not_an_onward_transfer].
+
+test(what_if_keeps_input_problems) :-
+    findall(Status,
+        gdpr_chapter_v_extras_what_if(not_a_list, transfer_is_onward_transfer, attested(true, attestation(by, at, reason, none)), Status),
+        Statuses),
+    Statuses == [input_problems([wrong_type(profile)])].
+
+test(re_exported_duty_query_answers_once) :-
+    findall(Result,
+        second_subparagraph_duty([attribute(party_role, processor)], inform_supervisory_authority, Result, _, _),
+        Results),
+    Results == [not_a_processor_duty].
+
+test(re_exported_article_48_query_answers_once) :-
+    findall(Result,
+        foreign_judgment_or_decision_recognition([attribute(third_country_judgment_or_decision_requires_transfer, attested(false, attestation(by, at, reason, none)))], Result, _, _),
+        Results),
+    Results == [article_48_not_engaged].
+
+test(re_exported_input_check_answers_once) :-
+    findall(Problems, gdpr_chapter_v_extras_input_problems([attribute(party_role, controller), attribute(party_role, controller)], Problems), Answers),
+    Answers == [[duplicate_key(party_role)]].
+
+test(re_exported_input_check_called_directly) :-
+    gdpr_chapter_v_extras_input_problems([attribute(party_role, controller)], Problems),
+    Problems == [].
+
+test(result_constructor_atoms_resolve) :-
     duty_met,
     not_a_processor_duty,
-    onward_transfer_may_take_place,
     inform_data_subject.
 
 :- end_module(queries).

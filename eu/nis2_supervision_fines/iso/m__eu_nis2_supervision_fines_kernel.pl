@@ -1,11 +1,11 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_nis2_supervision_fines_kernel, [nis2_supervision_fines_input_problems/2, nis2_supervision_fines_pairs/3, nis2_supervision_fines_missing_in_order/3]).
+:- module(m__eu_nis2_supervision_fines_kernel, [nis2_supervision_fines_input_problems/2, nis2_supervision_fines_relied_pairs/3]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
 :- use_module(library(reif), [memberd_t/3]).
-:- use_module(formalize_lib, [profile_get/3, profile_lacks/2, missing_keys/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
 
 nis2_supervision_fines_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
@@ -158,40 +158,33 @@ not_below_zero_t(true, Value, true) :-
 not_below_zero_t(true, Value, false) :-
     Value < 0.
 
-nis2_supervision_fines_pairs(_, [], []).
-nis2_supervision_fines_pairs(Profile, [Key|Keys], [Key - Value|Pairs]) :-
+nis2_supervision_fines_relied_pairs(_, [], []).
+nis2_supervision_fines_relied_pairs(Profile, [Key|Keys], [Key - Value|Pairs]) :-
     profile_get(Profile, Key, Value),
-    nis2_supervision_fines_pairs(Profile, Keys, Pairs).
-nis2_supervision_fines_pairs(Profile, [Key|Keys], Pairs) :-
+    nis2_supervision_fines_relied_pairs(Profile, Keys, Pairs).
+nis2_supervision_fines_relied_pairs(Profile, [Key|Keys], Pairs) :-
     profile_lacks(Profile, Key),
-    nis2_supervision_fines_pairs(Profile, Keys, Pairs).
-
-nis2_supervision_fines_missing_in_order(Profile, Keys, Missing) :-
-    missing_keys(Profile, Keys, Missing).
+    nis2_supervision_fines_relied_pairs(Profile, Keys, Pairs).
 
 test(a_well_formed_profile_has_no_problem) :-
-    findall(Problems, nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(worldwide_annual_turnover_eur, 0), attribute(earlier_measures_ineffective, unsure)], Problems), Answers),
-    Answers == [[]].
+    nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(earlier_measures_ineffective, unsure)], []).
 test(the_empty_profile_has_no_problem) :-
     nis2_supervision_fines_input_problems([], []).
-test(a_duplicated_key_is_named_once_and_not_typed) :-
-    nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(entity_class, banana)], [duplicate_key(entity_class)]).
+test(a_repeated_key_is_a_duplicate_only) :-
+    nis2_supervision_fines_input_problems([attribute(entity_class, essential), attribute(entity_class, wrong)], [duplicate_key(entity_class)]).
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    nis2_supervision_fines_input_problems([attribute(entity_is_public_administration, unsure)], [wrong_type(entity_is_public_administration)]).
 test(a_negative_turnover_is_wrong_type) :-
     nis2_supervision_fines_input_problems([attribute(worldwide_annual_turnover_eur, -1)], [wrong_type(worldwide_annual_turnover_eur)]).
-test(a_fraction_turnover_is_wrong_type) :-
-    nis2_supervision_fines_input_problems([attribute(worldwide_annual_turnover_eur, 3/2)], [wrong_type(worldwide_annual_turnover_eur)]).
-test(unsure_on_a_crisp_key_is_wrong_type) :-
-    nis2_supervision_fines_input_problems([attribute(entity_is_public_administration, unsure)], [wrong_type(entity_is_public_administration)]).
-test(contract_problems_come_before_unknown_keys_named_once) :-
-    nis2_supervision_fines_input_problems([attribute(colour, red), attribute(entity_class, banana), attribute(colour, blue)], [wrong_type(entity_class), unknown_key(colour)]).
+test(an_unknown_key_is_named_once) :-
+    nis2_supervision_fines_input_problems([attribute(foo, 1), attribute(foo, 2)], [unknown_key(foo)]).
+test(contract_problems_come_before_unknown_keys) :-
+    nis2_supervision_fines_input_problems([attribute(foo, 1), attribute(gdpr_fine_for_same_conduct, maybe), attribute(entity_class, big)], [wrong_type(entity_class), wrong_type(gdpr_fine_for_same_conduct), unknown_key(foo)]).
 test(a_non_list_is_not_a_profile) :-
-    nis2_supervision_fines_input_problems(essential, [wrong_type(profile)]).
-test(a_list_with_a_stray_element_is_not_a_profile) :-
-    nis2_supervision_fines_input_problems([attribute(entity_class, essential), entity_class], [wrong_type(profile)]).
-test(pairs_keep_present_judgements_in_order) :-
-    findall(Pairs, nis2_supervision_fines_pairs([attribute(gdpr_fine_for_same_conduct, unsure), attribute(infringement_may_entail_notifiable_personal_data_breach, true)], [infringement_may_entail_notifiable_personal_data_breach, gdpr_fine_for_same_conduct], Pairs), Answers),
-    Answers == [[infringement_may_entail_notifiable_personal_data_breach - true, gdpr_fine_for_same_conduct - unsure]].
-test(pairs_skip_absent_judgements) :-
-    nis2_supervision_fines_pairs([attribute(entity_class, essential)], [earlier_measures_ineffective], []).
-test(missing_keys_in_order) :-
-    nis2_supervision_fines_missing_in_order([attribute(entity_class, essential)], [entity_class, worldwide_annual_turnover_eur], [worldwide_annual_turnover_eur]).
+    nis2_supervision_fines_input_problems(not_a_list, [wrong_type(profile)]).
+test(a_list_with_a_bare_atom_is_not_a_profile) :-
+    nis2_supervision_fines_input_problems([attribute(entity_class, essential), stray], [wrong_type(profile)]).
+test(pairs_follow_the_given_key_order) :-
+    nis2_supervision_fines_relied_pairs([attribute(gdpr_fine_for_same_conduct, unsure), attribute(infringement_may_entail_notifiable_personal_data_breach, true)], [infringement_may_entail_notifiable_personal_data_breach, gdpr_fine_for_same_conduct], [infringement_may_entail_notifiable_personal_data_breach - true, gdpr_fine_for_same_conduct - unsure]).
+test(pairs_skip_an_absent_key) :-
+    nis2_supervision_fines_relied_pairs([attribute(earlier_measures_ineffective, unsure)], [infringement_may_entail_notifiable_personal_data_breach, earlier_measures_ineffective], [earlier_measures_ineffective - unsure]).

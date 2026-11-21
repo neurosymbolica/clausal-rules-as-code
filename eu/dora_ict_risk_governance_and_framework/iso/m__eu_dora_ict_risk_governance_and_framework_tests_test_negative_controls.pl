@@ -1,0 +1,132 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_risk_governance_and_framework_tests_test_negative_controls, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_risk_governance_and_framework_dora_ict_risk_governance_and_framework, [dora_ict_risk_governance_and_framework_status/2, dora_ict_risk_governance_and_framework_status_values/1, ict_risk_governance_duties_required/3, ict_risk_governance_duties_complete/3, ict_risk_governance_duties_outstanding/3]).
+:- use_module(m__eu_dora_ict_risk_governance_and_framework_fixtures, [dora_ict_risk_governance_and_framework_profile_for/2]).
+
+complete_result(Subject, Result) :-
+    dora_ict_risk_governance_and_framework_profile_for(Subject, Profile),
+    ict_risk_governance_duties_complete(Profile, Result, _).
+
+required_result(Subject, Result) :-
+    dora_ict_risk_governance_and_framework_profile_for(Subject, Profile),
+    ict_risk_governance_duties_required(Profile, Result, _).
+
+outstanding_result(Subject, Result) :-
+    dora_ict_risk_governance_and_framework_profile_for(Subject, Profile),
+    ict_risk_governance_duties_outstanding(Profile, Result, _).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    dora_ict_risk_governance_and_framework_status_values(StatusValues),
+    StatusValues == [complete, incomplete, simplified_framework_entity].
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    findall(Status, dora_ict_risk_governance_and_framework_status(Profile, Status), [complete]).
+test(an_article_16_entity_is_simplified) :-
+    complete_result(article_16_1_entity, simplified_framework_entity).
+test(an_article_16_entity_with_an_unperformed_duty_is_still_simplified) :-
+    complete_result(article_16_1_entity_with_unperformed_duty, simplified_framework_entity).
+test(an_ordinary_entity_is_complete) :-
+    complete_result(large_entity_all_performed, complete).
+test(an_absent_article_16_answer_is_named) :-
+    complete_result(article_16_1_answer_absent, indeterminate([financial_entity_is_article_16_1_entity])).
+test(an_unperformed_duty_is_incomplete) :-
+    complete_result(large_entity_data_security_unperformed, incomplete).
+test(the_annual_review_binds_a_larger_entity) :-
+    complete_result(large_entity_annual_review_unperformed, incomplete).
+test(the_annual_review_does_not_bind_a_microenterprise) :-
+    complete_result(microenterprise_annual_review_unperformed, complete).
+test(the_periodic_review_binds_a_microenterprise) :-
+    complete_result(microenterprise_periodic_review_unperformed, incomplete).
+test(an_unassessed_major_change_is_incomplete) :-
+    complete_result(large_entity_major_change_unassessed, incomplete).
+test(without_a_major_change_the_assessment_is_not_due) :-
+    complete_result(large_entity_no_major_change_unassessed, complete).
+test(without_a_major_change_nothing_is_outstanding) :-
+    outstanding_result(large_entity_no_major_change_unassessed, none_outstanding).
+test(unassessed_legacy_systems_are_incomplete) :-
+    complete_result(large_entity_legacy_systems_unassessed, incomplete).
+test(without_legacy_systems_the_assessment_is_not_due) :-
+    complete_result(large_entity_no_legacy_systems_unassessed, complete).
+test(an_unanswered_information_request_is_incomplete) :-
+    complete_result(large_entity_information_request_unanswered, incomplete).
+test(without_an_information_request_nothing_is_due) :-
+    complete_result(large_entity_no_information_request, complete).
+test(an_unanswered_review_report_request_is_incomplete) :-
+    complete_result(large_entity_review_report_request_unanswered, incomplete).
+test(without_a_review_report_request_nothing_is_due) :-
+    complete_result(large_entity_no_review_report_request, complete).
+test(a_missing_major_change_answer_is_named_for_a_larger_entity) :-
+    required_result(large_entity_major_change_unanswered, indeterminate([major_change_occurred])).
+test(a_missing_major_change_answer_is_not_asked_of_a_microenterprise) :-
+    required_result(microenterprise_major_change_unanswered, required(_)).
+test(a_size_failing_either_way_is_incomplete) :-
+    complete_result(size_unanswered_both_reviews_unperformed, incomplete).
+test(a_size_failing_one_way_is_named) :-
+    complete_result(size_unanswered_annual_review_unperformed, indeterminate([financial_entity_is_microenterprise])).
+test(a_size_that_cannot_matter_is_not_asked) :-
+    complete_result(size_unanswered_all_performed, complete).
+test(a_missing_duty_key_is_named) :-
+    complete_result(large_entity_governance_framework_unanswered, indeterminate([has_internal_governance_and_control_framework])).
+test(an_unsure_judgement_that_matters_is_referred) :-
+    complete_result(large_entity_control_function_unsure, needs_legal_review(open_textured(independent_ict_risk_control_function_assigned, cite(eu_reg_2022_2554_art_6_4)), _)).
+test(an_unsure_judgement_on_a_duty_that_does_not_apply_is_not_referred) :-
+    complete_result(microenterprise_control_function_unsure, complete).
+test(an_unsure_judgement_overtaken_by_a_failure_is_not_referred) :-
+    complete_result(large_entity_control_function_unsure_and_data_security_unperformed, incomplete).
+test(an_unknown_key_is_an_input_problem) :-
+    complete_result(large_entity_unknown_key, input_problems([unknown_key(entity_holds_a_banking_licence)])).
+test(an_unsure_size_is_wrong_type) :-
+    complete_result(microenterprise_answered_unsure, input_problems([wrong_type(financial_entity_is_microenterprise)])).
+test(a_repeated_size_is_a_duplicate) :-
+    complete_result(large_entity_duplicate_size_answer, input_problems([duplicate_key(financial_entity_is_microenterprise)])).
+test(both_unperformed_duties_are_listed) :-
+    outstanding_result(large_entity_legacy_and_data_security_unperformed, outstanding([data_security_policies, legacy_systems_risk_assessment])).
+
+test(the_baseline_profile_yields_no_other_table_status, fail) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    findall(Status, dora_ict_risk_governance_and_framework_status(Profile, Status), [BaselineStatus]),
+    dora_ict_risk_governance_and_framework_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_ict_risk_governance_and_framework_status(Profile, Other).
+test(an_ordinary_entity_is_not_simplified, fail) :-
+    complete_result(large_entity_all_performed, simplified_framework_entity).
+test(a_present_article_16_answer_is_not_named, fail) :-
+    complete_result(large_entity_all_performed, indeterminate(_)).
+test(an_unperformed_duty_is_not_complete, fail) :-
+    complete_result(large_entity_data_security_unperformed, complete).
+test(all_performed_is_not_incomplete, fail) :-
+    complete_result(large_entity_all_performed, incomplete).
+test(the_annual_review_does_not_make_a_microenterprise_incomplete, fail) :-
+    complete_result(microenterprise_annual_review_unperformed, incomplete).
+test(without_a_major_change_it_is_not_incomplete, fail) :-
+    complete_result(large_entity_no_major_change_unassessed, incomplete).
+test(without_legacy_systems_it_is_not_incomplete, fail) :-
+    complete_result(large_entity_no_legacy_systems_unassessed, incomplete).
+test(without_a_review_report_request_it_is_not_incomplete, fail) :-
+    complete_result(large_entity_no_review_report_request, incomplete).
+test(a_microenterprise_is_not_indeterminate_on_the_major_change, fail) :-
+    required_result(microenterprise_major_change_unanswered, indeterminate(_)).
+test(a_size_failing_one_way_is_not_incomplete, fail) :-
+    complete_result(size_unanswered_annual_review_unperformed, incomplete).
+test(a_missing_duty_key_is_not_complete, fail) :-
+    complete_result(large_entity_governance_framework_unanswered, complete).
+test(an_overtaken_unsure_judgement_is_not_a_legal_review, fail) :-
+    complete_result(large_entity_control_function_unsure_and_data_security_unperformed, needs_legal_review(_, _)).
+test(a_well_formed_profile_has_no_input_problem, fail) :-
+    complete_result(large_entity_all_performed, input_problems(_)).
+test(one_unperformed_duty_alone_is_not_the_list, fail) :-
+    outstanding_result(large_entity_legacy_and_data_security_unperformed, outstanding([data_security_policies])).
+
+cp_test_names([the_status_table_has_a_near_miss_atom, the_baseline_profile_yields_exactly_one_status, an_article_16_entity_is_simplified, an_article_16_entity_with_an_unperformed_duty_is_still_simplified, an_ordinary_entity_is_complete, an_absent_article_16_answer_is_named, an_unperformed_duty_is_incomplete, the_annual_review_binds_a_larger_entity, the_annual_review_does_not_bind_a_microenterprise, the_periodic_review_binds_a_microenterprise, an_unassessed_major_change_is_incomplete, without_a_major_change_the_assessment_is_not_due, without_a_major_change_nothing_is_outstanding, unassessed_legacy_systems_are_incomplete, without_legacy_systems_the_assessment_is_not_due, an_unanswered_information_request_is_incomplete, without_an_information_request_nothing_is_due, an_unanswered_review_report_request_is_incomplete, without_a_review_report_request_nothing_is_due, a_missing_major_change_answer_is_named_for_a_larger_entity, a_missing_major_change_answer_is_not_asked_of_a_microenterprise, a_size_failing_either_way_is_incomplete, a_size_failing_one_way_is_named, a_size_that_cannot_matter_is_not_asked, a_missing_duty_key_is_named, an_unsure_judgement_that_matters_is_referred, an_unsure_judgement_on_a_duty_that_does_not_apply_is_not_referred, an_unsure_judgement_overtaken_by_a_failure_is_not_referred, an_unknown_key_is_an_input_problem, an_unsure_size_is_wrong_type, a_repeated_size_is_a_duplicate, both_unperformed_duties_are_listed]).
+cp_test_fail_names([the_baseline_profile_yields_no_other_table_status, an_ordinary_entity_is_not_simplified, a_present_article_16_answer_is_not_named, an_unperformed_duty_is_not_complete, all_performed_is_not_incomplete, the_annual_review_does_not_make_a_microenterprise_incomplete, without_a_major_change_it_is_not_incomplete, without_legacy_systems_it_is_not_incomplete, without_a_review_report_request_it_is_not_incomplete, a_microenterprise_is_not_indeterminate_on_the_major_change, a_size_failing_one_way_is_not_incomplete, a_missing_duty_key_is_not_complete, an_overtaken_unsure_judgement_is_not_a_legal_review, a_well_formed_profile_has_no_input_problem, one_unperformed_duty_alone_is_not_the_list]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

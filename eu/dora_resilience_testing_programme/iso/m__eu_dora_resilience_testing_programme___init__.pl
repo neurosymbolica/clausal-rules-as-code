@@ -1,0 +1,54 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_resilience_testing_programme___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_resilience_testing_programme_kernel, [contract_key/2, dora_resilience_testing_programme_input_problems/2, present_pairs/2]).
+:- use_module(m__eu_dora_resilience_testing_programme_citations, [citation/2, implements/1]).
+:- use_module(m__eu_dora_resilience_testing_programme_dora_resilience_testing_programme, [decide_dora_resilience_testing_programme/2, dora_resilience_testing_programme_checklist/2, dora_resilience_testing_programme_decision_resolvable/1, dora_resilience_testing_programme_status/2, dora_resilience_testing_programme_status_values/1, resilience_testing_duties_complete/3, resilience_testing_duties_outstanding/3, resilience_testing_duties_required/3]).
+:- use_module(m__eu_dora_resilience_testing_programme_queries, [central_counterparty/0, central_securities_depository/0, complete/0, critical_ict_systems_tested_at_least_yearly/0, dora_entity_type/0, dora_resilience_testing_programme_compliance_check/3, dora_resilience_testing_programme_profile_keys/1, dora_resilience_testing_programme_what_if/4, execution_of_appropriate_tests/0, financial_entity_is_microenterprise/0, incomplete/0, independent_testers/0, internal_tester_resourced_and_conflicts_of_interest_avoided/0, internal_tester_resources_and_conflicts_of_interest/0, internal_validation_methodologies/0, internal_validation_methodologies_established/0, issue_prioritisation_classification_and_remedy/0, microenterprise_risk_based_planned_testing/0, microenterprise_tests_risk_based_and_planned/0, none_outstanding/0, procedures_to_prioritise_classify_and_remedy_issues_established/0, programme_conducted_on_risk_based_approach/0, programme_includes_range_of_assessments_and_tests/0, programme_provides_for_appropriate_tests/0, range_of_assessments_and_tests/0, resilience_testing_programme/0, resilience_testing_programme_established_maintained_and_reviewed/0, risk_based_testing_approach/0, tests_undertaken_by_independent_parties/0, tests_undertaken_by_internal_tester/0, unsure/0, vulnerability_assessments_before_deployment/0, vulnerability_assessments_performed_before_deployment/0, yearly_testing_of_critical_ict_systems/0]).
+:- use_module(m__eu_dora_resilience_testing_programme_fixtures, [dora_resilience_testing_programme_assess/2, dora_resilience_testing_programme_profile_for/2, dora_resilience_testing_programme_subject/1]).
+
+root_export(central_counterparty).
+root_export(central_securities_depository).
+root_export(complete).
+root_export(critical_ict_systems_tested_at_least_yearly).
+root_export(dora_entity_type).
+root_export(duplicate_key).
+root_export(execution_of_appropriate_tests).
+root_export(financial_entity_is_microenterprise).
+root_export(incomplete).
+root_export(independent_testers).
+root_export(indeterminate).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(internal_tester_resourced_and_conflicts_of_interest_avoided).
+root_export(internal_tester_resources_and_conflicts_of_interest).
+root_export(internal_validation_methodologies).
+root_export(internal_validation_methodologies_established).
+root_export(issue_prioritisation_classification_and_remedy).
+root_export(microenterprise_risk_based_planned_testing).
+root_export(microenterprise_tests_risk_based_and_planned).
+root_export(needs_legal_review).
+root_export(none_outstanding).
+root_export(open_textured).
+root_export(outstanding).
+root_export(procedures_to_prioritise_classify_and_remedy_issues_established).
+root_export(programme_conducted_on_risk_based_approach).
+root_export(programme_includes_range_of_assessments_and_tests).
+root_export(programme_provides_for_appropriate_tests).
+root_export(provenance).
+root_export(range_of_assessments_and_tests).
+root_export(required).
+root_export(resilience_testing_programme).
+root_export(resilience_testing_programme_established_maintained_and_reviewed).
+root_export(risk_based_testing_approach).
+root_export(tests_undertaken_by_independent_parties).
+root_export(tests_undertaken_by_internal_tester).
+root_export(unknown_key).
+root_export(unsure).
+root_export(vulnerability_assessments_before_deployment).
+root_export(vulnerability_assessments_performed_before_deployment).
+root_export(wrong_type).
+root_export(yearly_testing_of_critical_ict_systems).

@@ -1,0 +1,351 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/labour/night_work
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "night_work"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The root_exports atoms (profile keys, enumeration
+# atoms, shift kinds, result atoms, unsure) are listed as name/0 because the
+# test cases read them as package-root attributes.
+public_interface:
+  # -- kernel.clausal --
+  # (night_work_input_problems/2 is re-exported through queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- night_work.clausal --
+  - "night_work_average_status/7"
+  - "hazardous_night_work_status/7"
+  - "average_night_hours_kept/0"
+  - "average_night_hours_exceeded/0"
+  - "hazardous_night_work_hours_kept/0"
+  - "hazardous_night_work_hours_exceeded/0"
+  - "night_work_limits_not_applied_to_worker/0"
+  - "not_a_night_worker/0"
+  - "no_special_hazards_or_heavy_strain/0"
+  - "night_work_derogation_applies/0"
+  - "decide_night_work/2"
+  - "night_work_status/2"
+  - "night_work_checklist/2"
+  - "night_work_decision_resolvable/1"
+  - "night_work_status_values/1"
+  # -- queries.clausal --
+  - "night_work_profile_keys/1"
+  - "night_work_input_problems/2"
+  - "night_work_what_if/4"
+  - "night_work_block_limit_minutes/2"
+  - "night_work_span_working_minutes/6"
+  - "on_call_on_site_counts_as_working_time/0"
+  - "on_call_standby_counts_as_working_time/0"
+  - "night_time_start/0"
+  - "night_time_end/0"
+  - "night_work_reference_period_days/0"
+  - "worker_category/0"
+  - "night_worker/0"
+  - "special_hazards_or_heavy_strain/0"
+  - "derogation_from_article_8/0"
+  - "other_worker/0"
+  - "mobile_worker/0"
+  - "seagoing_fishing_vessel_worker/0"
+  - "no_derogation/0"
+  - "derogation_under_article_17_1/0"
+  - "derogation_under_article_17_3/0"
+  - "derogation_under_article_18/0"
+  - "work/0"
+  - "on_call_on_site/0"
+  - "on_call_standby/0"
+  - "paid_annual_leave/0"
+  - "sick_leave/0"
+  - "unsure/0"
+  - "date/3"
+  - "date_time/5"
+  - "shift/4"
+  - "cite/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "night_work_subject/1"
+  - "night_work_profile_for/2"
+  - "night_work_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: module paths of shared backbone packages this
+# domain imports. The domain imports only kit modules (formalize_lib) and
+# library(datetime), no shared backbone package.
+uses: []
+
+scope: "Whether one worker's rota, over one period from PERIOD_START to PERIOD_END
+  (both days included), keeps the two limits on the length of night work that
+  Article 8 of Directive 2003/88/EC requires the Member States to ensure:
+  Art 8(a), normal hours of work of night workers not exceeding an average of
+  eight hours in any 24-hour period, averaged over consecutive reference blocks
+  of the Art 16(c) reference period with one 24-hour period left out of the
+  divisor for each whole seven days (Art 16, last sentence); and Art 8(b), night
+  workers whose work involves special hazards or heavy physical or mental strain
+  not working more than eight hours in any period of 24 hours during which they
+  perform night work. Working time is read under Art 2(1) (on-call time by the
+  caller's judgement), night time under Art 2(3) (the caller's national night
+  time), and the outcomes apply Art 20(1) with Art 2(7) (mobile workers), Art
+  21(1) (seagoing fishing vessels) and the derogations of Art 17(1), Art 17(3)
+  and Art 18 as stated by the caller. It is a check of a rota against the
+  Directive, not a finding against an employer. Out of scope, handed to a lawyer
+  or a sibling order: whether the worker is within Art 1 or under a more specific
+  rule of Art 14; whether the worker is a night worker under Art 2(4) (caller's
+  judgement); the national definition of special hazards or heavy strain
+  (caller's judgement); the conditions of any derogation and the compensating
+  rest or protection they require; the adequate rest of mobile and fishing vessel
+  workers; the other duties for night workers (Arts 9 to 13); the average weekly
+  working time of Art 6; national rules on night work; amendments after the
+  original act."
+
+sources:
+  - "Directive 2003/88/EC of the European Parliament and of the Council of 4 November
+    2003 concerning certain aspects of the organisation of working time (Working Time
+    Directive), OJ L 299, 18.11.2003, p. 9 (CELEX 32003L0088, original act; no English
+    consolidation exists): Art 1(3), Art 2(1), 2(3), 2(4), 2(7), Art 8 (opening words,
+    points (a) and (b), last subparagraph), Art 14, Art 16 (opening words, point (c),
+    last sentence), Art 17(1), 17(2), 17(3), Art 18 (first to third subparagraphs),
+    Art 20(1), Art 21(1)."
+
+query_interface:
+  2: "night_work_status/2"                 # status verdict of a case (Art 8(a) or Art 8(b))
+  16: "night_work_what_if/4"               # what_if: re-evaluate under an overridden key
+  23: "night_work_block_limit_minutes/2"   # calculation: the working-minute limit of a reference block
+
+deferred_set:
+- what: article_units
+  units:
+  - 32003L0088#art_001
+  - 32003L0088#art_002
+  - 32003L0088#art_003
+  - 32003L0088#art_012
+  - 32003L0088#art_014
+  - 32003L0088#art_016
+  - 32003L0088#art_017
+  - 32003L0088#art_018
+  - 32003L0088#art_020
+  - 32003L0088#art_021
+  reason: Each of these article units holds the article's number and heading (with
+    opening words in Art 2, Art 12 and Art 16); the operative text this order reads
+    sits in the paragraph, point and subparagraph units below them. Art 16's opening
+    words are quoted for reading (6). Deferred so every unit of the pinned extract
+    is accounted for. (The article unit of Art 8 is cited, not deferred.)
+  consequence: 'None for a caller: the cited units carry the rules.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: scope_of_the_directive
+  units:
+  - 32003L0088#parag_001.001
+  - 32003L0088#parag_001.002
+  - 32003L0088#point_001.002_a
+  - 32003L0088#point_001.002_b
+  - 32003L0088#parag_001.003
+  - 32003L0088#subpara_001.003_1
+  - 32003L0088#parag_001.004
+  - 32003L0088#subpara_014_1
+  reason: Art 1 states the purpose and scope (all sectors within the meaning of Directive
+    89/391/EEC; not seafarers) and Art 14 leaves room for more specific Community
+    rules for certain occupations. The order does not decide whether a worker is within
+    the Directive; it assumes so (reading (16), Q23).
+  consequence: A caller whose worker is outside Art 1 (a seafarer, for example) or
+    under a more specific rule of Art 14 must not rely on the answers.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable as an input fact on scope in a later change to the orders; the
+    deferral stands for this run.
+- what: night_worker_definition_points
+  units:
+  - 32003L0088#point_002.004_a
+  - 32003L0088#point_002.004_b
+  - 32003L0088#point_002.004_b_i
+  - 32003L0088#point_002.004_b_ii
+  reason: 'Points (a) and (b) of Art 2(4), with (b)(i) and (b)(ii), say who is a night
+    worker: three hours of daily working time during night time as a normal course,
+    or a proportion of annual working time defined by national legislation or collective
+    agreement. The caller states the result as the judgement night_worker; the order
+    does not apply the points to the rota (reading (11), Q15).'
+  consequence: not_a_night_worker and every answer that relies on night_worker rest
+    on the caller's judgement, not on a check of the rota against Art 2(4).
+  declaration: answered_with_caveat
+  debt: true
+  open: Art 2(4)(a) could be computed from a rota once 'as a normal course' has a
+    reading; Art 2(4)(b) needs annual working time and the national proportion.
+- what: definitions_this_order_does_not_read
+  units:
+  - 32003L0088#parag_002.002
+  - 32003L0088#parag_002.005
+  - 32003L0088#parag_002.006
+  - 32003L0088#parag_002.008
+  - 32003L0088#parag_002.009
+  reason: Art 2(2), (5), (6), (8) and (9) define rest period, shift work, shift worker,
+    offshore work and adequate rest. This order reads Art 2(1), (3), (4) and (7) only.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  debt: true
+  open: the definitions belong to duties this order does not check (rest, shift work,
+    offshore work).
+- what: daily_rest
+  units:
+  - 32003L0088#subpara_003_1
+  reason: Art 3 (daily rest) is a separate duty, pinned with this extract; this order
+    does not read it.
+  consequence: The answers say nothing about the daily rest of Art 3.
+  declaration: not_an_exception
+  debt: true
+  open: the daily rest is a separate duty, checked by its own order.
+- what: safety_and_health_protection_of_night_workers
+  units:
+  - 32003L0088#point_012_a
+  - 32003L0088#point_012_b
+  reason: Art 12 asks the Member States to ensure safety and health protection appropriate
+    to the nature of the work of night workers and shift workers, and equivalent protection
+    and prevention services. It sets no limit a rota can be checked against; this
+    order checks Art 8 only (Q20).
+  consequence: The answers say nothing about the protection Art 12 requires.
+  declaration: not_an_exception
+  debt: true
+  open: not a rota check; would need facts about protection and services.
+- what: other_reference_periods_and_the_leave_sentence
+  units:
+  - 32003L0088#point_016_a
+  - 32003L0088#point_016_b
+  - 32003L0088#subpara_016_1
+  reason: Art 16(a) and 16(b) let the Member States lay down reference periods for
+    Art 5 (weekly rest) and Art 6 (maximum weekly working time). The sentence printed
+    after 16(b) (subpara_016_1) makes paid annual leave and sick leave neutral in
+    the calculation of the average; the order reads it as belonging to Art 16(b) and
+    does not apply it to the average of Art 8(a) (reading (6), Q10).
+  consequence: Leave days stay in the divisor of the Art 8(a) average.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: conditions_of_the_derogations
+  units:
+  - 32003L0088#point_017.001_a
+  - 32003L0088#point_017.001_b
+  - 32003L0088#point_017.001_c
+  - 32003L0088#parag_017.002
+  - 32003L0088#point_017.003_a
+  - 32003L0088#point_017.003_b
+  - 32003L0088#point_017.003_c
+  - 32003L0088#point_017.003_c_i
+  - 32003L0088#point_017.003_c_ii
+  - 32003L0088#point_017.003_c_iii
+  - 32003L0088#point_017.003_c_iv
+  - 32003L0088#point_017.003_c_v
+  - 32003L0088#point_017.003_c_vi
+  - 32003L0088#point_017.003_c_vii
+  - 32003L0088#point_017.003_c_viii
+  - 32003L0088#point_017.003_d
+  - 32003L0088#point_017.003_d_i
+  - 32003L0088#point_017.003_d_ii
+  - 32003L0088#point_017.003_d_iii
+  - 32003L0088#point_017.003_e
+  - 32003L0088#point_017.003_e_i
+  - 32003L0088#point_017.003_e_ii
+  - 32003L0088#point_017.003_e_iii
+  - 32003L0088#point_017.003_f
+  - 32003L0088#point_017.003_g
+  - 32003L0088#subpara_018_3
+  - 32003L0088#subpara_018_4
+  - 32003L0088#point_018_a
+  - 32003L0088#point_018_b
+  reason: The points of Art 17(1) and 17(3) list the activities and cases a derogation
+    may cover; Art 17(2) and the third subparagraph of Art 18 require equivalent compensating
+    rest or appropriate protection; the fourth subparagraph of Art 18 lets the Member
+    States lay down rules for applying it. Whether a derogation exists and meets them
+    is a matter of national law and of the agreements; the caller states the derogation
+    (reading (14), Q19).
+  consequence: night_work_derogation_applies never says that the conditions were met
+    or that compensating rest was given.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: derogations_that_do_not_touch_article_8
+  units:
+  - 32003L0088#parag_017.004
+  - 32003L0088#point_017.004_a
+  - 32003L0088#point_017.004_b
+  - 32003L0088#parag_017.005
+  - 32003L0088#subpara_017.005_1
+  - 32003L0088#subpara_017.005_2
+  - 32003L0088#subpara_017.005_3
+  - 32003L0088#subpara_017.005_4
+  - 32003L0088#subpara_017.005_5
+  - 32003L0088#point_017.005_a
+  - 32003L0088#point_017.005_b
+  - 32003L0088#subpara_017.005_6
+  reason: Art 17(4) lets the Member States derogate from Articles 3 and 5 for shift
+    work and split work, and Art 17(5) from Article 6 and Article 16(b) for doctors
+    in training. Neither names Art 8.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: adequate_rest_and_limits_of_mobile_and_fishing_vessel_workers
+  units:
+  - 32003L0088#subpara_020.001_1
+  - 32003L0088#subpara_021.001_1
+  - 32003L0088#parag_021.002
+  - 32003L0088#point_021.002_a
+  - 32003L0088#point_021.002_b
+  - 32003L0088#subpara_021.002_1
+  - 32003L0088#parag_021.003
+  - 32003L0088#point_021.003_a
+  - 32003L0088#point_021.003_a_i
+  - 32003L0088#point_021.003_a_ii
+  - 32003L0088#subpara_021.003_1
+  - 32003L0088#point_021.003_b
+  - 32003L0088#point_021.003_b_i
+  - 32003L0088#point_021.003_b_ii
+  - 32003L0088#parag_021.004
+  - 32003L0088#parag_021.005
+  - 32003L0088#point_021.005_a
+  - 32003L0088#point_021.005_b
+  - 32003L0088#parag_021.006
+  - 32003L0088#parag_021.007
+  reason: The second subparagraphs of Art 20(1) and Art 21(1) and Art 21(2) to (7)
+    ask the Member States to ensure adequate rest, and limits on hours of work or
+    rest, for mobile workers and workers on board seagoing fishing vessels, by national
+    measures. This order only says that Art 8 does not apply to them (reading (13),
+    Q18).
+  consequence: night_work_limits_not_applied_to_worker never says that the worker
+    had adequate rest or that the limits of Art 21 were kept.
+  declaration: answered_with_caveat
+  not_formalized_because: national_law
+- what: offshore_reference_period
+  units:
+  - 32003L0088#parag_020.002
+  reason: Art 20(2) lets the Member States extend the reference period of Art 16(b)
+    to 12 months for workers who mainly perform offshore work. It is a Member State
+    option for another article and does not touch Art 8.
+  consequence: None for the answers of this order.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+- what: review_of_offshore_provisions
+  units:
+  - 32003L0088#parag_020.003
+  reason: Art 20(3) asks the Commission to review the provisions on offshore workers
+    by 1 August 2005. It binds an institution and does not touch Art 8.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: institutional

@@ -1,205 +1,107 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_output_mode.clausal -- OUTPUT MODE: every answer argument read out,
-% the whole answer list collected and compared, for each fixture and both
-% queries (exactly ONE solution each).
+% the full answer list compared, for each route of both queries, the
+% checklist and the verdict.
 % Run: python -m clausal.testing eu/data_protection/gdpr_art36_3_consultation_request/tests/test_output_mode.clausal
 % =====================================================================
 :- module(test_output_mode, []).
 :- use_module(eu/data_protection/gdpr_art36_3_consultation_request/gdpr_art36_3_consultation_request, [
     consultation_request_status/4,
     missing_consultation_request_items/4,
-    decide_gdpr_art36_3_consultation_request/2
+    decide_gdpr_art36_3_consultation_request/2,
+    gdpr_art36_3_consultation_request_checklist/2
 ]).
 :- use_module(eu/data_protection/gdpr_art36_3_consultation_request/fixtures, [gdpr_art36_3_consultation_request_profile_for/2]).
 
-seven_citations([
-    cite(eu_reg_2016_679_art_36_3),
-    cite(eu_reg_2016_679_art_36_3_a),
-    cite(eu_reg_2016_679_art_36_3_b),
-    cite(eu_reg_2016_679_art_36_3_c),
-    cite(eu_reg_2016_679_art_36_3_d),
-    cite(eu_reg_2016_679_art_36_3_e),
-    cite(eu_reg_2016_679_art_36_3_f)
-]).
+sole_controller_statement(attested(false, attestation(privacy_counsel, attestation_moment, role_review, none))).
 
-controller_alone_basis([outside_fact(joint_controllers_or_processors_involved, attested(false, attestation(host_user, host_time, stated_by_caller, none)))]).
+joint_controllers_statement(attested(true, attestation(privacy_counsel, attestation_moment, role_review, none))).
 
-processor_involved_basis([outside_fact(joint_controllers_or_processors_involved, attested(true, attestation(host_user, host_time, stated_by_caller, none)))]).
-
-roles_referral(needs_legal_review(
-    cross_reference_unresolved(cite(eu_reg_2016_679_art_36_3_a), cite(controller_and_processor_roles_statement)),
-    [resolution(cite(controller_and_processor_roles_statement), not_attempted),
-     inputs_relied_on([joint_controllers_or_processors_involved-absent])])).
+seven_citations([cite(eu_reg_2016_679_art_36_3), cite(eu_reg_2016_679_art_36_3_a), cite(eu_reg_2016_679_art_36_3_b), cite(eu_reg_2016_679_art_36_3_c), cite(eu_reg_2016_679_art_36_3_d), cite(eu_reg_2016_679_art_36_3_e), cite(eu_reg_2016_679_art_36_3_f)]).
 
 status_answers(Subject, Answers) :-
     gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
-    findall(Result-Basis-Citations, consultation_request_status(Profile, Result, Basis, Citations), Answers).
+    findall(Result-Basis, consultation_request_status(Profile, Result, Basis, _Citations), Answers).
 
 items_answers(Subject, Answers) :-
     gdpr_art36_3_consultation_request_profile_for(Subject, Profile),
-    findall(Items-Basis-Citations, missing_consultation_request_items(Profile, Items, Basis, Citations), Answers).
+    findall(Items-Basis, missing_consultation_request_items(Profile, Items, Basis, _Citations), Answers).
 
-test(controller_alone_complete_answers) :-
-    controller_alone_basis(Basis),
-    seven_citations(Citations),
-    status_answers(controller_alone_complete, StatusAnswers),
-    StatusAnswers == [consultation_request_complete-Basis-Citations],
-    items_answers(controller_alone_complete, ItemAnswers),
-    ItemAnswers == [[]-Basis-Citations].
-
-test(impact_assessment_not_provided_answers) :-
-    controller_alone_basis(Basis),
-    seven_citations(Citations),
-    status_answers(impact_assessment_not_provided, StatusAnswers),
-    StatusAnswers == [consultation_request_incomplete-Basis-Citations],
-    items_answers(impact_assessment_not_provided, ItemAnswers),
-    ItemAnswers == [[data_protection_impact_assessment]-Basis-Citations].
-
-test(consultation_under_member_state_law_answers) :-
-    status_answers(consultation_under_member_state_law, StatusAnswers),
+test(complete_sole_controller_answers) :-
+    sole_controller_statement(Statement),
+    status_answers(complete_sole_controller, StatusAnswers),
+    StatusAnswers == [consultation_request_complete-[outside_fact(joint_controllers_or_processors_involved, Statement)]],
+    items_answers(complete_sole_controller, ItemAnswers),
+    ItemAnswers == [[]-[outside_fact(joint_controllers_or_processors_involved, Statement)]].
+test(missing_assessment_answers) :-
+    sole_controller_statement(Statement),
+    status_answers(incomplete_missing_assessment, StatusAnswers),
+    StatusAnswers == [consultation_request_incomplete-[outside_fact(joint_controllers_or_processors_involved, Statement)]],
+    items_answers(incomplete_missing_assessment, ItemAnswers),
+    ItemAnswers == [[data_protection_impact_assessment]-[outside_fact(joint_controllers_or_processors_involved, Statement)]].
+test(complete_joint_controllers_answers_copy_no_unread_fact) :-
+    status_answers(complete_joint_controllers, StatusAnswers),
+    StatusAnswers == [consultation_request_complete-[]],
+    items_answers(complete_joint_controllers, ItemAnswers),
+    ItemAnswers == [[]-[]].
+test(responsibilities_missing_answers_copy_the_read_fact) :-
+    joint_controllers_statement(Statement),
+    status_answers(joint_controllers_responsibilities_missing, StatusAnswers),
+    StatusAnswers == [consultation_request_incomplete-[outside_fact(joint_controllers_or_processors_involved, Statement)]],
+    items_answers(joint_controllers_responsibilities_missing, ItemAnswers),
+    ItemAnswers == [[respective_responsibilities]-[outside_fact(joint_controllers_or_processors_involved, Statement)]].
+test(officer_contact_details_missing_answers) :-
+    items_answers(officer_contact_details_missing, ItemAnswers),
+    ItemAnswers == [[data_protection_officer_contact_details]-[]].
+test(other_information_missing_answers) :-
+    items_answers(other_information_missing, ItemAnswers),
+    ItemAnswers == [[other_requested_information]-[]].
+test(member_state_law_answers) :-
+    gdpr_art36_3_consultation_request_profile_for(member_state_law_consultation, Profile),
+    findall(Result-Basis-Citations, consultation_request_status(Profile, Result, Basis, Citations), StatusAnswers),
     StatusAnswers == [not_governed_by_article_36_3-[]-[cite(eu_reg_2016_679_art_36_3)]],
-    items_answers(consultation_under_member_state_law, ItemAnswers),
+    findall(Items-Basis-Citations, missing_consultation_request_items(Profile, Items, Basis, Citations), ItemAnswers),
     ItemAnswers == [not_governed_by_article_36_3-[]-[cite(eu_reg_2016_679_art_36_3)]].
-
-test(consultation_footing_not_stated_answers) :-
-    status_answers(consultation_footing_not_stated, StatusAnswers),
-    StatusAnswers == [indeterminate([consultation_under_article_36_1])-[]-[]],
-    items_answers(consultation_footing_not_stated, ItemAnswers),
-    ItemAnswers == [indeterminate([consultation_under_article_36_1])-[]-[]].
-
-test(roles_not_attested_answers_are_the_referral) :-
-    roles_referral(Referral),
-    status_answers(roles_not_attested_responsibilities_not_given, StatusAnswers),
-    StatusAnswers == [Referral-[]-[]],
-    items_answers(roles_not_attested_responsibilities_not_given, ItemAnswers),
-    ItemAnswers == [Referral-[]-[]].
-
-test(roles_attested_controller_alone_answers) :-
-    controller_alone_basis(Basis),
-    seven_citations(Citations),
-    status_answers(roles_attested_controller_alone, StatusAnswers),
-    StatusAnswers == [consultation_request_complete-Basis-Citations],
-    items_answers(roles_attested_controller_alone, ItemAnswers),
-    ItemAnswers == [[]-Basis-Citations].
-
-test(processor_involved_responsibilities_missing_answers) :-
-    processor_involved_basis(Basis),
-    seven_citations(Citations),
-    status_answers(processor_involved_responsibilities_missing, StatusAnswers),
-    StatusAnswers == [consultation_request_incomplete-Basis-Citations],
-    items_answers(processor_involved_responsibilities_missing, ItemAnswers),
-    ItemAnswers == [[respective_responsibilities]-Basis-Citations].
-
-test(processor_involved_responsibilities_given_answers_copy_no_basis) :-
-    seven_citations(Citations),
-    status_answers(processor_involved_responsibilities_given, StatusAnswers),
-    StatusAnswers == [consultation_request_complete-[]-Citations],
-    items_answers(processor_involved_responsibilities_given, ItemAnswers),
-    ItemAnswers == [[]-[]-Citations].
-
-test(officer_designated_contact_missing_answers) :-
-    seven_citations(Citations),
-    status_answers(officer_designated_contact_missing, StatusAnswers),
-    StatusAnswers == [consultation_request_incomplete-[]-Citations],
-    items_answers(officer_designated_contact_missing, ItemAnswers),
-    ItemAnswers == [[data_protection_officer_contact_details]-[]-Citations].
-
-test(officer_designated_contact_given_answers) :-
-    seven_citations(Citations),
-    status_answers(officer_designated_contact_given, StatusAnswers),
-    StatusAnswers == [consultation_request_complete-[]-Citations],
-    items_answers(officer_designated_contact_given, ItemAnswers),
-    ItemAnswers == [[]-[]-Citations].
-
-test(contact_given_designation_unstated_answers) :-
-    seven_citations(Citations),
-    status_answers(contact_given_designation_unstated, StatusAnswers),
-    StatusAnswers == [consultation_request_complete-[]-Citations],
-    items_answers(contact_given_designation_unstated, ItemAnswers),
-    ItemAnswers == [[]-[]-Citations].
-
-test(authority_request_answer_unstated_answers) :-
-    status_answers(authority_request_answer_unstated, StatusAnswers),
-    StatusAnswers == [indeterminate([requested_other_information_provided])-[]-[]],
-    items_answers(authority_request_answer_unstated, ItemAnswers),
-    ItemAnswers == [indeterminate([requested_other_information_provided])-[]-[]].
-
-test(authority_request_answered_answers) :-
-    seven_citations(Citations),
-    status_answers(authority_request_answered, StatusAnswers),
-    StatusAnswers == [consultation_request_complete-[]-Citations],
-    items_answers(authority_request_answered, ItemAnswers),
-    ItemAnswers == [[]-[]-Citations].
-
-test(authority_request_not_answered_answers) :-
-    seven_citations(Citations),
-    status_answers(authority_request_not_answered, StatusAnswers),
-    StatusAnswers == [consultation_request_incomplete-[]-Citations],
-    items_answers(authority_request_not_answered, ItemAnswers),
-    ItemAnswers == [[other_requested_information]-[]-Citations].
-
-test(missing_item_and_officer_unknown_answers) :-
-    seven_citations(Citations),
-    status_answers(missing_item_and_officer_unknown, StatusAnswers),
-    StatusAnswers == [consultation_request_incomplete-[]-Citations],
-    items_answers(missing_item_and_officer_unknown, ItemAnswers),
-    ItemAnswers == [indeterminate([data_protection_officer_designated])-[]-[]].
-
-test(missing_item_and_officer_not_designated_answers) :-
-    seven_citations(Citations),
-    status_answers(missing_item_and_officer_not_designated, StatusAnswers),
-    StatusAnswers == [consultation_request_incomplete-[]-Citations],
-    items_answers(missing_item_and_officer_not_designated, ItemAnswers),
-    ItemAnswers == [[purposes_and_means]-[]-Citations].
-
-test(deciding_key_before_responsibilities_answers) :-
-    status_answers(deciding_key_before_responsibilities, StatusAnswers),
-    StatusAnswers == [indeterminate([measures_and_safeguards_provided])-[]-[]],
-    items_answers(deciding_key_before_responsibilities, ItemAnswers),
-    ItemAnswers == [indeterminate([respective_responsibilities_provided])-[]-[]].
-
-test(responsibilities_unstated_roles_unstated_answers) :-
-    status_answers(responsibilities_unstated_roles_unstated, StatusAnswers),
-    StatusAnswers == [indeterminate([respective_responsibilities_provided])-[]-[]],
-    items_answers(responsibilities_unstated_roles_unstated, ItemAnswers),
-    ItemAnswers == [indeterminate([respective_responsibilities_provided])-[]-[]].
-
-test(attested_value_on_crisp_key_answers) :-
-    status_answers(attested_value_on_crisp_key, StatusAnswers),
-    StatusAnswers == [input_problems([wrong_type(purposes_and_means_provided)])-[]-[]],
-    items_answers(attested_value_on_crisp_key, ItemAnswers),
-    ItemAnswers == [input_problems([wrong_type(purposes_and_means_provided)])-[]-[]].
-
-test(bare_roles_value_answers) :-
-    status_answers(bare_roles_value, StatusAnswers),
-    StatusAnswers == [input_problems([wrong_type(joint_controllers_or_processors_involved)])-[]-[]].
-
-test(duplicate_and_unknown_keys_answers) :-
-    status_answers(duplicate_and_unknown_keys, StatusAnswers),
-    StatusAnswers == [input_problems([duplicate_key(impact_assessment_provided), unknown_key(controller_name)])-[]-[]],
-    items_answers(duplicate_and_unknown_keys, ItemAnswers),
-    ItemAnswers == [input_problems([duplicate_key(impact_assessment_provided), unknown_key(controller_name)])-[]-[]].
-
-test(several_missing_items_listed_in_point_order) :-
-    Profile = [
-        attribute(consultation_under_article_36_1, true),
-        attribute(respective_responsibilities_provided, true),
-        attribute(purposes_and_means_provided, false),
-        attribute(measures_and_safeguards_provided, true),
-        attribute(data_protection_officer_designated, true),
-        attribute(data_protection_officer_contact_details_provided, false),
-        attribute(impact_assessment_provided, false),
-        attribute(other_information_requested_by_supervisory_authority, true),
-        attribute(requested_other_information_provided, false)
-    ],
-    findall(Items, missing_consultation_request_items(Profile, Items, _, _), Answers),
-    Answers == [[purposes_and_means, data_protection_officer_contact_details, data_protection_impact_assessment, other_requested_information]].
-
-test(the_verdict_carries_its_citations) :-
-    gdpr_art36_3_consultation_request_profile_for(controller_alone_complete, Profile),
+test(unstated_footing_answers) :-
+    status_answers(consultation_footing_unstated, StatusAnswers),
+    StatusAnswers == [indeterminate([consultation_under_article_36_1])-[]],
+    items_answers(consultation_footing_unstated, ItemAnswers),
+    ItemAnswers == [indeterminate([consultation_under_article_36_1])-[]].
+test(referral_answers) :-
+    status_answers(roles_unattested_referral, StatusAnswers),
+    StatusAnswers == [needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_36_3_a), cite(controller_and_processor_roles_statement)), [resolution(cite(controller_and_processor_roles_statement), not_attempted), inputs_relied_on([joint_controllers_or_processors_involved-absent])])-[]].
+test(attested_sole_controller_answers) :-
+    sole_controller_statement(Statement),
+    items_answers(roles_attested_sole_controller, ItemAnswers),
+    ItemAnswers == [[]-[outside_fact(joint_controllers_or_processors_involved, Statement)]].
+test(designation_unknown_answers) :-
+    status_answers(officer_designation_unknown, StatusAnswers),
+    StatusAnswers == [indeterminate([data_protection_officer_designated])-[]],
+    items_answers(officer_designation_unknown, ItemAnswers),
+    ItemAnswers == [indeterminate([data_protection_officer_designated])-[]].
+test(officer_not_designated_answers) :-
+    status_answers(officer_not_designated, StatusAnswers),
+    StatusAnswers == [consultation_request_complete-[]].
+test(open_responsibilities_status_is_incomplete_items_ask) :-
+    status_answers(missing_item_with_open_responsibilities, StatusAnswers),
+    StatusAnswers == [consultation_request_incomplete-[]],
+    items_answers(missing_item_with_open_responsibilities, ItemAnswers),
+    ItemAnswers == [indeterminate([respective_responsibilities_provided])-[]].
+test(settled_responsibilities_items_list) :-
+    items_answers(missing_item_with_settled_responsibilities, ItemAnswers),
+    ItemAnswers == [[purposes_and_means]-[]].
+test(malformed_answers) :-
+    status_answers(malformed_attested_crisp_key, StatusAnswers),
+    StatusAnswers == [input_problems([wrong_type(purposes_and_means_provided)])-[]].
+test(the_verdict_carries_the_seven_citations) :-
+    gdpr_art36_3_consultation_request_profile_for(complete_joint_controllers, Profile),
     seven_citations(Citations),
     findall(Verdict, decide_gdpr_art36_3_consultation_request(Profile, Verdict), Verdicts),
     Verdicts == [gdpr_art36_3_consultation_request_verdict(consultation_request_complete, Citations)].
+test(the_checklist_names_each_point_with_its_cite) :-
+    gdpr_art36_3_consultation_request_profile_for(officer_contact_details_missing, Profile),
+    findall(Items, gdpr_art36_3_consultation_request_checklist(Profile, Items), Checklists),
+    Checklists == [[item(respective_responsibilities, satisfied, cite(eu_reg_2016_679_art_36_3_a)), item(purposes_and_means, satisfied, cite(eu_reg_2016_679_art_36_3_b)), item(measures_and_safeguards, satisfied, cite(eu_reg_2016_679_art_36_3_c)), item(data_protection_officer_contact_details, missing, cite(eu_reg_2016_679_art_36_3_d)), item(data_protection_impact_assessment, satisfied, cite(eu_reg_2016_679_art_36_3_e)), item(other_requested_information, satisfied, cite(eu_reg_2016_679_art_36_3_f))]].
 
 :- end_module(test_output_mode).

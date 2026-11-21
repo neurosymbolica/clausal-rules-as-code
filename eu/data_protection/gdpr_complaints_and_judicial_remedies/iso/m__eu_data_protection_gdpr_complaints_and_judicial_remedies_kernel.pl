@@ -45,22 +45,24 @@ attribute_list_t(Term, false) :-
 
 attribute_t(Element, false) :-
     var(Element).
-attribute_t(Element, T) :-
+attribute_t(Element, true) :-
     nonvar(Element),
-    Element = attribute(Key, _),
-    term_variables(Key, Variables),
-    no_variables_t(Variables, T).
+    Element = attribute(_, _).
 attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
-no_variables_t([], true).
-no_variables_t([_|_], false).
-
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    known_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
     unknown_keys(Elements, Known, Problems).
@@ -154,12 +156,29 @@ attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
 
 test(an_empty_profile_has_no_problem) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([], []).
-test(an_unbound_profile_is_not_an_attribute_list) :-
-    gdpr_complaints_and_judicial_remedies_input_problems(_, [wrong_type(profile)]).
+    gdpr_complaints_and_judicial_remedies_input_problems([], Problems),
+    Problems == [].
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true), attribute(decision_is_legally_binding, unsure), attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(host, at, reason, none)))], Problems),
+    Problems == [].
+test(duplicate_wrong_type_and_unknown_in_order) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true), attribute(colour, red), attribute(is_data_subject, false), attribute(decision_concerns_the_caller, maybe), attribute(colour, blue)], Problems),
+    Problems == [duplicate_key(is_data_subject), wrong_type(decision_concerns_the_caller), unknown_key(colour)].
 test(a_crisp_key_given_unsure_is_wrong_type) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, unsure)], [wrong_type(is_data_subject)]).
-test(a_judgement_given_unsure_is_well_formed) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([attribute(decision_is_legally_binding, unsure)], []).
-test(a_repeated_key_is_a_duplicate_only) :-
-    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true), attribute(is_data_subject, unsure)], [duplicate_key(is_data_subject)]).
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, unsure)], Problems),
+    Problems == [wrong_type(is_data_subject)].
+test(an_unbound_attestation_argument_is_wrong_type) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(authority_competent_under_articles_55_and_56, attested(true, attestation(_, at, reason, none)))], Problems),
+    Problems == [wrong_type(authority_competent_under_articles_55_and_56)].
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    gdpr_complaints_and_judicial_remedies_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_not_an_attribute_list) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(a_non_attribute_element_is_not_an_attribute_list) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([is_data_subject - true], Problems),
+    Problems == [wrong_type(profile)].
+
+test(a_well_formed_profile_is_not_refused, fail) :-
+    gdpr_complaints_and_judicial_remedies_input_problems([attribute(is_data_subject, true)], [_|_]).

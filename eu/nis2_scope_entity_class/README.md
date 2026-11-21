@@ -4,7 +4,7 @@
 
 ## Scope
 
-Directive (EU) 2022/2555 (NIS 2) Art 2 and Art 3, with the size categories of Art 2 of the Annex to Recommendation 2003/361/EC as Art 2(1) refers to it. Decides three questions for one entity from a profile of final figures and judgements: its size category (size_class/3), whether the Directive applies to it (scope_decision/3: the exclusions of Art 2(7), 2(9) and 2(10) first, then the thirteen grounds of Art 2(1) to 2(4)) and whether it is an essential or an important entity (entity_class/3, Art 3(1) and 3(2)). The Annex I or II type, and the open-textured points of Art 2(2)(b) to (e), are judgements of the caller: an unsure judgement that decides is handed back as needs_legal_review. Out of scope: how a Member State applies the Directive to an entity (country orders), the aggregation rules of Arts 3 to 6 of the Annex, national definitions of public administration, the Annex lists, and the obligations of Arts 21 and 23.
+Directive (EU) 2022/2555 (NIS 2) Art 2(1) to (4), (7), (9) and (10) and Art 3(1) and (2), with the size ceilings of Article 2 of the Annex to Commission Recommendation 2003/361/EC to which Art 2(1) refers. Decided here, from a profile of caller-stated facts and judgements: the size category of the entity (size_class/3), whether the Directive applies to it (scope_decision/3) and whether it is an essential or an important entity (entity_class/3). An absent fact that can change the answer is named (indeterminate, one key); an unsure judgement that decides is referred to a lawyer (needs_legal_review). Out of scope: whether an activity is of an Annex I or II type (a caller judgement), the SME aggregation rules of Arts 3 to 6 of the Annex to the Recommendation, the national definitions of public administration, the identification of critical entities under Directive (EU) 2022/2557, Member State extensions and exemptions under Art 2(5) and (8), whether national law applies the Directive (country orders), and jurisdiction and registration (sibling order).
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Directive (EU) 2022/2555 (NIS 2) Art 2 and Art 3, with the size categories of Ar
 
 ## What was checked
 
-- 268 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 242 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

@@ -1,4 +1,4 @@
-# Which Member State's jurisdiction an entity falls under (Directive (EU) 2022/2555 Art 26(1)-(3)), where the main establishment of a Union provider is (Art 26(2)), what ...
+# Directive (EU) 2022/2555 (NIS 2), original OJ text, Art 26(1) to (3), Art 27(1) to (3) and Art 3(3) and (4). Decided here, for an entity whose category the caller gives: ...
 
 `eu/nis2_jurisdiction_registration`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 176/176 | none (no provision-tracking ledger) | pass | pass | pass |
+| 216/216 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-Which Member State's jurisdiction an entity falls under (Directive (EU) 2022/2555 Art 26(1)-(3)), where the main establishment of a Union provider is (Art 26(2)), what the entity must submit to the registry (Art 27(2)) and for the Member States' list of entities (Art 3(4)), and the limits for notifying changes (Art 27(3), Art 3(4)). The Directive binds the Member States; this domain states what it requires. Out of scope (handed to the lawyer or a sibling domain): whether the entity is in scope and its category (sibling order on scope), calendar computation of the periods, national registers, forms and channels.
+Directive (EU) 2022/2555 (NIS 2), original OJ text, Art 26(1) to (3), Art 27(1) to (3) and Art 3(3) and (4). Decided here, for an entity whose category the caller gives: the basis of its jurisdiction (never the Member State itself), the step of Art 26(2) that fixes the main establishment of a provider named in Art 26(1)(b), the information it must submit for the ENISA registry (Art 27(2)) and for the Member States list of entities (Art 3(4)), and the limits for notifying changes (Art 27(3), Art 3(4) second subparagraph), listed and not computed. Unsure judgements on Art 26(2) are referred to a lawyer. Out of scope: whether the entity is in scope and which category it falls in (sibling order on scope), the authorities duties, the national register and channel (country orders), calendar computation of periods (Regulation 1182/71), and whether an initial submission was on time.
 
 ## Pinned sources
 
@@ -43,9 +43,9 @@ Which Member State's jurisdiction an entity falls under (Directive (EU) 2022/255
 
     **Consequence for a user:** The answers say what is to be submitted, not where; the country orders give the channel.
 
-??? info "registry_initial_submission_date"
+??? info "registry_submission_chapeau_and_initial_date"
 
-    **Why:** The opening words of Art 27(2) require Member States to have entities submit the information of points (a) to (f) by 17 January 2025. The items themselves are formalized through points (a) to (f) of Art 27(2) (registry_submission_items/2, each item carrying its cite(eu_dir_2022_2555_art_27_2_x)); the date has passed and no query gives or checks a date (reading (6)), so the opening words add no result of their own.
+    **Why:** The chapeau of Art 27(2) ('Member States shall require entities referred to in paragraph 1 to submit the following information to the competent authorities by 17 January 2025') binds the Member States and sets the date of the initial submission. The date has passed and no query gives or checks it (reading (6)); the information items themselves are formalized through points (a) to (f) (32022L2555#point_027.002_a to _f), and the entities addressed through the list of Art 27(1) (reading (6)).
 
-    **Consequence for a user:** The answers list what is to be submitted, not whether an initial submission was on time; the caller judges the date.
+    **Consequence for a user:** The answers list what an entity of Art 27(1) must submit; they do not say whether an initial submission was on time.
 

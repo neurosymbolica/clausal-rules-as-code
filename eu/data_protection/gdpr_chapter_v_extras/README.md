@@ -4,7 +4,7 @@
 
 ## Scope
 
-Beside the GDPR Chapter V cascade (gdpr-chapter-v-transfers), and deciding nothing it decides: for a transfer made under the second subparagraph of Art 49(1) GDPR (supplied as an attested outside fact), whether the controller has met the duty to inform the supervisory authority and the duty to inform the data subject of the transfer and of the compelling legitimate interests pursued (Art 49(1), second subparagraph, second and third sentences; duties of the controller only), and whether the controller or processor has met the duty to document the assessment and the suitable safeguards in its Art 30 records (Art 49(6)); whether Art 48 bars the recognition or enforcement of a third-country judgment or decision requiring a transfer or disclosure; and, under Art 44 first sentence, whether an onward transfer may take place, read from the onward transfer's own Chapter V answer supplied as an attested outside fact. Out of scope: whether any transfer has a Chapter V basis (the conditions of the second subparagraph of Art 49(1) included) - gdpr-chapter-v-transfers; whether a record of processing activities is required and what it holds (Art 30) - gdpr-records-and-officer; the information of ...
+Regulation (EU) 2016/679 (GDPR), beside gdpr-chapter-v-transfers (which it never re-decides). Decided here, from the pinned text only: the controller's two duties to inform (the supervisory authority; the data subject of the transfer and of the compelling legitimate interests) in the second and third sentences of the second subparagraph of Art 49(1), and the Art 49(6) duty of the controller or processor to document the assessment and the suitable safeguards in its Art 30 records, for a transfer made under that subparagraph (second_subparagraph_duty/5); Art 48 as a bar on recognising or enforcing a third-country judgment or decision requiring a transfer or disclosure without an international agreement (foreign_judgment_or_decision_recognition/4); and Art 44, first sentence, for an onward transfer, whose own Chapter V answer is supplied as an outside fact (onward_transfer_condition/4). Out of scope: whether a transfer may take place under Chapter V and on which basis (gdpr-chapter-v-transfers), the conditions of the first sentence of the second subparagraph of Art 49(1), whether an Art 30 record is required and what else it holds (gdpr-records-and-officer, including Art 30(5)), the ...
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ Beside the GDPR Chapter V cascade (gdpr-chapter-v-transfers), and deciding nothi
 
 ## What was checked
 
-- 187 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 142 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

@@ -1,0 +1,87 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dsa_art_14_terms_and_conditions_order_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dsa_art_14_terms_and_conditions_order_dsa_art_14_terms_and_conditions_order, [art_14_1_terms_and_conditions_content_status/4, art_14_2_significant_change_information_status/4, art_14_3_minors_explanation_status/4, art_14_4_restriction_enforcement_status/4, art_14_5_terms_and_conditions_summary_status/4, art_14_6_official_languages_status/4, dsa_art_14_terms_and_conditions_order_status/2]).
+:- use_module(m__eu_dsa_art_14_terms_and_conditions_order_kernel, [dsa_art_14_terms_and_conditions_order_input_problems/2]).
+:- use_module(m__eu_dsa_art_14_terms_and_conditions_order_fixtures, [dsa_art_14_terms_and_conditions_order_profile_for/2]).
+
+every_query_answer(Profile, Result, Basis, Citations) :-
+    art_14_1_terms_and_conditions_content_status(Profile, Result, Basis, Citations),
+    art_14_2_significant_change_information_status(Profile, Result, Basis, Citations),
+    art_14_3_minors_explanation_status(Profile, Result, Basis, Citations),
+    art_14_4_restriction_enforcement_status(Profile, Result, Basis, Citations),
+    art_14_5_terms_and_conditions_summary_status(Profile, Result, Basis, Citations),
+    art_14_6_official_languages_status(Profile, Result, Basis, Citations).
+
+test(art_14_1_compliant_bound) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(small_hosting_service_no_complaint_system, Profile),
+    art_14_1_terms_and_conditions_content_status(Profile, art_14_1_terms_and_conditions_compliant, [], [cite(eu_reg_2022_2065_art_14_1)]).
+test(art_14_1_not_compliant_bound) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(complaint_system_without_rules, Profile),
+    art_14_1_terms_and_conditions_content_status(Profile, art_14_1_terms_and_conditions_not_compliant, [], [cite(eu_reg_2022_2065_art_14_1)]).
+test(art_14_2_compliant_bound) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(fully_compliant_very_large_platform, Profile),
+    art_14_2_significant_change_information_status(Profile, art_14_2_change_information_compliant, [], [cite(eu_reg_2022_2065_art_14_2)]).
+test(art_14_2_not_required_bound) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(insignificant_change_not_notified, Profile),
+    art_14_2_significant_change_information_status(Profile, art_14_2_change_information_not_required, [], [cite(eu_reg_2022_2065_art_14_2)]).
+test(art_14_3_not_compliant_bound) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(minors_service_unclear_explanation, Profile),
+    art_14_3_minors_explanation_status(Profile, art_14_3_minors_explanation_not_compliant, [], [cite(eu_reg_2022_2065_art_14_3)]).
+test(art_14_4_not_required_bound) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(no_restriction_enforced, Profile),
+    art_14_4_restriction_enforcement_status(Profile, art_14_4_restriction_enforcement_not_required, [], [cite(eu_reg_2022_2065_art_14_4)]).
+test(art_14_5_compliant_bound_with_its_basis) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(fully_compliant_very_large_platform, Profile),
+    art_14_5_terms_and_conditions_summary_status(Profile, art_14_5_summary_compliant, [outside_fact(designated_as_very_large_online_platform_or_search_engine, attested(true, attestation(host_service, attestation_time, commission_designation_decision, none)))], [cite(eu_reg_2022_2065_art_14_5)]).
+test(art_14_6_not_required_bound_with_its_basis) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(small_hosting_service_no_complaint_system, Profile),
+    art_14_6_official_languages_status(Profile, art_14_6_official_languages_not_required, [outside_fact(designated_as_very_large_online_platform_or_search_engine, attested(false, attestation(host_service, attestation_time, commission_designation_list, none)))], [cite(eu_reg_2022_2065_art_14_6)]).
+test(art_14_4_indeterminate_bound) :-
+    art_14_4_restriction_enforcement_status([], indeterminate([provider_applies_or_enforces_restriction]), [], []).
+test(facade_status_bound) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(fully_compliant_very_large_platform, Profile),
+    dsa_art_14_terms_and_conditions_order_status(Profile, dsa_art_14_terms_and_conditions_order_compliant).
+test(an_unbound_profile_is_wrong_type_in_every_query) :-
+    every_query_answer(_, input_problems([wrong_type(profile)]), [], []).
+test(an_atom_profile_is_wrong_type_in_every_query) :-
+    every_query_answer(not_a_list, input_problems([wrong_type(profile)]), [], []).
+test(a_partial_list_is_wrong_type_in_every_query) :-
+    every_query_answer([attribute(terms_and_conditions_changed, true)|_], input_problems([wrong_type(profile)]), [], []).
+test(a_non_attribute_element_is_wrong_type_alone) :-
+    every_query_answer([attribute(stray_key, true), terms_and_conditions_changed], input_problems([wrong_type(profile)]), [], []).
+test(a_key_not_read_by_a_query_is_still_checked) :-
+    every_query_answer([attribute(provider_applies_or_enforces_restriction, unsure)], input_problems([wrong_type(provider_applies_or_enforces_restriction)]), [], []).
+test(a_judgement_outside_its_values_is_wrong_type) :-
+    dsa_art_14_terms_and_conditions_order_input_problems([attribute(service_primarily_directed_at_minors, yes)], [wrong_type(service_primarily_directed_at_minors)]).
+test(a_numeric_key_is_unknown_as_given) :-
+    dsa_art_14_terms_and_conditions_order_input_problems([attribute(42, true)], [unknown_key(42)]).
+test(an_attestation_with_an_unbound_reason_is_wrong_type) :-
+    every_query_answer([attribute(designated_as_very_large_online_platform_or_search_engine, attested(true, attestation(host, at_time, _, none)))], input_problems([wrong_type(designated_as_very_large_online_platform_or_search_engine)]), [], []).
+test(a_duplicate_and_an_unknown_key_in_the_stated_order) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(malformed_duplicate_and_unknown_keys, Profile),
+    every_query_answer(Profile, input_problems([duplicate_key(terms_and_conditions_changed), unknown_key(stray_key)]), [], []).
+test(an_absent_key_is_not_an_input_problem) :-
+    dsa_art_14_terms_and_conditions_order_input_problems([], []).
+
+test(art_14_1_not_compliant_bound_is_rejected_for_a_compliant_profile, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(small_hosting_service_no_complaint_system, Profile),
+    art_14_1_terms_and_conditions_content_status(Profile, art_14_1_terms_and_conditions_not_compliant, _, _).
+test(art_14_5_compliant_bound_with_an_empty_basis_is_rejected, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(fully_compliant_very_large_platform, Profile),
+    art_14_5_terms_and_conditions_summary_status(Profile, art_14_5_summary_compliant, [], _).
+test(facade_other_status_bound_is_rejected, fail) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(fully_compliant_very_large_platform, Profile),
+    dsa_art_14_terms_and_conditions_order_status(Profile, dsa_art_14_terms_and_conditions_order_not_compliant).
+
+cp_test_names([art_14_1_compliant_bound, art_14_1_not_compliant_bound, art_14_2_compliant_bound, art_14_2_not_required_bound, art_14_3_not_compliant_bound, art_14_4_not_required_bound, art_14_5_compliant_bound_with_its_basis, art_14_6_not_required_bound_with_its_basis, art_14_4_indeterminate_bound, facade_status_bound, an_unbound_profile_is_wrong_type_in_every_query, an_atom_profile_is_wrong_type_in_every_query, a_partial_list_is_wrong_type_in_every_query, a_non_attribute_element_is_wrong_type_alone, a_key_not_read_by_a_query_is_still_checked, a_judgement_outside_its_values_is_wrong_type, a_numeric_key_is_unknown_as_given, an_attestation_with_an_unbound_reason_is_wrong_type, a_duplicate_and_an_unknown_key_in_the_stated_order, an_absent_key_is_not_an_input_problem]).
+cp_test_fail_names([art_14_1_not_compliant_bound_is_rejected_for_a_compliant_profile, art_14_5_compliant_bound_with_an_empty_basis_is_rejected, facade_other_status_bound_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

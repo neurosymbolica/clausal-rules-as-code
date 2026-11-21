@@ -1,0 +1,114 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: every predicate
+% registered in manifest.yaml query_interface.
+% Run: python -m clausal.testing eu/dora_ict_risk_governance_and_framework/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_ict_risk_governance_and_framework/queries, [
+    dora_ict_risk_governance_and_framework_profile_keys/1,
+    dora_ict_risk_governance_and_framework_input_problems/2,
+    dora_ict_risk_governance_and_framework_what_if/4,
+    dora_ict_risk_governance_and_framework_compliance_check/3
+]).
+:- use_module(eu/dora_ict_risk_governance_and_framework/dora_ict_risk_governance_and_framework, [
+    decide_dora_ict_risk_governance_and_framework/2,
+    dora_ict_risk_governance_and_framework_checklist/2
+]).
+:- use_module(eu/dora_ict_risk_governance_and_framework/fixtures, [dora_ict_risk_governance_and_framework_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_ict_risk_governance_and_framework_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_is_article_16_1_entity, financial_entity_is_microenterprise, authority_requested_ict_risk_information, authority_requested_framework_review_report, major_change_occurred, entity_operates_legacy_ict_systems, has_internal_governance_and_control_framework, management_body_defines_approves_and_oversees_framework, management_body_bears_ultimate_ict_risk_responsibility, management_body_put_in_place_data_security_policies, ict_roles_and_governance_arrangements_set, management_body_approved_strategy_and_risk_tolerance, management_body_oversees_continuity_policy_and_plans, management_body_approves_ict_audit_plans, management_body_allocates_resilience_budget, management_body_approves_third_party_policy, reporting_channels_to_management_body_in_place, third_party_monitoring_role_established, management_body_keeps_ict_knowledge_up_to_date, has_sound_documented_ict_risk_management_framework, framework_protects_information_and_ict_assets, minimises_ict_risk_impact, provided_ict_risk_information_on_request, independent_ict_risk_control_function_assigned, risk_control_and_audit_functions_segregated, framework_reviewed_at_least_yearly, framework_reviewed_periodically, framework_reviewed_upon_events_and_improved, review_report_submitted_on_request, framework_internally_audited, formal_audit_follow_up_process_established, resilience_strategy_in_framework, uses_updated_appropriate_ict_systems, functions_and_assets_identified_and_classified, ict_risk_sources_identified_and_assessed, risk_assessed_upon_major_change, assets_identified_and_mapped, third_party_dependencies_identified, inventories_maintained_and_updated, legacy_systems_risk_assessed].
+
+test(there_are_forty_profile_keys) :-
+    dora_ict_risk_governance_and_framework_profile_keys(ProfileKeys),
+    length(ProfileKeys, 40).
+
+% ---- the re-exported input check ----------------------------------------
+test(the_reexported_input_check_accepts_a_fixture) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_input_problems(Profile, []).
+
+test(the_reexported_input_check_names_an_unknown_key) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_unknown_key, Profile),
+    dora_ict_risk_governance_and_framework_input_problems(Profile, [unknown_key(entity_holds_a_banking_licence)]).
+
+% ---- #2 eligibility and #7 justification -------------------------------
+test(eligibility_verdict_with_citations) :-
+    dora_ict_risk_governance_and_framework_profile_for(microenterprise_all_performed, Profile),
+    decide_dora_ict_risk_governance_and_framework(Profile, dora_ict_risk_governance_and_framework_verdict(complete, [_|_])).
+
+test(justification_every_item_carries_a_citation) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    length(Items, 34),
+    maplist(cited_item, Items).
+
+cited_item(item(_, _, cite(_))).
+
+test(justification_an_article_16_entity_has_every_duty_inapplicable) :-
+    dora_ict_risk_governance_and_framework_profile_for(article_16_1_entity, Profile),
+    dora_ict_risk_governance_and_framework_checklist(Profile, Items),
+    maplist(inapplicable_item, Items).
+
+inapplicable_item(item(_, inapplicable, cite(_))).
+
+% ---- #16 what-if --------------------------------------------------------
+test(what_if_a_duty_were_not_performed) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_what_if(Profile, management_body_put_in_place_data_security_policies, false, incomplete).
+
+test(what_if_a_duty_were_not_performed_is_not_complete, fail) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_what_if(Profile, management_body_put_in_place_data_security_policies, false, complete).
+
+test(what_if_the_entity_were_a_microenterprise) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_annual_review_unperformed, Profile),
+    dora_ict_risk_governance_and_framework_what_if(Profile, financial_entity_is_microenterprise, true, complete).
+
+test(what_if_an_absent_key_were_answered) :-
+    dora_ict_risk_governance_and_framework_profile_for(article_16_1_answer_absent, Profile),
+    dora_ict_risk_governance_and_framework_what_if(Profile, financial_entity_is_article_16_1_entity, true, simplified_framework_entity).
+
+test(what_if_answers_once) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    findall(Status, dora_ict_risk_governance_and_framework_what_if(Profile, major_change_occurred, true, Status), Statuses),
+    Statuses == [complete].
+
+% ---- #13 compliance check ----------------------------------------------
+test(omitting_an_applying_duty_is_forbidden) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(annual_framework_review), verdict(forbidden, Citations)),
+    member(cite(eu_reg_2022_2554_art_6_5), Citations).
+
+test(omitting_a_duty_that_does_not_apply_is_permitted) :-
+    dora_ict_risk_governance_and_framework_profile_for(microenterprise_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(annual_framework_review), verdict(permitted, [])).
+
+test(omitting_a_duty_that_does_not_apply_is_not_forbidden, fail) :-
+    dora_ict_risk_governance_and_framework_profile_for(microenterprise_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(annual_framework_review), verdict(forbidden, _)).
+
+test(performing_a_duty_is_permitted) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_all_performed, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, perform_duty(annual_framework_review), verdict(permitted, [_|_])).
+
+test(an_article_16_entity_may_omit_any_duty) :-
+    dora_ict_risk_governance_and_framework_profile_for(article_16_1_entity, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(internal_governance_and_control_framework), verdict(permitted, [cite(eu_reg_2022_2554_art_16_1)])).
+
+test(a_missing_trigger_passes_through_the_compliance_check) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_major_change_unanswered, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(risk_assessment_upon_major_change), verdict(indeterminate([major_change_occurred]), [])).
+
+test(an_input_problem_passes_through_the_compliance_check) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_unknown_key, Profile),
+    dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(data_security_policies), verdict(input_problems([unknown_key(entity_holds_a_banking_licence)]), [])).
+
+test(the_compliance_check_answers_once) :-
+    dora_ict_risk_governance_and_framework_profile_for(large_entity_every_trigger, Profile),
+    findall(Verdict, dora_ict_risk_governance_and_framework_compliance_check(Profile, omit_duty(legacy_systems_risk_assessment), Verdict), Verdicts),
+    Verdicts = [verdict(forbidden, _)].
+
+:- end_module(test_queries).

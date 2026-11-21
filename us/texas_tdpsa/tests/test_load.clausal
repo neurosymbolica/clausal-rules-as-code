@@ -1,0 +1,136 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of us/texas_tdpsa loads, its
+% input check answers once with the problems the order states, the result
+% and status terms build and destructure, the result atoms the order pins
+% are distinct, and real citation records resolve.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      us/texas_tdpsa/tests/test_load.clausal
+% Self-contained: it imports only the kernel and citations exports, and
+% references no determination slice.
+% =====================================================================
+:- module(test_load, []).
+:- use_module(us/texas_tdpsa/kernel, [texas_tdpsa_input_problems/2]).
+:- use_module(us/texas_tdpsa/citations, [citation/2, implements/1]).
+
+% ---- the input check ---------------------------------------------------
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, texas_tdpsa_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_has_no_problem) :-
+    texas_tdpsa_input_problems(
+        [attribute(entity_category, none_of_the_excluded_categories),
+         attribute(processes_or_sells_personal_data, true),
+         attribute(conducts_business_in_texas_or_serves_texas_residents, unsure),
+         attribute(small_business_as_defined_by_sba,
+                   attested(false, attestation(host, moment, reason, none))),
+         attribute(violation_count, 0)],
+        Problems),
+    Problems == [].
+
+test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+    findall(Problems, texas_tdpsa_input_problems(not_a_list, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unbound_profile_is_wrong_type_profile) :-
+    texas_tdpsa_input_problems(_Profile, Problems),
+    Problems == [wrong_type(profile)].
+
+test(a_key_outside_the_contract_is_unknown) :-
+    texas_tdpsa_input_problems([attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
+
+test(a_repeated_key_is_a_duplicate_only) :-
+    texas_tdpsa_input_problems(
+        [attribute(violation_count, 1),
+         attribute(violation_count, minus)],
+        Problems),
+    Problems == [duplicate_key(violation_count)].
+
+test(a_negative_count_is_wrong_type) :-
+    texas_tdpsa_input_problems([attribute(violation_count, -1)], Problems),
+    Problems == [wrong_type(violation_count)].
+
+test(a_bare_outside_fact_is_wrong_type) :-
+    texas_tdpsa_input_problems(
+        [attribute(small_business_as_defined_by_sba, true)],
+        Problems),
+    Problems == [wrong_type(small_business_as_defined_by_sba)].
+
+test(an_attested_crisp_key_is_wrong_type) :-
+    texas_tdpsa_input_problems(
+        [attribute(cured_within_cure_period,
+                   attested(true, attestation(host, moment, reason, none)))],
+        Problems),
+    Problems == [wrong_type(cured_within_cure_period)].
+
+% ---- the result and status terms ----------------------------------------
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = texas_tdpsa_verdict(in_scope, [cite(us_tx_bc_541_002_a)]),
+    Verdict = texas_tdpsa_verdict(Status, Citations),
+    Status == in_scope,
+    Citations == [cite(us_tx_bc_541_002_a)].
+
+test(the_indeterminate_status_names_one_key) :-
+    Result = indeterminate([violation_count]),
+    Result = indeterminate([Key]),
+    Key == violation_count.
+
+test(the_absent_referral_destructures) :-
+    Result = needs_legal_review(
+        cross_reference_unresolved(
+            cite(us_tx_bc_541_002_a_3),
+            cite(sba_small_business_size_determination)),
+        [resolution(cite(sba_small_business_size_determination), not_attempted),
+         inputs_relied_on([small_business_as_defined_by_sba-absent])]),
+    Result = needs_legal_review(
+        cross_reference_unresolved(cite(Source), cite(Target)),
+        [resolution(cite(Target), Resolution), inputs_relied_on(Pairs)]),
+    Source == us_tx_bc_541_002_a_3,
+    Target == sba_small_business_size_determination,
+    Resolution == not_attempted,
+    Pairs == [small_business_as_defined_by_sba-absent].
+
+test(the_basis_carries_the_attestation_as_supplied) :-
+    Attested = attested(false, attestation(host, moment, reason, none)),
+    Basis = [outside_fact(small_business_as_defined_by_sba, Attested)],
+    Basis = [outside_fact(Key, Copied)],
+    Key == small_business_as_defined_by_sba,
+    Copied == Attested.
+
+% ---- the result atoms are distinct --------------------------------------
+
+test(the_applicability_atoms_are_distinct) :-
+    dif(in_scope, out_of_scope).
+
+test(the_action_atoms_are_distinct) :-
+    dif(cure_period_running, action_may_be_brought),
+    dif(cure_period_running, no_action_for_cured_violation),
+    dif(action_may_be_brought, no_action_for_cured_violation).
+
+test(the_other_result_atoms_are_distinct) :-
+    dif(no_extension_available, no_civil_penalty),
+    dif(unsure, absent),
+    dif(absent, not_attempted).
+
+% ---- the citation records -----------------------------------------------
+
+test(the_applicability_citation_is_recorded) :-
+    citation(us_tx_bc_541_002_a, _Record).
+
+test(the_penalty_citation_is_recorded) :-
+    citation(us_tx_bc_541_155_a, _Record).
+
+test(the_referral_target_is_recorded) :-
+    citation(sba_small_business_size_determination, _Record).
+
+test(the_marker_holds_for_a_recorded_key) :-
+    implements(us_tx_bc_541_154).
+
+test(the_marker_fails_for_an_unrecorded_key, fail) :-
+    implements(us_tx_bc_541_999).
+
+:- end_module(test_load).

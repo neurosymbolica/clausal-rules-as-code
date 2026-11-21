@@ -1,37 +1,131 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% queries.clausal -- QUERY layer for eu/data_protection/gdpr_common_definitions_roles_and_establishments.
-% A TOP-LAYER consumer of the determination slice's public predicates.
+% queries.clausal -- QUERY-COMBINATOR layer for eu/data_protection/gdpr_common_definitions_roles_and_establishments.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
 %
-% gdpr_common_definitions_roles_and_establishments_what_if/4 (what-if): override one attribute, re-evaluate
-% gdpr_common_definitions_roles_and_establishments_profile_keys/1: the key schema of the typed input contract
+% Query types served (the order's declared list):
+%   #3 status_determination: the eleven definition relations and
+%      gdpr_common_definitions_roles_and_establishments_status/2 (slice);
+%   #7 justification: gdpr_common_definitions_roles_and_establishments_checklist/2
+%      (slice), one item(Name, Status, Citations) per definition with its
+%      cite(...) provenance.
+% This layer adds:
+% gdpr_common_definitions_roles_and_establishments_what_if/4 (#16 what-if): override one key -> re-evaluate
+% gdpr_common_definitions_roles_and_establishments_profile_keys/1: top-level profile key schema
 % gdpr_common_definitions_roles_and_establishments_input_problems/2: the problems a profile has ([] = none)
-% The profile is an attribute list, so the override is done on attribute/2 items.
-% Query type 3 (status_determination) is served by gdpr_..._status/2 and query
-% type 7 (justification) by gdpr_..._checklist/2, both of the determination slice.
+% and the RESULT CONSTRUCTORS of INTERFACE - THE ANSWERS (definition_answer/3,
+% input_problems/1, ...): exported so the answer vocabulary is part of the
+% public contract, never called as queries. A constructor is data and has
+% no clauses; its fields are named by the constructors/1 declaration.
+%
+% The profile is an ATTRIBUTE LIST, not a dict, so the what-if override is
+% written here over attribute(Key, Value) items (kit override_key/4 takes a
+% dict). Every item giving the overridden key is dropped and one
+% attribute(Key, Value) is appended; a profile that is not a list is passed
+% through unchanged, so the slice answers it with input_problems. This is
+% plumbing: it decides nothing statutory and carries no marker.
 % =====================================================================
 
 :- module(queries, [
     gdpr_common_definitions_roles_and_establishments_profile_keys/1,
     gdpr_common_definitions_roles_and_establishments_input_problems/2,
-    gdpr_common_definitions_roles_and_establishments_what_if/4
+    gdpr_common_definitions_roles_and_establishments_what_if/4,
+    definition_answer/3,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2
 ]).
 
 :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/kernel, [gdpr_common_definitions_roles_and_establishments_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_common_definitions_roles_and_establishments/gdpr_common_definitions_roles_and_establishments, [gdpr_common_definitions_roles_and_establishments_status/2]).
 
+% ---- result constructors (data terms of the answer; never queries) ----
+:- constructors([
+    definition_answer(status, ground, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(input, citation),
+    cross_reference_unresolved(citation, target),
+    resolution(target, resolution),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    outside_fact(key, attested),
+    attested(value, attestation),
+    attestation(author, moment, reason, evidence),
+    url(address, retrieved),
+    document(upload, digest)
+]).
+
 % schema of top-level profile keys: the keys of the order's typed input contract, in its order
 gdpr_common_definitions_roles_and_establishments_profile_keys([data_are_personal_data, party_determines_purposes_and_means, purposes_and_means_determined_by_law, party_provided_for_as_controller_by_law, party_processes_on_behalf_of_controller, data_relate_to_genetic_characteristics_giving_unique_information, data_result_from_technical_processing_allowing_unique_identification, data_relate_to_health_and_reveal_health_status, party_role, established_in_more_than_one_member_state, central_administration_in_union, decisions_taken_in_other_union_establishment, other_establishment_can_have_decisions_implemented, processor_subject_to_specific_obligations, entity_is_person_partnership_or_association, entity_engaged_in_economic_activity, controlling_undertaking_and_controlled_undertakings, party_established_in_authority_member_state, data_subjects_in_authority_member_state_substantially_affected, complaint_lodged_with_authority, processing_in_context_of_establishments_in_more_than_one_member_state, processing_in_context_of_single_union_establishment, substantially_affects_data_subjects_in_more_than_one_member_state, objection_to_draft_decision, objection_concerns_infringement_or_envisaged_action, objection_demonstrates_significance_of_risks]).
 
-% what-if: re-evaluate the headline status with one key hypothetically overridden
+% #16 what-if: re-evaluate the eleven definitions with one key
+% hypothetically overridden. Exactly one solution for every profile.
 gdpr_common_definitions_roles_and_establishments_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
-    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    override_items(Profile, OverriddenKey, NewValue, Hypothesis),
     gdpr_common_definitions_roles_and_establishments_status(Hypothesis, NewStatus).
 
-override_attribute([], Key, Value, [attribute(Key, Value)]).
-override_attribute([attribute(Key, _)|Rest], Key, Value, [attribute(Key, Value)|Rest]).
-override_attribute([attribute(Other, Old)|Rest], Key, Value, [attribute(Other, Old)|Changed]) :-
-    dif(Other, Key),
-    override_attribute(Rest, Key, Value, Changed).
+% override_items(Items, Key, Value, Hypothesis): complementary clauses on the
+% shape of Items; nothing is unified into an unbound part of the profile.
+override_items(Items, _, _, Items) :-
+    var(Items).
+override_items(Items, Key, Value, [attribute(Key, Value)]) :-
+    Items == [].
+override_items(Items, Key, Value, Hypothesis) :-
+    nonvar(Items),
+    Items = [Item|Rest],
+    override_items(Rest, Key, Value, Later),
+    keep_item(Item, Key, Later, Hypothesis).
+override_items(Items, _, _, Items) :-
+    nonvar(Items),
+    Items \== [],
+    Items \= [_|_].
+
+% keep_item(Item, Key, Later, Kept): an item giving Key (by identity) is
+% dropped; every other item is kept in place.
+keep_item(Item, _, Later, [Item|Later]) :-
+    var(Item).
+keep_item(Item, Key, Later, Later) :-
+    nonvar(Item),
+    Item = attribute(ItemKey, _),
+    ItemKey == Key.
+keep_item(Item, Key, Later, [Item|Later]) :-
+    nonvar(Item),
+    Item = attribute(ItemKey, _),
+    ItemKey \== Key.
+keep_item(Item, _, Later, [Item|Later]) :-
+    nonvar(Item),
+    Item \= attribute(_, _).
+
+test(what_if_replaces_the_overridden_key) :-
+    override_items([attribute(party_role, controller), attribute(complaint_lodged_with_authority, false)], party_role, processor, Hypothesis),
+    Hypothesis == [attribute(complaint_lodged_with_authority, false), attribute(party_role, processor)].
+test(what_if_adds_an_absent_key) :-
+    override_items([], party_role, processor, Hypothesis),
+    Hypothesis == [attribute(party_role, processor)].
+test(what_if_flips_the_processor) :-
+    gdpr_common_definitions_roles_and_establishments_what_if([attribute(party_processes_on_behalf_of_controller, false)], party_processes_on_behalf_of_controller, true, Statuses),
+    member(defined_term(party_is_processor, definition_answer(met, none, [cite(eu_reg_2016_679_art_4_8)])), Statuses).
+test(what_if_answers_once) :-
+    findall(Statuses, gdpr_common_definitions_roles_and_establishments_what_if([attribute(party_role, controller)], party_role, processor, Statuses), Answers),
+    length(Answers, 1).
 
 :- end_module(queries).

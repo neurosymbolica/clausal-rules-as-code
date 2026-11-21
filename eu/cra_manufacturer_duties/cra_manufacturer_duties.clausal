@@ -1,0 +1,713 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% cra_manufacturer_duties.clausal -- the "cra_manufacturer_duties" DETERMINATION for
+% eu/cra_manufacturer_duties, self-contained top to bottom: its statutory VALUE
+% facts, its derived calendar arithmetic, its decision routes, its checklist,
+% its verdict assembly and the status projection, with per-rule tests.
+%
+% Source: Regulation (EU) 2024/2847 (Cyber Resilience Act), pinned original OJ
+% text 32024R2847 (OJ L, 2024/2847, 20.11.2024):
+%   Art 71(2)           dates of application (11 September 2026 for Article 14,
+%                       11 December 2027 for the rest);
+%   Art 69(2), (3)      products placed on the market before 11 December 2027;
+%   Art 3(21), (30)     placing on the market; substantial modification;
+%   Art 13(8), 3rd sub. the five-year (60-month) floor of the support period;
+%   Art 3(20), 13(19)   the support period and its end date;
+%   Art 13(9), (13), (18) the periods of availability (the longer of 10 years
+%                       and the support period).
+% Every reading is the drafter's reading, not a lawyer's (see the order).
+%
+% Three queries (THE CALLED CONTRACT):
+%   requirements_applicability(PROFILE, ASSESSMENT_DATE, VERDICT, CITATIONS)
+%   support_period_minimum(PROFILE, ASSESSMENT_DATE, VERDICT, CITATIONS)
+%   retention_end_date(PROFILE, ASSESSMENT_DATE, ITEM, VERDICT, CITATIONS)
+% Each yields exactly ONE solution: input problems first, then the steps of
+% THE LIMBS in order, each step a set of complementary clauses.
+%
+% Facade: a REQUEST is one of the three query shapes without their outputs:
+%   requirements_applicability(PROFILE, ASSESSMENT_DATE)
+%   support_period_minimum(PROFILE, ASSESSMENT_DATE)
+%   retention_end_date(PROFILE, ASSESSMENT_DATE, ITEM)
+% decide_cra_manufacturer_duties(REQUEST,
+%     cra_manufacturer_duties_verdict(VERDICT, CITATIONS)).
+% =====================================================================
+
+:- module(cra_manufacturer_duties, [
+    requirements_applicability/4,
+    support_period_minimum/4,
+    retention_end_date/5,
+    decide_cra_manufacturer_duties/2,
+    cra_manufacturer_duties_status/2,
+    cra_manufacturer_duties_checklist/2,
+    cra_manufacturer_duties_decision_resolvable/1,
+    cra_manufacturer_duties_status_values/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/cra_manufacturer_duties/kernel, [
+    cra_manufacturer_duties_input_problems/2,
+    date_earlier/2,
+    date_not_earlier/2,
+    date_later_of/3
+]).
+:- use_module(eu/cra_manufacturer_duties/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+
+% Art 71(2): the dates of application. Chapter IV (11 June 2026) is not read.
+application_date(article_14, date(2026, 9, 11), cite(eu_reg_2024_2847_art_71_2)).
+application_date(regulation, date(2027, 12, 11), cite(eu_reg_2024_2847_art_71_2)).
+
+% Art 13(8), third subparagraph: at least five years, counted in months
+% (Art 13(19) states the end date by month and year).
+support_period_floor(60, cite(eu_reg_2024_2847_art_13_8)).
+
+% Art 13(9), (13), (18): ITEM, the START key, the period in years, the citation.
+availability_period(technical_documentation_and_declaration_of_conformity,
+                    placing_on_market_date,
+                    10,
+                    cite(eu_reg_2024_2847_art_13_13)).
+availability_period(information_and_instructions_to_the_user,
+                    placing_on_market_date,
+                    10,
+                    cite(eu_reg_2024_2847_art_13_18)).
+availability_period(security_update,
+                    security_update_issue_date,
+                    10,
+                    cite(eu_reg_2024_2847_art_13_9)).
+
+% The order's referral row (REFERRALS): situation, reason, input, citation,
+% the inputs relied on.
+referral(product_may_be_substantially_modified_on_or_after_application_date,
+         open_textured,
+         substantially_modified_on_or_after_application_date,
+         cite(eu_reg_2024_2847_art_69_2),
+         [substantially_modified_on_or_after_application_date]).
+
+% The verdict vocabulary (the functor names of every VERDICT form).
+cra_manufacturer_duties_status_values([
+    subject_to_requirements,
+    article_14_only,
+    not_yet_applicable,
+    minimum_support_period,
+    keep_until,
+    not_applicable_outside_support_period,
+    indeterminate,
+    needs_legal_review,
+    input_problems
+]).
+
+% ---- THE INPUT CHECK of the arguments (steps A0, B0, C0) --------------
+% The profile problems come from the kernel's typed check; the argument
+% problems follow them: wrong_type(assessment_date), then wrong_type(item).
+
+query_problems(Profile, AssessmentDate, Problems) :-
+    cra_manufacturer_duties_input_problems(Profile, ProfileProblems),
+    assessment_date_problems(AssessmentDate, DateProblems),
+    append(ProfileProblems, DateProblems, Problems).
+
+retention_problems(Profile, AssessmentDate, RetentionItem, Problems) :-
+    query_problems(Profile, AssessmentDate, QueryProblems),
+    item_problems(RetentionItem, ItemProblems),
+    append(QueryProblems, ItemProblems, Problems).
+
+% ASSESSMENT_DATE is checked with the kernel's own date type: a one-element
+% probe profile holding it under a date key. The probe never binds it and
+% gives [] for a ground real calendar day, a wrong_type problem otherwise
+% (an unbound or partly unbound date included).
+assessment_date_problems(AssessmentDate, Problems) :-
+    cra_manufacturer_duties_input_problems([attribute(placing_on_market_date, AssessmentDate)],
+                                           ProbeProblems),
+    argument_problems(ProbeProblems, assessment_date, Problems).
+
+argument_problems([], _, []).
+argument_problems([_|_], Argument, [wrong_type(Argument)]).
+
+item_problems(RetentionItem, [wrong_type(item)]) :-
+    var(RetentionItem).
+item_problems(RetentionItem, Problems) :-
+    nonvar(RetentionItem),
+    memberd_t(RetentionItem,
+              [technical_documentation_and_declaration_of_conformity,
+               information_and_instructions_to_the_user,
+               security_update],
+              IsKnownItem),
+    known_item_problems(IsKnownItem, Problems).
+
+known_item_problems(true, []).
+known_item_problems(false, [wrong_type(item)]).
+
+% ---- (A) REQUIREMENTS_APPLICABILITY -----------------------------------
+
+requirements_applicability(Profile, AssessmentDate, Verdict, Citations) :-
+    query_problems(Profile, AssessmentDate, Problems),
+    applicability_answer(Problems, Profile, AssessmentDate, Verdict, Citations).
+
+% (A0) input problems first.
+applicability_answer([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+applicability_answer([], Profile, AssessmentDate, Verdict, Citations) :-
+    applicability_route(Profile, AssessmentDate, Verdict, Citations).
+
+% (A1) before 11 September 2026: nothing applies yet.
+applicability_route(_, AssessmentDate, not_yet_applicable, [Citation]) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(article_14, Article14Date, Citation),
+    date_earlier(AssessmentDate, Article14Date).
+% (A2) 11 September 2026 to 10 December 2027: Article 14 only (reading (3)).
+applicability_route(_, AssessmentDate, article_14_only, [Citation]) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(article_14, Article14Date, Citation),
+    application_date(regulation, RegulationDate, _),
+    date_not_earlier(AssessmentDate, Article14Date),
+    date_earlier(AssessmentDate, RegulationDate).
+% (A3) to (A5) from 11 December 2027.
+applicability_route(Profile, AssessmentDate, Verdict, Citations) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(regulation, RegulationDate, _),
+    date_not_earlier(AssessmentDate, RegulationDate),
+    placing_route(Profile, Verdict, Citations).
+
+% (A3) the placing date is asked for; the judgement is behind it.
+placing_route(Profile, indeterminate([placing_on_market_date]), []) :-
+    profile_lacks(Profile, placing_on_market_date).
+% (A4) placed on or after 11 December 2027.
+placing_route(Profile, subject_to_requirements, [Citation]) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    implements(eu_reg_2024_2847_art_3_21),
+    profile_has(Profile, placing_on_market_date),
+    profile_get(Profile, placing_on_market_date, PlacingDate),
+    application_date(regulation, RegulationDate, Citation),
+    date_not_earlier(PlacingDate, RegulationDate).
+% (A5) placed before 11 December 2027: Art 69(2) and (3).
+placing_route(Profile, Verdict, Citations) :-
+    implements(eu_reg_2024_2847_art_69_2),
+    implements(eu_reg_2024_2847_art_3_21),
+    profile_has(Profile, placing_on_market_date),
+    profile_get(Profile, placing_on_market_date, PlacingDate),
+    application_date(regulation, RegulationDate, _),
+    date_earlier(PlacingDate, RegulationDate),
+    modification_route(Profile, Verdict, Citations).
+
+modification_route(Profile,
+                   indeterminate([substantially_modified_on_or_after_application_date]),
+                   []) :-
+    profile_lacks(Profile, substantially_modified_on_or_after_application_date).
+modification_route(Profile, subject_to_requirements, [cite(eu_reg_2024_2847_art_69_2)]) :-
+    implements(eu_reg_2024_2847_art_69_2),
+    implements(eu_reg_2024_2847_art_3_30),
+    profile_has(Profile, substantially_modified_on_or_after_application_date),
+    profile_get(Profile, substantially_modified_on_or_after_application_date, true).
+modification_route(Profile,
+                   article_14_only,
+                   [cite(eu_reg_2024_2847_art_69_2), cite(eu_reg_2024_2847_art_69_3)]) :-
+    implements(eu_reg_2024_2847_art_69_3),
+    implements(eu_reg_2024_2847_art_3_30),
+    profile_has(Profile, substantially_modified_on_or_after_application_date),
+    profile_get(Profile, substantially_modified_on_or_after_application_date, false).
+modification_route(Profile,
+                   needs_legal_review(open_textured(InputKey, Citation),
+                                      [inputs_relied_on(Pairs)]),
+                   []) :-
+    implements(eu_reg_2024_2847_art_69_2),
+    referral(product_may_be_substantially_modified_on_or_after_application_date,
+             open_textured,
+             InputKey,
+             Citation,
+             InputKeys),
+    profile_has(Profile, InputKey),
+    profile_get(Profile, InputKey, unsure),
+    relied_pairs(Profile, InputKeys, Pairs).
+
+% PAIRS: KEY-VALUE of each judgement key read, in root_exports order.
+relied_pairs(_, [], []).
+relied_pairs(Profile, [InputKey|InputKeys], [InputKey-Value|Pairs]) :-
+    profile_get(Profile, InputKey, Value),
+    relied_pairs(Profile, InputKeys, Pairs).
+
+% ---- (B) SUPPORT_PERIOD_MINIMUM ---------------------------------------
+
+support_period_minimum(Profile, AssessmentDate, Verdict, Citations) :-
+    query_problems(Profile, AssessmentDate, Problems),
+    support_answer(Problems, Profile, AssessmentDate, Verdict, Citations).
+
+% (B0) input problems first.
+support_answer([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+support_answer([], Profile, AssessmentDate, Verdict, Citations) :-
+    support_route(Profile, AssessmentDate, Verdict, Citations).
+
+% (B1) before 11 December 2027 no duty of Article 13 applies.
+support_route(_, AssessmentDate, not_yet_applicable, [Citation]) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(regulation, RegulationDate, Citation),
+    date_earlier(AssessmentDate, RegulationDate).
+support_route(Profile, AssessmentDate, Verdict, Citations) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(regulation, RegulationDate, _),
+    date_not_earlier(AssessmentDate, RegulationDate),
+    floor_route(Profile, Verdict, Citations).
+
+% (B2) the expected use time is asked for.
+floor_route(Profile, indeterminate([expected_use_time_in_months]), []) :-
+    profile_lacks(Profile, expected_use_time_in_months).
+% (B3) the floor: 60 months, or the expected use time when it is shorter.
+floor_route(Profile, minimum_support_period(FloorMonths), [Citation]) :-
+    implements(eu_reg_2024_2847_art_13_8),
+    implements(eu_reg_2024_2847_art_3_20),
+    profile_has(Profile, expected_use_time_in_months),
+    profile_get(Profile, expected_use_time_in_months, ExpectedMonths),
+    support_period_floor(FloorMonths, Citation),
+    ExpectedMonths #>= FloorMonths.
+floor_route(Profile, minimum_support_period(ExpectedMonths), [Citation]) :-
+    implements(eu_reg_2024_2847_art_13_8),
+    implements(eu_reg_2024_2847_art_3_20),
+    profile_has(Profile, expected_use_time_in_months),
+    profile_get(Profile, expected_use_time_in_months, ExpectedMonths),
+    support_period_floor(FloorMonths, Citation),
+    ExpectedMonths #< FloorMonths.
+
+% ---- (C) RETENTION_END_DATE -------------------------------------------
+
+retention_end_date(Profile, AssessmentDate, RetentionItem, Verdict, Citations) :-
+    retention_problems(Profile, AssessmentDate, RetentionItem, Problems),
+    retention_answer(Problems, Profile, AssessmentDate, RetentionItem, Verdict, Citations).
+
+% (C0) input problems first.
+retention_answer([Problem|Problems], _, _, _, input_problems([Problem|Problems]), []).
+retention_answer([], Profile, AssessmentDate, RetentionItem, Verdict, Citations) :-
+    retention_route(Profile, AssessmentDate, RetentionItem, Verdict, Citations).
+
+% (C1) before 11 December 2027 no duty of Article 13 applies.
+retention_route(_, AssessmentDate, _, not_yet_applicable, [Citation]) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(regulation, RegulationDate, Citation),
+    date_earlier(AssessmentDate, RegulationDate).
+retention_route(Profile, AssessmentDate, RetentionItem, Verdict, Citations) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(regulation, RegulationDate, _),
+    date_not_earlier(AssessmentDate, RegulationDate),
+    availability_route(Profile, RetentionItem, Verdict, Citations).
+
+% (C2) the first absent of START and support_period_end_date, in root_exports
+% order (both START keys precede support_period_end_date).
+availability_route(Profile, RetentionItem, indeterminate([StartKey]), []) :-
+    availability_period(RetentionItem, StartKey, _, _),
+    profile_lacks(Profile, StartKey).
+availability_route(Profile, RetentionItem, indeterminate([support_period_end_date]), []) :-
+    availability_period(RetentionItem, StartKey, _, _),
+    profile_has(Profile, StartKey),
+    profile_lacks(Profile, support_period_end_date).
+availability_route(Profile, RetentionItem, Verdict, Citations) :-
+    availability_period(RetentionItem, StartKey, PeriodYears, Citation),
+    profile_has(Profile, StartKey),
+    profile_has(Profile, support_period_end_date),
+    profile_get(Profile, StartKey, StartDate),
+    profile_get(Profile, support_period_end_date, SupportEndDate),
+    coverage_route(RetentionItem, StartDate, SupportEndDate, PeriodYears, Citation,
+                   Verdict, Citations).
+
+% (C3) a security update issued after the support period is outside Art 13(9).
+coverage_route(security_update, IssueDate, SupportEndDate, _, Citation,
+               not_applicable_outside_support_period, [Citation]) :-
+    implements(eu_reg_2024_2847_art_13_9),
+    date_earlier(SupportEndDate, IssueDate).
+% (C4) the later of the start date plus 10 years and the support period end.
+coverage_route(security_update, IssueDate, SupportEndDate, PeriodYears, Citation,
+               keep_until(KeepDate), [Citation]) :-
+    implements(eu_reg_2024_2847_art_13_9),
+    date_not_earlier(SupportEndDate, IssueDate),
+    availability_end(IssueDate, PeriodYears, SupportEndDate, KeepDate).
+coverage_route(RetentionItem, PlacingDate, SupportEndDate, PeriodYears, Citation,
+               keep_until(KeepDate), [Citation]) :-
+    implements(eu_reg_2024_2847_art_13_13),
+    implements(eu_reg_2024_2847_art_13_18),
+    dif(RetentionItem, security_update),
+    availability_end(PlacingDate, PeriodYears, SupportEndDate, KeepDate).
+
+% Art 13(9), (13), (18): whichever is longer, the period after the start date
+% or the support period (Art 3(20)) ending on its stated end date (Art 13(19)).
+availability_end(StartDate, PeriodYears, SupportEndDate, KeepDate) :-
+    implements(eu_reg_2024_2847_art_13_13),
+    implements(eu_reg_2024_2847_art_13_18),
+    implements(eu_reg_2024_2847_art_13_9),
+    implements(eu_reg_2024_2847_art_13_19),
+    years_after(StartDate, PeriodYears, AnniversaryDate),
+    date_later_of(AnniversaryDate, SupportEndDate, KeepDate).
+
+% Reading (8): the same day and month PeriodYears calendar years later;
+% 29 February gives 28 February. Three complementary clauses.
+years_after(date(StartYear, StartMonth, DayNumber), PeriodYears,
+            date(LaterYear, StartMonth, DayNumber)) :-
+    implements(eu_reg_2024_2847_art_13_13),
+    StartMonth #< 2,
+    LaterYear #= StartYear + PeriodYears.
+years_after(date(StartYear, StartMonth, DayNumber), PeriodYears,
+            date(LaterYear, StartMonth, DayNumber)) :-
+    implements(eu_reg_2024_2847_art_13_13),
+    StartMonth #> 2,
+    LaterYear #= StartYear + PeriodYears.
+years_after(date(StartYear, 2, DayNumber), PeriodYears, date(LaterYear, 2, DayNumber)) :-
+    implements(eu_reg_2024_2847_art_13_13),
+    DayNumber #< 29,
+    LaterYear #= StartYear + PeriodYears.
+years_after(date(StartYear, 2, 29), PeriodYears, date(LaterYear, 2, 28)) :-
+    implements(eu_reg_2024_2847_art_13_13),
+    LaterYear #= StartYear + PeriodYears.
+
+% ---- facade: verdict assembly -----------------------------------------
+
+decide_cra_manufacturer_duties(requirements_applicability(Profile, AssessmentDate),
+                               cra_manufacturer_duties_verdict(Verdict, Citations)) :-
+    requirements_applicability(Profile, AssessmentDate, Verdict, Citations).
+decide_cra_manufacturer_duties(support_period_minimum(Profile, AssessmentDate),
+                               cra_manufacturer_duties_verdict(Verdict, Citations)) :-
+    support_period_minimum(Profile, AssessmentDate, Verdict, Citations).
+decide_cra_manufacturer_duties(retention_end_date(Profile, AssessmentDate, RetentionItem),
+                               cra_manufacturer_duties_verdict(Verdict, Citations)) :-
+    retention_end_date(Profile, AssessmentDate, RetentionItem, Verdict, Citations).
+
+% ---- projection: Status only (the functor name of the VERDICT) --------
+cra_manufacturer_duties_status(Request, Status) :-
+    decide_cra_manufacturer_duties(Request, cra_manufacturer_duties_verdict(Verdict, _)),
+    functor(Verdict, Status, _).
+
+cra_manufacturer_duties_decision_resolvable(Request) :-
+    decide_cra_manufacturer_duties(Request, _).
+
+% ---- checklist: one row per ground, each with cite(...) ---------------
+% A request with input problems has no grounds to list: [].
+
+cra_manufacturer_duties_checklist(Request, Items) :-
+    request_problems(Request, Problems),
+    request_checklist(Problems, Request, Items).
+
+request_problems(requirements_applicability(Profile, AssessmentDate), Problems) :-
+    query_problems(Profile, AssessmentDate, Problems).
+request_problems(support_period_minimum(Profile, AssessmentDate), Problems) :-
+    query_problems(Profile, AssessmentDate, Problems).
+request_problems(retention_end_date(Profile, AssessmentDate, RetentionItem), Problems) :-
+    retention_problems(Profile, AssessmentDate, RetentionItem, Problems).
+
+request_checklist([_|_], _, []).
+request_checklist([],
+                  requirements_applicability(Profile, AssessmentDate),
+                  [Article14Row,
+                   RegulationRow,
+                   item(placed_on_market_on_or_after_application_date,
+                        PlacingStatus,
+                        cite(eu_reg_2024_2847_art_69_2)),
+                   item(substantially_modified_on_or_after_application_date,
+                        ModificationStatus,
+                        cite(eu_reg_2024_2847_art_69_2))]) :-
+    date_gate_item(article_14_applies_at_assessment_date, article_14, AssessmentDate,
+                   Article14Row),
+    date_gate_item(regulation_applies_at_assessment_date, regulation, AssessmentDate,
+                   RegulationRow),
+    placing_status(Profile, PlacingStatus),
+    modification_status(Profile, ModificationStatus).
+request_checklist([],
+                  support_period_minimum(Profile, AssessmentDate),
+                  [RegulationRow,
+                   item(expected_use_time_at_least_five_years, FloorStatus, Citation)]) :-
+    date_gate_item(regulation_applies_at_assessment_date, regulation, AssessmentDate,
+                   RegulationRow),
+    support_period_floor(_, Citation),
+    floor_status(Profile, FloorStatus).
+request_checklist([],
+                  retention_end_date(Profile, AssessmentDate, RetentionItem),
+                  [RegulationRow,
+                   item(RetentionItem, AvailabilityStatus, Citation)]) :-
+    date_gate_item(regulation_applies_at_assessment_date, regulation, AssessmentDate,
+                   RegulationRow),
+    availability_period(RetentionItem, _, _, Citation),
+    availability_route(Profile, RetentionItem, Verdict, _),
+    availability_row_status(Verdict, AvailabilityStatus).
+
+date_gate_item(RowName, Which, AssessmentDate, item(RowName, Status, Citation)) :-
+    implements(eu_reg_2024_2847_art_71_2),
+    application_date(Which, GateDate, Citation),
+    date_gate_status(AssessmentDate, GateDate, Status).
+
+date_gate_status(AssessmentDate, GateDate, met) :-
+    date_not_earlier(AssessmentDate, GateDate).
+date_gate_status(AssessmentDate, GateDate, unmet(before_application_date)) :-
+    date_earlier(AssessmentDate, GateDate).
+
+placing_status(Profile, unknown([placing_on_market_date])) :-
+    profile_lacks(Profile, placing_on_market_date).
+placing_status(Profile, met) :-
+    implements(eu_reg_2024_2847_art_3_21),
+    profile_has(Profile, placing_on_market_date),
+    profile_get(Profile, placing_on_market_date, PlacingDate),
+    application_date(regulation, RegulationDate, _),
+    date_not_earlier(PlacingDate, RegulationDate).
+placing_status(Profile, unmet(placed_before_application_date)) :-
+    implements(eu_reg_2024_2847_art_3_21),
+    profile_has(Profile, placing_on_market_date),
+    profile_get(Profile, placing_on_market_date, PlacingDate),
+    application_date(regulation, RegulationDate, _),
+    date_earlier(PlacingDate, RegulationDate).
+
+modification_status(Profile, unknown([substantially_modified_on_or_after_application_date])) :-
+    profile_lacks(Profile, substantially_modified_on_or_after_application_date).
+modification_status(Profile, met) :-
+    implements(eu_reg_2024_2847_art_3_30),
+    profile_has(Profile, substantially_modified_on_or_after_application_date),
+    profile_get(Profile, substantially_modified_on_or_after_application_date, true).
+modification_status(Profile, unmet(not_substantially_modified)) :-
+    implements(eu_reg_2024_2847_art_3_30),
+    profile_has(Profile, substantially_modified_on_or_after_application_date),
+    profile_get(Profile, substantially_modified_on_or_after_application_date, false).
+modification_status(Profile, unknown([substantially_modified_on_or_after_application_date])) :-
+    profile_has(Profile, substantially_modified_on_or_after_application_date),
+    profile_get(Profile, substantially_modified_on_or_after_application_date, unsure).
+
+floor_status(Profile, unknown([expected_use_time_in_months])) :-
+    profile_lacks(Profile, expected_use_time_in_months).
+floor_status(Profile, met) :-
+    implements(eu_reg_2024_2847_art_13_8),
+    profile_has(Profile, expected_use_time_in_months),
+    profile_get(Profile, expected_use_time_in_months, ExpectedMonths),
+    support_period_floor(FloorMonths, _),
+    ExpectedMonths #>= FloorMonths.
+floor_status(Profile, unmet(expected_use_time_below_five_years)) :-
+    implements(eu_reg_2024_2847_art_13_8),
+    profile_has(Profile, expected_use_time_in_months),
+    profile_get(Profile, expected_use_time_in_months, ExpectedMonths),
+    support_period_floor(FloorMonths, _),
+    ExpectedMonths #< FloorMonths.
+
+availability_row_status(keep_until(_), met).
+availability_row_status(not_applicable_outside_support_period,
+                        unmet(issued_after_support_period)).
+availability_row_status(indeterminate(MissingKeys), unknown(MissingKeys)).
+
+% ---- tests: requirements_applicability --------------------------------
+
+test(before_article_14_nothing_applies) :-
+    findall(Verdict-Citations,
+            requirements_applicability([], date(2026, 9, 10), Verdict, Citations),
+            Answers),
+    Answers == [not_yet_applicable-[cite(eu_reg_2024_2847_art_71_2)]].
+test(the_window_opens_with_article_14) :-
+    findall(Verdict-Citations,
+            requirements_applicability([], date(2026, 9, 11), Verdict, Citations),
+            Answers),
+    Answers == [article_14_only-[cite(eu_reg_2024_2847_art_71_2)]].
+test(the_window_ignores_the_profile) :-
+    findall(Verdict,
+            requirements_applicability([attribute(placing_on_market_date, date(2028, 1, 1))],
+                                       date(2027, 12, 10), Verdict, _),
+            Verdicts),
+    Verdicts == [article_14_only].
+test(the_window_is_not_subject_to_requirements, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2028, 1, 1))],
+                               date(2027, 12, 10), subject_to_requirements, _).
+test(from_application_the_placing_date_is_asked) :-
+    findall(Verdict-Citations,
+            requirements_applicability([attribute(substantially_modified_on_or_after_application_date, true)],
+                                       date(2027, 12, 11), Verdict, Citations),
+            Answers),
+    Answers == [indeterminate([placing_on_market_date])-[]].
+test(placed_on_application_day_is_subject) :-
+    findall(Verdict-Citations,
+            requirements_applicability([attribute(placing_on_market_date, date(2027, 12, 11))],
+                                       date(2028, 3, 1), Verdict, Citations),
+            Answers),
+    Answers == [subject_to_requirements-[cite(eu_reg_2024_2847_art_71_2)]].
+test(placed_before_and_modified_is_subject) :-
+    findall(Verdict-Citations,
+            requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 1)),
+                                        attribute(substantially_modified_on_or_after_application_date, true)],
+                                       date(2028, 3, 1), Verdict, Citations),
+            Answers),
+    Answers == [subject_to_requirements-[cite(eu_reg_2024_2847_art_69_2)]].
+test(placed_before_and_not_modified_is_article_14_only) :-
+    findall(Verdict-Citations,
+            requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 1)),
+                                        attribute(substantially_modified_on_or_after_application_date, false)],
+                                       date(2028, 3, 1), Verdict, Citations),
+            Answers),
+    Answers == [article_14_only-[cite(eu_reg_2024_2847_art_69_2), cite(eu_reg_2024_2847_art_69_3)]].
+test(placed_before_and_not_modified_is_not_subject, fail) :-
+    requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 1)),
+                                attribute(substantially_modified_on_or_after_application_date, false)],
+                               date(2028, 3, 1), subject_to_requirements, _).
+test(placed_before_and_modification_absent_is_asked) :-
+    findall(Verdict,
+            requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 1))],
+                                       date(2028, 3, 1), Verdict, _),
+            Verdicts),
+    Verdicts == [indeterminate([substantially_modified_on_or_after_application_date])].
+test(an_unsure_modification_goes_to_a_lawyer) :-
+    findall(Verdict-Citations,
+            requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 1)),
+                                        attribute(substantially_modified_on_or_after_application_date, unsure)],
+                                       date(2028, 3, 1), Verdict, Citations),
+            Answers),
+    Answers == [needs_legal_review(open_textured(substantially_modified_on_or_after_application_date,
+                                                 cite(eu_reg_2024_2847_art_69_2)),
+                                   [inputs_relied_on([substantially_modified_on_or_after_application_date-unsure])])-[]].
+test(an_unknown_key_is_an_input_problem) :-
+    findall(Verdict-Citations,
+            requirements_applicability([attribute(colour, red)], date(2028, 3, 1), Verdict, Citations),
+            Answers),
+    Answers == [input_problems([unknown_key(colour)])-[]].
+test(an_impossible_assessment_date_is_wrong_type) :-
+    findall(Verdict,
+            requirements_applicability([], date(2027, 2, 30), Verdict, _),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(assessment_date)])].
+test(an_unbound_assessment_date_follows_the_profile_problem) :-
+    findall(Verdict,
+            requirements_applicability(nonsense, _, Verdict, _),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(profile), wrong_type(assessment_date)])].
+
+% ---- tests: support_period_minimum ------------------------------------
+
+test(the_floor_is_not_yet_applicable_before_application) :-
+    findall(Verdict-Citations,
+            support_period_minimum([attribute(expected_use_time_in_months, 72)],
+                                   date(2027, 12, 10), Verdict, Citations),
+            Answers),
+    Answers == [not_yet_applicable-[cite(eu_reg_2024_2847_art_71_2)]].
+test(a_long_use_time_gives_sixty_months) :-
+    findall(Verdict-Citations,
+            support_period_minimum([attribute(expected_use_time_in_months, 72)],
+                                   date(2027, 12, 11), Verdict, Citations),
+            Answers),
+    Answers == [minimum_support_period(60)-[cite(eu_reg_2024_2847_art_13_8)]].
+test(exactly_sixty_months_gives_sixty) :-
+    findall(Verdict,
+            support_period_minimum([attribute(expected_use_time_in_months, 60)],
+                                   date(2028, 1, 1), Verdict, _),
+            Verdicts),
+    Verdicts == [minimum_support_period(60)].
+test(a_short_use_time_gives_the_use_time) :-
+    findall(Verdict,
+            support_period_minimum([attribute(expected_use_time_in_months, 36)],
+                                   date(2028, 1, 1), Verdict, _),
+            Verdicts),
+    Verdicts == [minimum_support_period(36)].
+test(a_short_use_time_does_not_give_sixty, fail) :-
+    support_period_minimum([attribute(expected_use_time_in_months, 36)],
+                           date(2028, 1, 1), minimum_support_period(60), _).
+test(an_absent_use_time_is_asked) :-
+    findall(Verdict-Citations,
+            support_period_minimum([], date(2028, 1, 1), Verdict, Citations),
+            Answers),
+    Answers == [indeterminate([expected_use_time_in_months])-[]].
+test(a_fraction_use_time_is_wrong_type) :-
+    findall(Verdict,
+            support_period_minimum([attribute(expected_use_time_in_months, 73/2)],
+                                   date(2028, 1, 1), Verdict, _),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(expected_use_time_in_months)])].
+
+% ---- tests: retention_end_date ----------------------------------------
+
+test(documentation_is_kept_ten_years_after_placing) :-
+    findall(Verdict-Citations,
+            retention_end_date([attribute(placing_on_market_date, date(2028, 1, 10)),
+                                attribute(support_period_end_date, date(2033, 1, 31))],
+                               date(2028, 2, 1),
+                               technical_documentation_and_declaration_of_conformity,
+                               Verdict, Citations),
+            Answers),
+    Answers == [keep_until(date(2038, 1, 10))-[cite(eu_reg_2024_2847_art_13_13)]].
+test(a_longer_support_period_wins) :-
+    findall(Verdict-Citations,
+            retention_end_date([attribute(placing_on_market_date, date(2028, 1, 10)),
+                                attribute(support_period_end_date, date(2040, 6, 30))],
+                               date(2028, 2, 1),
+                               information_and_instructions_to_the_user,
+                               Verdict, Citations),
+            Answers),
+    Answers == [keep_until(date(2040, 6, 30))-[cite(eu_reg_2024_2847_art_13_18)]].
+test(a_leap_day_moves_to_the_twenty_eighth) :-
+    findall(Verdict,
+            retention_end_date([attribute(placing_on_market_date, date(2028, 2, 29)),
+                                attribute(support_period_end_date, date(2030, 2, 28))],
+                               date(2028, 3, 1),
+                               technical_documentation_and_declaration_of_conformity,
+                               Verdict, _),
+            Verdicts),
+    Verdicts == [keep_until(date(2038, 2, 28))].
+test(an_update_on_the_last_day_is_covered) :-
+    findall(Verdict-Citations,
+            retention_end_date([attribute(security_update_issue_date, date(2032, 5, 31)),
+                                attribute(support_period_end_date, date(2032, 5, 31))],
+                               date(2032, 6, 1), security_update, Verdict, Citations),
+            Answers),
+    Answers == [keep_until(date(2042, 5, 31))-[cite(eu_reg_2024_2847_art_13_9)]].
+test(an_update_after_the_support_period_is_outside) :-
+    findall(Verdict-Citations,
+            retention_end_date([attribute(security_update_issue_date, date(2032, 6, 1)),
+                                attribute(support_period_end_date, date(2032, 5, 31))],
+                               date(2032, 6, 2), security_update, Verdict, Citations),
+            Answers),
+    Answers == [not_applicable_outside_support_period-[cite(eu_reg_2024_2847_art_13_9)]].
+test(an_update_after_the_support_period_gets_no_date, fail) :-
+    retention_end_date([attribute(security_update_issue_date, date(2032, 6, 1)),
+                        attribute(support_period_end_date, date(2032, 5, 31))],
+                       date(2032, 6, 2), security_update, keep_until(_), _).
+test(the_start_key_is_asked_first) :-
+    findall(Verdict,
+            retention_end_date([], date(2028, 1, 1), security_update, Verdict, _),
+            Verdicts),
+    Verdicts == [indeterminate([security_update_issue_date])].
+test(the_support_period_end_is_asked_next) :-
+    findall(Verdict,
+            retention_end_date([attribute(placing_on_market_date, date(2028, 1, 10))],
+                               date(2028, 2, 1),
+                               technical_documentation_and_declaration_of_conformity,
+                               Verdict, _),
+            Verdicts),
+    Verdicts == [indeterminate([support_period_end_date])].
+test(retention_is_not_yet_applicable_before_application) :-
+    findall(Verdict-Citations,
+            retention_end_date([], date(2027, 1, 1), security_update, Verdict, Citations),
+            Answers),
+    Answers == [not_yet_applicable-[cite(eu_reg_2024_2847_art_71_2)]].
+test(an_unknown_item_is_wrong_type) :-
+    findall(Verdict,
+            retention_end_date([], date(2028, 1, 1), manual, Verdict, _),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(item)])].
+test(an_unbound_item_follows_the_date_problem) :-
+    findall(Verdict,
+            retention_end_date([], date(2027, 13, 1), _, Verdict, _),
+            Verdicts),
+    Verdicts == [input_problems([wrong_type(assessment_date), wrong_type(item)])].
+
+% ---- tests: facade, status and checklist ------------------------------
+
+test(the_status_is_the_verdict_name) :-
+    findall(Status,
+            cra_manufacturer_duties_status(support_period_minimum([attribute(expected_use_time_in_months, 72)],
+                                                                  date(2028, 1, 1)),
+                                           Status),
+            Statuses),
+    Statuses == [minimum_support_period].
+test(the_checklist_cites_each_ground) :-
+    findall(Items,
+            cra_manufacturer_duties_checklist(requirements_applicability([attribute(placing_on_market_date, date(2025, 5, 1)),
+                                                                          attribute(substantially_modified_on_or_after_application_date, false)],
+                                                                         date(2028, 3, 1)),
+                                              Items),
+            Checklists),
+    Checklists == [[item(article_14_applies_at_assessment_date, met, cite(eu_reg_2024_2847_art_71_2)),
+                    item(regulation_applies_at_assessment_date, met, cite(eu_reg_2024_2847_art_71_2)),
+                    item(placed_on_market_on_or_after_application_date,
+                         unmet(placed_before_application_date),
+                         cite(eu_reg_2024_2847_art_69_2)),
+                    item(substantially_modified_on_or_after_application_date,
+                         unmet(not_substantially_modified),
+                         cite(eu_reg_2024_2847_art_69_2))]].
+test(a_request_with_problems_has_an_empty_checklist) :-
+    cra_manufacturer_duties_checklist(support_period_minimum(nonsense, date(2028, 1, 1)), Items),
+    Items == [].
+
+:- end_module(cra_manufacturer_duties).

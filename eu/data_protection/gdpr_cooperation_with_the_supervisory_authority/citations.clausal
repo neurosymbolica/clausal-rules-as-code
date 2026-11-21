@@ -5,23 +5,28 @@
 % citation/2 record form: a FACT, the key an atom, the second argument a
 % pair list with keys exactly label, ref, verbatim, in that order:
 %   citation(Key, [label-'...', ref-'...', verbatim-'...']).
-% The verbatim pair is OMITTED while the key's entry in
+% OMIT the verbatim-'...' pair while the key's entry in
 % citations-sources.yaml is `status: unverified`; `status: verified`
 % requires a non-empty ref AND a verbatim that is an exact substring of
-% the source. In a quoted atom an apostrophe is written twice ('').
+% the source. In a quoted atom write an apostrophe twice ('').
 %
-% Keys (CANONICAL lexicon scheme, _lexicon/citations.yaml):
+% A clause cites a key with a `cite(Key)` term; cite(...) is data and
+% needs no import.
+%
+% KEYS
 %   eu_reg_2016_679_art_31 -- Regulation (EU) 2016/679 (GDPR) Art 31, the
-%     whole article (one paragraph), pinned unit 02016R0679-20160504#art_031.
-%     The only load-bearing provision: who is bound, 'on request', 'in the
-%     performance of its tasks', 'shall cooperate'.
-%   cooperation_statement -- the TARGET of the outside fact cooperation_given:
-%     the attested statement that the caller cooperated with the request. It
-%     is not a provision; it is named only in cross_reference_unresolved/2 and
-%     resolution/2 of the step-5 referral.
+%     single paragraph (pinned unit 02016R0679-20160504#art_031). The only
+%     load-bearing provision: who is bound, 'on request', 'in the
+%     performance of its tasks', 'shall cooperate'. The only citation atom
+%     a RESULT returns as a final citation.
+%   cooperation_statement -- the cross-reference TARGET of the outside fact
+%     cooperation_given (the attested statement that the caller cooperated
+%     with the request). It appears only inside cite(cooperation_statement)
+%     in the cross_reference_unresolved referral; no clause carries it as a
+%     provenance marker.
 %
-% PROVENANCE: every operative clause opens its body with implements(Key),
-% Key a key recorded here.
+% PROVENANCE: every operative clause opens its body with implements(Key).
+% implements/1 succeeds for every recorded key and fails for any other.
 % =====================================================================
 
 :- module(citations, [
@@ -29,12 +34,10 @@
     implements/1
 ]).
 
-citation(eu_reg_2016_679_art_31, [label-'Regulation (EU) 2016/679 (General Data Protection Regulation) Art 31 (cooperation with the supervisory authority)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504', verbatim-'The controller and the processor and, where applicable, their representatives, shall cooperate, on request, with the supervisory authority in the performance of its tasks.']).
+citation(eu_reg_2016_679_art_31, [label-'Regulation (EU) 2016/679 (GDPR) Art 31 (cooperation with the supervisory authority)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504', verbatim-'The controller and the processor and, where applicable, their representatives, shall cooperate, on request, with the supervisory authority in the performance of its tasks.']).
 
-citation(cooperation_statement, [label-'Attested statement of cooperation with the request of the supervisory authority (outside fact cooperation_given, Regulation (EU) 2016/679 Art 31)', ref-'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02016R0679-20160504']).
+citation(cooperation_statement, [label-'Attested cooperation statement: outside fact cooperation_given, the statement that the caller cooperated on the request (target of the cross-reference from Regulation (EU) 2016/679 (GDPR) Art 31)', ref-'outside_facts: cooperation_given (fetcher none; kinds attested, fetched)']).
 
-% implements(Key): the provenance marker; succeeds for every recorded key and
-% fails for a key not recorded here.
 implements(Key) :-
     citation(Key, _).
 

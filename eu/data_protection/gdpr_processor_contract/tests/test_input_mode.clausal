@@ -1,7 +1,8 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_input_mode.clausal -- INPUT MODE: public predicates called with the
-% result argument BOUND (verdict given, not read out), and the input check.
+% result argument BOUND (verdict given, not read out), and INPUT TOLERANCE:
+% malformed profiles get their input problems, never a silent absence.
 % Run: python -m clausal.testing eu/data_protection/gdpr_processor_contract/tests/test_input_mode.clausal
 % =====================================================================
 :- module(test_input_mode, []).
@@ -15,118 +16,80 @@
 :- use_module(eu/data_protection/gdpr_processor_contract/kernel, [gdpr_processor_contract_input_problems/2]).
 :- use_module(eu/data_protection/gdpr_processor_contract/fixtures, [gdpr_processor_contract_profile_for/2]).
 
-test(status_holds_with_the_verdict_bound) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+% ---- bound verdicts, one per route ----------------------------------------
+test(eligible_holds_with_the_status_bound) :-
+    gdpr_processor_contract_profile_for(eligible_without_subprocessor, Profile),
     processor_contract_status(Profile, eligible).
-
-test(the_wrong_bound_status_is_rejected, fail) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+test(eligible_rejects_a_bound_ineligible, fail) :-
+    gdpr_processor_contract_profile_for(eligible_without_subprocessor, Profile),
     processor_contract_status(Profile, ineligible).
-
-test(whole_eligible_verdict_bound) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
-    decide_processor_contract(Profile, processor_contract_verdict(eligible, [], [cite(eu_reg_2016_679_art_28_3), cite(eu_reg_2016_679_art_28_9), cite(eu_reg_2016_679_art_28_1), cite(eu_reg_2016_679_art_28_3_f), cite(eu_reg_2016_679_art_28_3_e), cite(eu_reg_2016_679_art_28_3_d), cite(eu_reg_2016_679_art_28_3_b), cite(eu_reg_2016_679_art_28_3_g), cite(eu_reg_2016_679_art_28_3_h), cite(eu_reg_2016_679_art_28_3_second_subpara), cite(eu_reg_2016_679_art_28_3_a), cite(eu_reg_2016_679_art_28_3_c), cite(eu_reg_2016_679_art_28_2)])).
-
-test(whole_ineligible_verdict_bound) :-
-    gdpr_processor_contract_profile_for(audit_clause_missing, Profile),
+test(ineligible_holds_with_the_whole_verdict_bound) :-
+    gdpr_processor_contract_profile_for(near_miss_missing_point_h, Profile),
     decide_processor_contract(Profile, processor_contract_verdict(ineligible, [stipulates_information_and_audit_rights], [cite(eu_reg_2016_679_art_28_3_h)])).
-
-test(a_misaligned_ineligible_verdict_is_rejected, fail) :-
-    gdpr_processor_contract_profile_for(audit_clause_missing, Profile),
-    decide_processor_contract(Profile, processor_contract_verdict(ineligible, [stipulates_information_and_audit_rights], [cite(eu_reg_2016_679_art_28_3_g)])).
-
-test(missing_stipulations_bound_two_keys) :-
-    gdpr_processor_contract_profile_for(confidentiality_and_security_missing, Profile),
-    contract_missing_stipulations(Profile, [stipulates_confidentiality_commitment, stipulates_security_measures]).
-
-test(missing_stipulations_empty_when_eligible) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
+test(ineligible_rejects_a_wrong_bound_citation, fail) :-
+    gdpr_processor_contract_profile_for(near_miss_missing_point_h, Profile),
+    decide_processor_contract(Profile, processor_contract_verdict(ineligible, [stipulates_information_and_audit_rights], [cite(eu_reg_2016_679_art_28_3)])).
+test(missing_stipulations_hold_bound) :-
+    gdpr_processor_contract_profile_for(near_miss_partial_point_a_recorded_false, Profile),
+    contract_missing_stipulations(Profile, [stipulates_processing_only_on_documented_instructions]).
+test(missing_stipulations_are_empty_for_eligible) :-
+    gdpr_processor_contract_profile_for(eligible_without_subprocessor, Profile),
     contract_missing_stipulations(Profile, []).
-
-test(missing_stipulations_nonempty_is_rejected_when_eligible, fail) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
-    contract_missing_stipulations(Profile, [_|_]).
-
-test(not_applicable_verdict_bound) :-
-    gdpr_processor_contract_profile_for(not_a_processor, Profile),
+test(not_applicable_holds_bound) :-
+    gdpr_processor_contract_profile_for(not_applicable_not_on_behalf, Profile),
     decide_processor_contract(Profile, processor_contract_verdict(not_applicable, [], [cite(eu_reg_2016_679_art_4_8)])).
-
-test(indeterminate_verdict_bound) :-
-    gdpr_processor_contract_profile_for(in_writing_unestablished, Profile),
-    decide_processor_contract(Profile, processor_contract_verdict(indeterminate([contract_in_writing]), [], [])).
-
-test(role_absent_names_the_role_key) :-
-    gdpr_processor_contract_profile_for(role_unestablished, Profile),
-    processor_contract_status(Profile, indeterminate([processing_on_behalf_of_controller])).
-
-test(deferred_provision_with_pairs_bound) :-
-    gdpr_processor_contract_profile_for(processor_determines_purposes, Profile),
-    decide_processor_contract(Profile, processor_contract_verdict(needs_legal_review(deferred_provision(cite(eu_reg_2016_679_art_28_10)), [inputs_relied_on([processing_on_behalf_of_controller-true, processor_determines_purposes_and_means-true, standard_clauses_adopted-absent])]), [], [])).
-
-test(open_textured_role_bound) :-
-    gdpr_processor_contract_profile_for(role_unsure, Profile),
-    decide_processor_contract(Profile, processor_contract_verdict(needs_legal_review(open_textured(processing_on_behalf_of_controller, cite(eu_reg_2016_679_art_4_8)), [inputs_relied_on([processing_on_behalf_of_controller-unsure, standard_clauses_adopted-absent])]), [], [])).
-
-test(open_textured_guarantees_bound) :-
-    gdpr_processor_contract_profile_for(guarantees_unsure, Profile),
-    decide_processor_contract(Profile, processor_contract_verdict(needs_legal_review(open_textured(processor_provides_sufficient_guarantees, cite(eu_reg_2016_679_art_28_1)), [inputs_relied_on([contract_binding_on_processor-true, processing_on_behalf_of_controller-true, processor_determines_purposes_and_means-false, processor_provides_sufficient_guarantees-unsure, standard_clauses_adopted-absent])]), [], [])).
-
-test(input_problem_verdict_bound) :-
-    gdpr_processor_contract_profile_for(input_problem_in_writing_unsure, Profile),
-    decide_processor_contract(Profile, processor_contract_verdict(input_problems([wrong_type(contract_in_writing)]), [], [])).
-
-test(checklist_item_bound) :-
-    gdpr_processor_contract_profile_for(audit_clause_missing, Profile),
+test(indeterminate_holds_bound_with_every_absent_key) :-
+    gdpr_processor_contract_profile_for(absent_keys_list_all, Profile),
+    processor_contract_status(Profile, indeterminate([contract_in_writing, stipulates_security_measures])).
+test(indeterminate_rejects_a_list_of_the_first_key_only, fail) :-
+    gdpr_processor_contract_profile_for(absent_keys_list_all, Profile),
+    processor_contract_status(Profile, indeterminate([contract_in_writing])).
+test(open_textured_referral_holds_bound) :-
+    gdpr_processor_contract_profile_for(checklist_binding_unsure, Profile),
+    processor_contract_status(Profile, needs_legal_review(open_textured(contract_binding_on_processor, cite(eu_reg_2016_679_art_28_3)), [inputs_relied_on([contract_binding_on_processor-unsure, contract_governed_by_union_or_member_state_law-true, processing_on_behalf_of_controller-true, processor_determines_purposes_and_means-false, processor_provides_sufficient_guarantees-true, standard_clauses_adopted-absent])])).
+test(deferred_referral_holds_bound) :-
+    gdpr_processor_contract_profile_for(role_controller_deferred, Profile),
+    processor_contract_status(Profile, needs_legal_review(deferred_provision(cite(eu_reg_2016_679_art_28_10)), [inputs_relied_on([processing_on_behalf_of_controller-true, processor_determines_purposes_and_means-true, standard_clauses_adopted-absent])])).
+test(input_problems_hold_bound) :-
+    gdpr_processor_contract_profile_for(input_problems_mixed, Profile),
+    processor_contract_status(Profile, input_problems([wrong_type(contract_in_writing), duplicate_key(subprocessor_engaged), unknown_key(stray_key)])).
+test(a_checklist_item_holds_bound) :-
+    gdpr_processor_contract_profile_for(near_miss_missing_point_h, Profile),
     contract_checklist(Profile, Items),
     member(checklist_item(stipulates_information_and_audit_rights, cite(eu_reg_2016_679_art_28_3_h), unmet), Items).
+test(an_outside_fact_holds_bound) :-
+    gdpr_processor_contract_profile_for(eligible_with_standard_clauses_recorded, Profile),
+    processor_contract_outside_facts(Profile, [outside_fact(standard_clauses_adopted, attested(true, attestation(host, moment, reason, none)))]).
 
-test(outside_fact_absent_bound) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
-    processor_contract_outside_facts(Profile, [outside_fact(standard_clauses_adopted, absent)]).
-
-test(outside_fact_attested_bound) :-
-    gdpr_processor_contract_profile_for(standard_clauses_attested, Profile),
-    processor_contract_outside_facts(Profile, [outside_fact(standard_clauses_adopted, attested(true, attestation(decision_layer, recorded_at_review, user_confirmed, none)))]).
-
-test(outside_fact_with_input_problems) :-
-    gdpr_processor_contract_profile_for(input_problem_in_writing_unsure, Profile),
-    processor_contract_outside_facts(Profile, input_problems([wrong_type(contract_in_writing)])).
-
-test(input_check_a_good_profile_has_no_problem) :-
-    gdpr_processor_contract_profile_for(compliant_without_subprocessor, Profile),
-    gdpr_processor_contract_input_problems(Profile, []).
-
-test(input_check_a_non_list_is_wrong_type_profile) :-
-    gdpr_processor_contract_input_problems(not_a_list, [wrong_type(profile)]).
-
-test(input_check_unknown_key) :-
-    gdpr_processor_contract_input_problems([attribute(bogus_key, true)], [unknown_key(bogus_key)]).
-
-test(input_check_duplicate_key_is_not_wrong_type) :-
-    gdpr_processor_contract_input_problems([attribute(contract_in_writing, true), attribute(contract_in_writing, false)], [duplicate_key(contract_in_writing)]).
-
-test(input_check_crisp_unsure_is_wrong_type) :-
-    gdpr_processor_contract_input_problems([attribute(contract_in_writing, unsure)], [wrong_type(contract_in_writing)]).
-
-test(input_check_judgement_unsure_is_fine) :-
-    gdpr_processor_contract_input_problems([attribute(processor_provides_sufficient_guarantees, unsure)], []).
-
-test(input_check_bad_authorisation_atom) :-
-    gdpr_processor_contract_input_problems([attribute(subprocessor_authorisation, maybe)], [wrong_type(subprocessor_authorisation)]).
-
-test(input_check_good_authorisation_atom) :-
-    gdpr_processor_contract_input_problems([attribute(subprocessor_authorisation, none)], []).
-
-test(input_check_bare_outside_fact_is_wrong_type) :-
-    gdpr_processor_contract_input_problems([attribute(standard_clauses_adopted, true)], [wrong_type(standard_clauses_adopted)]).
-
-test(input_check_contract_keys_first_then_unknown) :-
-    gdpr_processor_contract_input_problems([attribute(zzz_key, 1), attribute(contract_in_writing, 5)], [wrong_type(contract_in_writing), unknown_key(zzz_key)]).
-
-test(input_check_unknown_key_named_once) :-
-    gdpr_processor_contract_input_problems([attribute(zzz_key, 1), attribute(zzz_key, 2)], [unknown_key(zzz_key)]).
-
-test(an_empty_profile_is_well_formed_and_not_established) :-
+% ---- input tolerance --------------------------------------------------------
+test(a_non_list_profile_is_wrong_type) :-
+    decide_processor_contract(not_an_attribute_list, processor_contract_verdict(input_problems([wrong_type(profile)]), [], [])).
+test(a_partial_list_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, true)|_], [wrong_type(profile)]).
+test(an_item_that_is_not_an_attribute_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([contract_in_writing], [wrong_type(profile)]).
+test(an_unbound_key_is_wrong_type_of_the_profile) :-
+    gdpr_processor_contract_input_problems([attribute(_, true)], [wrong_type(profile)]).
+test(an_unbound_value_is_wrong_type_never_absent) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, _)], [wrong_type(contract_in_writing)]).
+test(a_quoted_boolean_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, "true")], [wrong_type(contract_in_writing)]).
+test(an_unknown_judgement_value_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(contract_binding_on_processor, yes)], [wrong_type(contract_binding_on_processor)]).
+test(equal_duplicates_are_a_duplicate_key) :-
+    gdpr_processor_contract_input_problems([attribute(contract_in_writing, true), attribute(contract_in_writing, true)], [duplicate_key(contract_in_writing)]).
+test(an_unknown_key_is_named) :-
+    gdpr_processor_contract_input_problems([attribute(stray_key, true)], [unknown_key(stray_key)]).
+test(an_attested_fact_with_url_evidence_is_well_typed) :-
+    gdpr_processor_contract_input_problems([attribute(standard_clauses_adopted, attested(false, attestation(host, moment, reason, url(address, retrieved))))], []).
+test(an_attested_fact_with_a_bad_value_is_wrong_type) :-
+    gdpr_processor_contract_input_problems([attribute(standard_clauses_adopted, attested(maybe, attestation(host, moment, reason, none)))], [wrong_type(standard_clauses_adopted)]).
+test(absence_is_not_an_input_problem) :-
+    gdpr_processor_contract_input_problems([], []),
     processor_contract_status([], indeterminate([processing_on_behalf_of_controller])).
+test(a_malformed_profile_gets_no_checklist) :-
+    contract_checklist(profile_text, []),
+    contract_missing_stipulations(profile_text, []),
+    processor_contract_outside_facts(profile_text, input_problems([wrong_type(profile)])).
 
 :- end_module(test_input_mode).

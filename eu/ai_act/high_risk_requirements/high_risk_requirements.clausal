@@ -1,0 +1,905 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% high_risk_requirements.clausal -- the high_risk_requirements DETERMINATION for
+% eu/ai_act/high_risk_requirements, self-contained top to bottom: its statutory
+% VALUE facts (the Chapter III dates and the Art 111 compliance dates, the
+% requirement table and the element table, each row carrying ready-made
+% cite(Key) terms), its ladder over complete profiles, its two called queries,
+% its checklist and its verdict assembly.
+%
+% Source: Regulation (EU) 2024/1689 (Artificial Intelligence Act), consolidated
+% text 02024R1689-20260727: Art 3, points (8), (9), (11), (14a), (14b) (read into
+% the keys); Art 8(1); Art 9(1); Art 10(1) and (6); Art 11(1) and (2); Art 12(1)
+% and (3); Art 13(1), (2) and (3); Art 14(1) and (5); Art 15(1) and (3); Annex IV;
+% Art 111(1) and (2); Art 113, third paragraph, point (c).
+%
+% THE CALLED CONTRACT:
+%   high_risk_requirement_status(Profile, Requirement, AssessmentDate, Result, Citations)
+%   documentation_element_status(Profile, Element, Result, Citations)
+% Each takes step (0), the input problems, first; then hands THE LADDER (the
+% answer of a COMPLETE profile) to THE STATUS RULE (settle_status/6, the same
+% rule as the kernel's high_risk_requirements_settle/6, run in THIS module so
+% that the ladder closures resolve here), which gives the answer, the missing
+% key (indeterminate([Key])) or the referral (needs_legal_review(...)).
+%
+% PRECEDENCE (defeasibility, reading (15)): the ladder is a chain of steps,
+% each a pair of complementary clauses on a reified truth value; a step whose
+% test is met defeats every later step. No cut, no if-then-else, no once/1.
+% Open-textured judgements (significant changes in design; intended to be used
+% by public authorities) are never decided here: the caller states them, and an
+% unsure judgement that matters goes to a lawyer through the status rule.
+%
+% FACADE: decide_high_risk_requirements(Case, high_risk_requirements_verdict(Result, Citations))
+% with Case one of requirement_case(Profile, Requirement, AssessmentDate) or
+% element_case(Profile, Element); Result and Citations exactly as the called
+% contract gives them.
+% =====================================================================
+
+:- module(high_risk_requirements, [
+    decide_high_risk_requirements/2,
+    high_risk_requirements_status/2,
+    high_risk_requirements_checklist/2,
+    high_risk_requirements_decision_resolvable/1,
+    high_risk_requirements_status_values/1,
+    high_risk_requirement_status/5,
+    documentation_element_status/4,
+    not_applicable_on_date/0,
+    not_a_high_risk_ai_system/0,
+    requirement_does_not_apply/0,
+    compliance_required_by_31_december_2030/0,
+    existing_system_without_significant_changes_not_covered/0,
+    compliance_required_by_2_august_2030/0,
+    requirement_applies_to_testing_data_sets_only/0,
+    requirement_applies_and_the_simplified_form_may_be_used/0,
+    requirement_applies/0,
+    element_not_required/0,
+    element_required_subject_to_an_open_condition/0,
+    element_required/0
+]).
+
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3]).
+:- use_module(eu/ai_act/high_risk_requirements/kernel, [
+    high_risk_requirements_input_problems/2,
+    high_risk_requirements_valid_date_t/2,
+    high_risk_requirements_day_before_t/3
+]).
+:- use_module(eu/ai_act/high_risk_requirements/citations, [implements/1]).
+
+% ---- the result atoms of the contract (result constructors, never queries) ----
+not_applicable_on_date.
+not_a_high_risk_ai_system.
+requirement_does_not_apply.
+compliance_required_by_31_december_2030.
+existing_system_without_significant_changes_not_covered.
+compliance_required_by_2_august_2030.
+requirement_applies_to_testing_data_sets_only.
+requirement_applies_and_the_simplified_form_may_be_used.
+requirement_applies.
+element_not_required.
+element_required_subject_to_an_open_condition.
+element_required.
+
+% The final answers of both queries, as a ground table.
+high_risk_requirements_status_values([
+    not_applicable_on_date,
+    not_a_high_risk_ai_system,
+    requirement_does_not_apply,
+    compliance_required_by_31_december_2030,
+    existing_system_without_significant_changes_not_covered,
+    compliance_required_by_2_august_2030,
+    requirement_applies_to_testing_data_sets_only,
+    requirement_applies_and_the_simplified_form_may_be_used,
+    requirement_applies,
+    element_not_required,
+    element_required_subject_to_an_open_condition,
+    element_required
+]).
+
+% ---- statutory VALUE facts: the dates (reading (2), (10), (11)) -----------
+% application_date(Route, Date, Citation): Art 113, third paragraph, point (c).
+application_date(chapter_three_annex_iii, date(2027, 12, 2), cite(eu_reg_2024_1689_art_113_c_i)).
+application_date(chapter_three_annex_i, date(2028, 8, 2), cite(eu_reg_2024_1689_art_113_c_ii)).
+
+% compliance_deadline(Route, Date, Citation): Art 111(1) and (2), 'by D' read as
+% due on D itself (the requirement applies from D).
+compliance_deadline(annex_ten_component, date(2030, 12, 31), cite(eu_reg_2024_1689_art_111_1)).
+compliance_deadline(public_authority_system, date(2030, 8, 2), cite(eu_reg_2024_1689_art_111_2)).
+
+% ---- the query keys, in decision (root_exports) order ----------------------
+status_query_keys([
+    system_is_a_high_risk_ai_system_listed_in_annex_iii,
+    system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i,
+    system_listed_under_point_1_a_of_annex_iii,
+    used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum,
+    union_or_national_law_considers_the_separate_verification_disproportionate,
+    uses_techniques_involving_the_training_of_ai_models_with_data,
+    provider_is_an_sme_including_a_start_up_or_an_smc,
+    component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027,
+    placed_on_the_market_or_put_into_service_before_the_chapter_iii_date,
+    significant_changes_in_design_as_from_the_chapter_iii_date,
+    intended_to_be_used_by_public_authorities
+]).
+
+element_query_keys([
+    system_is_a_component_of_products,
+    pre_determined_changes_to_the_system_and_its_performance,
+    related_to_a_product_covered_by_annex_i_section_a
+]).
+
+% The type of each key (as the input contract types it): boolean or judgement.
+key_type(system_is_a_high_risk_ai_system_listed_in_annex_iii, boolean).
+key_type(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, boolean).
+key_type(system_listed_under_point_1_a_of_annex_iii, boolean).
+key_type(used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum, boolean).
+key_type(union_or_national_law_considers_the_separate_verification_disproportionate, boolean).
+key_type(uses_techniques_involving_the_training_of_ai_models_with_data, boolean).
+key_type(provider_is_an_sme_including_a_start_up_or_an_smc, boolean).
+key_type(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, boolean).
+key_type(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, boolean).
+key_type(significant_changes_in_design_as_from_the_chapter_iii_date, judgement).
+key_type(intended_to_be_used_by_public_authorities, judgement).
+key_type(system_is_a_component_of_products, boolean).
+key_type(pre_determined_changes_to_the_system_and_its_performance, boolean).
+key_type(related_to_a_product_covered_by_annex_i_section_a, boolean).
+
+% ---- the referral rows (the order's REFERRALS, bare citation keys) ---------
+referral_citation(significant_changes_in_design_as_from_the_chapter_iii_date, eu_reg_2024_1689_art_111_2).
+referral_citation(intended_to_be_used_by_public_authorities, eu_reg_2024_1689_art_111_2).
+
+% ---- the requirement table (reading (1), (4) to (9)) ----------------------
+% requirement_row(Requirement, OwnCondition, FinalForm, RequirementCitations)
+requirement_row(risk_management_system, no_own_condition, plain, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_9_1)]).
+requirement_row(data_and_data_governance, no_own_condition, data_sets, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_10_1)]).
+requirement_row(technical_documentation, no_own_condition, simplified_form, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_11_1)]).
+requirement_row(record_keeping, no_own_condition, plain, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_12_1)]).
+requirement_row(minimum_logging_capabilities_for_point_1_a_systems, point_one_a_logging, plain, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_12_3)]).
+requirement_row(transparency_and_instructions_for_use, no_own_condition, plain, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_13_1), cite(eu_reg_2024_1689_art_13_2)]).
+requirement_row(human_oversight, no_own_condition, plain, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_14_1)]).
+requirement_row(separate_verification_by_at_least_two_natural_persons, point_one_a_verification, plain, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_14_5)]).
+requirement_row(accuracy_robustness_and_cybersecurity, no_own_condition, plain, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_15_1)]).
+
+% THE NOT-APPLYING CITATIONS of the two requirements with conditions of their own.
+not_applying_citation_row(minimum_logging_capabilities_for_point_1_a_systems, [cite(eu_reg_2024_1689_art_12_3)]).
+not_applying_citation_row(separate_verification_by_at_least_two_natural_persons, [cite(eu_reg_2024_1689_art_14_5)]).
+
+% ---- the element table (reading (12), (13)) --------------------------------
+% element_row(Element, Condition, ElementCitations): Condition is unconditional,
+% open_condition or stated_condition(ConditionKey).
+element_row(annex_iv_point_1_a, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_a)]).
+element_row(annex_iv_point_1_b, open_condition, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_b)]).
+element_row(annex_iv_point_1_c, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_c)]).
+element_row(annex_iv_point_1_d, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_d)]).
+element_row(annex_iv_point_1_e, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_e)]).
+element_row(annex_iv_point_1_f, stated_condition(system_is_a_component_of_products), [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_f)]).
+element_row(annex_iv_point_1_g, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_g)]).
+element_row(annex_iv_point_1_h, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_h)]).
+element_row(annex_iv_point_2_a, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_a)]).
+element_row(annex_iv_point_2_b, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_b)]).
+element_row(annex_iv_point_2_c, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_c)]).
+element_row(annex_iv_point_2_d, open_condition, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_d)]).
+element_row(annex_iv_point_2_e, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_e)]).
+element_row(annex_iv_point_2_f, stated_condition(pre_determined_changes_to_the_system_and_its_performance), [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_f)]).
+element_row(annex_iv_point_2_g, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_g)]).
+element_row(annex_iv_point_2_h, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_2_h)]).
+element_row(annex_iv_point_3, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_3)]).
+element_row(annex_iv_point_4, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_4)]).
+element_row(annex_iv_point_5, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_5)]).
+element_row(annex_iv_point_6, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_6)]).
+element_row(annex_iv_point_7, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_7)]).
+element_row(annex_iv_point_8, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_8)]).
+element_row(annex_iv_point_9, unconditional, [cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_9)]).
+element_row(article_11_2_information_under_annex_i_section_a_legislation, stated_condition(related_to_a_product_covered_by_annex_i_section_a), [cite(eu_reg_2024_1689_art_11_2)]).
+element_row(article_13_3_point_a, unconditional, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_a)]).
+element_row(article_13_3_point_b_i, unconditional, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_b_i)]).
+element_row(article_13_3_point_b_ii, unconditional, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_b_ii)]).
+element_row(article_13_3_point_b_iii, unconditional, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_b_iii)]).
+element_row(article_13_3_point_b_iv, open_condition, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_b_iv)]).
+element_row(article_13_3_point_b_v, open_condition, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_b_v)]).
+element_row(article_13_3_point_b_vi, open_condition, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_b_vi)]).
+element_row(article_13_3_point_b_vii, open_condition, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_b_vii)]).
+element_row(article_13_3_point_c, stated_condition(pre_determined_changes_to_the_system_and_its_performance), [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_c)]).
+element_row(article_13_3_point_d, unconditional, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_d)]).
+element_row(article_13_3_point_e, unconditional, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_e)]).
+element_row(article_13_3_point_f, open_condition, [cite(eu_reg_2024_1689_art_13_3), cite(eu_reg_2024_1689_art_13_3_f)]).
+element_row(article_15_3_levels_of_accuracy_and_accuracy_metrics, unconditional, [cite(eu_reg_2024_1689_art_15_3)]).
+
+% =====================================================================
+% high_risk_requirement_status/5
+% =====================================================================
+high_risk_requirement_status(Profile, Requirement, AssessmentDate, Result, Citations) :-
+    high_risk_requirements_input_problems(Profile, ProfileProblems),
+    requirement_problems(Requirement, RequirementProblems),
+    date_problems(AssessmentDate, DateProblems),
+    append([ProfileProblems, RequirementProblems, DateProblems], Problems),
+    status_answer(Problems, Profile, Requirement, AssessmentDate, Result, Citations).
+
+status_answer([], Profile, Requirement, AssessmentDate, Result, Citations) :-
+    status_query_keys(QueryKeys),
+    settle_status(QueryKeys,
+                  Profile,
+                  requirement_ladder(Requirement, AssessmentDate),
+                  referral_citation,
+                  Result,
+                  Citations).
+status_answer([Problem|Problems], _, _, _, input_problems([Problem|Problems]), []).
+
+% Step (0) for the arguments: an unbound argument is never enumerated.
+requirement_problems(Requirement, Problems) :-
+    requirement_atom_t(Requirement, IsRequirement),
+    requirement_problem(IsRequirement, Problems).
+
+requirement_problem(true, []).
+requirement_problem(false, [wrong_type(requirement)]).
+
+requirement_atom_t(Term, false) :-
+    var(Term).
+requirement_atom_t(Term, Truth) :-
+    nonvar(Term),
+    findall(Requirement, requirement_row(Requirement, _, _, _), Requirements),
+    memberd_t(Term, Requirements, Truth).
+
+date_problems(AssessmentDate, Problems) :-
+    high_risk_requirements_valid_date_t(AssessmentDate, IsDate),
+    date_problem(IsDate, Problems).
+
+date_problem(true, []).
+date_problem(false, [wrong_type(assessment_date)]).
+
+% ---- THE LADDER over a complete profile (INTERFACE - THE LIMBS) ------------
+% Step (1): before 2 December 2027 no requirement of this order applies. The
+% general date of Art 113, second paragraph, and points (a), (b) and (d) of its
+% third paragraph do not date Arts 8 to 15 (reading (2)): only point (c) is read.
+requirement_ladder(Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c),
+    implements(eu_reg_2024_1689_art_113),
+    implements(eu_reg_2024_1689_art_113_a),
+    implements(eu_reg_2024_1689_art_113_b),
+    implements(eu_reg_2024_1689_art_113_d),
+    application_date(chapter_three_annex_iii, AnnexThreeDate, _),
+    high_risk_requirements_day_before_t(AssessmentDate, AnnexThreeDate, IsBefore),
+    general_date_step(IsBefore, Requirement, AssessmentDate, Profile, Result, Citations).
+
+general_date_step(true,
+                  _,
+                  _,
+                  _,
+                  not_applicable_on_date,
+                  [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)]) :-
+    implements(eu_reg_2024_1689_art_113_c).
+general_date_step(false, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_8),
+    implements(eu_reg_2024_1689_art_8_1),
+    profile_get(Profile, system_is_a_high_risk_ai_system_listed_in_annex_iii, AnnexThree),
+    profile_get(Profile, system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, AnnexOne),
+    classification_step(AnnexThree, AnnexOne, Requirement, AssessmentDate, Profile, Result, Citations).
+
+% Step (2): not high-risk; step (3): Annex I only, before 2 August 2028.
+classification_step(false, false, _, _, _, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_8_1)]) :-
+    implements(eu_reg_2024_1689_art_8_1).
+classification_step(false, true, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c_ii),
+    application_date(chapter_three_annex_i, AnnexOneDate, _),
+    high_risk_requirements_day_before_t(AssessmentDate, AnnexOneDate, IsBefore),
+    annex_one_date_step(IsBefore, Requirement, AssessmentDate, Profile, Result, Citations).
+classification_step(true, _, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c_i),
+    own_conditions_step(Requirement, AssessmentDate, Profile, Result, Citations).
+
+annex_one_date_step(true,
+                    _,
+                    _,
+                    _,
+                    not_applicable_on_date,
+                    [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]) :-
+    implements(eu_reg_2024_1689_art_113_c_ii).
+annex_one_date_step(false, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c_ii),
+    own_conditions_step(Requirement, AssessmentDate, Profile, Result, Citations).
+
+% Step (4): the requirement does not apply by its own conditions.
+own_conditions_step(Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_8_1),
+    requirement_row(Requirement, OwnCondition, _, _),
+    not_applying_t(OwnCondition, Profile, NotApplying),
+    own_condition_step(NotApplying, Requirement, AssessmentDate, Profile, Result, Citations).
+
+not_applying_t(no_own_condition, _, false) :-
+    implements(eu_reg_2024_1689_art_8_1).
+not_applying_t(point_one_a_logging, Profile, Truth) :-
+    implements(eu_reg_2024_1689_art_12_3),
+    implements(eu_reg_2024_1689_art_12_3_a),
+    implements(eu_reg_2024_1689_art_12_3_b),
+    implements(eu_reg_2024_1689_art_12_3_c),
+    implements(eu_reg_2024_1689_art_12_3_d),
+    profile_get(Profile, system_is_a_high_risk_ai_system_listed_in_annex_iii, AnnexThree),
+    profile_get(Profile, system_listed_under_point_1_a_of_annex_iii, PointOneA),
+    point_one_a_referred(AnnexThree, PointOneA, Referred),
+    logging_not_applying(Referred, Truth).
+not_applying_t(point_one_a_verification, Profile, Truth) :-
+    implements(eu_reg_2024_1689_art_14_5),
+    profile_get(Profile, system_is_a_high_risk_ai_system_listed_in_annex_iii, AnnexThree),
+    profile_get(Profile, system_listed_under_point_1_a_of_annex_iii, PointOneA),
+    profile_get(Profile, used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum, Purposes),
+    profile_get(Profile, union_or_national_law_considers_the_separate_verification_disproportionate, LawView),
+    point_one_a_referred(AnnexThree, PointOneA, Referred),
+    verification_exception(Purposes, LawView, Exception),
+    verification_not_applying(Referred, Exception, Truth).
+
+% Reading (7): point 1(a) is read only for an Annex III system.
+point_one_a_referred(true, true, true).
+point_one_a_referred(true, false, false).
+point_one_a_referred(false, _, false).
+
+logging_not_applying(true, false).
+logging_not_applying(false, true).
+
+% Reading (9): the exception needs BOTH the purposes AND the law's view.
+verification_exception(true, true, true).
+verification_exception(true, false, false).
+verification_exception(false, _, false).
+
+verification_not_applying(false, _, true).
+verification_not_applying(true, Exception, Exception).
+
+own_condition_step(true, Requirement, _, _, requirement_does_not_apply, Citations) :-
+    implements(eu_reg_2024_1689_art_8_1),
+    not_applying_citation_row(Requirement, Citations).
+own_condition_step(false, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_1),
+    profile_get(Profile, component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, Component),
+    annex_ten_step(Component, Requirement, AssessmentDate, Profile, Result, Citations).
+
+% Step (5): Annex X components, compliance by 31 December 2030 (reading (10)).
+annex_ten_step(true, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_1),
+    compliance_deadline(annex_ten_component, Deadline, _),
+    high_risk_requirements_day_before_t(AssessmentDate, Deadline, IsBefore),
+    annex_ten_deadline_step(IsBefore, Requirement, Profile, Result, Citations).
+annex_ten_step(false, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    implements(eu_reg_2024_1689_art_3_9),
+    implements(eu_reg_2024_1689_art_3_11),
+    profile_get(Profile, placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, Placed),
+    existing_system_step(Placed, Requirement, AssessmentDate, Profile, Result, Citations).
+
+annex_ten_deadline_step(true, Requirement, _, compliance_required_by_31_december_2030, Citations) :-
+    implements(eu_reg_2024_1689_art_111_1),
+    requirement_row(Requirement, _, _, RequirementCitations),
+    append([cite(eu_reg_2024_1689_art_111_1)], RequirementCitations, Citations).
+annex_ten_deadline_step(false, Requirement, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_1),
+    final_step(Requirement, Profile, Result, Citations).
+
+% Steps (6) and (7): systems already on the market or in service (reading (11)).
+existing_system_step(true, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    profile_get(Profile, significant_changes_in_design_as_from_the_chapter_iii_date, Changes),
+    design_change_step(Changes, Requirement, AssessmentDate, Profile, Result, Citations).
+existing_system_step(false, Requirement, _, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    final_step(Requirement, Profile, Result, Citations).
+
+design_change_step(true, Requirement, _, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    final_step(Requirement, Profile, Result, Citations).
+design_change_step(false, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    implements(eu_reg_2024_1689_art_3_8),
+    profile_get(Profile, intended_to_be_used_by_public_authorities, Public),
+    public_authority_step(Public, Requirement, AssessmentDate, Profile, Result, Citations).
+
+public_authority_step(false, _, _, _, existing_system_without_significant_changes_not_covered, [cite(eu_reg_2024_1689_art_111_2)]) :-
+    implements(eu_reg_2024_1689_art_111_2).
+public_authority_step(true, Requirement, AssessmentDate, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    compliance_deadline(public_authority_system, Deadline, _),
+    high_risk_requirements_day_before_t(AssessmentDate, Deadline, IsBefore),
+    public_deadline_step(IsBefore, Requirement, Profile, Result, Citations).
+
+public_deadline_step(true, Requirement, _, compliance_required_by_2_august_2030, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    requirement_row(Requirement, _, _, RequirementCitations),
+    append([cite(eu_reg_2024_1689_art_111_2)], RequirementCitations, Citations).
+public_deadline_step(false, Requirement, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    final_step(Requirement, Profile, Result, Citations).
+
+% Steps (8) to (10): the requirement applies.
+final_step(Requirement, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_8_1),
+    requirement_row(Requirement, _, FinalForm, RequirementCitations),
+    final_form_step(FinalForm, Profile, RequirementCitations, Result, Citations).
+
+final_form_step(plain, _, RequirementCitations, requirement_applies, RequirementCitations) :-
+    implements(eu_reg_2024_1689_art_8_1).
+final_form_step(data_sets, Profile, RequirementCitations, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_10_1),
+    profile_get(Profile, uses_techniques_involving_the_training_of_ai_models_with_data, UsesTraining),
+    data_sets_step(UsesTraining, RequirementCitations, Result, Citations).
+final_form_step(simplified_form, Profile, RequirementCitations, Result, Citations) :-
+    implements(eu_reg_2024_1689_art_11_1),
+    implements(eu_reg_2024_1689_art_3_14a),
+    implements(eu_reg_2024_1689_art_3_14b),
+    profile_get(Profile, provider_is_an_sme_including_a_start_up_or_an_smc, SmallEnterprise),
+    simplified_form_step(SmallEnterprise, RequirementCitations, Result, Citations).
+
+data_sets_step(true, RequirementCitations, requirement_applies, RequirementCitations) :-
+    implements(eu_reg_2024_1689_art_10_1).
+data_sets_step(false, _, requirement_applies_to_testing_data_sets_only, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_10_6)]) :-
+    implements(eu_reg_2024_1689_art_10_6).
+
+simplified_form_step(true, _, requirement_applies_and_the_simplified_form_may_be_used, [cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_11_1)]) :-
+    implements(eu_reg_2024_1689_art_11_1).
+simplified_form_step(false, RequirementCitations, requirement_applies, RequirementCitations) :-
+    implements(eu_reg_2024_1689_art_11_1).
+
+% =====================================================================
+% documentation_element_status/4
+% =====================================================================
+documentation_element_status(Profile, Element, Result, Citations) :-
+    high_risk_requirements_input_problems(Profile, ProfileProblems),
+    element_problems(Element, ElementProblems),
+    append(ProfileProblems, ElementProblems, Problems),
+    element_answer(Problems, Profile, Element, Result, Citations).
+
+element_answer([], Profile, Element, Result, Citations) :-
+    element_query_keys(QueryKeys),
+    settle_status(QueryKeys,
+                  Profile,
+                  element_ladder(Element),
+                  referral_citation,
+                  Result,
+                  Citations).
+element_answer([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+
+element_problems(Element, Problems) :-
+    element_atom_t(Element, IsElement),
+    element_problem(IsElement, Problems).
+
+element_problem(true, []).
+element_problem(false, [wrong_type(element)]).
+
+element_atom_t(Term, false) :-
+    var(Term).
+element_atom_t(Term, Truth) :-
+    nonvar(Term),
+    findall(Element, element_row(Element, _, _), Elements),
+    memberd_t(Term, Elements, Truth).
+
+% THE LADDER of an element over a complete profile.
+element_ladder(Element, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1689_annex_iv),
+    element_row(Element, Condition, Citations),
+    element_condition_result(Condition, Profile, Result).
+
+% Step (2) open words are not judged (reading (13)); step (3) no condition.
+element_condition_result(unconditional, _, element_required) :-
+    implements(eu_reg_2024_1689_annex_iv).
+element_condition_result(open_condition, _, element_required_subject_to_an_open_condition) :-
+    implements(eu_reg_2024_1689_annex_iv).
+element_condition_result(stated_condition(ConditionKey), Profile, Result) :-
+    implements(eu_reg_2024_1689_art_11_1),
+    profile_get(Profile, ConditionKey, ConditionHolds),
+    stated_condition_result(ConditionHolds, Result).
+
+% Step (1): a stated condition that does not hold.
+stated_condition_result(false, element_not_required).
+stated_condition_result(true, element_required).
+
+% =====================================================================
+% THE STATUS RULE (the ruling, <<DNUM>>; <<DNUM>> wording; Q22), run in THIS module
+% so that the ladder and referral closures resolve here. Same rule as the
+% kernel's high_risk_requirements_settle/6.
+% =====================================================================
+settle_status(QueryKeys, Profile, Ladder, Referral, Result, Citations) :-
+    maplist(key_entry(Profile), QueryKeys, Entries),
+    free_entries(Entries, 0, FreeEntries),
+    length(FreeEntries, FreeCount),
+    findall(Values-Answer,
+            completion_answer(Entries, FreeCount, Ladder, Values, Answer),
+            Rows),
+    pairs_values(Rows, Answers),
+    sort(Answers, DistinctAnswers),
+    settled_status(DistinctAnswers,
+                   FreeEntries,
+                   Rows,
+                   QueryKeys,
+                   Profile,
+                   Referral,
+                   Result,
+                   Citations).
+
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+key_entry(Profile, Key, entry(Key, State)) :-
+    key_occurrences(Profile, Key, Occurrences),
+    state_from_occurrences(Occurrences, Profile, Key, State).
+
+state_from_occurrences(none, _, _, absent).
+state_from_occurrences(one, Profile, Key, State) :-
+    profile_get(Profile, Key, Value),
+    key_type(Key, Type),
+    value_state(Type, Value, State).
+
+value_state(boolean, Value, fixed(Value)).
+value_state(judgement, Value, State) :-
+    memberd_t(Value, [unsure], IsUnsure),
+    judgement_state(IsUnsure, Value, State).
+
+judgement_state(true, _, unsure).
+judgement_state(false, Value, fixed(Value)).
+
+free_entries([], _, []).
+free_entries([entry(_, fixed(_))|Entries], Index, FreeEntries) :-
+    free_entries(Entries, Index, FreeEntries).
+free_entries([entry(Key, absent)|Entries], Index, [free(Key, absent, Index)|FreeEntries]) :-
+    NextIndex #= Index + 1,
+    free_entries(Entries, NextIndex, FreeEntries).
+free_entries([entry(Key, unsure)|Entries], Index, [free(Key, unsure, Index)|FreeEntries]) :-
+    NextIndex #= Index + 1,
+    free_entries(Entries, NextIndex, FreeEntries).
+
+completion_answer(Entries, FreeCount, Ladder, Values, answer(Result, SortedCitations)) :-
+    length(Values, FreeCount),
+    maplist(boolean_value, Values),
+    completion(Entries, Values, CompleteProfile),
+    call(Ladder, CompleteProfile, Result, Citations),
+    sort(Citations, SortedCitations).
+
+boolean_value(true).
+boolean_value(false).
+
+completion([], [], []).
+completion([entry(Key, fixed(Value))|Entries], Values, [attribute(Key, Value)|Attributes]) :-
+    completion(Entries, Values, Attributes).
+completion([entry(Key, absent)|Entries], [Value|Values], [attribute(Key, Value)|Attributes]) :-
+    completion(Entries, Values, Attributes).
+completion([entry(Key, unsure)|Entries], [Value|Values], [attribute(Key, Value)|Attributes]) :-
+    completion(Entries, Values, Attributes).
+
+settled_status([answer(Result, Citations)], _, _, _, _, _, Result, Citations).
+settled_status([_, _|_], FreeEntries, Rows, QueryKeys, Profile, Referral, Result, Citations) :-
+    maplist(free_information(Rows), FreeEntries, Informations),
+    open_status(Informations, QueryKeys, Profile, Referral, Result, Citations).
+
+free_information(Rows,
+                 free(Key, Kind, Index),
+                 information(Key, Kind, Index, Matters, Witnesses)) :-
+    witnesses(Index, Rows, Witnesses),
+    matters_t(Witnesses, Matters).
+
+witnesses(Index, Rows, Witnesses) :-
+    findall(OtherValues-(Value-Answer),
+            ( member(Values-Answer, Rows),
+              remove_at(Index, Values, Value, OtherValues)
+            ),
+            Keyed),
+    keysort(Keyed, Sorted),
+    group_pairs_by_key(Sorted, Groups),
+    findall(WitnessValues,
+            ( member(WitnessValues-Group, Groups),
+              member(true-AnswerTrue, Group),
+              member(false-AnswerFalse, Group),
+              AnswerTrue \== AnswerFalse
+            ),
+            Found),
+    sort(Found, Witnesses).
+
+remove_at(0, [Value|Values], Value, Values).
+remove_at(Index, [Item|Items], Value, [Item|Rest]) :-
+    Index #> 0,
+    PreviousIndex #= Index - 1,
+    remove_at(PreviousIndex, Items, Value, Rest).
+
+matters_t([], false).
+matters_t([_|_], true).
+
+open_status(Informations, QueryKeys, Profile, Referral, Result, Citations) :-
+    absent_informations(Informations, AbsentInformations),
+    maplist(missing_candidate(AbsentInformations), AbsentInformations, Candidates),
+    first_missing(Candidates, Found),
+    missing_status(Found,
+                   Informations,
+                   AbsentInformations,
+                   QueryKeys,
+                   Profile,
+                   Referral,
+                   Result,
+                   Citations).
+
+missing_status(found(Key), _, _, _, _, _, indeterminate([Key]), []).
+missing_status(none, Informations, AbsentInformations, QueryKeys, Profile, Referral, Result, Citations) :-
+    first_mattering(AbsentInformations, Found),
+    fallback_status(Found, Informations, QueryKeys, Profile, Referral, Result, Citations).
+
+fallback_status(found(Key), _, _, _, _, indeterminate([Key]), []).
+fallback_status(none,
+                Informations,
+                QueryKeys,
+                Profile,
+                Referral,
+                needs_legal_review(open_textured(Judgement, cite(CitationKey)),
+                                   [inputs_relied_on(Pairs)]),
+                []) :-
+    unsure_informations(Informations, UnsureInformations),
+    first_mattering(UnsureInformations, found(Judgement)),
+    call(Referral, Judgement, CitationKey),
+    judgement_pairs(QueryKeys, Profile, Pairs).
+
+absent_informations([], []).
+absent_informations([information(Key, absent, Index, Matters, Witnesses)|Informations],
+                    [information(Key, absent, Index, Matters, Witnesses)|AbsentInformations]) :-
+    absent_informations(Informations, AbsentInformations).
+absent_informations([information(_, unsure, _, _, _)|Informations], AbsentInformations) :-
+    absent_informations(Informations, AbsentInformations).
+
+unsure_informations([], []).
+unsure_informations([information(Key, unsure, Index, Matters, Witnesses)|Informations],
+                    [information(Key, unsure, Index, Matters, Witnesses)|UnsureInformations]) :-
+    unsure_informations(Informations, UnsureInformations).
+unsure_informations([information(_, absent, _, _, _)|Informations], UnsureInformations) :-
+    unsure_informations(Informations, UnsureInformations).
+
+missing_candidate(AbsentInformations,
+                  information(Key, Kind, Index, Matters, Witnesses),
+                  candidate(Key, Matters, Behind)) :-
+    behind_any_t(information(Key, Kind, Index, Matters, Witnesses), AbsentInformations, Behind).
+
+first_missing([], none).
+first_missing([candidate(Key, true, false)|_], found(Key)).
+first_missing([candidate(_, true, true)|Candidates], Found) :-
+    first_missing(Candidates, Found).
+first_missing([candidate(_, false, _)|Candidates], Found) :-
+    first_missing(Candidates, Found).
+
+first_mattering([], none).
+first_mattering([information(Key, _, _, true, _)|_], found(Key)).
+first_mattering([information(_, _, _, false, _)|Informations], Found) :-
+    first_mattering(Informations, Found).
+
+behind_any_t(_, [], false).
+behind_any_t(Information, [Other|Others], Truth) :-
+    pair_behind_t(Information, Other, PairTruth),
+    behind_any_t(Information, Others, RestTruth),
+    truth_or(PairTruth, RestTruth, Truth).
+
+pair_behind_t(information(_, _, Index, _, _), information(_, _, OtherIndex, _, _), false) :-
+    Index =:= OtherIndex.
+pair_behind_t(information(_, _, Index, _, Witnesses),
+              information(_, _, OtherIndex, _, OtherWitnesses),
+              Truth) :-
+    Index =\= OtherIndex,
+    other_position(Index, OtherIndex, OtherPosition),
+    other_position(OtherIndex, Index, OwnPosition),
+    values_at(OtherPosition, Witnesses, OtherValues),
+    values_at(OwnPosition, OtherWitnesses, OwnValues),
+    sort(OtherValues, OtherValueSet),
+    sort(OwnValues, OwnValueSet),
+    one_value_t(OtherValueSet, OneValue),
+    both_values_t(OwnValueSet, BothValues),
+    truth_and(OneValue, BothValues, Truth).
+
+other_position(Removed, Index, Index) :-
+    Index #< Removed.
+other_position(Removed, Index, Position) :-
+    Index #> Removed,
+    Position #= Index - 1.
+
+values_at(Position, Witnesses, Values) :-
+    findall(Value,
+            ( member(Witness, Witnesses),
+              list_item(Position, Witness, Value)
+            ),
+            Values).
+
+one_value_t([], false).
+one_value_t([_], true).
+one_value_t([_, _|_], false).
+
+both_values_t([], false).
+both_values_t([_], false).
+both_values_t([false, true], true).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+% THE PAIRS RULE: the judgement keys among the query keys PRESENT in the profile, in
+% root_exports order, with their values as given (unsure included).
+judgement_pairs([], _, []).
+judgement_pairs([Key|Keys], Profile, Pairs) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    judgement_pairs(Keys, Profile, LaterPairs),
+    judgement_pair(Type, Occurrences, Profile, Key, LaterPairs, Pairs).
+
+judgement_pair(boolean, _, _, _, Pairs, Pairs).
+judgement_pair(judgement, none, _, _, Pairs, Pairs).
+judgement_pair(judgement, one, Profile, Key, Pairs, [Key-Value|Pairs]) :-
+    profile_get(Profile, Key, Value).
+
+% =====================================================================
+% FACADE: verdict, status projection, checklist
+% =====================================================================
+decide_high_risk_requirements(requirement_case(Profile, Requirement, AssessmentDate),
+                              high_risk_requirements_verdict(Result, Citations)) :-
+    high_risk_requirement_status(Profile, Requirement, AssessmentDate, Result, Citations).
+decide_high_risk_requirements(element_case(Profile, Element),
+                              high_risk_requirements_verdict(Result, Citations)) :-
+    documentation_element_status(Profile, Element, Result, Citations).
+
+high_risk_requirements_status(Case, Status) :-
+    decide_high_risk_requirements(Case, high_risk_requirements_verdict(Status, _)).
+
+% One row per requirement (on the case's date) or per element, each with the
+% citations its answer carries.
+high_risk_requirements_checklist(requirement_case(Profile, _, AssessmentDate), Items) :-
+    findall(item(Requirement, Result, Citations),
+            ( requirement_row(Requirement, _, _, _),
+              high_risk_requirement_status(Profile, Requirement, AssessmentDate, Result, Citations)
+            ),
+            Items).
+high_risk_requirements_checklist(element_case(Profile, _), Items) :-
+    findall(item(Element, Result, Citations),
+            ( element_row(Element, _, _),
+              documentation_element_status(Profile, Element, Result, Citations)
+            ),
+            Items).
+
+high_risk_requirements_decision_resolvable(Case) :-
+    decide_high_risk_requirements(Case, high_risk_requirements_verdict(Result, _)),
+    high_risk_requirements_status_values(Values),
+    memberd_t(Result, Values, true).
+
+% =====================================================================
+% tests
+% =====================================================================
+base_profile(Component, Placed, Changes, Public, [
+    attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+    attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false),
+    attribute(system_listed_under_point_1_a_of_annex_iii, false),
+    attribute(used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum, false),
+    attribute(union_or_national_law_considers_the_separate_verification_disproportionate, false),
+    attribute(uses_techniques_involving_the_training_of_ai_models_with_data, true),
+    attribute(provider_is_an_sme_including_a_start_up_or_an_smc, false),
+    attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, Component),
+    attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, Placed),
+    attribute(significant_changes_in_design_as_from_the_chapter_iii_date, Changes),
+    attribute(intended_to_be_used_by_public_authorities, Public)
+]).
+
+point_one_a_profile(Purposes, LawView, [
+    attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, true),
+    attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false),
+    attribute(system_listed_under_point_1_a_of_annex_iii, true),
+    attribute(used_for_the_purposes_of_law_enforcement_migration_border_control_or_asylum, Purposes),
+    attribute(union_or_national_law_considers_the_separate_verification_disproportionate, LawView),
+    attribute(uses_techniques_involving_the_training_of_ai_models_with_data, false),
+    attribute(provider_is_an_sme_including_a_start_up_or_an_smc, true),
+    attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false),
+    attribute(placed_on_the_market_or_put_into_service_before_the_chapter_iii_date, false),
+    attribute(significant_changes_in_design_as_from_the_chapter_iii_date, false),
+    attribute(intended_to_be_used_by_public_authorities, false)
+]).
+
+test(before_the_general_date_nothing_applies) :-
+    high_risk_requirement_status([], risk_management_system, date(2027, 12, 1), Result, Citations),
+    Result == not_applicable_on_date,
+    sort([cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i), cite(eu_reg_2024_1689_art_113_c_ii)], Expected),
+    sort(Citations, Got),
+    Got == Expected.
+test(a_complete_annex_iii_profile_gets_requirement_applies) :-
+    base_profile(false, false, false, false, Profile),
+    high_risk_requirement_status(Profile, risk_management_system, date(2028, 1, 1), Result, Citations),
+    Result == requirement_applies,
+    sort(Citations, Got),
+    sort([cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_9_1)], Expected),
+    Got == Expected.
+test(one_answer_only) :-
+    base_profile(false, false, false, false, Profile),
+    findall(Result, high_risk_requirement_status(Profile, human_oversight, date(2028, 1, 1), Result, _), Results),
+    length(Results, 1).
+test(the_general_date_itself_applies, fail) :-
+    base_profile(false, false, false, false, Profile),
+    high_risk_requirement_status(Profile, risk_management_system, date(2027, 12, 2), not_applicable_on_date, _).
+test(an_empty_profile_asks_for_the_annex_iii_key) :-
+    high_risk_requirement_status([], risk_management_system, date(2028, 1, 1), Result, Citations),
+    Result == indeterminate([system_is_a_high_risk_ai_system_listed_in_annex_iii]),
+    Citations == [].
+test(an_unknown_requirement_is_a_wrong_type) :-
+    high_risk_requirement_status([], colour_coding, date(2028, 1, 1), input_problems([wrong_type(requirement)]), []).
+test(unbound_arguments_give_their_wrong_types) :-
+    high_risk_requirement_status([], _, date(2027, 2, 29), Result, []),
+    Result == input_problems([wrong_type(requirement), wrong_type(assessment_date)]).
+test(an_unsure_design_change_is_referred) :-
+    base_profile(false, true, unsure, false, Profile),
+    high_risk_requirement_status(Profile, risk_management_system, date(2028, 1, 1), Result, Citations),
+    Result == needs_legal_review(open_textured(significant_changes_in_design_as_from_the_chapter_iii_date, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_as_from_the_chapter_iii_date-unsure, intended_to_be_used_by_public_authorities-false])]),
+    Citations == [].
+test(an_existing_unchanged_system_is_not_covered) :-
+    base_profile(false, true, false, false, Profile),
+    high_risk_requirement_status(Profile, record_keeping, date(2028, 1, 1), existing_system_without_significant_changes_not_covered, [cite(eu_reg_2024_1689_art_111_2)]).
+test(a_public_authority_system_has_until_2_august_2030) :-
+    base_profile(false, true, false, true, Profile),
+    high_risk_requirement_status(Profile, record_keeping, date(2029, 1, 1), compliance_required_by_2_august_2030, _).
+test(a_public_authority_system_is_covered_on_2_august_2030) :-
+    base_profile(false, true, false, true, Profile),
+    high_risk_requirement_status(Profile, record_keeping, date(2030, 8, 2), requirement_applies, _).
+test(an_annex_x_component_has_until_31_december_2030) :-
+    base_profile(true, false, false, false, Profile),
+    high_risk_requirement_status(Profile, risk_management_system, date(2029, 1, 1), Result, Citations),
+    Result == compliance_required_by_31_december_2030,
+    sort(Citations, Got),
+    sort([cite(eu_reg_2024_1689_art_111_1), cite(eu_reg_2024_1689_art_8_1), cite(eu_reg_2024_1689_art_9_1)], Expected),
+    Got == Expected.
+test(an_annex_x_component_is_covered_on_31_december_2030) :-
+    base_profile(true, false, false, false, Profile),
+    high_risk_requirement_status(Profile, risk_management_system, date(2030, 12, 31), requirement_applies, _).
+test(the_verification_exception_needs_both_conditions) :-
+    point_one_a_profile(true, true, Profile),
+    high_risk_requirement_status(Profile, separate_verification_by_at_least_two_natural_persons, date(2028, 1, 1), requirement_does_not_apply, [cite(eu_reg_2024_1689_art_14_5)]).
+test(the_verification_applies_without_the_law_view) :-
+    point_one_a_profile(true, false, Profile),
+    high_risk_requirement_status(Profile, separate_verification_by_at_least_two_natural_persons, date(2028, 1, 1), requirement_applies, _).
+test(the_logging_minimum_applies_to_a_point_one_a_system) :-
+    point_one_a_profile(true, true, Profile),
+    high_risk_requirement_status(Profile, minimum_logging_capabilities_for_point_1_a_systems, date(2028, 1, 1), requirement_applies, _).
+test(the_logging_minimum_does_not_apply_otherwise) :-
+    base_profile(false, false, false, false, Profile),
+    high_risk_requirement_status(Profile, minimum_logging_capabilities_for_point_1_a_systems, date(2028, 1, 1), requirement_does_not_apply, [cite(eu_reg_2024_1689_art_12_3)]).
+test(without_training_only_the_testing_data_sets) :-
+    point_one_a_profile(false, false, Profile),
+    high_risk_requirement_status(Profile, data_and_data_governance, date(2028, 1, 1), requirement_applies_to_testing_data_sets_only, _).
+test(an_sme_provider_may_use_the_simplified_form) :-
+    point_one_a_profile(false, false, Profile),
+    high_risk_requirement_status(Profile, technical_documentation, date(2028, 1, 1), requirement_applies_and_the_simplified_form_may_be_used, _).
+test(an_annex_i_only_system_waits_for_2_august_2028) :-
+    high_risk_requirement_status([attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, false), attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, true)], human_oversight, date(2028, 8, 1), not_applicable_on_date, _).
+test(a_system_high_risk_under_neither_route) :-
+    high_risk_requirement_status([attribute(system_is_a_high_risk_ai_system_listed_in_annex_iii, false), attribute(system_is_a_high_risk_ai_system_under_article_6_1_and_annex_i, false)], human_oversight, date(2029, 1, 1), not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_8_1)]).
+test(an_unconditional_element_is_required) :-
+    documentation_element_status([], annex_iv_point_1_a, element_required, Citations),
+    sort(Citations, Got),
+    sort([cite(eu_reg_2024_1689_art_11_1), cite(eu_reg_2024_1689_annex_iv_1_a)], Expected),
+    Got == Expected.
+test(an_open_element_is_reported) :-
+    documentation_element_status([], article_13_3_point_f, element_required_subject_to_an_open_condition, _).
+test(a_stated_condition_asks_for_its_key) :-
+    documentation_element_status([], annex_iv_point_1_f, indeterminate([system_is_a_component_of_products]), []).
+test(a_stated_condition_that_fails_is_not_required) :-
+    documentation_element_status([attribute(system_is_a_component_of_products, false)], annex_iv_point_1_f, element_not_required, _).
+test(a_stated_condition_that_holds_is_required) :-
+    documentation_element_status([attribute(system_is_a_component_of_products, true)], annex_iv_point_1_f, element_required, _).
+test(an_unknown_element_is_a_wrong_type) :-
+    documentation_element_status([], annex_iv_point_10, input_problems([wrong_type(element)]), []).
+test(a_bad_profile_comes_first) :-
+    documentation_element_status(not_a_list, _, input_problems([wrong_type(profile), wrong_type(element)]), []).
+test(the_requirement_checklist_has_nine_rows) :-
+    base_profile(false, false, false, false, Profile),
+    high_risk_requirements_checklist(requirement_case(Profile, risk_management_system, date(2028, 1, 1)), Items),
+    length(Items, 9).
+test(the_element_checklist_has_thirty_seven_rows) :-
+    high_risk_requirements_checklist(element_case([], annex_iv_point_1_a), Items),
+    length(Items, 37).
+test(a_settled_case_is_resolvable) :-
+    base_profile(false, false, false, false, Profile),
+    high_risk_requirements_decision_resolvable(requirement_case(Profile, human_oversight, date(2028, 1, 1))).
+test(a_missing_key_is_not_resolvable, fail) :-
+    high_risk_requirements_decision_resolvable(requirement_case([], human_oversight, date(2028, 1, 1))).
+
+:- end_module(high_risk_requirements).

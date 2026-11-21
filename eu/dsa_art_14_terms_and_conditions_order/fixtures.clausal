@@ -1,0 +1,246 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dsa_art_14_terms_and_conditions_order.
+% A TOP-LAYER consumer: it imports the slice's PUBLIC predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...]. The order has no
+% threshold, so the near-miss controls are ONE-KEY flips: each control changes
+% one key (or one statement) of its partner and gets the opposite answer on the
+% paragraph the pair is about.
+%
+% Pairs (positive / near-miss control, the paragraph they turn on):
+%   fully_compliant_very_large_platform / very_large_platform_without_summary   Art 14(5)
+%   small_hosting_service_no_complaint_system / complaint_system_without_rules  Art 14(1) item (v)
+%   small_hosting_service_no_complaint_system / missing_content_moderation_information  Art 14(1) item (ii)
+%   fully_compliant_very_large_platform / significant_change_not_notified        Art 14(2)
+%   insignificant_change_not_notified / significant_change_not_notified          Art 14(2) not required
+%   fully_compliant_very_large_platform / minors_service_unclear_explanation     Art 14(3)
+%   service_not_for_minors / minors_service_unclear_explanation                  Art 14(3) not required
+%   fully_compliant_very_large_platform / disproportionate_enforcement           Art 14(4)
+%   no_restriction_enforced / disproportionate_enforcement                       Art 14(4) not required
+%   designation_attested_false / designation_attested_true                       Art 14(5), 14(6)
+%   designated_summary_unsure / designation_absent_summary_unsure                referral kinds
+%   small_hosting_service_no_complaint_system / unsure_language_judgement        Art 14(1) item (iii)
+%   well_formed_change_only / malformed_duplicate_and_unknown_keys               input check
+%   unbound_key, empty_profile                                                   input check, missing keys
+%   todo_baseline_subject: the scaffold's baseline subject, the fully compliant
+%   very large platform (read by the scaffold's baseline tests).
+% =====================================================================
+
+:- module(fixtures, [
+    dsa_art_14_terms_and_conditions_order_subject/1,
+    dsa_art_14_terms_and_conditions_order_profile_for/2,
+    dsa_art_14_terms_and_conditions_order_assess/2
+]).
+
+:- use_module(eu/dsa_art_14_terms_and_conditions_order/dsa_art_14_terms_and_conditions_order, [decide_dsa_art_14_terms_and_conditions_order/2]).
+
+% ---- Subject registry ------------------------------------------------
+dsa_art_14_terms_and_conditions_order_subject(fully_compliant_very_large_platform).
+dsa_art_14_terms_and_conditions_order_subject(very_large_platform_without_summary).
+dsa_art_14_terms_and_conditions_order_subject(small_hosting_service_no_complaint_system).
+dsa_art_14_terms_and_conditions_order_subject(complaint_system_without_rules).
+dsa_art_14_terms_and_conditions_order_subject(missing_content_moderation_information).
+dsa_art_14_terms_and_conditions_order_subject(significant_change_not_notified).
+dsa_art_14_terms_and_conditions_order_subject(insignificant_change_not_notified).
+dsa_art_14_terms_and_conditions_order_subject(minors_service_unclear_explanation).
+dsa_art_14_terms_and_conditions_order_subject(service_not_for_minors).
+dsa_art_14_terms_and_conditions_order_subject(disproportionate_enforcement).
+dsa_art_14_terms_and_conditions_order_subject(no_restriction_enforced).
+dsa_art_14_terms_and_conditions_order_subject(designation_absent_summary_unsure).
+dsa_art_14_terms_and_conditions_order_subject(designated_summary_unsure).
+dsa_art_14_terms_and_conditions_order_subject(designation_attested_false).
+dsa_art_14_terms_and_conditions_order_subject(designation_attested_true).
+dsa_art_14_terms_and_conditions_order_subject(unsure_language_judgement).
+dsa_art_14_terms_and_conditions_order_subject(malformed_duplicate_and_unknown_keys).
+dsa_art_14_terms_and_conditions_order_subject(well_formed_change_only).
+dsa_art_14_terms_and_conditions_order_subject(unbound_key).
+dsa_art_14_terms_and_conditions_order_subject(empty_profile).
+dsa_art_14_terms_and_conditions_order_subject(todo_baseline_subject).
+
+% ---- Base profiles ---------------------------------------------------
+
+% A designated very large platform meeting every duty of Art 14.
+compliant_very_large_platform_profile([
+    attribute(terms_and_conditions_include_information_on_restrictions_on_recipient_information, true),
+    attribute(terms_and_conditions_include_information_on_content_moderation, true),
+    attribute(terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language, true),
+    attribute(terms_and_conditions_publicly_available_in_easily_accessible_and_machine_readable_format, true),
+    attribute(provider_has_internal_complaint_handling_system, true),
+    attribute(terms_and_conditions_include_rules_of_procedure_of_internal_complaint_handling_system, true),
+    attribute(terms_and_conditions_changed, true),
+    attribute(change_to_terms_and_conditions_is_significant, true),
+    attribute(recipients_informed_of_change_to_terms_and_conditions, true),
+    attribute(service_primarily_directed_at_minors, true),
+    attribute(service_predominantly_used_by_minors, true),
+    attribute(conditions_and_restrictions_explained_in_way_minors_can_understand, true),
+    attribute(provider_applies_or_enforces_restriction, true),
+    attribute(restriction_applied_in_diligent_objective_and_proportionate_manner, true),
+    attribute(restriction_applied_with_due_regard_to_rights_and_legitimate_interests_of_parties, true),
+    attribute(concise_clear_machine_readable_summary_of_terms_and_conditions_provided, true),
+    attribute(terms_and_conditions_published_in_official_languages_of_all_member_states_of_service, true),
+    attribute(designated_as_very_large_online_platform_or_search_engine,
+              attested(true, attestation(host_service, attestation_time, commission_designation_decision, none)))
+]).
+
+% A small hosting service with no internal complaint handling system, no change,
+% not for minors, no restriction enforced, stated not to be designated.
+small_hosting_service_profile([
+    attribute(terms_and_conditions_include_information_on_restrictions_on_recipient_information, true),
+    attribute(terms_and_conditions_include_information_on_content_moderation, true),
+    attribute(terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language, true),
+    attribute(terms_and_conditions_publicly_available_in_easily_accessible_and_machine_readable_format, true),
+    attribute(provider_has_internal_complaint_handling_system, false),
+    attribute(terms_and_conditions_changed, false),
+    attribute(service_primarily_directed_at_minors, false),
+    attribute(service_predominantly_used_by_minors, false),
+    attribute(provider_applies_or_enforces_restriction, false),
+    attribute(designated_as_very_large_online_platform_or_search_engine,
+              attested(false, attestation(host_service, attestation_time, commission_designation_list, none)))
+]).
+
+% ---- Profiles --------------------------------------------------------
+dsa_art_14_terms_and_conditions_order_profile_for(fully_compliant_very_large_platform, Profile) :-
+    compliant_very_large_platform_profile(Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(todo_baseline_subject, Profile) :-
+    compliant_very_large_platform_profile(Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(very_large_platform_without_summary, Profile) :-
+    compliant_very_large_platform_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [concise_clear_machine_readable_summary_of_terms_and_conditions_provided-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(small_hosting_service_no_complaint_system, Profile) :-
+    small_hosting_service_profile(Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(complaint_system_without_rules, Profile) :-
+    small_hosting_service_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [provider_has_internal_complaint_handling_system-true,
+                     terms_and_conditions_include_rules_of_procedure_of_internal_complaint_handling_system-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(missing_content_moderation_information, Profile) :-
+    small_hosting_service_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [terms_and_conditions_include_information_on_content_moderation-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(significant_change_not_notified, Profile) :-
+    compliant_very_large_platform_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [recipients_informed_of_change_to_terms_and_conditions-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(insignificant_change_not_notified, Profile) :-
+    compliant_very_large_platform_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [change_to_terms_and_conditions_is_significant-false,
+                     recipients_informed_of_change_to_terms_and_conditions-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(minors_service_unclear_explanation, Profile) :-
+    compliant_very_large_platform_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [conditions_and_restrictions_explained_in_way_minors_can_understand-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(service_not_for_minors, Profile) :-
+    compliant_very_large_platform_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [service_primarily_directed_at_minors-false,
+                     service_predominantly_used_by_minors-false,
+                     conditions_and_restrictions_explained_in_way_minors_can_understand-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(disproportionate_enforcement, Profile) :-
+    compliant_very_large_platform_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [restriction_applied_in_diligent_objective_and_proportionate_manner-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(no_restriction_enforced, Profile) :-
+    compliant_very_large_platform_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [provider_applies_or_enforces_restriction-false,
+                     restriction_applied_in_diligent_objective_and_proportionate_manner-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(designation_absent_summary_unsure, Profile) :-
+    small_hosting_service_profile(BaseProfile),
+    without_attribute(BaseProfile, designated_as_very_large_online_platform_or_search_engine, UndesignatedProfile),
+    with_attributes(UndesignatedProfile,
+                    [concise_clear_machine_readable_summary_of_terms_and_conditions_provided-unsure,
+                     terms_and_conditions_published_in_official_languages_of_all_member_states_of_service-true],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(designated_summary_unsure, Profile) :-
+    small_hosting_service_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [concise_clear_machine_readable_summary_of_terms_and_conditions_provided-unsure,
+                     terms_and_conditions_published_in_official_languages_of_all_member_states_of_service-true,
+                     designated_as_very_large_online_platform_or_search_engine-attested(true, attestation(host_service, attestation_time, commission_designation_decision, none))],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(designation_attested_false, Profile) :-
+    small_hosting_service_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [concise_clear_machine_readable_summary_of_terms_and_conditions_provided-false,
+                     terms_and_conditions_published_in_official_languages_of_all_member_states_of_service-false],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(designation_attested_true, Profile) :-
+    small_hosting_service_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [concise_clear_machine_readable_summary_of_terms_and_conditions_provided-false,
+                     terms_and_conditions_published_in_official_languages_of_all_member_states_of_service-false,
+                     designated_as_very_large_online_platform_or_search_engine-attested(true, attestation(host_service, attestation_time, commission_designation_decision, none))],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(unsure_language_judgement, Profile) :-
+    small_hosting_service_profile(BaseProfile),
+    with_attributes(BaseProfile,
+                    [terms_and_conditions_in_clear_plain_intelligible_user_friendly_and_unambiguous_language-unsure],
+                    Profile).
+dsa_art_14_terms_and_conditions_order_profile_for(malformed_duplicate_and_unknown_keys, [
+    attribute(terms_and_conditions_changed, true),
+    attribute(stray_key, value),
+    attribute(terms_and_conditions_changed, false)
+]).
+dsa_art_14_terms_and_conditions_order_profile_for(well_formed_change_only, [
+    attribute(terms_and_conditions_changed, true)
+]).
+dsa_art_14_terms_and_conditions_order_profile_for(unbound_key, [
+    attribute(_UnboundKey, true)
+]).
+dsa_art_14_terms_and_conditions_order_profile_for(empty_profile, []).
+
+% ---- Profile plumbing (no statutory content) -------------------------
+
+% with_attributes(Profile, Pairs, NewProfile): each Key-Value of Pairs replaces
+% every attribute of Key in Profile.
+with_attributes(Profile, Pairs, NewProfile) :-
+    foldl(with_pair, Pairs, Profile, NewProfile).
+
+with_pair(AttributeKey-AttributeValue, Profile, NewProfile) :-
+    without_attribute(Profile, AttributeKey, OtherAttributes),
+    append(OtherAttributes, [attribute(AttributeKey, AttributeValue)], NewProfile).
+
+without_attribute([], _, []).
+without_attribute([attribute(ElementKey, Value)|Elements], AttributeKey, [attribute(ElementKey, Value)|Kept]) :-
+    ElementKey \== AttributeKey,
+    without_attribute(Elements, AttributeKey, Kept).
+without_attribute([attribute(ElementKey, _)|Elements], AttributeKey, Kept) :-
+    ElementKey == AttributeKey,
+    without_attribute(Elements, AttributeKey, Kept).
+
+% ---- Convenience wrapper ---------------------------------------------
+dsa_art_14_terms_and_conditions_order_assess(Subject, Result) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(Subject, Profile),
+    decide_dsa_art_14_terms_and_conditions_order(Profile, Result).
+
+% ---- tests ------------------------------------------------------------
+
+test(every_subject_has_exactly_one_profile) :-
+    findall(Subject, dsa_art_14_terms_and_conditions_order_subject(Subject), Subjects),
+    maplist(one_profile, Subjects).
+
+one_profile(Subject) :-
+    findall(Profile, dsa_art_14_terms_and_conditions_order_profile_for(Subject, Profile), Profiles),
+    length(Profiles, 1).
+
+test(a_variant_replaces_the_key_without_duplicating_it) :-
+    dsa_art_14_terms_and_conditions_order_profile_for(very_large_platform_without_summary, Profile),
+    findall(SummaryValue,
+            member(attribute(concise_clear_machine_readable_summary_of_terms_and_conditions_provided, SummaryValue), Profile),
+            SummaryValues),
+    SummaryValues == [false].
+
+:- end_module(fixtures).

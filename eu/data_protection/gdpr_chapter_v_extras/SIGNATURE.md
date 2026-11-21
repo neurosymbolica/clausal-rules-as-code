@@ -1,156 +1,83 @@
 # SIGNATURE — eu/data_protection/gdpr_chapter_v_extras
 
-This is the authoring plan for later phases. The package layout is unchanged:
-`kernel -> citations -> parameters -> gdpr_chapter_v_extras -> queries -> fixtures -> package facade`.
-There is one determination slice, `gdpr_chapter_v_extras.clausal`. The predicate prefix is `gdpr_chapter_v_extras_`; the three called-contract queries keep the exact names the contract gives.
+## Query surface (summary)
 
-## 1. Public query surface (summary)
+**The called contract** is the scored surface. Each query takes PROFILE first and yields exactly ONE solution.
 
-### 1.1 Called contract
+- `second_subparagraph_duty(Profile, Duty, Result, Basis, Citations)`
+- `foreign_judgment_or_decision_recognition(Profile, Result, Basis, Citations)`
+- `onward_transfer_condition(Profile, Result, Basis, Citations)`
+- `gdpr_chapter_v_extras_input_problems(Profile, Problems)`
 
-This section is non-negotiable and is scored by collecting EVERY solution. Every query yields exactly ONE solution.
+**The scaffold facade** delegates to these. Its first argument is a REQUEST term naming the query:
 
-- **`second_subparagraph_duty(Profile, Duty, Result, Basis, Citations)`**
-  - Query type #13, compliance check.
-  - Cites `eu_reg_2016_679_art_49_1_second_subpara` and `eu_reg_2016_679_art_49_6`.
-- **`foreign_judgment_or_decision_recognition(Profile, Result, Basis, Citations)`**
-  - Query type #13.
-  - Cites `eu_reg_2016_679_art_48`.
-- **`onward_transfer_condition(Profile, Result, Basis, Citations)`**
-  - Query type #13.
-  - Cites `eu_reg_2016_679_art_44`.
-- **`gdpr_chapter_v_extras_input_problems(Profile, Problems)`**
-  - The input check.
-  - It never fails and never raises, for any term.
+- `duty(Duty, Profile)`;
+- `foreign_judgment(Profile)`;
+- `onward_transfer(Profile)`.
 
-### 1.2 Scaffold facade
+This lets one arity-2 facade serve three queries without ever guessing which one is meant.
 
-The facade keeps the scaffold names. It is a convenience surface built only from the four predicates above.
+**Totality.** Every query answers every term with exactly one solution:
 
-- **`decide_gdpr_chapter_v_extras(Profile, gdpr_chapter_v_extras_verdict(Status, Citations))`**
-  - Gives the overall verdict.
-  - `Status` is one of the facade STATUS atoms in section 3, or `input_problems(Problems)`.
-  - `Citations` is the set-like list of `cite(KEY)` terms drawn from the final items of the checklist.
-- **`gdpr_chapter_v_extras_status(Profile, Status)`**
-  - Query type #3, status determination.
-  - It is the same `Status` as `decide_gdpr_chapter_v_extras/2`.
-- **`gdpr_chapter_v_extras_checklist(Profile, Checklist)`**
-  - Returns a list of `item(RequirementId, ItemStatus, cite(KEY))`, one per requirement, in the order of section 6.2.
-  - For a profile with input problems, `Checklist` is `[]`.
-- **`gdpr_chapter_v_extras_what_if(Profile, Key, Value, Verdict)`**
-  - Builds `profile_set(Profile, attribute(Key, Value), RevisedProfile)`, which replaces any existing entry for `Key`.
-  - Then returns `decide_gdpr_chapter_v_extras(RevisedProfile, Verdict)`.
-  - The revised profile passes through the input check like any other.
-- **Fixtures**
-  - `gdpr_chapter_v_extras_fixture(FixtureName, Profile)` holds named example profiles; see section 7.
-  - If the scaffold already names the fixture predicate differently, keep the scaffold name.
+- input problems first;
+- then the limb steps, as mutually exclusive clauses guarded by the negation of every earlier step;
+- no `!`, no `->`, no `*->`.
 
-### 1.3 Totality and determinism
+**Determinism.** `profile_get/3` meets a duplicated key only when the input check has already answered `input_problems`, so each reached limb sees one value per key.
 
-- Every public predicate yields exactly one solution for every ground `Profile` and `Duty`.
-- The input check also yields exactly one solution for non-ground input.
-- Routes are mutually exclusive by guard. There is no `!`, `->` or `*->`, and no `once/1` used to suppress duplicates.
-- Ground result terms are folded into clause heads (C17), one clause per disjoint route.
-- Imported figures: none. This order has no statutory number. The 250-person figure of Art 30(5) belongs to `gdpr-records-and-officer` and is not read.
+**Imported figures.** No statutory figures exist: there are no numeric thresholds, periods or dates, so there is no `constant_value`.
 
-## 2. Result vocabulary (called contract)
+## Verdict STATUS atoms (replacing the placeholder `required / permitted / not_applicable`)
 
-### 2.1 Final RESULT atoms (result constructors of arity 0)
+Final results:
 
-| Query | Final RESULT atoms |
-|---|---|
-| `second_subparagraph_duty` | `no_second_subparagraph_transfer`, `not_a_processor_duty`, `duty_met`, `duty_not_met` |
-| `foreign_judgment_or_decision_recognition` | `article_48_not_engaged`, `not_barred_by_article_48`, `not_recognisable_or_enforceable` |
-| `onward_transfer_condition` | `not_an_onward_transfer`, `onward_transfer_may_take_place`, `onward_transfer_may_not_take_place` |
+- `second_subparagraph_duty`: `no_second_subparagraph_transfer`, `not_a_processor_duty`, `duty_met`, `duty_not_met`.
+- `foreign_judgment_or_decision_recognition`: `article_48_not_engaged`, `not_barred_by_article_48`, `not_recognisable_or_enforceable`.
+- `onward_transfer_condition`: `not_an_onward_transfer`, `onward_transfer_may_take_place`, `onward_transfer_may_not_take_place`.
 
-### 2.2 Non-final RESULT compounds (exactly one applies; BASIS `[]` and CITATIONS `[]` for each)
+Non-final status compounds (never the bare atom `indeterminate`):
 
-- **`input_problems(Problems)`.** Problems is a list of these terms:
-  - `duplicate_key(KEY)`;
-  - `wrong_type(KEY)`;
-  - `wrong_type(profile)`;
-  - `wrong_type(duty)`;
-  - `unknown_key(KEY)`.
-- **`indeterminate([KEY])`.** It names exactly one key, never an outside fact. The bare atom `indeterminate` is NEVER written.
-- **The absent referral:**
-  `needs_legal_review(cross_reference_unresolved(cite(CITATION), cite(TARGET)), [resolution(cite(TARGET), not_attempted), inputs_relied_on([KEY-absent])])`
+- `indeterminate([Key])`: exactly one bare key atom, never an outside fact.
+- `needs_legal_review(cross_reference_unresolved(cite(Citation), cite(Target)), [resolution(cite(Target), not_attempted), inputs_relied_on([Key-absent])])`.
+- `input_problems(Problems)`, with Problems terms `duplicate_key(Key)`, `wrong_type(Key)`, `unknown_key(Key)`, `wrong_type(profile)` and `wrong_type(duty)`.
 
-### 2.3 Argument atoms
+`open_textured` is never produced, because there is no judgement key.
 
-The DUTY argument takes one of three inputs. They are never results.
+## Profile keys (eleven, in contract order)
 
-- `inform_supervisory_authority`
-- `inform_data_subject`
-- `document_assessment_and_safeguards`
-
-### 2.4 Other exported result constructors
-
-`outside_fact/2`, `attested/2`, `attestation/4`, `url/2`, `document/2`, `resolution/2`, `inputs_relied_on/1`, `cross_reference_unresolved/2`, `needs_legal_review/2`.
-
-## 3. Facade STATUS atoms (replacing `required, permitted, not_applicable`)
-
-- **`no_condition_breached`.** Every checklist item is `met` or `inapplicable`.
-- **`more_input_needed`.** No item is unmet and at least one item is `unknown(...)`.
-- **`condition_breached`.** At least one item is `unmet(...)`. Unmet decides before unknown.
-- **`input_problems(Problems)`.** The profile is malformed. The verdict is `gdpr_chapter_v_extras_verdict(input_problems(Problems), [])`.
-
-The decision is computed with `decide_labeled(Checklist, labels(no_condition_breached, more_input_needed, condition_breached), Status)`.
-
-## 4. Profile keys (eleven, in this order)
-
-This is the order of `root_exports` and of `input_contract`. Each key is a bare atom read only with `profile_get/3`, by presence first and then by value. Absence is tested as `\+ profile_get(Profile, Key, _)`.
+PROFILE = `[attribute(Key, Value), ...]`. It is read ONLY with `profile_get/3`, presence first, then value. Absent means not established.
 
 | # | Key | Kind | Values |
 |---|---|---|---|
-| 1 | `transfer_relies_on_article_49_1_second_subparagraph` | outside fact | `attested(true\|false, attestation(BY, AT, REASON, EVIDENCE))` |
+| 1 | `transfer_relies_on_article_49_1_second_subparagraph` | outside fact | `attested(true\|false, attestation(By, At, Reason, Evidence))` |
 | 2 | `party_role` | enumeration | `controller`, `processor` |
 | 3 | `supervisory_authority_informed_of_transfer` | crisp | `true`, `false` |
 | 4 | `data_subject_informed_of_transfer` | crisp | `true`, `false` |
 | 5 | `data_subject_informed_of_compelling_legitimate_interests` | crisp | `true`, `false` |
 | 6 | `assessment_documented_in_records` | crisp | `true`, `false` |
 | 7 | `suitable_safeguards_documented_in_records` | crisp | `true`, `false` |
-| 8 | `third_country_judgment_or_decision_requires_transfer` | outside fact | attested, as for key 1 |
-| 9 | `international_agreement_basis_for_judgment_or_decision` | outside fact | attested, as for key 1 |
-| 10 | `transfer_is_onward_transfer` | outside fact | attested, as for key 1 |
-| 11 | `onward_transfer_has_chapter_v_basis` | outside fact | attested, as for key 1 |
+| 8 | `third_country_judgment_or_decision_requires_transfer` | outside fact | attested as above |
+| 9 | `international_agreement_basis_for_judgment_or_decision` | outside fact | attested as above |
+| 10 | `transfer_is_onward_transfer` | outside fact | attested as above |
+| 11 | `onward_transfer_has_chapter_v_basis` | outside fact | attested as above |
 
-Notes on the keys:
+Notes on values:
 
-- **No numeric, money or date keys.** There are no unit suffixes and no `date(Year, Month, Day)` terms.
-- **No judgement key.** No key takes the value `unsure`.
-- **The attestation term.**
-  - EVIDENCE is `none`, `url(URL, RETRIEVED_AT)` or `document(UPLOAD_ID, SHA256)`.
-  - None of the four attestation arguments is inspected.
-  - The whole `attested(...)` term is copied into BASIS as `outside_fact(KEY, Attested)`.
+- Evidence is `none`, `url(Url, RetrievedAt)` or `document(UploadId, Sha256)`. It is not inspected, beyond requiring that no attestation argument is, or holds, an unbound variable.
+- There are no money, numeric or date keys, so no unit suffixes and no `date(Year, Month, Day)` terms are needed.
 
-### 4.1 Outside-fact table
+DUTY argument (not a profile key): `inform_supervisory_authority`, `inform_data_subject`, `document_assessment_and_safeguards`. Any other term, an unbound one included, gives `wrong_type(duty)`.
 
-This table lives in `kernel.clausal` as `outside_fact_reference(Key, Citation, Target)`.
+## Citation-key atoms (canonical lexicon; never shortened, never invented)
 
-| Key | Citation | Target |
-|---|---|---|
-| `transfer_relies_on_article_49_1_second_subparagraph` | `eu_reg_2016_679_art_49_1_second_subpara` | `second_subparagraph_transfer_statement` |
-| `third_country_judgment_or_decision_requires_transfer` | `eu_reg_2016_679_art_48` | `foreign_judgment_requires_transfer_statement` |
-| `international_agreement_basis_for_judgment_or_decision` | `eu_reg_2016_679_art_48` | `international_agreement_basis_statement` |
-| `transfer_is_onward_transfer` | `eu_reg_2016_679_art_44` | `onward_transfer_statement` |
-| `onward_transfer_has_chapter_v_basis` | `eu_reg_2016_679_art_44` | `onward_transfer_chapter_v_basis_statement` |
+Load-bearing:
 
-## 5. Citation-key atoms (`citations.clausal`)
+- `eu_reg_2016_679_art_44`
+- `eu_reg_2016_679_art_48`
+- `eu_reg_2016_679_art_49_1_second_subpara`
+- `eu_reg_2016_679_art_49_6`
 
-All atoms use the canonical `_lexicon/citations.yaml` scheme; no shortened atom is ever invented.
-
-### 5.1 Load-bearing provisions
-
-- `eu_reg_2016_679_art_44` — Art 44, first sentence (onward transfers).
-- `eu_reg_2016_679_art_48` — Art 48.
-- `eu_reg_2016_679_art_49_1_second_subpara` — Art 49(1), second subparagraph (the two duties to inform; `not_a_processor_duty`).
-- `eu_reg_2016_679_art_49_6` — Art 49(6) (the documentation duty).
-
-`second_subpara` is the canonical lexicon spelling. If C6 flags `subpara`, add `% lint: canonical citation atom` beside it; do not shorten or rename the atom.
-
-### 5.2 Target atoms
-
-These are used only inside `cite(TARGET)` at the absent referral:
+Referral targets (used only inside `cite(...)` in THE ABSENT REFERRAL):
 
 - `second_subparagraph_transfer_statement`
 - `foreign_judgment_requires_transfer_statement`
@@ -158,191 +85,179 @@ These are used only inside `cite(TARGET)` at the absent referral:
 - `onward_transfer_statement`
 - `onward_transfer_chapter_v_basis_statement`
 
-### 5.3 Deferred units
+CITATIONS is a set-like list of `cite(Key)`. Each atom is written once.
 
-Art 30(1)(e), Art 30(2)(c) and Art 30(5) are pinned as sources in the manifest but get NO citation atom. They are read only for interpretation and never appear in CITATIONS.
+## Public predicates (one line each)
 
-## 6. Determination slice — `gdpr_chapter_v_extras.clausal`
+**Called contract**
 
-### 6.1 Statutory value facts owned
+- `second_subparagraph_duty(Profile, Duty, Result, Basis, Citations)`: compliance check (#13) of one Art 49(1) second-subparagraph or Art 49(6) duty. Steps 0–7 below. Cites `eu_reg_2016_679_art_49_1_second_subpara` or `eu_reg_2016_679_art_49_6`.
+- `foreign_judgment_or_decision_recognition(Profile, Result, Basis, Citations)`: status determination (#3) of the Art 48 bar. Cites `eu_reg_2016_679_art_48`.
+- `onward_transfer_condition(Profile, Result, Basis, Citations)`: compliance check (#13) of an onward transfer under Art 44, first sentence. Cites `eu_reg_2016_679_art_44`.
+- `gdpr_chapter_v_extras_input_problems(Profile, Problems)`: the typed input check, which never fails or raises. Problems is `[]` when the profile is well-formed. No citation.
 
-- **No numeric thresholds, periods or tables.** No `constant_value` is declared and `parameters.clausal` stays empty of figures, with a comment saying so.
-- **The slice owns these domain value facts:**
-  - `duty_to_inform(inform_supervisory_authority).`
-  - `duty_to_inform(inform_data_subject).`
-  - `duty_atom(Duty)` for the three duty atoms.
-  - `duty_fulfilment_keys(inform_supervisory_authority, [supervisory_authority_informed_of_transfer]).`
-  - `duty_fulfilment_keys(inform_data_subject, [data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests]).`
-  - `duty_fulfilment_keys(document_assessment_and_safeguards, [assessment_documented_in_records, suitable_safeguards_documented_in_records]).`
-  - `duty_citation(inform_supervisory_authority, cite(eu_reg_2016_679_art_49_1_second_subpara)).`
-  - `duty_citation(inform_data_subject, cite(eu_reg_2016_679_art_49_1_second_subpara)).`
-  - `duty_citation(document_assessment_and_safeguards, cite(eu_reg_2016_679_art_49_6)).`
+**Scaffold facade** (kept names)
 
-### 6.2 Rules / requirements
+- `decide_gdpr_chapter_v_extras(Request, Verdict)`:
+  - Request is `duty(Duty, Profile)`, `foreign_judgment(Profile)` or `onward_transfer(Profile)`.
+  - Verdict is `gdpr_chapter_v_extras_verdict(Status, Citations)`, where Status and Citations are the delegated query's Result and Citations.
+  - Cites as the delegated query.
+- `gdpr_chapter_v_extras_status(Request, Status)`: status determination (#3). Status is the delegated query's Result. Cites as the delegated query.
+- `gdpr_chapter_v_extras_checklist(Request, Checklist)`:
+  - Checklist is a list of formalize_lib `item(StepId, Status, cite(Key))` rows, one per element of the requested limb.
+  - Each Status is `met`, `unmet(Reason)` or `unknown([Key])`.
+  - Requirement ids:
+    - `party_is_controller`, `transfer_under_second_subparagraph`;
+    - `supervisory_authority_informed`, `data_subject_informed_of_transfer`, `data_subject_informed_of_interests`;
+    - `assessment_documented`, `safeguards_documented`;
+    - `judgment_requires_transfer`, `international_agreement_basis`;
+    - `transfer_is_onward`, `onward_basis`.
+  - Built with `eval_requirements/4`, using the closure `gdpr_chapter_v_extras_requirement`, called as `requirement(RequirementId, Profile, Status, Citation)`.
+  - This is explanatory only. The verdict comes from the limbs, never from `decide_labeled`.
+- `gdpr_chapter_v_extras_what_if(Request, Key, Value, Status)`:
+  - Overrides Key with Value in the Request's profile (`what_if/5` from query_combinators, with the decide closure `gdpr_chapter_v_extras_status`), then returns the new Status.
+  - One solution.
+- Fixtures: `gdpr_chapter_v_extras_fixture(Name, Request)` and `gdpr_chapter_v_extras_fixture_expected(Name, Status)`. There is one fixture per terminal step of every limb, including each absent referral, each input-problem shape and the Q9 case.
 
-The first route whose guard holds decides. Guards are written to be mutually exclusive, so no second route can also hold.
+## Planned reuse (manifest `uses:`)
 
-#### Step 0, shared by all three queries
+- **formalize_lib**:
+  - `profile_get/3`: the ONLY profile reader in the queries;
+  - `eval_requirements/4`, `item/3`, `attribute/2`, `unmet/1`, `unknown/1`: the checklist;
+  - `memberd/2`: membership in key tables.
+  - Vocabulary atom: `met`.
+- **kit.query_combinators**: `what_if/5`, `override_key/4`.
+- **validate_props** (tests):
+  - `run_props/1`;
+  - `prop_totality/3`, `prop_determinism/3`: exactly one solution over a generated profile grid, including duplicates and unbound terms;
+  - `prop_citation_complete/3`: every final answer carries its citation;
+  - `prop_missing_key_coverage/3`.
+- **Not used** (deliberately):
+  - `kit.compliance_lib`: its deny-overrides modality lattice and CWA would not reproduce the fixed step order and referral shapes, and could yield several solutions.
+  - deadline, rolling_window, date_time: the order has no dates or periods.
+  - currency_vocab, vat_category, country: no money, no VAT, no country codes.
+- **`_common` family backbone**: none needed.
 
-- `gdpr_chapter_v_extras_input_problems(Profile, Problems)` is called first.
-- For the duty query, `wrong_type(duty)` is appended when `Duty` is not one of the three atoms; this includes an unbound `Duty`.
-- A non-empty list gives `input_problems(Problems), [], []`.
-- Every other route requires the list to be `[]`. Duplicate keys are therefore excluded before `profile_get/3` runs, so `profile_get` yields at most one value per key.
+## Module layout (unchanged file and module names)
 
-#### `second_subparagraph_duty(Profile, Duty, Result, Basis, Citations)`
+`kernel -> citations -> parameters -> gdpr_chapter_v_extras -> queries -> fixtures -> package facade`
 
-Notation: `T` = `transfer_relies_on_article_49_1_second_subparagraph`, `R` = `party_role`, `TB` = `[outside_fact(T, Attested)]`.
+- **`kernel.clausal`**: the scaffold floor only. With one determination slice, no predicate must be shared, so nothing domain-specific is added.
+- **`citations.clausal`**: the four load-bearing citation keys and five targets, with pinned unit ids:
+  - `eu_reg_2016_679_art_44`: `02016R0679-20160504#art_044`;
+  - `eu_reg_2016_679_art_48`: `#art_048`;
+  - `eu_reg_2016_679_art_49_1_second_subpara`: `#parag_049.001`;
+  - `eu_reg_2016_679_art_49_6`: `#parag_049.006`.
+- **`parameters.clausal`**: no statutory figures. The TODO is replaced by a comment stating that none exist.
+- **`gdpr_chapter_v_extras.clausal`**: the single slice (below).
+- **`queries.clausal`**: re-exports the four contract predicates.
+- **`fixtures.clausal`**: the fixtures.
+- **Package facade**: the four scaffold facade predicates.
 
-1. **Processor and a duty to inform.**
-   - Guard: `duty_to_inform(Duty)` and `R == processor`.
-   - Answer: `not_a_processor_duty`, Basis `[]`, Citations `[cite(eu_reg_2016_679_art_49_1_second_subpara)]`.
-   - This holds whatever `T` is.
-2. **T absent.**
-   - Guard: not route 1, and `T` absent.
-   - Answer: the absent referral on `T`.
-3. **Party role absent for a duty to inform.**
-   - Guard: `duty_to_inform(Duty)`, `R` absent, and `T` present.
-   - Answer: `indeterminate([party_role])`, `[]`, `[]`.
-4. **T attested false.**
-   - Guard: `T = attested(false, _)` and party settled.
-   - Answer: `no_second_subparagraph_transfer`, `TB`, `[DCITE]`.
-5. **A fulfilment key false.**
-   - Guard: `T = attested(true, _)`, party settled, and `fulfilment_outcome(Profile, Keys, some_false)`.
-   - Answer: `duty_not_met`, `TB`, `[DCITE]`.
-   - A false key decides before an absent one is named.
-6. **A fulfilment key absent.**
-   - Guard: `T` true, party settled, and outcome `first_absent(Key)`.
-   - Answer: `indeterminate([Key])`, `[]`, `[]`.
-7. **Every fulfilment key true.**
-   - Guard: `T` true, party settled, and outcome `all_true`.
-   - Answer: `duty_met`, `TB`, `[DCITE]`.
+## Slice: gdpr_chapter_v_extras.clausal
 
-Helpers:
+### Value facts owned (local tables, not a shared constants file)
 
-- **Party settled.** `Duty == document_assessment_and_safeguards`, or `R == controller`. `R` is never read for the documentation duty.
-- **`fulfilment_outcome(Profile, Keys, Outcome)`** has three exclusive clauses:
-  - `some_false`: guarded by `\+ \+ (member(Key, Keys), profile_get(Profile, Key, false))`, so it gives one solution even when both keys are false.
-  - `first_absent(Key)`: no key is false, and `first_absent_key/3` recurses over `Keys` by presence.
-  - `all_true`: every key is present with value `true`.
-- **Keys read.** The query reads only `T`, `R` (for the duties to inform) and the fulfilment keys of its own `Duty`. Every other key never changes its answer.
+Contract and key tables:
 
-#### `foreign_judgment_or_decision_recognition(Profile, Result, Basis, Citations)`
+- `contract_key_order([transfer_relies_on_article_49_1_second_subparagraph, party_role, supervisory_authority_informed_of_transfer, data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests, assessment_documented_in_records, suitable_safeguards_documented_in_records, third_country_judgment_or_decision_requires_transfer, international_agreement_basis_for_judgment_or_decision, transfer_is_onward_transfer, onward_transfer_has_chapter_v_basis]).`
+- `key_kind(Key, outside_fact | enumeration | crisp).` for each of the eleven.
+- `enumeration_value(party_role, controller).` and `enumeration_value(party_role, processor).`
 
-Notation: `J` = `third_country_judgment_or_decision_requires_transfer`, `I` = `international_agreement_basis_for_judgment_or_decision`.
+Outside facts, as `outside_fact_entry(Key, Citation, Target)`:
 
-1. **J absent.** The absent referral on `J`. `I` is not yet needed.
-2. **J attested false.** `article_48_not_engaged`, `[outside_fact(J, AttestedJ)]`, `[cite(eu_reg_2016_679_art_48)]`.
-3. **J attested true, I absent.** The absent referral on `I`.
-4. **J attested true, I present.**
-   - I attested true: `not_barred_by_article_48`.
-   - I attested false: `not_recognisable_or_enforceable`.
-   - For both: `[outside_fact(J, AttestedJ), outside_fact(I, AttestedI)]`, `[cite(eu_reg_2016_679_art_48)]`.
+- `transfer_relies_on_article_49_1_second_subparagraph`, `eu_reg_2016_679_art_49_1_second_subpara`, `second_subparagraph_transfer_statement`;
+- `third_country_judgment_or_decision_requires_transfer`, `eu_reg_2016_679_art_48`, `foreign_judgment_requires_transfer_statement`;
+- `international_agreement_basis_for_judgment_or_decision`, `eu_reg_2016_679_art_48`, `international_agreement_basis_statement`;
+- `transfer_is_onward_transfer`, `eu_reg_2016_679_art_44`, `onward_transfer_statement`;
+- `onward_transfer_has_chapter_v_basis`, `eu_reg_2016_679_art_44`, `onward_transfer_chapter_v_basis_statement`.
 
-#### `onward_transfer_condition(Profile, Result, Basis, Citations)`
+Duties:
 
-Notation: `W` = `transfer_is_onward_transfer`, `M` = `onward_transfer_has_chapter_v_basis`.
+- `duty_fulfilment_keys(Duty, Keys)`:
+  - `inform_supervisory_authority`: `[supervisory_authority_informed_of_transfer]`;
+  - `inform_data_subject`: `[data_subject_informed_of_transfer, data_subject_informed_of_compelling_legitimate_interests]`;
+  - `document_assessment_and_safeguards`: `[assessment_documented_in_records, suitable_safeguards_documented_in_records]`.
+- `duty_citation(Duty, Cite)`:
+  - `inform_supervisory_authority`: `cite(eu_reg_2016_679_art_49_1_second_subpara)`;
+  - `inform_data_subject`: `cite(eu_reg_2016_679_art_49_1_second_subpara)`;
+  - `document_assessment_and_safeguards`: `cite(eu_reg_2016_679_art_49_6)`.
+- `duty_to_inform(inform_supervisory_authority).` and `duty_to_inform(inform_data_subject).`
 
-1. **W absent.** The absent referral on `W`.
-2. **W attested false.** `not_an_onward_transfer`, `[outside_fact(W, AttestedW)]`, `[cite(eu_reg_2016_679_art_44)]`.
-3. **W attested true, M absent.** The absent referral on `M`.
-4. **W attested true, M present.**
-   - M attested true: `onward_transfer_may_take_place`.
-   - M attested false: `onward_transfer_may_not_take_place`.
-   - For both: `[outside_fact(W, AttestedW), outside_fact(M, AttestedM)]`, `[cite(eu_reg_2016_679_art_44)]`.
+### Rules / requirements
 
-#### Checklist requirements
+**Helpers**
 
-The checklist requirements are `gdpr_chapter_v_extras_requirement(RequirementId, Profile, ItemStatus, Citation)`. RequirementId comes FIRST, matching the kit's `requirement/4` closure.
+- `absent_referral(Key, Result)` builds THE ABSENT REFERRAL from `outside_fact_entry/3`.
+- `attested_value(Profile, Key, Value, Attested)` reads via `profile_get/3` and unifies `attested(Value, _)`.
+- `key_absent(Profile, Key)` is `\+ profile_get(Profile, Key, _)`.
 
-**Requirement ids, in this order, with the call each one makes:**
+**Step 0 (all queries).** `gdpr_chapter_v_extras_input_problems/2` walks the list structurally. This is the input check, not a value read.
 
-| Requirement id | Call | Item citation |
-|---|---|---|
-| `inform_supervisory_authority` | `second_subparagraph_duty(Profile, inform_supervisory_authority, Result, _, _)` | `cite(eu_reg_2016_679_art_49_1_second_subpara)` |
-| `inform_data_subject` | `second_subparagraph_duty(Profile, inform_data_subject, Result, _, _)` | `cite(eu_reg_2016_679_art_49_1_second_subpara)` |
-| `document_assessment_and_safeguards` | `second_subparagraph_duty(Profile, document_assessment_and_safeguards, Result, _, _)` | `cite(eu_reg_2016_679_art_49_6)` |
-| `foreign_judgment_or_decision_recognition` | the Art 48 query | `cite(eu_reg_2016_679_art_48)` |
-| `onward_transfer_condition` | the onward-transfer query | `cite(eu_reg_2016_679_art_44)` |
+1. If the profile is unbound, a partial list, holds an unbound element, or holds an element that is not `attribute(_, _)`, Problems is `[wrong_type(profile)]`.
+2. Otherwise, for each contract key in `contract_key_order`:
+   - if it occurs two or more times: `duplicate_key(Key)`, without reading its values;
+   - else, if its single value fails `value_has_type(Kind, Value)`: `wrong_type(Key)`.
+3. Then `unknown_key(Key)` once per non-contract key (a non-atom or unbound key included, as given), in first-occurrence order. Identity is compared with `==`, never unification.
 
-**ItemStatus mapping,** one head clause per RESULT family:
+Type tests:
 
-| ItemStatus | RESULT values |
-|---|---|
-| `met` | `duty_met`, `not_barred_by_article_48`, `onward_transfer_may_take_place` |
-| `inapplicable` | `no_second_subparagraph_transfer`, `not_a_processor_duty`, `article_48_not_engaged`, `not_an_onward_transfer` |
-| `unmet(Result)` | `duty_not_met`, `not_recognisable_or_enforceable`, `onward_transfer_may_not_take_place` |
-| `unknown([Result])` | `indeterminate(_)`, `needs_legal_review(_, _)` |
+- An outside fact must be `nonvar`, `attested(V, attestation(A, B, C, D))` with V `==` `true` or `false`, and A–D each `ground`.
+- A crisp key must be `==` `true` or `false`.
+- `party_role` must be `==` `controller` or `processor`.
 
-`inapplicable` is a kit vocabulary atom. Every item carries its `cite(...)`, met items included. The verdict's `Citations` are the sorted set of item citations whose status is not `unknown(...)`.
+The duty query appends `wrong_type(duty)` unless Duty is `nonvar` and a duty atom. Any problem gives `input_problems(Problems), [], []`.
 
-### 6.3 Verdict atoms
+**`second_subparagraph_duty`** (T, R, the fulfilment keys and DCITE as above; TB = `[outside_fact(T, Attested)]`)
 
-The slice uses the RESULT atoms of section 2.1, the non-final compounds of section 2.2 and the facade STATUS atoms of section 3.
+1. A duty to inform, and R `processor`: `not_a_processor_duty, [], [cite(eu_reg_2016_679_art_49_1_second_subpara)]`.
+2. T absent: `absent_referral(T)`.
+3. A duty to inform, and R absent: `indeterminate([party_role]), [], []`.
+4. T `false`: `no_second_subparagraph_transfer, TB, [DCITE]`.
+5. T `true` (and R `controller` for a duty to inform), and some fulfilment key `false`: `duty_not_met, TB, [DCITE]`. This is ONE clause: the `false` test is wrapped in `\+ \+` or uses a once-yielding existence check, so two false keys cannot give two solutions.
+6. The first absent fulfilment key (in table order) gives `indeterminate([Key]), [], []`.
+7. Every fulfilment key `true` gives `duty_met, TB, [DCITE]`.
 
-### 6.4 Predicates SHARED with other files (these, and only these, go in `kernel.clausal`)
+R is not read for `document_assessment_and_safeguards`.
 
-- **`gdpr_chapter_v_extras_input_problems/2`, with its typed contract.**
-  - `contract_key(Key, Type)` facts list the eleven keys in contract order. Type is `outside_fact`, `crisp` or `party_role_enumeration`.
-  - The check yields one solution per term, guarded by `var/1`, `nonvar/1` and `==`, never by unification against the input:
-    - an unbound profile, a partial list, or a list with a non-`attribute(KEY, VALUE)` or unbound element gives `[wrong_type(profile)]`;
-    - then, per contract key in order, `duplicate_key(KEY)` (its values are not read), or else `wrong_type(KEY)`;
-    - then `unknown_key(KEY)` for keys outside the eleven, by first occurrence and compared with `==`. A non-atom KEY, an unbound variable included, is unknown as given.
-  - The duty argument check `duty_argument_problems(Duty, Problems)` gives `[]` or `[wrong_type(duty)]`.
-- **`outside_fact_reference(Key, Citation, Target)`.** The five rows of section 4.1.
-- **`absent_referral(Key, Result)`.** Builds the absent referral term of section 2.2 from `outside_fact_reference/3`.
+**`foreign_judgment_or_decision_recognition`** (J, I)
 
-The slice reads presence and values itself with `profile_get/3`. The facade and `queries.clausal` read only the three called queries and the input check.
+1. J absent: referral on J.
+2. J `false`: `article_48_not_engaged, [outside_fact(J, AttestedJ)], [cite(eu_reg_2016_679_art_48)]`.
+3. I absent: referral on I.
+4. I `true`: `not_barred_by_article_48`. I `false`: `not_recognisable_or_enforceable`. Both give Basis `[outside_fact(J, AttestedJ), outside_fact(I, AttestedI)]` and Citations `[cite(eu_reg_2016_679_art_48)]`.
 
-### 6.5 Tests (per rule, in `tests/`)
+**`onward_transfer_condition`** (W, M)
 
-- **One positive test per route** of each query, including:
-  - route 1 with `T` absent and with `T` attested false;
-  - route 2 with `party_role` absent (the the absent-outside-fact referral rule case, Q9);
-  - route 5 with one key false and the other absent.
-- **One counting test per route:** `findall(Result-Basis-Citations, Query, All), length(All, 1)`.
-- **Unread keys do not matter.** Adding or removing any key a query does not read leaves its answer unchanged; for example, the Art 48 keys leave the duty query unchanged.
-- **Absent versus false.** A key that is absent gives a different answer from the same key present and false.
-- **Input check cases:**
-  - duplicate equal values;
-  - duplicate unequal values;
-  - a bare `true` for an outside fact;
-  - an attested term for a crisp key;
-  - `attestation/3`;
-  - an unbound value;
-  - a non-atom key;
-  - an unbound profile;
-  - a partial list;
-  - a non-attribute element;
-  - a bad duty together with a bad profile, which gives `[wrong_type(profile), wrong_type(duty)]`.
-- **Pairing.** Every `test(_, fail)` is paired with a positive test over the same case.
-- **Property runs** with `validate_props`: totality, determinism and citation completeness over the fixture generator.
+1. W absent: referral on W.
+2. W `false`: `not_an_onward_transfer, [outside_fact(W, AttestedW)], [cite(eu_reg_2016_679_art_44)]`.
+3. M absent: referral on M.
+4. M `true`: `onward_transfer_may_take_place`. M `false`: `onward_transfer_may_not_take_place`. Both give Basis `[outside_fact(W, AttestedW), outside_fact(M, AttestedM)]` and Citations `[cite(eu_reg_2016_679_art_44)]`.
 
-## 7. Fixtures (`fixtures.clausal`)
+**Style and isolation**
 
-Fixtures use `gdpr_chapter_v_extras_fixture(FixtureName, Profile)`. Each includes a well-formed `attestation(host_user, host_timestamp, Reason, none)`; BY and AT are placeholders the host supplies.
+- Every ground result is folded into the clause head (C17), one clause per disjoint route.
+- No cut and no if-then-else.
+- Each query reads only the keys its steps name.
 
-| Fixture name | Profile summary | Expected status |
-|---|---|---|
-| `controller_all_duties_met` | Controller, `T` true, every crisp key true, Art 48 and onward facts attested false. | `no_condition_breached` |
-| `controller_data_subject_not_told_interests` | As above, but the compelling legitimate interests were not told to the data subject. | `condition_breached` |
-| `processor_documentation_pending` | Processor, `T` true, the safeguards documentation key absent. | `more_input_needed` |
-| `second_subparagraph_unstated` | `T` absent. | `more_input_needed` (the duty queries refer) |
-| `foreign_judgment_without_agreement` | `J` true, `I` false. | `condition_breached` |
-| `onward_transfer_with_basis` | `W` true, `M` true. | the onward item is `met` |
-| `malformed_bare_boolean_outside_fact` | An outside fact supplied as a bare boolean. | `input_problems([wrong_type(transfer_is_onward_transfer)])` |
+### Verdict atoms
 
-## 8. Planned reuse (manifest `uses:`)
+As listed in 'Verdict STATUS atoms' above, grouped per query.
 
-- **`formalize_lib`:**
-  - `profile_get/3` (the only profile reader);
-  - `profile_set/3` (`what_if`);
-  - `eval_requirements/4` (the checklist, injecting the `gdpr_chapter_v_extras_requirement` closure);
-  - `decide_labeled/3` (the status);
-  - `item/3`, `unmet/1`, `unknown/1`, `labels/3`, `attribute/2` (constructors);
-  - the vocabulary atoms `met` and `inapplicable`.
-- **`validate_props`:** `run_props/1`, `prop_totality/3`, `prop_determinism/3`, `prop_citation_complete/3` in the test modes.
-- **Not used, with reasons:**
-  - **`kit.compliance_lib`.** Its deny-overrides modality verdict cannot produce the exact RESULT, BASIS and CITATIONS terms of the called contract, so the compliance checks (#13) are hand-routed limbs.
-  - **`kit.query_combinators:what_if/5`.** It overrides dict worlds, while this profile is an attribute list, so `profile_set/3` is used instead.
-  - **`date_time`, `deadline_lib`, `rolling_window`, `currency_vocab`, `country`.** This order has no dates, money or country codes.
-- **Family backbone (`_common`, deontic).** Nothing is imported until a shared attested-fact reader exists. The local `kernel.clausal` helpers (`outside_fact_reference/3`, `absent_referral/2`) are flagged in the working notes (not published) as a candidate kit module.
+### Shared predicates (kernel.clausal)
+
+None. This is the only determination slice, so nothing must be shared.
+
+### Tests (seven modes, per-rule)
+
+1. **Load.**
+2. **Per-step unit tests.** One positive per terminal step of each query, each paired with a negative over the same case.
+3. **Precedence.** Covers:
+   - processor with T absent, giving `not_a_processor_duty` (Q9);
+   - document duty with T absent, giving a referral;
+   - a false key beating an absent key;
+   - J `false` with I absent.
+4. **Irrelevance.** Changing an unread key never changes an answer.
+5. **Input check.** Duplicates, wrong types, a bare `true` for an outside fact, an unbound attestation argument, an unknown non-atom key, a partial list, and `[wrong_type(profile), wrong_type(duty)]`.
+6. **Properties.** Totality and exactly-one-solution, via `findall` plus `length(Solutions, 1)`.
+7. **Fixtures.** Each fixture round-trips through the facade and what-if.

@@ -42,22 +42,24 @@ attribute_list_t(Term, false) :-
 
 attribute_t(Element, false) :-
     var(Element).
-attribute_t(Element, T) :-
+attribute_t(Element, true) :-
     nonvar(Element),
-    Element = attribute(Key, _),
-    term_variables(Key, Variables),
-    no_variables_t(Variables, T).
+    Element = attribute(_, _).
 attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
-no_variables_t([], true).
-no_variables_t([_|_], false).
-
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    known_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
     unknown_keys(Elements, Known, Problems).
@@ -151,3 +153,23 @@ attestation_t(Value, false) :-
 attested_value_t(false, _, _, false).
 attested_value_t(true, Type, AttestedValue, T) :-
     in_type_t(Type, AttestedValue, T).
+
+test(a_well_formed_profile_has_no_problem) :-
+    gdpr_compensation_and_liability_input_problems([attribute(party_role, controller), attribute(damage_suffered, unsure)], []).
+test(an_empty_profile_has_no_problem) :-
+    gdpr_compensation_and_liability_input_problems([], []).
+test(a_term_that_is_not_a_list_is_not_a_profile) :-
+    gdpr_compensation_and_liability_input_problems(profile, [wrong_type(profile)]).
+test(a_repeated_key_is_a_duplicate_only) :-
+    gdpr_compensation_and_liability_input_problems([attribute(damage_suffered, true), attribute(damage_suffered, maybe)], [duplicate_key(damage_suffered)]).
+test(an_unsure_crisp_key_is_a_wrong_type) :-
+    gdpr_compensation_and_liability_input_problems([attribute(involved_in_the_processing, unsure)], [wrong_type(involved_in_the_processing)]).
+test(a_key_outside_the_contract_is_unknown) :-
+    gdpr_compensation_and_liability_input_problems([attribute(colour, blue)], [unknown_key(colour)]).
+test(an_attested_statement_is_well_formed) :-
+    gdpr_compensation_and_liability_input_problems([attribute(not_in_any_way_responsible_for_the_event, attested(true, attestation(host, today, proved, none)))], []).
+test(an_attestation_holding_a_variable_is_a_wrong_type) :-
+    gdpr_compensation_and_liability_input_problems([attribute(not_in_any_way_responsible_for_the_event, attested(true, attestation(host, today, proved, _)))], [wrong_type(not_in_any_way_responsible_for_the_event)]).
+
+test(a_well_formed_profile_is_not_refused, fail) :-
+    gdpr_compensation_and_liability_input_problems([attribute(party_role, processor)], [_|_]).
