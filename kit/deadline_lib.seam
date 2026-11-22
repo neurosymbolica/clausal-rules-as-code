@@ -227,8 +227,13 @@ prev_day(DATE, PREVIOUS_DATE) <- (
 
 # month_last_day/3: the last calendar day of YEAR-MONTH, found by stepping
 # back one day from the first of the following month — no month-length table
-# and no leap rule to restate.
+# and no leap rule to restate. DECEMBER is the one month answered directly (always 31): stepping
+# from 1 January of the next year would build date(10000, 1, 1), which is outside the date
+# type (years 1 to 9999) and raised a domain error for any December 9999 input.
+month_last_day(_, 12, 31),
+
 month_last_day(YEAR, MONTH, LAST_DAY) <- (
+    MONTH < 12,
     NEXT_MONTH == MONTH % 12 + 1,
     NEXT_YEAR == YEAR + MONTH // 12,
     FIRST_OF_NEXT is date(NEXT_YEAR, NEXT_MONTH, 1),

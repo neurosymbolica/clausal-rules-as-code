@@ -1,0 +1,83 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_kernel, [gdpr_impact_assessment_assessment_duty_stated_risk_input_problems/2, leaf_crisp/3, leaf_judgement/3, leaf_outside_blocking/3, leaf_outside_enabling/3, strong_and/2, strong_not/2, strong_or/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_citations, [citation/2, implements/1]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_gdpr_impact_assessment_assessment_duty_stated_risk, [decide_gdpr_impact_assessment_assessment_duty_stated_risk/2, decide_impact_assessment_duty/2, gdpr_impact_assessment_assessment_duty_stated_risk_checklist/2, gdpr_impact_assessment_assessment_duty_stated_risk_decision_resolvable/1, gdpr_impact_assessment_assessment_duty_stated_risk_status/2, gdpr_impact_assessment_assessment_duty_stated_risk_status_values/1, impact_assessment_officer_advice/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_queries, [gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check/3, gdpr_impact_assessment_assessment_duty_stated_risk_officer_status/2, gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys/1, gdpr_impact_assessment_assessment_duty_stated_risk_what_if/4]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_fixtures, [gdpr_impact_assessment_assessment_duty_stated_risk_assess/2, gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2, gdpr_impact_assessment_assessment_duty_stated_risk_subject/1]).
+
+root_export(absent).
+root_export(approved).
+root_export(art35_10_general_assessment_exemption).
+root_export(art35_1_high_risk).
+root_export(art35_3_a_profiling_with_significant_decisions).
+root_export(art35_3_b_large_scale_sensitive_data).
+root_export(art35_3_c_public_area_monitoring).
+root_export(art35_4_national_list).
+root_export(art35_5_national_list_exemption).
+root_export(assessment_indicates_high_risk_absent_mitigation).
+root_export(automated_evaluation_including_profiling).
+root_export(criminal_offence_data_processed).
+root_export(data_protection_officer_advice_sought).
+root_export(data_protection_officer_designated).
+root_export(datasets_matched_or_combined).
+root_export(decisions_based_on_evaluation).
+root_export(decisions_produce_legal_effects).
+root_export(decisions_similarly_significantly_affect).
+root_export(description_and_purposes).
+root_export(description_of_processing_and_purposes_present).
+root_export(duplicate_key).
+root_export(envisaged_measures).
+root_export(envisaged_measures_described).
+root_export(highly_personal_data_processed).
+root_export(impact_assessment_carried_out).
+root_export(impact_assessment_verdict).
+root_export(indeterminate).
+root_export(input_problems).
+root_export(lawful_basis_is_legal_obligation_or_public_task).
+root_export(legal_basis_with_general_impact_assessment).
+root_export(legitimate_interest_described).
+root_export(legitimate_interest_pursued).
+root_export(likely_high_risk_to_rights_and_freedoms).
+root_export(measures_reduce_residual_risk_below_high).
+root_export(member_state_requires_assessment_despite_general_one).
+root_export(member_state_requires_prior_authorisation).
+root_export(met).
+root_export(mitigating_measures_taken).
+root_export(monitoring_is_systematic).
+root_export(national_list_exempts_assessment).
+root_export(national_list_exempts_item).
+root_export(national_list_requires_assessment).
+root_export(national_list_requires_item).
+root_export(necessity_and_proportionality).
+root_export(necessity_and_proportionality_assessed).
+root_export(needs_legal_review).
+root_export(no_requirement_triggered).
+root_export(none).
+root_export(not_applicable).
+root_export(not_attempted).
+root_export(not_met).
+root_export(officer_advice_verdict).
+root_export(processing_for_public_interest_task).
+root_export(processing_on_large_scale).
+root_export(processing_prevents_exercise_of_right_or_service).
+root_export(profile).
+root_export(publicly_accessible_area_monitored).
+root_export(rejected).
+root_export(risk_assessment).
+root_export(risks_to_data_subjects_assessed).
+root_export(route_approvals).
+root_export(route_profiling_with_legal_effects).
+root_export(route_public_area_monitoring_with_new_technology).
+root_export(route_sensitive_data_with_new_technology).
+root_export(special_category_data_processed).
+root_export(systematic_and_extensive_evaluation).
+root_export(unknown_key).
+root_export(unsure).
+root_export(uses_new_technologies).
+root_export(vulnerable_data_subjects).
+root_export(wrong_type).

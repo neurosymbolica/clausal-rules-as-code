@@ -4,101 +4,113 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_breach_notification_verdict, [decide_breach_notification_verdict/2, breach_notification_verdict/4, notification_obligation/2, authority_notification_deadline/3, authority_notification_period_end/3]).
-:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_kernel, [gdpr_arts33_34_breach_notification_input_problems/2]).
-:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_fixtures, [gdpr_arts33_34_breach_notification_subject/1, gdpr_arts33_34_breach_notification_profile_for/2]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_breach_notification_verdict, [breach_notification_verdict/4, notification_obligation/2, authority_notification_deadline/3]).
+:- use_module(m__eu_data_protection_gdpr_arts33_34_breach_notification_fixtures, [gdpr_arts33_34_breach_notification_subject/1, gdpr_arts33_34_breach_notification_profile_for/2, gdpr_arts33_34_breach_notification_assess/2]).
 
-all_subjects(Subjects) :-
-    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects).
+has_one_answer(Subject) :-
+    findall(Result, gdpr_arts33_34_breach_notification_assess(Subject, Result), [_]).
 
-subject_classifies(Subject) :-
-    gdpr_arts33_34_breach_notification_subject(Subject),
-    gdpr_arts33_34_breach_notification_profile_for(Subject, Request),
-    decide_breach_notification_verdict(Request, _Verdict).
+test(totality_and_determinism_every_subject_has_one_answer) :-
+    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(has_one_answer, Subjects).
+test(determinism_over_the_hours) :-
+    findall(Profile, gdpr_arts33_34_breach_notification_profile_for(_, Profile), Profiles),
+    numlist(0, 100, HoursList),
+    maplist(one_verdict_at_every_hour(HoursList), Profiles).
+test(every_fixture_gives_its_stated_verdict) :-
+    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects),
+    maplist(fixture_matches, Subjects).
+test(citations_are_complete_for_every_subject) :-
+    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects),
+    maplist(citations_complete, Subjects).
+test(an_unlikely_risk_is_ineligible_at_every_hour) :-
+    findall(Verdict, (between(0, 150, HoursElapsed), breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], HoursElapsed, Verdict, _)), Verdicts),
+    length(Verdicts, 151),
+    sort(Verdicts, [ineligible]).
+test(a_late_notification_gets_a_verdict) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, false)], 200, Verdict, _),
+    Verdict = needs_legal_review(_, _).
+test(hours_are_always_72) :-
+    maplist(hours_are_72, [date(2025, 10, 31), date(2032, 2, 29), date(2025, 2, 29), date(9999, 12, 30), not_a_date]).
+test(every_final_controller_list_holds_one_article_34_term) :-
+    findall(Profile, settled_controller_profile(Profile), Profiles),
+    length(Profiles, 144),
+    maplist(one_article_34_term, Profiles).
 
-subject_has_one_verdict(Subject) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, Request),
-    findall(Verdict, decide_breach_notification_verdict(Request, Verdict), Verdicts),
-    length(Verdicts, 1).
+one_verdict_at(Profile, HoursElapsed) :-
+    findall(Verdict, breach_notification_verdict(Profile, HoursElapsed, Verdict, _), [_]).
 
-subject_has_one_input_check(Subject) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, breach_notification_request(Profile, _)),
-    findall(Problems, gdpr_arts33_34_breach_notification_input_problems(Profile, Problems), Answers),
-    length(Answers, 1).
+one_verdict_at_every_hour(HoursList, Profile) :-
+    maplist(one_verdict_at(Profile), HoursList).
 
-subject_has_one_obligation(Subject) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, breach_notification_request(Profile, _)),
-    findall(Obligation, notification_obligation(Profile, Obligation), Answers),
-    length(Answers, 1).
+expected_fixture_status(timely_at_the_period_end, eligible).
+expected_fixture_status(late_one_hour_past_without_reasons, notification_requirement_not_met(reasons_for_delay)).
+expected_fixture_status(unlikely_risk_notified_late, ineligible).
+expected_fixture_status(risk_notified_late_with_justified_reasons, eligible).
+expected_fixture_status(late_with_unjustified_reasons, needs_legal_review(open_textured(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)), _)).
+expected_fixture_status(notified_inside_the_period_without_undue_delay, eligible).
+expected_fixture_status(notified_inside_the_period_with_undue_delay, notification_requirement_not_met(without_undue_delay)).
+expected_fixture_status(risk_judgement_missing, indeterminate([breach_unlikely_to_result_in_risk])).
+expected_fixture_status(risk_judgement_unsure, needs_legal_review(open_textured(breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)), _)).
+expected_fixture_status(negative_hours_elapsed, input_problems([wrong_type(hours_elapsed)])).
+expected_fixture_status(contradictory_risk_judgements, input_problems([contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])])).
 
-subject_citations_fit(Subject) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, breach_notification_request(Profile, HoursElapsed)),
-    breach_notification_verdict(Profile, HoursElapsed, Verdict, Citations),
-    citations_fit_verdict(Verdict, Citations).
+fixture_matches(Subject) :-
+    expected_fixture_status(Subject, Expected),
+    gdpr_arts33_34_breach_notification_assess(Subject, breach_notification_verdict_verdict(Status, _)),
+    Status = Expected.
 
-citations_fit_verdict(eligible, [cite(eu_reg_2016_679_art_33_1)]).
-citations_fit_verdict(ineligible, [cite(eu_reg_2016_679_art_33_1)]).
-citations_fit_verdict(notification_requirement_not_met(_), [cite(eu_reg_2016_679_art_33_1)]).
-citations_fit_verdict(indeterminate([_|_]), []).
-citations_fit_verdict(needs_legal_review(open_textured(_, cite(_)), [inputs_relied_on(_)|_]), []).
-citations_fit_verdict(input_problems([_|_]), []).
+expected_citations(eligible, [cite(eu_reg_2016_679_art_33_1)]).
+expected_citations(ineligible, [cite(eu_reg_2016_679_art_33_1)]).
+expected_citations(notification_requirement_not_met(_), [cite(eu_reg_2016_679_art_33_1)]).
+expected_citations(indeterminate(_), []).
+expected_citations(needs_legal_review(_, _), []).
+expected_citations(input_problems(_), []).
 
-ineligible_at(HoursElapsed) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], HoursElapsed, ineligible, [cite(eu_reg_2016_679_art_33_1)]).
+citations_complete(Subject) :-
+    gdpr_arts33_34_breach_notification_assess(Subject, breach_notification_verdict_verdict(Status, Citations)),
+    expected_citations(Status, Expected),
+    Citations == Expected.
 
-boundary_verdict_at(HoursElapsed, Verdict) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true), attribute(notification_accompanied_by_reasons_for_delay, false)], HoursElapsed, Verdict, _).
+test(lateness_alone_is_never_ineligible, fail) :-
+    between(73, 200, HoursElapsed),
+    member(Justified, [true, false, unsure]),
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, Justified)], HoursElapsed, ineligible, _).
 
-documents_the_breach_second(Subject) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, breach_notification_request(Profile, _)),
-    notification_obligation(Profile, [_, document_breach(cite(eu_reg_2016_679_art_33_5))|_]).
-
-hours_always_72(Aware) :-
+hours_are_72(Aware) :-
     authority_notification_deadline(Aware, _, Hours),
     Hours == 72.
 
-end_hour_follows(AwarenessHour) :-
-    authority_notification_period_end(date(2025, 6, 10), AwarenessHour, period_end(_, EndHour)),
-    EndHour =:= AwarenessHour + 1.
+risk_judgements(true, false).
+risk_judgements(false, false).
+risk_judgements(false, true).
 
-test(totality_every_subject_classifies) :-
-    all_subjects(Subjects),
-    sort(Subjects, SubjectSet),
-    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
-    sort(ClassifiedSubjects, SubjectSet).
-test(determinism_every_subject_has_exactly_one_verdict) :-
-    all_subjects(Subjects),
-    maplist(subject_has_one_verdict, Subjects).
-test(determinism_every_subject_has_exactly_one_input_check) :-
-    all_subjects(Subjects),
-    maplist(subject_has_one_input_check, Subjects).
-test(determinism_every_subject_has_exactly_one_obligation) :-
-    all_subjects(Subjects),
-    maplist(subject_has_one_obligation, Subjects).
-test(citation_completeness_over_every_subject) :-
-    all_subjects(Subjects),
-    maplist(subject_citations_fit, Subjects).
-test(unlikely_risk_is_ineligible_whatever_the_hours) :-
-    maplist(ineligible_at, [0, 1, 71, 72, 73, 500]).
-test(the_verdict_flips_exactly_after_the_72nd_hour) :-
-    numlist(70, 75, HourCounts),
-    maplist(boundary_verdict_at, HourCounts, Verdicts),
-    Verdicts == [eligible, eligible, eligible, notification_requirement_not_met(reasons_for_delay), notification_requirement_not_met(reasons_for_delay), notification_requirement_not_met(reasons_for_delay)].
-test(every_final_controller_list_documents_the_breach_second) :-
-    maplist(documents_the_breach_second, [public_communication_substitute, direct_communication_owed, authority_required_communication, authority_no_decision_unlikely_risk]).
-test(hours_is_72_for_every_awareness_date) :-
-    maplist(hours_always_72, [date(2025, 1, 1), date(2025, 2, 30), nothing, "2025-01-01"]).
-test(the_end_hour_follows_every_hour_of_awareness) :-
-    numlist(0, 23, AwarenessHours),
-    maplist(end_hour_follows, AwarenessHours).
-test(a_deadline_on_a_saturday_is_not_moved) :-
-    authority_notification_deadline(date(2025, 12, 24), date(DeadlineYear, DeadlineMonth, DeadlineDay), _),
-    DeadlineYear == 2025,
-    DeadlineMonth == 12,
-    DeadlineDay == 27.
+authority_items([]).
+authority_items([attribute(supervisory_authority_decision_on_communication, Decision)]) :-
+    member(Decision, [no_decision, required_communication, decided_point_a_condition_met, decided_point_b_condition_met, decided_point_c_condition_met]).
 
-cp_test_names([totality_every_subject_classifies, determinism_every_subject_has_exactly_one_verdict, determinism_every_subject_has_exactly_one_input_check, determinism_every_subject_has_exactly_one_obligation, citation_completeness_over_every_subject, unlikely_risk_is_ineligible_whatever_the_hours, the_verdict_flips_exactly_after_the_72nd_hour, every_final_controller_list_documents_the_breach_second, hours_is_72_for_every_awareness_date, the_end_hour_follows_every_hour_of_awareness, a_deadline_on_a_saturday_is_not_moved]).
-cp_test_fail_names([]).
+settled_controller_profile([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, Risk), attribute(breach_likely_to_result_in_high_risk, HighRisk), attribute(appropriate_protection_measures_applied_to_affected_data, Protection), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, Subsequent), attribute(communication_would_involve_disproportionate_effort, Effort)|AuthorityItems]) :-
+    risk_judgements(Risk, HighRisk),
+    authority_items(AuthorityItems),
+    member(Protection, [true, false]),
+    member(Subsequent, [true, false]),
+    member(Effort, [true, false]).
+
+article_33_term(no_notification_required(cite(eu_reg_2016_679_art_33_1))).
+article_33_term(notify_supervisory_authority(cite(eu_reg_2016_679_art_33_1))).
+
+article_34_term(communicate_to_data_subject(_)).
+article_34_term(no_communication_required(_)).
+article_34_term(public_communication_or_similar_measure(_)).
+
+one_article_34_term(Profile) :-
+    findall(Obligation, notification_obligation(Profile, Obligation), [[Article33Term, document_breach(cite(eu_reg_2016_679_art_33_5))|Rest]]),
+    article_33_term(Article33Term),
+    findall(Term, (member(Term, Rest), article_34_term(Term)), [_]).
+
+cp_test_names([totality_and_determinism_every_subject_has_one_answer, determinism_over_the_hours, every_fixture_gives_its_stated_verdict, citations_are_complete_for_every_subject, an_unlikely_risk_is_ineligible_at_every_hour, a_late_notification_gets_a_verdict, hours_are_always_72, every_final_controller_list_holds_one_article_34_term]).
+cp_test_fail_names([lateness_alone_is_never_ineligible]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.
 cp_run([], _).

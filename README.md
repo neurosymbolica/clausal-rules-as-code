@@ -28,16 +28,16 @@ side-by-side statute report: <https://neurosymbolica.github.io/clausal-rules-as-
 
 These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
 
-Every domain folder added on 2026-11-16, 2026-11-18 or 2026-11-21 repeats this in its own `README.md`.
+Every domain folder added on 2026-11-16, 2026-11-18, 2026-11-21 or 2026-11-22 repeats this in its own `README.md`.
 
 ## What is in it
 
-124 domains and 24,799 tests (24,768 in the domains, 31 in the shared procurement vocabulary),
+125 domains and 24,953 tests (24,922 in the domains, 31 in the shared procurement vocabulary),
 all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in force.
 
 | Area | Domains |
 |---|---|
-| EU: GDPR (including the GDPR Procedural Regulation) | 43 |
+| EU: GDPR (including the GDPR Procedural Regulation) | 44 |
 | EU: AI Act | 10 |
 | EU: NIS 2 Directive and its implementing regulation | 8 |
 | EU: public procurement (Directives 2014/24 and 2014/25) | 5, plus the shared vocabulary `eu/procurement/directive_2014_24/` |
@@ -81,8 +81,8 @@ They are the only domains with a provision-tracking ledger and a side-by-side re
 | `eu/procurement/time_limits` | What is the minimum time limit for receipt (Art 27-31)? |
 | `eu/procurement/utilities_negotiated_without_prior_call` | May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)? |
 
-The other 110 domains were added on 2026-11-16 (66), 2026-11-18 (19) and 2026-11-21 (25); on 2026-11-18 eight of
-the earlier ones, and on 2026-11-21 seventeen, were also replaced by amended versions. Each was produced through the Clausify
+The other 111 domains were added on 2026-11-16 (66), 2026-11-18 (19), 2026-11-21 (25) and 2026-11-22 (1); on 2026-11-18 eight of
+the earlier ones, on 2026-11-21 seventeen and on 2026-11-22 one, were also replaced by amended versions. Each was produced through the Clausify
 harness, and its answers were scored against an independently written, sealed test oracle that
 is not published (the verdicts were recorded after the runs and are not authenticated); its
 tests here pass on all three engines. They have no provision-tracking ledger, so no check

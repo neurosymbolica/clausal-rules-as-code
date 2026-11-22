@@ -90,7 +90,7 @@
 %     a test with two solutions makes include/3 yield two results, and a
 %     projection with two keys makes max_by/3 yield two maxima. Closing it
 %     needs a cut, `->', or a reified-truth if_/3 -- the note calls that a
-%     companion-STYLE decision for the operator, not a correctness question,
+%     companion-STYLE decision for the owner, not a correctness question,
 %     and this file keeps the house style.
 %  2. RESIDUAL CHOICE POINT. include/3 and max_pick/6 leave one behind (the
 %     price of disjoint guards instead of a cut). An unwrapped top-level

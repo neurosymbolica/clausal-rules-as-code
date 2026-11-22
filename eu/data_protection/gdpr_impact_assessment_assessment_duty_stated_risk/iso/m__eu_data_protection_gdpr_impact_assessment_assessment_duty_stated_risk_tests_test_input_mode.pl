@@ -1,0 +1,71 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_gdpr_impact_assessment_assessment_duty_stated_risk, [gdpr_impact_assessment_assessment_duty_stated_risk_status/2, decide_impact_assessment_duty/2, impact_assessment_officer_advice/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_fixtures, [gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2]).
+
+unread_extra_keys([attribute(highly_personal_data_processed, unsure), attribute(datasets_matched_or_combined, true), attribute(vulnerable_data_subjects, false), attribute(processing_prevents_exercise_of_right_or_service, unsure), attribute(uses_new_technologies, true), attribute(mitigating_measures_taken, true), attribute(processing_for_public_interest_task, false), attribute(assessment_indicates_high_risk_absent_mitigation, unsure), attribute(measures_reduce_residual_risk_below_high, false), attribute(member_state_requires_prior_authorisation, attested(true, attestation(host, at_time, reason, none))), attribute(route_approvals, approvals(viewer(account), []))]).
+
+test(required_status_holds_bound) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_status(Profile, required).
+test(not_required_status_holds_bound) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(high_risk_not_stated, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_status(Profile, not_required).
+test(the_whole_exemption_verdict_holds_bound) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(general_assessment_exemption, Profile),
+    decide_impact_assessment_duty(Profile, impact_assessment_verdict(not_required, [art35_10_general_assessment_exemption], [], _, [cite(eu_reg_2016_679_art_35_10)], [])).
+test(the_officer_verdict_holds_bound) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_advice_sought, Profile),
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(met, [cite(eu_reg_2016_679_art_35_2)])).
+test(a_non_list_profile_is_answered_with_its_problem) :-
+    decide_impact_assessment_duty(not_a_profile, impact_assessment_verdict(input_problems([wrong_type(profile)]), [], [], [], [], [])).
+test(an_atom_profile_is_answered_with_its_problem_by_entry_o) :-
+    impact_assessment_officer_advice(profile, officer_advice_verdict(input_problems([wrong_type(profile)]), [])).
+test(a_number_for_a_crisp_key_is_wrong_type) :-
+    decide_impact_assessment_duty([attribute(impact_assessment_carried_out, 1)], impact_assessment_verdict(input_problems([wrong_type(impact_assessment_carried_out)]), [], [], [], [], [])).
+test(key_order_does_not_change_the_verdict) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile),
+    reverse(Profile, Reversed),
+    decide_impact_assessment_duty(Profile, Verdict),
+    decide_impact_assessment_duty(Reversed, Verdict).
+test(unread_keys_change_no_answer_of_entry_a) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile),
+    unread_extra_keys(Extra),
+    append(Profile, Extra, Extended),
+    decide_impact_assessment_duty(Profile, Verdict),
+    decide_impact_assessment_duty(Extended, Verdict).
+test(entry_o_ignores_the_high_risk_judgement) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_not_consulted, Profile),
+    append(Profile, [attribute(likely_high_risk_to_rights_and_freedoms, unsure)], Extended),
+    impact_assessment_officer_advice(Extended, officer_advice_verdict(not_met, [cite(eu_reg_2016_679_art_35_2)])).
+test(an_item_fact_whose_boolean_is_absent_is_not_read) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(high_risk_not_stated, Profile),
+    append(Profile, [attribute(national_list_requires_item, attested(national_list_item(de_dsk, de_dsk_35_4_nr_2), attestation(host, at_time, reason, none)))], Extended),
+    decide_impact_assessment_duty(Profile, Verdict),
+    decide_impact_assessment_duty(Extended, Verdict).
+
+test(required_status_rejects_not_required, fail) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_status(Profile, not_required).
+test(not_required_status_rejects_required, fail) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(high_risk_not_stated, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_status(Profile, required).
+test(a_wrong_bound_basis_is_rejected, fail) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(general_assessment_exemption, Profile),
+    decide_impact_assessment_duty(Profile, impact_assessment_verdict(not_required, [art35_5_national_list_exemption], _, _, _, _)).
+test(the_officer_verdict_rejects_not_met, fail) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_advice_sought, Profile),
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(not_met, _)).
+
+cp_test_names([required_status_holds_bound, not_required_status_holds_bound, the_whole_exemption_verdict_holds_bound, the_officer_verdict_holds_bound, a_non_list_profile_is_answered_with_its_problem, an_atom_profile_is_answered_with_its_problem_by_entry_o, a_number_for_a_crisp_key_is_wrong_type, key_order_does_not_change_the_verdict, unread_keys_change_no_answer_of_entry_a, entry_o_ignores_the_high_risk_judgement, an_item_fact_whose_boolean_is_absent_is_not_read]).
+cp_test_fail_names([required_status_rejects_not_required, not_required_status_rejects_required, a_wrong_bound_basis_is_rejected, the_officer_verdict_rejects_not_met]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

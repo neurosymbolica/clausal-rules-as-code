@@ -1,0 +1,106 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_queries, [gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys/1, gdpr_impact_assessment_assessment_duty_stated_risk_what_if/4, gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check/3, gdpr_impact_assessment_assessment_duty_stated_risk_officer_status/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_kernel, [gdpr_impact_assessment_assessment_duty_stated_risk_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_gdpr_impact_assessment_assessment_duty_stated_risk, [gdpr_impact_assessment_assessment_duty_stated_risk_status/2, gdpr_impact_assessment_assessment_duty_stated_risk_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_fixtures, [gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2]).
+
+fixture(Subject, Profile) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys(ProfileKeys),
+    ProfileKeys == [assessment_indicates_high_risk_absent_mitigation, automated_evaluation_including_profiling, criminal_offence_data_processed, data_protection_officer_advice_sought, data_protection_officer_designated, datasets_matched_or_combined, decisions_based_on_evaluation, decisions_produce_legal_effects, decisions_similarly_significantly_affect, description_of_processing_and_purposes_present, envisaged_measures_described, highly_personal_data_processed, impact_assessment_carried_out, lawful_basis_is_legal_obligation_or_public_task, legal_basis_with_general_impact_assessment, legitimate_interest_described, legitimate_interest_pursued, likely_high_risk_to_rights_and_freedoms, measures_reduce_residual_risk_below_high, member_state_requires_assessment_despite_general_one, member_state_requires_prior_authorisation, mitigating_measures_taken, monitoring_is_systematic, national_list_exempts_assessment, national_list_exempts_item, national_list_requires_assessment, national_list_requires_item, necessity_and_proportionality_assessed, processing_for_public_interest_task, processing_on_large_scale, processing_prevents_exercise_of_right_or_service, publicly_accessible_area_monitored, risks_to_data_subjects_assessed, route_approvals, special_category_data_processed, systematic_and_extensive_evaluation, uses_new_technologies, vulnerable_data_subjects].
+test(there_are_thirty_eight_contract_keys) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys(ProfileKeys),
+    length(ProfileKeys, 38).
+test(the_reexported_input_check_accepts_a_well_formed_profile) :-
+    fixture(well_formed_control, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems(Profile, []).
+test(the_reexported_input_check_names_the_problems) :-
+    fixture(duplicate_and_unknown_keys, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems(Profile, [duplicate_key(processing_on_large_scale), unknown_key(colour)]).
+test(status_of_entry_a) :-
+    fixture(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_status(Profile, required).
+test(status_of_entry_o) :-
+    fixture(officer_advice_sought, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_officer_status(Profile, met).
+test(status_of_entry_o_without_an_officer) :-
+    fixture(no_officer_designated, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_officer_status(Profile, not_applicable).
+test(a_complete_owed_assessment_permits_the_processing) :-
+    fixture(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, permitted).
+test(a_missing_owed_assessment_prohibits_the_processing) :-
+    fixture(large_scale_health_data_no_assessment, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, prohibited).
+test(no_owed_assessment_permits_the_processing) :-
+    fixture(well_formed_control, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, permitted).
+test(a_missing_key_is_passed_through) :-
+    fixture(missing_profiling_flag, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, indeterminate([automated_evaluation_including_profiling])).
+test(input_problems_are_passed_through) :-
+    fixture(duplicate_and_unknown_keys, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, input_problems([duplicate_key(processing_on_large_scale), unknown_key(colour)])).
+test(the_compliance_check_gives_one_answer) :-
+    fixture(stated_high_risk, Profile),
+    findall(Result, gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, Result), Results),
+    Results == [permitted].
+test(every_limb_of_the_control_is_unmet_with_its_cite) :-
+    fixture(well_formed_control, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_checklist(Profile, Items),
+    Items == [item(article_35_3_a, unmet, cite(eu_reg_2016_679_art_35_3_a)), item(article_35_3_b, unmet, cite(eu_reg_2016_679_art_35_3_b)), item(article_35_3_c, unmet, cite(eu_reg_2016_679_art_35_3_c)), item(article_35_4, unmet, cite(eu_reg_2016_679_art_35_4)), item(article_35_5, unmet, cite(eu_reg_2016_679_art_35_5)), item(article_35_1, unmet, cite(eu_reg_2016_679_art_35_1)), item(article_35_10, unmet, cite(eu_reg_2016_679_art_35_10))].
+test(the_stated_high_risk_limb_is_met) :-
+    fixture(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_checklist(Profile, Items),
+    member(item(article_35_1, met, cite(eu_reg_2016_679_art_35_1)), Items).
+test(an_absent_profiling_flag_leaves_the_limb_open) :-
+    fixture(missing_profiling_flag, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_checklist(Profile, Items),
+    member(item(article_35_3_a, open, cite(eu_reg_2016_679_art_35_3_a)), Items).
+test(a_profile_with_problems_has_an_empty_checklist) :-
+    fixture(duplicate_and_unknown_keys, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_checklist(Profile, []).
+test(stating_high_risk_makes_it_required) :-
+    fixture(high_risk_not_stated, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, likely_high_risk_to_rights_and_freedoms, true, required).
+test(withdrawing_high_risk_makes_it_not_required) :-
+    fixture(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, likely_high_risk_to_rights_and_freedoms, false, not_required).
+test(an_unsure_high_risk_is_referred) :-
+    fixture(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, likely_high_risk_to_rights_and_freedoms, unsure, needs_legal_review(open_textured(likely_high_risk_to_rights_and_freedoms, cite(eu_reg_2016_679_art_35_1)), [inputs_relied_on([likely_high_risk_to_rights_and_freedoms - unsure, processing_on_large_scale - false])])).
+test(a_badly_typed_hypothesis_is_an_input_problem) :-
+    fixture(well_formed_control, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, processing_on_large_scale, maybe, input_problems([wrong_type(processing_on_large_scale)])).
+test(the_what_if_replaces_and_does_not_duplicate) :-
+    fixture(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, likely_high_risk_to_rights_and_freedoms, true, required).
+
+test(status_of_entry_o_is_not_met_only_when_not_sought, fail) :-
+    fixture(officer_advice_sought, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_officer_status(Profile, not_met).
+test(a_missing_owed_assessment_does_not_permit, fail) :-
+    fixture(large_scale_health_data_no_assessment, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, permitted).
+test(an_unknown_action_is_not_checked, fail) :-
+    fixture(well_formed_control, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, sell_the_data, _).
+test(the_what_if_does_not_keep_the_old_answer, fail) :-
+    fixture(high_risk_not_stated, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, likely_high_risk_to_rights_and_freedoms, true, not_required).
+
+cp_test_names([profile_keys_are_the_contract_keys, there_are_thirty_eight_contract_keys, the_reexported_input_check_accepts_a_well_formed_profile, the_reexported_input_check_names_the_problems, status_of_entry_a, status_of_entry_o, status_of_entry_o_without_an_officer, a_complete_owed_assessment_permits_the_processing, a_missing_owed_assessment_prohibits_the_processing, no_owed_assessment_permits_the_processing, a_missing_key_is_passed_through, input_problems_are_passed_through, the_compliance_check_gives_one_answer, every_limb_of_the_control_is_unmet_with_its_cite, the_stated_high_risk_limb_is_met, an_absent_profiling_flag_leaves_the_limb_open, a_profile_with_problems_has_an_empty_checklist, stating_high_risk_makes_it_required, withdrawing_high_risk_makes_it_not_required, an_unsure_high_risk_is_referred, a_badly_typed_hypothesis_is_an_input_problem, the_what_if_replaces_and_does_not_duplicate]).
+cp_test_fail_names([status_of_entry_o_is_not_met_only_when_not_sought, a_missing_owed_assessment_does_not_permit, an_unknown_action_is_not_checked, the_what_if_does_not_keep_the_old_answer]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

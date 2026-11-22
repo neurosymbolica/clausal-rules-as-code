@@ -1,0 +1,318 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_gdpr_impact_assessment_assessment_duty_stated_risk, [decide_gdpr_impact_assessment_assessment_duty_stated_risk/2, gdpr_impact_assessment_assessment_duty_stated_risk_status/2, gdpr_impact_assessment_assessment_duty_stated_risk_checklist/2, gdpr_impact_assessment_assessment_duty_stated_risk_decision_resolvable/1, gdpr_impact_assessment_assessment_duty_stated_risk_status_values/1]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_fixtures, [gdpr_impact_assessment_assessment_duty_stated_risk_subject/1, gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2, gdpr_impact_assessment_assessment_duty_stated_risk_assess/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_gdpr_impact_assessment_assessment_duty_stated_risk, [decide_impact_assessment_duty/2, impact_assessment_officer_advice/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_kernel, [gdpr_impact_assessment_assessment_duty_stated_risk_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_queries, [gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check/3, gdpr_impact_assessment_assessment_duty_stated_risk_officer_status/2, gdpr_impact_assessment_assessment_duty_stated_risk_what_if/4, gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys/1]).
+
+expected_duty_status(profiling_with_legal_effects_complete, required).
+expected_duty_status(profiling_without_legal_effects, not_required).
+expected_duty_status(large_scale_health_data_no_assessment, required).
+expected_duty_status(small_scale_health_data, not_required).
+expected_duty_status(public_area_monitoring_missing_measures, required).
+expected_duty_status(public_area_monitoring_not_systematic, not_required).
+expected_duty_status(national_list_item_de_dsk, required).
+expected_duty_status(national_list_attested_false, not_required).
+expected_duty_status(stated_high_risk, required).
+expected_duty_status(high_risk_not_stated, not_required).
+expected_duty_status(exempt_list_fr_cnil, not_required).
+expected_duty_status(exempt_list_attested_false, required).
+expected_duty_status(general_assessment_exemption, not_required).
+expected_duty_status(member_state_requires_assessment_anyway, required).
+expected_duty_status(member_state_decision_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_35_10), cite(member_state_decision_requiring_impact_assessment_before_processing)), [resolution(cite(member_state_decision_requiring_impact_assessment_before_processing), not_attempted), inputs_relied_on([likely_high_risk_to_rights_and_freedoms - false, member_state_requires_assessment_despite_general_one - absent, systematic_and_extensive_evaluation - true])])).
+expected_duty_status(member_state_decision_refused, not_required).
+expected_duty_status(missing_profiling_flag, indeterminate([automated_evaluation_including_profiling])).
+expected_duty_status(profiling_flag_supplied, required).
+expected_duty_status(large_scale_unsure, needs_legal_review(open_textured(processing_on_large_scale, cite(eu_reg_2016_679_art_35_3_b)), [inputs_relied_on([likely_high_risk_to_rights_and_freedoms - false, processing_on_large_scale - unsure])])).
+expected_duty_status(large_scale_stated, required).
+expected_duty_status(legitimate_interest_unknown, indeterminate([legitimate_interest_pursued])).
+expected_duty_status(legitimate_interest_not_pursued, required).
+expected_duty_status(duplicate_and_unknown_keys, input_problems([duplicate_key(processing_on_large_scale), unknown_key(colour)])).
+expected_duty_status(well_formed_control, not_required).
+
+expected_officer_status(officer_advice_sought, met).
+expected_officer_status(officer_not_consulted, not_met).
+expected_officer_status(no_officer_designated, not_applicable).
+expected_officer_status(officer_designated_advice_unknown, indeterminate([data_protection_officer_advice_sought])).
+expected_officer_status(officer_both_absent, indeterminate([impact_assessment_carried_out])).
+expected_officer_status(no_assessment_carried_out, not_applicable).
+
+near_miss(profiling_with_legal_effects_complete, profiling_without_legal_effects).
+near_miss(large_scale_health_data_no_assessment, small_scale_health_data).
+near_miss(public_area_monitoring_missing_measures, public_area_monitoring_not_systematic).
+near_miss(national_list_item_de_dsk, national_list_attested_false).
+near_miss(stated_high_risk, high_risk_not_stated).
+near_miss(exempt_list_fr_cnil, exempt_list_attested_false).
+near_miss(general_assessment_exemption, member_state_requires_assessment_anyway).
+near_miss(member_state_decision_absent, member_state_decision_refused).
+near_miss(missing_profiling_flag, profiling_flag_supplied).
+near_miss(large_scale_unsure, large_scale_stated).
+near_miss(legitimate_interest_unknown, legitimate_interest_not_pursued).
+near_miss(duplicate_and_unknown_keys, well_formed_control).
+
+officer_near_miss(officer_advice_sought, officer_not_consulted).
+officer_near_miss(no_officer_designated, officer_designated_advice_unknown).
+officer_near_miss(officer_both_absent, no_assessment_carried_out).
+
+subject_status(Subject, Status) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_assess(Subject, gdpr_impact_assessment_assessment_duty_stated_risk_verdict(Status, _Citations)).
+
+subject_verdict(Subject, Verdict) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    decide_impact_assessment_duty(Profile, Verdict).
+
+subject_officer_status(Subject, Status) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_officer_status(Profile, Status).
+
+same_citations(Actual, Expected) :-
+    clausal_msort(Actual, SortedActual),
+    clausal_msort(Expected, SortedExpected),
+    SortedActual == SortedExpected.
+
+all_distinct([]).
+all_distinct([First - Second|Pairs]) :-
+    dif(First, Second),
+    all_distinct(Pairs).
+
+solution_count_one([]).
+solution_count_one([Subject|Subjects]) :-
+    findall(Verdict, subject_verdict(Subject, Verdict), Verdicts),
+    length(Verdicts, 1),
+    findall(Status, subject_officer_status(Subject, Status), Statuses),
+    length(Statuses, 1),
+    solution_count_one(Subjects).
+
+checklists_nonempty([]).
+checklists_nonempty([Subject|Subjects]) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_checklist(Profile, [_FirstItem|_OtherItems]),
+    checklists_nonempty(Subjects).
+
+evidence_profile(Evidence, [attribute(national_list_requires_assessment, attested(false, attestation(host, at_time, reason, Evidence))), attribute(likely_high_risk_to_rights_and_freedoms, false), attribute(automated_evaluation_including_profiling, false), attribute(processing_on_large_scale, false)]).
+
+test(every_entry_a_subject_gets_its_expected_status) :-
+    findall(Subject - Status, expected_duty_status(Subject, Status), Expected),
+    findall(Subject - Actual, (expected_duty_status(Subject, _), subject_status(Subject, Actual)), Answers),
+    Answers == Expected.
+test(every_entry_o_subject_gets_its_expected_status) :-
+    findall(Subject - Status, expected_officer_status(Subject, Status), Expected),
+    findall(Subject - Actual, (expected_officer_status(Subject, _), subject_officer_status(Subject, Actual)), Answers),
+    Answers == Expected.
+test(every_registered_subject_has_an_expectation) :-
+    findall(Subject, gdpr_impact_assessment_assessment_duty_stated_risk_subject(Subject), Registered),
+    findall(Subject, expected_duty_status(Subject, _), DutySubjects),
+    findall(Subject, expected_officer_status(Subject, _), OfficerSubjects),
+    append(DutySubjects, OfficerSubjects, Covered),
+    clausal_msort(Registered, SortedRegistered),
+    clausal_msort(Covered, SortedCovered),
+    SortedRegistered == SortedCovered.
+test(profiling_with_legal_effects_is_required) :-
+    subject_status(profiling_with_legal_effects_complete, required).
+test(profiling_without_legal_effects_is_not_required) :-
+    subject_status(profiling_without_legal_effects, not_required).
+test(large_scale_health_data_is_required) :-
+    subject_status(large_scale_health_data_no_assessment, required).
+test(small_scale_health_data_is_not_required) :-
+    subject_status(small_scale_health_data, not_required).
+test(systematic_public_monitoring_is_required) :-
+    subject_status(public_area_monitoring_missing_measures, required).
+test(unsystematic_public_monitoring_is_not_required) :-
+    subject_status(public_area_monitoring_not_systematic, not_required).
+test(national_list_match_is_required) :-
+    subject_status(national_list_item_de_dsk, required).
+test(national_list_attested_false_is_not_required) :-
+    subject_status(national_list_attested_false, not_required).
+test(stated_high_risk_is_required) :-
+    subject_status(stated_high_risk, required).
+test(high_risk_not_stated_is_not_required) :-
+    subject_status(high_risk_not_stated, not_required).
+test(exempt_list_is_not_required) :-
+    subject_status(exempt_list_fr_cnil, not_required).
+test(exempt_list_attested_false_is_required) :-
+    subject_status(exempt_list_attested_false, required).
+test(general_assessment_exemption_is_not_required) :-
+    subject_status(general_assessment_exemption, not_required).
+test(member_state_requirement_restores_the_duty) :-
+    subject_status(member_state_requires_assessment_anyway, required).
+test(absent_member_state_decision_is_referred) :-
+    subject_status(member_state_decision_absent, needs_legal_review(cross_reference_unresolved(cite(eu_reg_2016_679_art_35_10), cite(member_state_decision_requiring_impact_assessment_before_processing)), _ReviewContext)).
+test(refused_member_state_decision_is_not_required) :-
+    subject_status(member_state_decision_refused, not_required).
+test(missing_profiling_flag_is_named) :-
+    subject_status(missing_profiling_flag, indeterminate([automated_evaluation_including_profiling])).
+test(supplied_profiling_flag_is_required) :-
+    subject_status(profiling_flag_supplied, required).
+test(unsure_large_scale_is_referred) :-
+    subject_status(large_scale_unsure, needs_legal_review(open_textured(processing_on_large_scale, cite(eu_reg_2016_679_art_35_3_b)), _ReviewContext)).
+test(stated_large_scale_is_required) :-
+    subject_status(large_scale_stated, required).
+test(unknown_legitimate_interest_is_named) :-
+    subject_status(legitimate_interest_unknown, indeterminate([legitimate_interest_pursued])).
+test(no_legitimate_interest_is_required) :-
+    subject_status(legitimate_interest_not_pursued, required).
+test(duplicate_and_unknown_keys_are_input_problems) :-
+    subject_status(duplicate_and_unknown_keys, input_problems([duplicate_key(processing_on_large_scale), unknown_key(colour)])).
+test(well_formed_control_is_not_required) :-
+    subject_status(well_formed_control, not_required).
+test(every_near_miss_control_gets_another_status) :-
+    findall(PositiveStatus - ControlStatus, (near_miss(Positive, Control), subject_status(Positive, PositiveStatus), subject_status(Control, ControlStatus)), Pairs),
+    length(Pairs, 12),
+    all_distinct(Pairs).
+test(every_officer_near_miss_gets_another_status) :-
+    findall(PositiveStatus - ControlStatus, (officer_near_miss(Positive, Control), subject_officer_status(Positive, PositiveStatus), subject_officer_status(Control, ControlStatus)), Pairs),
+    length(Pairs, 3),
+    all_distinct(Pairs).
+test(profiling_verdict_in_full) :-
+    subject_verdict(profiling_with_legal_effects_complete, impact_assessment_verdict(required, [art35_3_a_profiling_with_significant_decisions], [], [outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, absent), inputs_relied_on([decisions_similarly_significantly_affect - false, likely_high_risk_to_rights_and_freedoms - false, processing_on_large_scale - false, systematic_and_extensive_evaluation - true])], Citations, [])),
+    same_citations(Citations, [cite(eu_reg_2016_679_art_35_3_a)]).
+test(large_scale_verdict_lists_all_four_contents) :-
+    subject_verdict(large_scale_health_data_no_assessment, impact_assessment_verdict(required, [art35_3_b_large_scale_sensitive_data], [description_and_purposes, necessity_and_proportionality, risk_assessment, envisaged_measures], [outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, absent), inputs_relied_on([likely_high_risk_to_rights_and_freedoms - false, processing_on_large_scale - true])], Citations, [])),
+    same_citations(Citations, [cite(eu_reg_2016_679_art_35_3_b), cite(eu_reg_2016_679_art_35_7_a), cite(eu_reg_2016_679_art_35_7_b), cite(eu_reg_2016_679_art_35_7_c), cite(eu_reg_2016_679_art_35_7_d)]).
+test(monitoring_verdict_lists_the_missing_measures) :-
+    subject_verdict(public_area_monitoring_missing_measures, impact_assessment_verdict(required, [art35_3_c_public_area_monitoring], [envisaged_measures], _Context, Citations, [])),
+    same_citations(Citations, [cite(eu_reg_2016_679_art_35_3_c), cite(eu_reg_2016_679_art_35_7_d)]).
+test(national_list_verdict_cites_the_item) :-
+    subject_verdict(national_list_item_de_dsk, impact_assessment_verdict(required, [art35_4_national_list], [], [outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, attested(true, attestation(host, at_time, reason, none))), outside_fact(national_list_requires_item, attested(national_list_item(de_dsk, de_dsk_35_4_nr_1), attestation(host, at_time, reason, none))), inputs_relied_on([likely_high_risk_to_rights_and_freedoms - false, processing_on_large_scale - false])], Citations, [])),
+    same_citations(Citations, [cite(eu_reg_2016_679_art_35_4), cite(de_dsk_35_4_nr_1)]).
+test(an_unread_item_is_not_cited) :-
+    subject_verdict(national_list_attested_false, impact_assessment_verdict(not_required, [no_requirement_triggered], [], [outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, attested(false, attestation(host, at_time, reason, none))), inputs_relied_on([likely_high_risk_to_rights_and_freedoms - false, processing_on_large_scale - false])], Citations, [])),
+    same_citations(Citations, [cite(eu_reg_2016_679_art_35_1), cite(eu_reg_2016_679_art_35_3_a), cite(eu_reg_2016_679_art_35_3_b), cite(eu_reg_2016_679_art_35_3_c), cite(eu_reg_2016_679_art_35_4)]).
+test(exempt_list_verdict_cites_the_whole_cnil_list) :-
+    subject_verdict(exempt_list_fr_cnil, impact_assessment_verdict(not_required, [art35_5_national_list_exemption], [], [outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(national_list_exempts_assessment, attested(true, attestation(host, at_time, reason, none))), outside_fact(national_list_exempts_item, attested(national_list_item(fr_cnil, fr_cnil_35_5_list), attestation(host, at_time, reason, none))), outside_fact(national_list_requires_assessment, absent), inputs_relied_on([likely_high_risk_to_rights_and_freedoms - true, processing_on_large_scale - false])], Citations, [])),
+    same_citations(Citations, [cite(eu_reg_2016_679_art_35_5), cite(fr_cnil_35_5_list)]).
+test(stated_high_risk_verdict_rests_on_article_35_1) :-
+    subject_verdict(stated_high_risk, impact_assessment_verdict(required, [art35_1_high_risk], [], _Context, [cite(eu_reg_2016_679_art_35_1)], [])).
+test(general_assessment_exemption_verdict_cites_article_35_10) :-
+    subject_verdict(general_assessment_exemption, impact_assessment_verdict(not_required, [art35_10_general_assessment_exemption], [], _Context, [cite(eu_reg_2016_679_art_35_10)], [])).
+test(a_non_final_verdict_has_empty_fields) :-
+    subject_verdict(missing_profiling_flag, impact_assessment_verdict(indeterminate([automated_evaluation_including_profiling]), [], [], [], [], [])).
+test(an_input_problem_verdict_has_empty_fields) :-
+    subject_verdict(duplicate_and_unknown_keys, impact_assessment_verdict(input_problems([duplicate_key(processing_on_large_scale), unknown_key(colour)]), [], [], [], [], [])).
+test(every_subject_gives_one_solution_per_entry) :-
+    findall(Subject, gdpr_impact_assessment_assessment_duty_stated_risk_subject(Subject), Subjects),
+    solution_count_one(Subjects).
+test(every_well_formed_subject_has_a_nonempty_checklist) :-
+    findall(Subject, (expected_duty_status(Subject, _), dif(Subject, duplicate_and_unknown_keys)), Subjects),
+    checklists_nonempty(Subjects).
+test(the_checklist_items_each_carry_a_cite) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(national_list_item_de_dsk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_checklist(Profile, Items),
+    length(Items, 7),
+    member(item(article_35_4, met, cite(eu_reg_2016_679_art_35_4)), Items),
+    member(item(article_35_3_a, unmet, cite(eu_reg_2016_679_art_35_3_a)), Items).
+test(checklist_and_resolvable_hold_on_a_fixture) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_decision_resolvable(Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_checklist(Profile, [_FirstItem|_OtherItems]).
+test(final_statuses_are_the_declared_values) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_status_values(StatusValues),
+    subject_status(stated_high_risk, RequiredStatus),
+    member(RequiredStatus, StatusValues),
+    subject_status(high_risk_not_stated, NotRequiredStatus),
+    member(NotRequiredStatus, StatusValues).
+test(the_facade_status_reads_entry_a) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_status(Profile, required).
+test(the_facade_verdict_projects_entry_a) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile),
+    decide_gdpr_impact_assessment_assessment_duty_stated_risk(Profile, gdpr_impact_assessment_assessment_duty_stated_risk_verdict(required, [cite(eu_reg_2016_679_art_35_1)])).
+test(a_complete_required_assessment_permits_processing) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(profiling_with_legal_effects_complete, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, permitted).
+test(a_missing_assessment_prohibits_processing) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(large_scale_health_data_no_assessment, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, prohibited).
+test(no_duty_permits_processing) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(small_scale_health_data, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, permitted).
+test(a_non_final_answer_passes_through) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(missing_profiling_flag, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, indeterminate([automated_evaluation_including_profiling])).
+test(what_if_large_scale_flips_to_required) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(small_scale_health_data, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, processing_on_large_scale, true, required).
+test(what_if_the_same_value_keeps_not_required) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(small_scale_health_data, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, processing_on_large_scale, false, not_required).
+test(what_if_supplies_a_missing_key) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(missing_profiling_flag, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, automated_evaluation_including_profiling, true, required).
+test(officer_advice_sought_is_met_with_its_cite) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_advice_sought, Profile),
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(met, [cite(eu_reg_2016_679_art_35_2)])).
+test(officer_not_consulted_is_not_met) :-
+    subject_officer_status(officer_not_consulted, not_met).
+test(no_officer_is_not_applicable) :-
+    subject_officer_status(no_officer_designated, not_applicable).
+test(entry_o_ignores_the_stated_risk) :-
+    impact_assessment_officer_advice([attribute(impact_assessment_carried_out, true), attribute(data_protection_officer_designated, true), attribute(data_protection_officer_advice_sought, true), attribute(likely_high_risk_to_rights_and_freedoms, unsure)], officer_advice_verdict(met, [cite(eu_reg_2016_679_art_35_2)])).
+test(entry_o_reports_input_problems_first) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(duplicate_and_unknown_keys, Profile),
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(input_problems([duplicate_key(processing_on_large_scale), unknown_key(colour)]), [])).
+test(the_input_check_finds_the_problems) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(duplicate_and_unknown_keys, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems(Profile, [duplicate_key(processing_on_large_scale), unknown_key(colour)]).
+test(the_input_check_passes_a_well_formed_profile) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(well_formed_control, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems(Profile, []).
+test(a_non_list_profile_is_wrong_type) :-
+    decide_impact_assessment_duty(profile, impact_assessment_verdict(input_problems([wrong_type(profile)]), [], [], [], [], [])).
+test(unread_keys_change_no_answer) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(well_formed_control, Profile),
+    decide_impact_assessment_duty(Profile, Verdict),
+    append(Profile, [attribute(uses_new_technologies, true), attribute(vulnerable_data_subjects, unsure), attribute(highly_personal_data_processed, true), attribute(mitigating_measures_taken, false), attribute(member_state_requires_prior_authorisation, attested(true, attestation(host, at_time, reason, none))), attribute(route_approvals, approvals(viewer(account), []))], Extended),
+    decide_impact_assessment_duty(Extended, Verdict).
+test(the_profile_schema_has_thirty_eight_keys) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys(Keys),
+    length(Keys, 38).
+test(an_approved_approval_is_a_well_formed_route_approval) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems([attribute(route_approvals, approvals(viewer(account), [approval(route_profiling_with_legal_effects, '710c9afd08677bc4582523143a02ce5dad02d58e7d3255be19b48aceb3b35a55', approved, at, reason)]))], []).
+test(a_rejected_approval_is_a_well_formed_route_approval) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems([attribute(route_approvals, approvals(viewer(account), [approval(route_sensitive_data_with_new_technology, '710c9afd08677bc4582523143a02ce5dad02d58e7d3255be19b48aceb3b35a55', rejected, at, reason)]))], []).
+test(an_approval_with_a_pending_status_is_wrong_type) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems([attribute(route_approvals, approvals(viewer(account), [approval(route_profiling_with_legal_effects, '710c9afd08677bc4582523143a02ce5dad02d58e7d3255be19b48aceb3b35a55', pending, at, reason)]))], [wrong_type(route_approvals)]).
+test(url_evidence_is_copied_into_the_context) :-
+    evidence_profile(url('https://www.datenschutzkonferenz-online.de/', retrieved_at), Profile),
+    decide_impact_assessment_duty(Profile, impact_assessment_verdict(not_required, [no_requirement_triggered], [], Context, _Citations, [])),
+    member(outside_fact(national_list_requires_assessment, attested(false, attestation(host, at_time, reason, url('https://www.datenschutzkonferenz-online.de/', retrieved_at)))), Context).
+test(document_evidence_is_copied_into_the_context) :-
+    evidence_profile(document(upload_identifier, digest), Profile),
+    decide_impact_assessment_duty(Profile, impact_assessment_verdict(not_required, [no_requirement_triggered], [], Context, _Citations, [])),
+    member(outside_fact(national_list_requires_assessment, attested(false, attestation(host, at_time, reason, document(upload_identifier, digest)))), Context).
+test(provenance_term_builds_and_destructures) :-
+    Term = provenance(article_35_1, [cite(eu_reg_2016_679_art_35_1)]),
+    Term = provenance(Clause, Citations),
+    Clause == article_35_1,
+    Citations == [cite(eu_reg_2016_679_art_35_1)].
+
+test(profiling_without_legal_effects_is_not_required_only, fail) :-
+    subject_status(profiling_without_legal_effects, required).
+test(absent_member_state_decision_is_not_final, fail) :-
+    subject_status(member_state_decision_absent, not_required).
+test(a_missing_assessment_does_not_permit_processing, fail) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(large_scale_health_data_no_assessment, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, begin_processing, permitted).
+test(an_unknown_action_has_no_answer, fail) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(small_scale_health_data, Profile),
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, sell_data, _Result).
+test(officer_not_consulted_is_not_met_only, fail) :-
+    subject_officer_status(officer_not_consulted, met).
+test(document_evidence_is_not_required_only, fail) :-
+    evidence_profile(document(upload_identifier, digest), Profile),
+    decide_impact_assessment_duty(Profile, impact_assessment_verdict(required, _, _, _, _, _)).
+
+cp_test_names([every_entry_a_subject_gets_its_expected_status, every_entry_o_subject_gets_its_expected_status, every_registered_subject_has_an_expectation, profiling_with_legal_effects_is_required, profiling_without_legal_effects_is_not_required, large_scale_health_data_is_required, small_scale_health_data_is_not_required, systematic_public_monitoring_is_required, unsystematic_public_monitoring_is_not_required, national_list_match_is_required, national_list_attested_false_is_not_required, stated_high_risk_is_required, high_risk_not_stated_is_not_required, exempt_list_is_not_required, exempt_list_attested_false_is_required, general_assessment_exemption_is_not_required, member_state_requirement_restores_the_duty, absent_member_state_decision_is_referred, refused_member_state_decision_is_not_required, missing_profiling_flag_is_named, supplied_profiling_flag_is_required, unsure_large_scale_is_referred, stated_large_scale_is_required, unknown_legitimate_interest_is_named, no_legitimate_interest_is_required, duplicate_and_unknown_keys_are_input_problems, well_formed_control_is_not_required, every_near_miss_control_gets_another_status, every_officer_near_miss_gets_another_status, profiling_verdict_in_full, large_scale_verdict_lists_all_four_contents, monitoring_verdict_lists_the_missing_measures, national_list_verdict_cites_the_item, an_unread_item_is_not_cited, exempt_list_verdict_cites_the_whole_cnil_list, stated_high_risk_verdict_rests_on_article_35_1, general_assessment_exemption_verdict_cites_article_35_10, a_non_final_verdict_has_empty_fields, an_input_problem_verdict_has_empty_fields, every_subject_gives_one_solution_per_entry, every_well_formed_subject_has_a_nonempty_checklist, the_checklist_items_each_carry_a_cite, checklist_and_resolvable_hold_on_a_fixture, final_statuses_are_the_declared_values, the_facade_status_reads_entry_a, the_facade_verdict_projects_entry_a, a_complete_required_assessment_permits_processing, a_missing_assessment_prohibits_processing, no_duty_permits_processing, a_non_final_answer_passes_through, what_if_large_scale_flips_to_required, what_if_the_same_value_keeps_not_required, what_if_supplies_a_missing_key, officer_advice_sought_is_met_with_its_cite, officer_not_consulted_is_not_met, no_officer_is_not_applicable, entry_o_ignores_the_stated_risk, entry_o_reports_input_problems_first, the_input_check_finds_the_problems, the_input_check_passes_a_well_formed_profile, a_non_list_profile_is_wrong_type, unread_keys_change_no_answer, the_profile_schema_has_thirty_eight_keys, an_approved_approval_is_a_well_formed_route_approval, a_rejected_approval_is_a_well_formed_route_approval, an_approval_with_a_pending_status_is_wrong_type, url_evidence_is_copied_into_the_context, document_evidence_is_copied_into_the_context, provenance_term_builds_and_destructures]).
+cp_test_fail_names([profiling_without_legal_effects_is_not_required_only, absent_member_state_decision_is_not_final, a_missing_assessment_does_not_permit_processing, an_unknown_action_has_no_answer, officer_not_consulted_is_not_met_only, document_evidence_is_not_required_only]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

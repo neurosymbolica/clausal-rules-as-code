@@ -8,7 +8,7 @@ units of the pinned statute extract are formalized, deferred and unaccounted.
 Hidden-test results (reference implementation, mutation testing, adversarial review) are
 not listed yet; they will be added per domain in the next release.
 
-The 8 domains of the first release have a provision-tracking ledger. The domains added on 2026-11-16, 2026-11-18, 2026-11-20 and 2026-11-21 do not: their provision tracking is "none", and no check accounts for the share of the statute they cover. `check_provisions.py` is not run for them.
+The 8 domains of the first release have a provision-tracking ledger. The domains added on 2026-11-16, 2026-11-18, 2026-11-20, 2026-11-21 and 2026-11-22 do not: their provision tracking is "none", and no check accounts for the share of the statute they cover. `check_provisions.py` is not run for them.
 
 
 | Domain | Tests passed | Provision tracking | Citations | Parameters | Provenance |
@@ -44,7 +44,7 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `eu/data_protection/gdpr_art36_3_consultation_request` | 147/147 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_art6_lawful_basis` | 247/247 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_art89_research_safeguards` | 146/146 | none (no provision-tracking ledger) | pass | pass | pass |
-| `eu/data_protection/gdpr_arts33_34_breach_notification` | 247/247 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/data_protection/gdpr_arts33_34_breach_notification` | 192/192 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_binding_corporate_rules` | 214/214 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_chapter_v_extras` | 142/142 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_chapter_v_transfers` | 201/201 | none (no provision-tracking ledger) | pass | pass | pass |
@@ -68,6 +68,7 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `eu/data_protection/gdpr_data_subject_rights_portability_and_objection` | 177/177 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_data_subject_rights_response_duties` | 202/202 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_data_subject_rights_response_period` | 177/177 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk` | 209/209 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_impact_assessment_prior_consultation` | 179/179 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_information_duties_headline_verdict` | 184/184 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_information_duties_items_and_further_processing` | 144/144 | none (no provision-tracking ledger) | pass | pass | pass |

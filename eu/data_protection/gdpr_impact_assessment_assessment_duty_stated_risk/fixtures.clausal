@@ -1,0 +1,343 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls. Profile keys and subject ids are atoms.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...].
+% Every route has a POSITIVE subject followed by its one-unit NEAR-MISS
+% control (the next subject in the registry), which gets the other answer:
+%   Art 35(3)(a)   profiling_with_legal_effects_complete / profiling_without_legal_effects
+%   Art 35(3)(b)   large_scale_health_data_no_assessment / small_scale_health_data
+%   Art 35(3)(c)   public_area_monitoring_missing_measures / public_area_monitoring_not_systematic
+%   Art 35(4)      national_list_item_de_dsk / national_list_attested_false
+%   Art 35(1)      stated_high_risk / high_risk_not_stated
+%   Art 35(5)      exempt_list_fr_cnil / exempt_list_attested_false
+%   Art 35(10)     general_assessment_exemption / member_state_requires_assessment_anyway
+%   cross-ref      member_state_decision_absent / member_state_decision_refused
+%   missing key    missing_profiling_flag / profiling_flag_supplied
+%   open-textured  large_scale_unsure / large_scale_stated
+%   checklist key  legitimate_interest_unknown / legitimate_interest_not_pursued
+%   input check    duplicate_and_unknown_keys / well_formed_control
+%   Art 35(2)      officer_advice_sought / officer_not_consulted,
+%                  no_officer_designated / officer_designated_advice_unknown,
+%                  officer_both_absent / no_assessment_carried_out
+% Article 35 has no numeric threshold, so each near miss flips one fact.
+% =====================================================================
+
+:- module(fixtures, [
+    gdpr_impact_assessment_assessment_duty_stated_risk_subject/1,
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2,
+    gdpr_impact_assessment_assessment_duty_stated_risk_assess/2
+]).
+
+:- use_module(eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk/gdpr_impact_assessment_assessment_duty_stated_risk, [decide_gdpr_impact_assessment_assessment_duty_stated_risk/2]).
+
+% ---- Subject registry ------------------------------------------------
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(profiling_with_legal_effects_complete).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(profiling_without_legal_effects).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(large_scale_health_data_no_assessment).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(small_scale_health_data).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(public_area_monitoring_missing_measures).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(public_area_monitoring_not_systematic).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(national_list_item_de_dsk).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(national_list_attested_false).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(stated_high_risk).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(high_risk_not_stated).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(exempt_list_fr_cnil).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(exempt_list_attested_false).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(general_assessment_exemption).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(member_state_requires_assessment_anyway).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(member_state_decision_absent).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(member_state_decision_refused).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(missing_profiling_flag).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(profiling_flag_supplied).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(large_scale_unsure).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(large_scale_stated).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(legitimate_interest_unknown).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(legitimate_interest_not_pursued).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(duplicate_and_unknown_keys).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(well_formed_control).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(officer_advice_sought).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(officer_not_consulted).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(no_officer_designated).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(officer_designated_advice_unknown).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(officer_both_absent).
+gdpr_impact_assessment_assessment_duty_stated_risk_subject(no_assessment_carried_out).
+
+% An assessment that holds every Art 35(7) content (no legitimate interest).
+complete_assessment([
+    attribute(impact_assessment_carried_out, true),
+    attribute(description_of_processing_and_purposes_present, true),
+    attribute(legitimate_interest_pursued, false),
+    attribute(necessity_and_proportionality_assessed, true),
+    attribute(risks_to_data_subjects_assessed, true),
+    attribute(envisaged_measures_described, true)
+]).
+
+% ---- Profiles --------------------------------------------------------
+% Art 35(3)(a): legal effects met / not met.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(profiling_with_legal_effects_complete, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(automated_evaluation_including_profiling, true),
+        attribute(decisions_based_on_evaluation, true),
+        attribute(systematic_and_extensive_evaluation, true),
+        attribute(decisions_produce_legal_effects, true),
+        attribute(decisions_similarly_significantly_affect, false),
+        attribute(processing_on_large_scale, false),
+        attribute(likely_high_risk_to_rights_and_freedoms, false)
+    ], Contents, Profile).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(profiling_without_legal_effects, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(automated_evaluation_including_profiling, true),
+        attribute(decisions_based_on_evaluation, true),
+        attribute(systematic_and_extensive_evaluation, true),
+        attribute(decisions_produce_legal_effects, false),
+        attribute(decisions_similarly_significantly_affect, false),
+        attribute(processing_on_large_scale, false),
+        attribute(likely_high_risk_to_rights_and_freedoms, false)
+    ], Contents, Profile).
+% Art 35(3)(b): large scale / not large scale.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(large_scale_health_data_no_assessment, [
+    attribute(processing_on_large_scale, true),
+    attribute(special_category_data_processed, true),
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(small_scale_health_data, [
+    attribute(processing_on_large_scale, false),
+    attribute(special_category_data_processed, true),
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+% Art 35(3)(c): systematic monitoring / not systematic.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(public_area_monitoring_missing_measures, [
+    attribute(publicly_accessible_area_monitored, true),
+    attribute(monitoring_is_systematic, true),
+    attribute(processing_on_large_scale, true),
+    attribute(special_category_data_processed, false),
+    attribute(criminal_offence_data_processed, false),
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, true),
+    attribute(description_of_processing_and_purposes_present, true),
+    attribute(legitimate_interest_pursued, false),
+    attribute(necessity_and_proportionality_assessed, true),
+    attribute(risks_to_data_subjects_assessed, true),
+    attribute(envisaged_measures_described, false)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(public_area_monitoring_not_systematic, [
+    attribute(publicly_accessible_area_monitored, true),
+    attribute(monitoring_is_systematic, false),
+    attribute(processing_on_large_scale, true),
+    attribute(special_category_data_processed, false),
+    attribute(criminal_offence_data_processed, false),
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, true),
+    attribute(description_of_processing_and_purposes_present, true),
+    attribute(legitimate_interest_pursued, false),
+    attribute(necessity_and_proportionality_assessed, true),
+    attribute(risks_to_data_subjects_assessed, true),
+    attribute(envisaged_measures_described, false)
+]).
+% Art 35(4): on the list (with its item) / attested off the list.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(national_list_item_de_dsk, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(national_list_requires_assessment, attested(true, attestation(host, at_time, reason, none))),
+        attribute(national_list_requires_item, attested(national_list_item(de_dsk, de_dsk_35_4_nr_1), attestation(host, at_time, reason, none))),
+        attribute(likely_high_risk_to_rights_and_freedoms, false),
+        attribute(automated_evaluation_including_profiling, false),
+        attribute(processing_on_large_scale, false)
+    ], Contents, Profile).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(national_list_attested_false, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(national_list_requires_assessment, attested(false, attestation(host, at_time, reason, none))),
+        attribute(national_list_requires_item, attested(national_list_item(de_dsk, de_dsk_35_4_nr_1), attestation(host, at_time, reason, none))),
+        attribute(likely_high_risk_to_rights_and_freedoms, false),
+        attribute(automated_evaluation_including_profiling, false),
+        attribute(processing_on_large_scale, false)
+    ], Contents, Profile).
+% Art 35(1): high risk stated true / false.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(stated_high_risk, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(likely_high_risk_to_rights_and_freedoms, true),
+        attribute(automated_evaluation_including_profiling, false),
+        attribute(processing_on_large_scale, false)
+    ], Contents, Profile).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(high_risk_not_stated, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(likely_high_risk_to_rights_and_freedoms, false),
+        attribute(automated_evaluation_including_profiling, false),
+        attribute(processing_on_large_scale, false)
+    ], Contents, Profile).
+% Art 35(5): on the exemption list (with its item) / attested off it.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(exempt_list_fr_cnil, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(national_list_exempts_assessment, attested(true, attestation(host, at_time, reason, none))),
+        attribute(national_list_exempts_item, attested(national_list_item(fr_cnil, fr_cnil_35_5_list), attestation(host, at_time, reason, none))),
+        attribute(likely_high_risk_to_rights_and_freedoms, true),
+        attribute(automated_evaluation_including_profiling, false),
+        attribute(processing_on_large_scale, false)
+    ], Contents, Profile).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(exempt_list_attested_false, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(national_list_exempts_assessment, attested(false, attestation(host, at_time, reason, none))),
+        attribute(national_list_exempts_item, attested(national_list_item(fr_cnil, fr_cnil_35_5_list), attestation(host, at_time, reason, none))),
+        attribute(likely_high_risk_to_rights_and_freedoms, true),
+        attribute(automated_evaluation_including_profiling, false),
+        attribute(processing_on_large_scale, false)
+    ], Contents, Profile).
+% Art 35(10): exemption met / the Member State requires an assessment anyway.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(general_assessment_exemption, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(lawful_basis_is_legal_obligation_or_public_task, true),
+        attribute(legal_basis_with_general_impact_assessment, attested(true, attestation(host, at_time, reason, none))),
+        attribute(member_state_requires_assessment_despite_general_one, attested(false, attestation(host, at_time, reason, none))),
+        attribute(automated_evaluation_including_profiling, true),
+        attribute(decisions_based_on_evaluation, true),
+        attribute(systematic_and_extensive_evaluation, true),
+        attribute(decisions_produce_legal_effects, true),
+        attribute(likely_high_risk_to_rights_and_freedoms, false)
+    ], Contents, Profile).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(member_state_requires_assessment_anyway, Profile) :-
+    complete_assessment(Contents),
+    append([
+        attribute(lawful_basis_is_legal_obligation_or_public_task, true),
+        attribute(legal_basis_with_general_impact_assessment, attested(true, attestation(host, at_time, reason, none))),
+        attribute(member_state_requires_assessment_despite_general_one, attested(true, attestation(host, at_time, reason, none))),
+        attribute(automated_evaluation_including_profiling, true),
+        attribute(decisions_based_on_evaluation, true),
+        attribute(systematic_and_extensive_evaluation, true),
+        attribute(decisions_produce_legal_effects, true),
+        attribute(likely_high_risk_to_rights_and_freedoms, false)
+    ], Contents, Profile).
+% The enabling outside fact: absent (referred) / attested false.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(member_state_decision_absent, [
+    attribute(lawful_basis_is_legal_obligation_or_public_task, true),
+    attribute(legal_basis_with_general_impact_assessment, attested(true, attestation(host, at_time, reason, none))),
+    attribute(automated_evaluation_including_profiling, true),
+    attribute(decisions_based_on_evaluation, true),
+    attribute(systematic_and_extensive_evaluation, true),
+    attribute(decisions_produce_legal_effects, true),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(member_state_decision_refused, [
+    attribute(lawful_basis_is_legal_obligation_or_public_task, true),
+    attribute(legal_basis_with_general_impact_assessment, attested(true, attestation(host, at_time, reason, none))),
+    attribute(member_state_requires_assessment_despite_general_one, attested(false, attestation(host, at_time, reason, none))),
+    attribute(automated_evaluation_including_profiling, true),
+    attribute(decisions_based_on_evaluation, true),
+    attribute(systematic_and_extensive_evaluation, true),
+    attribute(decisions_produce_legal_effects, true),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+% A duty key absent (named) / supplied.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(missing_profiling_flag, [
+    attribute(decisions_based_on_evaluation, true),
+    attribute(systematic_and_extensive_evaluation, true),
+    attribute(decisions_produce_legal_effects, true),
+    attribute(processing_on_large_scale, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(profiling_flag_supplied, [
+    attribute(automated_evaluation_including_profiling, true),
+    attribute(decisions_based_on_evaluation, true),
+    attribute(systematic_and_extensive_evaluation, true),
+    attribute(decisions_produce_legal_effects, true),
+    attribute(processing_on_large_scale, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+% An open-textured judgement unsure (referred) / stated.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(large_scale_unsure, [
+    attribute(processing_on_large_scale, unsure),
+    attribute(special_category_data_processed, true),
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(large_scale_stated, [
+    attribute(processing_on_large_scale, true),
+    attribute(special_category_data_processed, true),
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, false)
+]).
+% A checklist key absent (named) / supplied.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(legitimate_interest_unknown, [
+    attribute(national_list_requires_assessment, attested(true, attestation(host, at_time, reason, none))),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, true),
+    attribute(description_of_processing_and_purposes_present, true),
+    attribute(necessity_and_proportionality_assessed, true),
+    attribute(risks_to_data_subjects_assessed, true),
+    attribute(envisaged_measures_described, true)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(legitimate_interest_not_pursued, [
+    attribute(national_list_requires_assessment, attested(true, attestation(host, at_time, reason, none))),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(impact_assessment_carried_out, true),
+    attribute(description_of_processing_and_purposes_present, true),
+    attribute(legitimate_interest_pursued, false),
+    attribute(necessity_and_proportionality_assessed, true),
+    attribute(risks_to_data_subjects_assessed, true),
+    attribute(envisaged_measures_described, true)
+]).
+% The input check: a duplicate and an unknown key / the same profile well formed.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(duplicate_and_unknown_keys, [
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(processing_on_large_scale, false),
+    attribute(processing_on_large_scale, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false),
+    attribute(colour, red)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(well_formed_control, [
+    attribute(automated_evaluation_including_profiling, false),
+    attribute(processing_on_large_scale, false),
+    attribute(likely_high_risk_to_rights_and_freedoms, false)
+]).
+% Art 35(2), entry O.
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_advice_sought, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(data_protection_officer_designated, true),
+    attribute(data_protection_officer_advice_sought, true)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_not_consulted, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(data_protection_officer_designated, true),
+    attribute(data_protection_officer_advice_sought, false)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(no_officer_designated, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(data_protection_officer_designated, false)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_designated_advice_unknown, [
+    attribute(impact_assessment_carried_out, true),
+    attribute(data_protection_officer_designated, true)
+]).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_both_absent, []).
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(no_assessment_carried_out, [
+    attribute(impact_assessment_carried_out, false)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+gdpr_impact_assessment_assessment_duty_stated_risk_assess(Subject, Result) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    decide_gdpr_impact_assessment_assessment_duty_stated_risk(Profile, Result).
+
+:- end_module(fixtures).

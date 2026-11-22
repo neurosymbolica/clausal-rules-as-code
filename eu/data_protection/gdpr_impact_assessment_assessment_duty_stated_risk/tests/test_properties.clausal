@@ -1,0 +1,120 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality and determinism (exactly one verdict) for entry A, entry O and
+% the facade; the shape invariants of a final and a non-final answer;
+% the independence of every answer from the keys no step reads.
+% Run: python -m clausal.testing eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk/gdpr_impact_assessment_assessment_duty_stated_risk, [
+    decide_gdpr_impact_assessment_assessment_duty_stated_risk/2,
+    decide_impact_assessment_duty/2,
+    impact_assessment_officer_advice/2
+]).
+:- use_module(eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk/fixtures, [
+    gdpr_impact_assessment_assessment_duty_stated_risk_subject/1,
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2
+]).
+
+all_subjects(Subjects) :-
+    findall(Subject, gdpr_impact_assessment_assessment_duty_stated_risk_subject(Subject), Subjects).
+
+one_entry_a_verdict(Subject) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    findall(Verdict, decide_impact_assessment_duty(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+one_entry_o_verdict(Subject) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    findall(Verdict, impact_assessment_officer_advice(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+one_facade_verdict(Subject) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    findall(Verdict, decide_gdpr_impact_assessment_assessment_duty_stated_risk(Profile, Verdict), Verdicts),
+    length(Verdicts, 1).
+
+% The shape of each STATUS: bases, contents, context and citations.
+verdict_shape(required, [_], _, Context, [_|_]) :-
+    last(Context, inputs_relied_on(_)).
+verdict_shape(not_required, [_], [], Context, [_|_]) :-
+    last(Context, inputs_relied_on(_)).
+verdict_shape(indeterminate([_]), [], [], [], []).
+verdict_shape(needs_legal_review(_, _), [], [], [], []).
+verdict_shape(input_problems([_|_]), [], [], [], []).
+
+entry_a_well_shaped(Subject) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    decide_impact_assessment_duty(Profile, impact_assessment_verdict(Status, Bases, MissingContents, Context, Citations, RoutesReliedOn)),
+    RoutesReliedOn == [],
+    verdict_shape(Status, Bases, MissingContents, Context, Citations).
+
+officer_shape(met, [cite(eu_reg_2016_679_art_35_2)]).
+officer_shape(not_met, [cite(eu_reg_2016_679_art_35_2)]).
+officer_shape(not_applicable, [cite(eu_reg_2016_679_art_35_2)]).
+officer_shape(indeterminate([_]), []).
+officer_shape(input_problems([_|_]), []).
+
+entry_o_well_shaped(Subject) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(Status, Citations)),
+    officer_shape(Status, Citations).
+
+unread_extra_keys([
+    attribute(highly_personal_data_processed, true),
+    attribute(datasets_matched_or_combined, unsure),
+    attribute(vulnerable_data_subjects, true),
+    attribute(processing_prevents_exercise_of_right_or_service, false),
+    attribute(uses_new_technologies, true),
+    attribute(mitigating_measures_taken, false),
+    attribute(processing_for_public_interest_task, true),
+    attribute(assessment_indicates_high_risk_absent_mitigation, true),
+    attribute(measures_reduce_residual_risk_below_high, unsure),
+    attribute(member_state_requires_prior_authorisation, attested(false, attestation(host, at_time, reason, none))),
+    attribute(route_approvals, approvals(viewer(account), []))
+]).
+
+unread_keys_change_nothing(Subject) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    unread_extra_keys(Extra),
+    append(Profile, Extra, Extended),
+    decide_impact_assessment_duty(Profile, DutyVerdict),
+    decide_impact_assessment_duty(Extended, DutyVerdict),
+    impact_assessment_officer_advice(Profile, OfficerVerdict),
+    impact_assessment_officer_advice(Extended, OfficerVerdict).
+
+test(totality_and_determinism_of_entry_a) :-
+    all_subjects(Subjects),
+    Subjects = [_|_],
+    maplist(one_entry_a_verdict, Subjects).
+
+test(totality_and_determinism_of_entry_o) :-
+    all_subjects(Subjects),
+    maplist(one_entry_o_verdict, Subjects).
+
+test(totality_and_determinism_of_the_facade) :-
+    all_subjects(Subjects),
+    maplist(one_facade_verdict, Subjects).
+
+test(every_entry_a_verdict_is_well_shaped) :-
+    all_subjects(Subjects),
+    maplist(entry_a_well_shaped, Subjects).
+
+test(every_entry_o_verdict_is_well_shaped) :-
+    all_subjects(Subjects),
+    maplist(entry_o_well_shaped, Subjects).
+
+test(keys_no_step_reads_change_no_answer) :-
+    all_subjects(Subjects),
+    maplist(unread_keys_change_nothing, Subjects).
+
+% Falsifier for the shape property: a final status with no citation is not
+% well shaped, so the property is not vacuous.
+test(a_final_status_without_citations_is_not_well_shaped, fail) :-
+    verdict_shape(required, [art35_1_high_risk], [], [inputs_relied_on([])], []).
+
+test(a_final_status_with_its_citation_is_well_shaped) :-
+    verdict_shape(required, [art35_1_high_risk], [], [inputs_relied_on([])], [cite(eu_reg_2016_679_art_35_1)]).
+
+:- end_module(test_properties).

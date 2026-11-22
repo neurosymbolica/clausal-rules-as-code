@@ -38,7 +38,7 @@ ledger (`provisions.yaml`) accounts for every one of them as:
 
 A unit that is none of these is **unaccounted**, and in each of the first eight domains the check
 fails if any unit is unaccounted. Today the count is zero in all eight. The 66 domains added on
-2026-11-16 and the domains added on 2026-11-18, 2026-11-20 and 2026-11-21 have no ledger, so this check does not apply to them.
+2026-11-16 and the domains added on 2026-11-18, 2026-11-20, 2026-11-21 and 2026-11-22 have no ledger, so this check does not apply to them.
 
 ## The side-by-side report
 

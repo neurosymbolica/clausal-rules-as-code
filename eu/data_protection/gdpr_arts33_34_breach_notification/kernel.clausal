@@ -1,55 +1,51 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
-% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_arts33_34_breach_notification (temporal family).
-% DAG root of the determination-slices layout. It holds ONLY the
-% PREDICATES that two or more files CALL.
+% kernel.clausal -- the SHARED FLOOR for eu/data_protection/gdpr_arts33_34_breach_notification
+% (temporal family). It is the DAG root of the determination-slices layout:
+%   kernel -> citations -> parameters -> breach_notification_verdict -> queries
+%   -> fixtures -> package facade.
 %
-% Source: Regulation (EU) 2016/679 (GDPR), consolidated text
-% 02016R0679-20160504, Art 33(1)-(5) and Art 34(1)-(4); the 72-hour period
-% counted under Regulation (EEC, Euratom) No 1182/71 Art 3(1) first
-% subparagraph, Art 3(2)(a), Art 3(3) and Art 3(4), applied by analogy.
+% Source: Regulation (EU) 2016/679 (GDPR) Art 33 and Art 34 (pinned consolidated
+% text 02016R0679-20160504). The period rule comes from Regulation (EEC, Euratom)
+% No 1182/71 Art 3, applied by analogy. This file holds only the order's INPUT
+% CHECK (INTERFACE - THE INPUT CHECK), which every query calls first. The check
+% decides no statutory condition, so it carries no implements/1 marker. The kernel
+% is the DAG root and does not import citations.
 %
-% The one shared predicate is the order's input check
-% gdpr_arts33_34_breach_notification_input_problems/2 (INTERFACE - THE INPUT
-% CHECK). Every public query that takes PROFILE calls it first, in the
-% determination slice and in queries.clausal alike. A predicate only ONE
-% file calls lives in that file: the real-calendar-day check, the period
-% arithmetic, the argument checks and the PAIRS builder are slice-local.
+% NOTHING SINGLE-CALLER LIVES HERE. This domain has one determination slice
+% (breach_notification_verdict.clausal). The slice owns the following, each with its
+% implements/1 marker:
+% - its value facts (72 hours, three calendar days, the date range);
+% - its argument checks (awareness_date, awareness_hour, hours_elapsed);
+% - its PAIRS builder.
 %
-% Atoms and data terms need NO declaration and NO import. This block only
-% RECORDS the result terms, so every file spells them alike.
+% Atoms and data terms need NO declaration and NO import. The block below RECORDS
+% the result terms so that every file spells them alike.
 %
-% Result term of the determination slice breach_notification_verdict:
+% Result term of the slice:
 %   breach_notification_verdict_verdict(Status, Citations)
-%     Status    -- the VERDICT of breach_notification_verdict/4: the atom
-%                  eligible or ineligible, the compound
-%                  notification_requirement_not_met(without_undue_delay |
-%                  reasons_for_delay), or a status compound:
-%                  indeterminate(MissingKeys), needs_legal_review(
-%                  open_textured(Key, cite(CitationKey)), Context) or
-%                  input_problems(Problems). The bare atom indeterminate is
-%                  NEVER written.
-%     Citations -- [cite(eu_reg_2016_679_art_33_1)] for every final verdict,
-%                  [] for every status.
-% Other answers the slice builds (exported constructors, never queries):
-%   OBLIGATION: one list of duty terms, in article order, each carrying
-%     cite(Key): notify_controller/1, no_notification_required/1,
-%     notify_supervisory_authority/1, document_breach/1,
-%     communicate_to_data_subject/1, no_communication_required/1,
-%     public_communication_or_similar_measure/1; or a status compound.
-%   DEADLINE: date(Year, Month, Day) or input_problems([wrong_type(awareness_date)]).
-%   PERIOD_END: period_end(date(Year, Month, Day), EndHour), EndHour 1..24,
-%     or input_problems(Problems).
-%   RESULT of the content checks: all_requirements_met,
-%     requirements_not_met(Items), information_to_follow_in_phases(Items)
-%     (authority notification only), or a status compound.
-%   Problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key),
-%     contradictory_inputs(Keys); Key may also be one of the argument names
-%     profile, awareness_date, awareness_hour, hours_elapsed.
-%   Context: [inputs_relied_on(Pairs)], or the TIMING CONTEXT
-%     [inputs_relied_on([hours_elapsed-HoursElapsed | Pairs])].
-% No profile key as_of_date exists in this domain: the contract has
-% twenty-five keys and any other key is unknown_key(Key).
+%   Status is the VERDICT of breach_notification_verdict/4, one of:
+%   - eligible or ineligible;
+%   - notification_requirement_not_met(without_undue_delay | reasons_for_delay);
+%   - indeterminate(MissingKeys), never the bare atom;
+%   - needs_legal_review(open_textured(Key, cite(CitationKey)), Context);
+%   - input_problems(Problems).
+%   Citations is [cite(eu_reg_2016_679_art_33_1)] for a final verdict and [] otherwise.
+%
+% Other answer terms (one spelling for every file):
+% - OBLIGATION: a list of duty terms, each of arity 1 holding cite(Key):
+%   - no_notification_required, notify_supervisory_authority, notify_controller;
+%   - document_breach;
+%   - communicate_to_data_subject, no_communication_required,
+%     public_communication_or_similar_measure.
+%   A DEFAULTED controller list ends with
+%   inputs_relied_on([supervisory_authority_decision_on_communication-no_decision]).
+% - RESULT of the content checks: all_requirements_met, requirements_not_met(Items)
+%   or information_to_follow_in_phases(Items).
+% - DEADLINE: date(Year, Month, Day). PERIOD_END: period_end(date(Year, Month, Day),
+%   EndHour).
+% - Problems items: duplicate_key(Key), wrong_type(Key), unknown_key(Key) and
+%   contradictory_inputs(Keys).
 % =====================================================================
 
 :- module(kernel, [gdpr_arts33_34_breach_notification_input_problems/2]).
@@ -57,31 +53,67 @@
 :- use_module(library(reif), [memberd_t/3]).
 
 % ---- input checks: the problems a profile has, if any -----------
-% gdpr_arts33_34_breach_notification_input_problems(Profile, Problems): Problems = [] means the profile can be
-% judged. Written from the order's typed input contract
-% (input_contract.types.profile: attribute_list).
-% It gives exactly one answer for every Profile, and the answer is ground:
-% - a Profile that is not an attribute list [attribute(Key, Value), ...] with a ground
-%   Key in every item gives [wrong_type(profile)];
-% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
-%   the key occurs more than once in Profile (none of its values is read, so it is never
-%   also wrong_type(Key)), else wrong_type(Key) when its one value is outside its type;
-%   then unknown_key(Key) for each key outside the contract, in the order of its first
-%   occurrence in Profile; then contradictory_inputs(Keys) for each contradictory pair of
-%   reading (8) whose two keys each occur once with exactly the contradictory values.
-%   An absent key is not a problem.
-% Every step is complementary clauses: exactly one clause holds for each input.
+% gdpr_arts33_34_breach_notification_input_problems(Profile, Problems).
+% Problems = [] means the profile can be judged. The check is written from the
+% order's typed input contract (attribute_list) and from THE INPUT CHECK.
+% It gives exactly one answer for every Profile:
+% - A Profile that is not an attribute list [attribute(Key, Value), ...] gives
+%   [wrong_type(profile)]. Such a Profile is any of:
+%   - an unbound variable or a partial list;
+%   - a list with an unbound element or a non-attribute element;
+%   - a list with an item whose Key is a compound holding an unbound variable.
+% - Otherwise the problems are, in this order:
+%   1. For each contract key in contract order: duplicate_key(Key) when the key
+%      occurs more than once (no value is read), else wrong_type(Key) when its one
+%      value is outside its type. A value with an unbound part is outside every
+%      type.
+%   2. unknown_key(Key) for each key outside the contract, as given, in the order
+%      of first occurrence. Keys are compared by identity, so two different
+%      unbound variables are two keys. Their values are never checked.
+%   3. contradictory_inputs(Keys) for each contradictory combination of reading
+%      (8), in its listed order.
+% An absent key is never a problem.
 gdpr_arts33_34_breach_notification_input_problems(Profile, Problems) :-
     attribute_list_t(Profile, IsAttributeList),
     profile_problems(IsAttributeList, Profile, Problems).
 
 profile_problems(false, _, [wrong_type(profile)]).
 profile_problems(true, Profile, Problems) :-
-    Keys = [breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk, delay_justified_by_reasons, party_role, notification_made_without_undue_delay, notification_accompanied_by_reasons_for_delay, supervisory_authority_decision_on_communication, appropriate_protection_measures_applied_to_affected_data, subsequent_measures_ensure_high_risk_no_longer_likely, communication_would_involve_disproportionate_effort, notification_describes_nature_of_breach, notification_gives_categories_and_approximate_numbers, categories_and_approximate_numbers_possible, notification_gives_contact_point, notification_describes_likely_consequences, notification_describes_measures_taken_or_proposed, notification_describes_mitigation_measures, mitigation_measures_appropriate, information_not_possible_to_provide_at_the_same_time, communication_made_without_undue_delay, communication_describes_nature_in_clear_and_plain_language, communication_gives_contact_point, communication_describes_likely_consequences, communication_describes_measures_taken_or_proposed, communication_describes_mitigation_measures],
+    contract_keys(Keys),
     unknown_keys(Profile, Keys, UnknownKeyProblems),
-    contradictory_problems(Profile, ContradictoryProblems),
-    append(UnknownKeyProblems, ContradictoryProblems, LaterProblems),
+    findall(Combination, contradictory_combination(Combination), Combinations),
+    contradiction_problems(Profile, Combinations, ContradictionProblems),
+    append(UnknownKeyProblems, ContradictionProblems, LaterProblems),
     key_problems(Keys, Profile, LaterProblems, Problems).
+
+% The twenty-five contract keys, in root_exports / input_contract order.
+contract_keys([
+    breach_unlikely_to_result_in_risk,
+    breach_likely_to_result_in_high_risk,
+    delay_justified_by_reasons,
+    party_role,
+    notification_made_without_undue_delay,
+    notification_accompanied_by_reasons_for_delay,
+    supervisory_authority_decision_on_communication,
+    appropriate_protection_measures_applied_to_affected_data,
+    subsequent_measures_ensure_high_risk_no_longer_likely,
+    communication_would_involve_disproportionate_effort,
+    notification_describes_nature_of_breach,
+    notification_gives_categories_and_approximate_numbers,
+    categories_and_approximate_numbers_possible,
+    notification_gives_contact_point,
+    notification_describes_likely_consequences,
+    notification_describes_measures_taken_or_proposed,
+    notification_describes_mitigation_measures,
+    mitigation_measures_appropriate,
+    information_not_possible_to_provide_at_the_same_time,
+    communication_made_without_undue_delay,
+    communication_describes_nature_in_clear_and_plain_language,
+    communication_gives_contact_point,
+    communication_describes_likely_consequences,
+    communication_describes_measures_taken_or_proposed,
+    communication_describes_mitigation_measures
+]).
 
 % The contract: each key and the type of its value.
 key_type(breach_unlikely_to_result_in_risk, judgement).
@@ -110,18 +142,31 @@ key_type(communication_describes_likely_consequences, boolean).
 key_type(communication_describes_measures_taken_or_proposed, boolean).
 key_type(communication_describes_mitigation_measures, boolean).
 
-% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
-% items, each Key ground; false for anything else, an unbound Term included.
+% The contradictory combinations of reading (8), in the order the order lists them.
+% Each pair is Key-Value, and the keys appear in the order of contradictory_inputs(Keys).
+contradictory_combination([
+    breach_unlikely_to_result_in_risk-true,
+    breach_likely_to_result_in_high_risk-true
+]).
+contradictory_combination([
+    delay_justified_by_reasons-true,
+    notification_accompanied_by_reasons_for_delay-false
+]).
+
+% attribute_list_t(Term, Truth): Truth is true when Term is a proper list of
+% attribute(Key, Value) items. A Key may be an unbound variable or a ground term,
+% but not a compound holding a variable. Truth is false for anything else,
+% including an unbound Term, a partial list and an unbound element.
 attribute_list_t(Term, false) :-
     var(Term).
 attribute_list_t(Term, true) :-
     Term == [].
-attribute_list_t(Term, T) :-
+attribute_list_t(Term, Truth) :-
     nonvar(Term),
     Term = [Element|Elements],
     attribute_t(Element, ElementIsAttribute),
     attribute_list_t(Elements, ElementsAreAttributes),
-    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+    truth_and(ElementIsAttribute, ElementsAreAttributes, Truth).
 attribute_list_t(Term, false) :-
     nonvar(Term),
     Term \== [],
@@ -129,22 +174,40 @@ attribute_list_t(Term, false) :-
 
 attribute_t(Element, false) :-
     var(Element).
-attribute_t(Element, T) :-
+attribute_t(Element, Truth) :-
     nonvar(Element),
     Element = attribute(Key, _),
-    term_variables(Key, Variables),
-    no_variables_t(Variables, T).
+    key_shape_t(Key, Truth).
 attribute_t(Element, false) :-
     nonvar(Element),
     Element \= attribute(_, _).
 
+% An unbound Key is a key outside the contract, reported as given. A non-variable
+% Key must be ground.
+key_shape_t(Key, true) :-
+    var(Key).
+key_shape_t(Key, Truth) :-
+    nonvar(Key),
+    term_variables(Key, Variables),
+    no_variables_t(Variables, Truth).
+
 no_variables_t([], true).
 no_variables_t([_|_], false).
 
-% Unknown keys, in profile order, each once: Known grows by each key named.
+% identical_member_t(Term, List, Truth): Truth is true when Term is IDENTICAL (==) to
+% some element of List. Nothing is unified, so an unbound key never matches another
+% key.
+identical_member_t(_, [], false).
+identical_member_t(Term, [Element|_], true) :-
+    Term == Element.
+identical_member_t(Term, [Element|Elements], Truth) :-
+    Term \== Element,
+    identical_member_t(Term, Elements, Truth).
+
+% Unknown keys, in profile order, each once. Known grows by each key named.
 unknown_keys([], _, []).
 unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
-    memberd_t(Key, Known, IsKnown),
+    identical_member_t(Key, Known, IsKnown),
     name_unknown_key(IsKnown, Key, Known, Elements, Problems).
 
 name_unknown_key(true, _, Known, Elements, Problems) :-
@@ -152,9 +215,10 @@ name_unknown_key(true, _, Known, Elements, Problems) :-
 name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
     unknown_keys(Elements, [Key|Known], Problems).
 
-% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
-% (none of its values is read), else wrong_type(Key) when its one value is outside the
-% key's type. An absent key has no value to check.
+% Contract keys, in contract order. A key that occurs more than once gives
+% duplicate_key(Key) and none of its values is read. Otherwise a key whose one value
+% is outside the key's type gives wrong_type(Key). An absent key has no value to
+% check.
 key_problems([], _, Problems, Problems).
 key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
     key_type(Key, Type),
@@ -162,7 +226,8 @@ key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
     key_problems(Keys, Profile, LaterProblems, KeyProblems),
     name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
 
-% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+% key_occurrences(Elements, Key, Occurrences): Occurrences is none, one or many,
+% for the items that give Key. Keys are compared by identity.
 key_occurrences([], _, none).
 key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
     ElementKey == Key,
@@ -185,114 +250,147 @@ name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
 name_wrong_type(true, _, Problems, Problems).
 name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
 
-% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
-% in Type (true when Elements gives Key none).
+% values_in_type_t(Elements, Key, Type, Truth): Truth is true when every value that
+% Elements gives Key is in Type. Truth is also true when Elements gives Key no value.
 values_in_type_t([], _, _, true).
-values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, Truth) :-
     ElementKey == Key,
     value_in_type_t(Type, Value, ValueInType),
     values_in_type_t(Elements, Key, Type, RestInType),
-    truth_and(ValueInType, RestInType, T).
-values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    truth_and(ValueInType, RestInType, Truth).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, Truth) :-
     ElementKey \== Key,
-    values_in_type_t(Elements, Key, Type, T).
+    values_in_type_t(Elements, Key, Type, Truth).
 
 % A value with an unbound part is outside every type; a ground one is checked.
-value_in_type_t(Type, Value, T) :-
+value_in_type_t(Type, Value, Truth) :-
     term_variables(Value, Variables),
-    ground_value_in_type_t(Variables, Type, Value, T).
+    ground_value_in_type_t(Variables, Type, Value, Truth).
 
 ground_value_in_type_t([_|_], _, _, false).
-ground_value_in_type_t([], Type, Value, T) :-
-    in_type_t(Type, Value, T).
+ground_value_in_type_t([], Type, Value, Truth) :-
+    in_type_t(Type, Value, Truth).
 
-% in_type_t(Type, Value, T): one clause per type, for a ground Value.
-in_type_t(judgement, Value, T) :-
-    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+% in_type_t(Type, Value, Truth): one clause per type, for a ground Value.
+in_type_t(judgement, Value, Truth) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, Truth).
+in_type_t(boolean, Value, Truth) :-
+    memberd_t(Value, [true, false], Truth).
+in_type_t(enum(Values), Value, Truth) :-
+    memberd_t(Value, Values, Truth).
+in_type_t(one_of(Types), Value, Truth) :-
+    in_some_type_t(Types, Value, Truth).
 
-in_type_t(boolean, Value, T) :-
-    memberd_t(Value, [true, false], T).
-
-in_type_t(enum(Values), Value, T) :-
-    memberd_t(Value, Values, T).
-
-in_type_t(one_of(Types), Value, T) :-
-    in_some_type_t(Types, Value, T).
-
-truth_and(true, T, T).
-truth_and(false, _, false).
-
-% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+% in_some_type_t(Types, Value, Truth): Truth is true when Value is in at least one of
+% Types.
 in_some_type_t([], _, false).
-in_some_type_t([Type|Types], Value, T) :-
+in_some_type_t([Type|Types], Value, Truth) :-
     in_type_t(Type, Value, InType),
     in_some_type_t(Types, Value, InAnother),
-    truth_or(InType, InAnother, T).
+    truth_or(InType, InAnother, Truth).
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
 
 truth_or(true, _, true).
-truth_or(false, T, T).
+truth_or(false, Truth, Truth).
 
-% ---- contradictory inputs (reading (8)) ---------------------------
-% contradictory_problems(Profile, Problems): one contradictory_inputs(Keys) per pair, in
-% the order of the order: first breach_unlikely_to_result_in_risk true with
-% breach_likely_to_result_in_high_risk true (a high risk is a degree of risk), then
-% delay_justified_by_reasons true with notification_accompanied_by_reasons_for_delay
-% false (reasons not given cannot justify a delay). A pair counts only when each of its
-% keys occurs exactly once with exactly the contradictory value; a duplicate or
-% ill-typed key is already its own problem and the pair is not named.
-contradictory_problems(Profile, Problems) :-
-    pair_problems(Profile, breach_unlikely_to_result_in_risk, true, breach_likely_to_result_in_high_risk, true, FirstProblems),
-    pair_problems(Profile, delay_justified_by_reasons, true, notification_accompanied_by_reasons_for_delay, false, SecondProblems),
-    append(FirstProblems, SecondProblems, Problems).
+% ---- contradictory inputs (reading (8)) ------------------------------
+% A combination is refused when each of its keys occurs exactly once with exactly
+% the listed value. Those values are true and false, so a matching value is also
+% well-typed.
+contradiction_problems(_, [], []).
+contradiction_problems(Profile, [Combination|Combinations], Problems) :-
+    combination_holds_t(Profile, Combination, Holds),
+    contradiction_problems(Profile, Combinations, LaterProblems),
+    name_contradiction(Holds, Combination, LaterProblems, Problems).
 
-pair_problems(Profile, FirstKey, FirstValue, SecondKey, SecondValue, Problems) :-
-    single_value_t(Profile, FirstKey, FirstValue, FirstHolds),
-    single_value_t(Profile, SecondKey, SecondValue, SecondHolds),
-    truth_and(FirstHolds, SecondHolds, BothHold),
-    name_contradiction(BothHold, [FirstKey, SecondKey], Problems).
+name_contradiction(true, Combination, LaterProblems, [contradictory_inputs(Keys)|LaterProblems]) :-
+    pairs_keys(Combination, Keys).
+name_contradiction(false, _, Problems, Problems).
 
-% single_value_t(Profile, Key, Wanted, T): T is true when Key occurs once with value Wanted.
-single_value_t(Profile, Key, Wanted, T) :-
+combination_holds_t(_, [], true).
+combination_holds_t(Profile, [Key-Expected|Pairs], Truth) :-
     key_occurrences(Profile, Key, Occurrences),
-    occurrence_value_t(Occurrences, Profile, Key, Wanted, T).
+    occurrence_value_t(Occurrences, Profile, Key, Expected, HoldsHere),
+    combination_holds_t(Profile, Pairs, HoldsRest),
+    truth_and(HoldsHere, HoldsRest, Truth).
 
 occurrence_value_t(none, _, _, _, false).
 occurrence_value_t(many, _, _, _, false).
-occurrence_value_t(one, Profile, Key, Wanted, T) :-
-    values_in_type_t(Profile, Key, enum([Wanted]), T).
+occurrence_value_t(one, Profile, Key, Expected, Truth) :-
+    single_value(Profile, Key, Value),
+    identical_t(Value, Expected, Truth).
 
-name_contradiction(true, Keys, [contradictory_inputs(Keys)]).
-name_contradiction(false, _, []).
+% single_value(Elements, Key, Value): the value of the one item that gives Key.
+single_value([attribute(ElementKey, Value)|_], Key, Value) :-
+    ElementKey == Key.
+single_value([attribute(ElementKey, _)|Elements], Key, Value) :-
+    ElementKey \== Key,
+    single_value(Elements, Key, Value).
 
-% ---- tests ---------------------------------------------------------
+identical_t(Left, Right, true) :-
+    Left == Right.
+identical_t(Left, Right, false) :-
+    Left \== Right.
+
+% ---- tests -----------------------------------------------------------
 test(an_empty_profile_has_no_problem) :-
-    gdpr_arts33_34_breach_notification_input_problems([], []).
+    gdpr_arts33_34_breach_notification_input_problems([], Problems),
+    Problems == [].
 test(a_well_formed_profile_has_no_problem) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, false), attribute(party_role, controller), attribute(notification_made_without_undue_delay, unsure)], []).
-test(a_non_list_is_wrong_type_profile) :-
-    gdpr_arts33_34_breach_notification_input_problems(controller, [wrong_type(profile)]).
-test(a_list_with_a_non_attribute_is_wrong_type_profile) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), party_role], [wrong_type(profile)]).
-test(an_enumeration_value_outside_its_atoms_is_wrong_type) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, auditor)], [wrong_type(party_role)]).
-test(unsure_is_not_a_crisp_value) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(notification_gives_contact_point, unsure)], [wrong_type(notification_gives_contact_point)]).
-test(a_repeated_key_is_one_duplicate_key) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), attribute(party_role, nobody)], [duplicate_key(party_role)]).
-test(an_unknown_key_is_named_once) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_colour, red), attribute(party_role, controller), attribute(breach_colour, blue)], [unknown_key(breach_colour)]).
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, unsure)], Problems),
+    Problems == [].
+test(a_well_formed_profile_is_not_wrong_type, fail) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller)], [wrong_type(profile)]).
+test(a_non_list_is_not_a_profile) :-
+    gdpr_arts33_34_breach_notification_input_problems(profile, Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_profile_is_not_a_profile) :-
+    gdpr_arts33_34_breach_notification_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(a_partial_list_is_not_a_profile) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(a_non_attribute_element_is_not_a_profile) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), party_role], Problems),
+    Problems == [wrong_type(profile)].
+test(a_compound_key_with_a_variable_is_not_a_profile) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(key(_), true)], Problems),
+    Problems == [wrong_type(profile)].
+test(a_duplicate_key_is_named_once) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), attribute(party_role, wrong)], Problems),
+    Problems == [duplicate_key(party_role)].
+test(a_wrong_value_is_wrong_type) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(notification_accompanied_by_reasons_for_delay, unsure)], Problems),
+    Problems == [wrong_type(notification_accompanied_by_reasons_for_delay)].
+test(an_unbound_value_is_wrong_type) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, _)], Problems),
+    Problems == [wrong_type(party_role)].
+test(an_unbound_key_is_named_as_given) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(Key, _)], Problems),
+    Problems = [unknown_key(Named)],
+    Named == Key.
+test(two_unbound_keys_are_two_keys) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(_, true), attribute(_, true)], Problems),
+    length(Problems, 2).
+test(an_unknown_atom_key_is_named_once) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(colour, red), attribute(colour, blue)], Problems),
+    Problems == [unknown_key(colour)].
 test(the_risk_pair_is_contradictory) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_likely_to_result_in_high_risk, true), attribute(breach_unlikely_to_result_in_risk, true)], [contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])]).
+    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true)], Problems),
+    Problems == [contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])].
 test(the_reasons_pair_is_contradictory) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(delay_justified_by_reasons, true), attribute(notification_accompanied_by_reasons_for_delay, false)], [contradictory_inputs([delay_justified_by_reasons, notification_accompanied_by_reasons_for_delay])]).
-test(an_unsure_judgement_is_not_contradictory) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, unsure), attribute(breach_likely_to_result_in_high_risk, true)], []).
-test(a_duplicated_key_does_not_form_a_contradictory_pair) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true)], [duplicate_key(breach_unlikely_to_result_in_risk)]).
-test(problems_come_in_contract_then_unknown_then_contradiction_order) :-
-    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_colour, red), attribute(breach_unlikely_to_result_in_risk, true), attribute(party_role, auditor), attribute(breach_likely_to_result_in_high_risk, true)], [wrong_type(party_role), unknown_key(breach_colour), contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])]).
-test(the_check_has_exactly_one_answer) :-
-    findall(Problems, gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, processor)], Problems), Answers),
-    Answers == [[]].
+    gdpr_arts33_34_breach_notification_input_problems([attribute(notification_accompanied_by_reasons_for_delay, false), attribute(delay_justified_by_reasons, true)], Problems),
+    Problems == [contradictory_inputs([delay_justified_by_reasons, notification_accompanied_by_reasons_for_delay])].
+test(an_unsure_risk_pair_is_not_contradictory) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, unsure)], Problems),
+    Problems == [].
+test(problems_come_in_the_stated_order) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(colour, red), attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true), attribute(party_role, nobody)], Problems),
+    Problems == [wrong_type(party_role), unknown_key(colour), contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])].
+test(exactly_one_answer) :-
+    findall(Problems, gdpr_arts33_34_breach_notification_input_problems([attribute(party_role, controller), attribute(colour, red)], Problems), Answers),
+    length(Answers, 1).
 
 :- end_module(kernel).

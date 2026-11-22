@@ -1,9 +1,9 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_input_mode.clausal -- INPUT MODE: public predicates called with the
-% result argument BOUND (verdict given, not read out), plus input tolerance:
-% ill-shaped profiles and arguments are refused as input_problems(PROBLEMS),
-% never answered.
+% result argument BOUND (verdict given, not read out), and INPUT TOLERANCE:
+% malformed profiles and arguments are answered as input_problems, never
+% raised and never guessed.
 % Run: python -m clausal.testing eu/data_protection/gdpr_arts33_34_breach_notification/tests/test_input_mode.clausal
 % =====================================================================
 :- module(test_input_mode, []).
@@ -16,108 +16,82 @@
     authority_notification_content_check/2,
     data_subject_communication_check/2
 ]).
-:- use_module(eu/data_protection/gdpr_arts33_34_breach_notification/kernel, [gdpr_arts33_34_breach_notification_input_problems/2]).
-:- use_module(eu/data_protection/gdpr_arts33_34_breach_notification/fixtures, [gdpr_arts33_34_breach_notification_profile_for/2]).
+:- use_module(eu/data_protection/gdpr_arts33_34_breach_notification/queries, [gdpr_arts33_34_breach_notification_input_problems/2]).
 
-request_of(Subject, Profile, HoursElapsed) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, breach_notification_request(Profile, HoursElapsed)).
+% ---- bound verdicts, one per route ---------------------------------------
+test(eligible_holds_bound_at_the_period_end) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 72, eligible, [cite(eu_reg_2016_679_art_33_1)]).
+test(ineligible_holds_bound_for_an_unlikely_risk) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], 0, ineligible, [cite(eu_reg_2016_679_art_33_1)]).
+test(ineligible_is_rejected_bound_for_a_risk, fail) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 72, ineligible, _).
+test(undue_delay_holds_bound_through_the_status) :-
+    breach_notification_verdict_status(case([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, false)], 10), notification_requirement_not_met(without_undue_delay)).
+test(missing_reasons_hold_bound) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, false)], 73, notification_requirement_not_met(reasons_for_delay), [cite(eu_reg_2016_679_art_33_1)]).
+test(an_absent_risk_judgement_holds_bound) :-
+    breach_notification_verdict([], 10, indeterminate([breach_unlikely_to_result_in_risk]), []).
+test(the_processor_list_holds_bound) :-
+    notification_obligation([attribute(party_role, processor)], [notify_controller(cite(eu_reg_2016_679_art_33_2))]).
+test(the_processor_list_is_not_the_controller_list, fail) :-
+    notification_obligation([attribute(party_role, processor)], [notify_supervisory_authority(_)|_]).
+test(the_deadline_holds_bound) :-
+    authority_notification_deadline(date(2025, 12, 30), date(2026, 1, 2), 72).
+test(the_period_end_holds_bound_across_a_leap_day) :-
+    authority_notification_period_end(date(2032, 2, 26), 10, period_end(date(2032, 2, 29), 11)).
+test(a_wrong_period_end_hour_is_rejected, fail) :-
+    authority_notification_period_end(date(2032, 2, 26), 10, period_end(date(2032, 2, 29), 10)).
+test(the_phases_result_holds_bound) :-
+    authority_notification_content_check([attribute(notification_describes_nature_of_breach, true), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, false), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, true)], information_to_follow_in_phases([contact_point])).
+test(the_communication_result_holds_bound) :-
+    data_subject_communication_check([attribute(communication_made_without_undue_delay, false), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, true)], requirements_not_met([without_undue_delay])).
 
-% ---- bound verdicts, one per route ---------------------------------
-test(eligible_holds_with_the_verdict_bound) :-
-    request_of(timely_notification_eligible, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, eligible, [cite(eu_reg_2016_679_art_33_1)]).
-test(the_eligible_profile_rejects_ineligible, fail) :-
-    request_of(timely_notification_eligible, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, ineligible, _).
-test(ineligible_holds_with_the_verdict_bound) :-
-    request_of(unlikely_risk_ineligible, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, ineligible, [cite(eu_reg_2016_679_art_33_1)]).
-test(the_ineligible_profile_rejects_eligible, fail) :-
-    request_of(unlikely_risk_ineligible, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, eligible, _).
-test(undue_delay_holds_with_the_verdict_bound) :-
-    request_of(timely_notification_unduly_delayed, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, notification_requirement_not_met(without_undue_delay), [cite(eu_reg_2016_679_art_33_1)]).
-test(missing_reasons_hold_with_the_verdict_bound) :-
-    request_of(seventy_three_hours_without_reasons, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, notification_requirement_not_met(reasons_for_delay), [cite(eu_reg_2016_679_art_33_1)]).
-test(the_missing_reasons_are_not_the_undue_delay, fail) :-
-    request_of(seventy_three_hours_without_reasons, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, notification_requirement_not_met(without_undue_delay), _).
-test(an_unjustified_delay_referral_holds_bound) :-
-    request_of(seventy_three_hours_with_unjustified_reasons, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, needs_legal_review(open_textured(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)), [inputs_relied_on([hours_elapsed-73, breach_unlikely_to_result_in_risk-false, delay_justified_by_reasons-false])]), []).
-test(an_unjustified_delay_is_never_ineligible, fail) :-
-    request_of(seventy_three_hours_with_unjustified_reasons, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, ineligible, _).
-test(a_missing_risk_judgement_holds_bound) :-
-    request_of(missing_risk_judgement, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, indeterminate([breach_unlikely_to_result_in_risk]), []).
-test(the_bare_atom_indeterminate_is_never_written, fail) :-
-    request_of(missing_risk_judgement, Profile, HoursElapsed),
-    breach_notification_verdict(Profile, HoursElapsed, indeterminate, _).
-test(the_status_projection_holds_bound) :-
-    request_of(seventy_two_hours_in_time, Profile, HoursElapsed),
-    breach_notification_verdict_status(breach_notification_request(Profile, HoursElapsed), eligible).
-test(the_processor_obligation_holds_bound) :-
-    request_of(processor_notifies_controller, Profile, _),
-    notification_obligation(Profile, [notify_controller(cite(eu_reg_2016_679_art_33_2))]).
-test(the_processor_owes_no_documentation_duty, fail) :-
-    request_of(processor_notifies_controller, Profile, _),
-    notification_obligation(Profile, [_, document_breach(_)|_]).
-test(the_hours_output_is_bound_to_72) :-
-    authority_notification_deadline(date(2025, 10, 31), _, 72).
-test(the_hours_output_is_never_48, fail) :-
-    authority_notification_deadline(date(2025, 10, 31), _, 48).
-
-% ---- input tolerance -------------------------------------------------
-test(a_non_list_profile_is_refused) :-
-    breach_notification_verdict(controller, 10, input_problems([wrong_type(profile)]), []).
-test(an_integer_profile_is_refused) :-
-    breach_notification_verdict(42, 10, Verdict, Citations),
-    Verdict == input_problems([wrong_type(profile)]),
-    Citations == [].
-test(a_list_with_a_bare_key_is_refused) :-
-    notification_obligation([attribute(party_role, controller), breach_unlikely_to_result_in_risk], input_problems([wrong_type(profile)])).
-test(a_quoted_string_value_is_wrong_type) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, "false")], 10, input_problems([wrong_type(breach_unlikely_to_result_in_risk)]), []).
-test(an_integer_value_is_wrong_type) :-
-    notification_obligation([attribute(party_role, 7)], Obligation),
-    Obligation == input_problems([wrong_type(party_role)]).
-test(an_unknown_key_is_refused_by_the_obligation) :-
-    notification_obligation([attribute(party_role, processor), attribute(as_of_date, today)], input_problems([unknown_key(as_of_date)])).
-test(a_duplicate_key_is_refused_by_the_content_check) :-
-    authority_notification_content_check([attribute(notification_gives_contact_point, true), attribute(notification_gives_contact_point, true)], input_problems([duplicate_key(notification_gives_contact_point)])).
-test(a_fractional_hour_count_is_wrong_type) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false)], 72.5, input_problems([wrong_type(hours_elapsed)]), []).
-test(an_atom_hour_count_is_wrong_type) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false)], seventy, input_problems([wrong_type(hours_elapsed)]), []).
+% ---- input tolerance -----------------------------------------------------
+test(an_atom_hours_elapsed_is_wrong_type) :-
+    breach_notification_verdict([], abc, input_problems([wrong_type(hours_elapsed)]), []).
+test(a_negative_hours_elapsed_is_wrong_type) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], -1, input_problems([wrong_type(hours_elapsed)]), []).
 test(profile_problems_come_before_argument_problems) :-
-    breach_notification_verdict([attribute(party_role, auditor)], -1, input_problems([wrong_type(party_role), wrong_type(hours_elapsed)]), []).
-test(a_key_the_verdict_does_not_read_is_still_checked) :-
-    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true), attribute(communication_gives_contact_point, unsure)], 10, input_problems([wrong_type(communication_gives_contact_point)]), []).
-test(the_reasons_pair_is_refused_by_the_content_check) :-
-    authority_notification_content_check([attribute(delay_justified_by_reasons, true), attribute(notification_accompanied_by_reasons_for_delay, false)], input_problems([contradictory_inputs([delay_justified_by_reasons, notification_accompanied_by_reasons_for_delay])])).
-test(the_risk_pair_is_refused_by_the_obligation) :-
-    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true)], input_problems([contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])])).
-test(the_risk_pair_is_refused_by_the_communication_check) :-
-    data_subject_communication_check([attribute(breach_unlikely_to_result_in_risk, true), attribute(breach_likely_to_result_in_high_risk, true)], input_problems([contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])])).
-test(the_input_check_is_empty_for_a_fixture_profile) :-
-    request_of(public_communication_substitute, Profile, _),
-    gdpr_arts33_34_breach_notification_input_problems(Profile, []).
-test(a_string_awareness_date_is_wrong_type_with_72_hours) :-
-    authority_notification_deadline("2025-10-31", input_problems([wrong_type(awareness_date)]), 72).
-test(a_non_leap_29_february_is_wrong_type) :-
-    authority_notification_deadline(date(2025, 2, 29), input_problems([wrong_type(awareness_date)]), 72).
-test(a_thirteenth_month_awareness_date_is_wrong_type) :-
-    authority_notification_deadline(date(2025, 13, 1), Deadline, Hours),
+    breach_notification_verdict([attribute(colour, red)], -1, Verdict, Citations),
+    Verdict == input_problems([unknown_key(colour), wrong_type(hours_elapsed)]),
+    Citations == [].
+test(a_non_list_profile_is_wrong_type) :-
+    notification_obligation(profile, Obligation),
+    Obligation == input_problems([wrong_type(profile)]).
+test(a_capitalised_role_is_wrong_type) :-
+    notification_obligation([attribute(party_role, 'Controller')], Obligation),
+    Obligation == input_problems([wrong_type(party_role)]).
+test(an_unbound_value_is_wrong_type) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, _)], 10, Verdict, _),
+    Verdict == input_problems([wrong_type(breach_unlikely_to_result_in_risk)]).
+test(a_wrong_authority_value_is_never_defaulted) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, unsure)], Obligation),
+    Obligation == input_problems([wrong_type(supervisory_authority_decision_on_communication)]).
+test(a_twice_given_authority_is_a_duplicate) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(supervisory_authority_decision_on_communication, no_decision)], Obligation),
+    Obligation == input_problems([duplicate_key(supervisory_authority_decision_on_communication)]).
+test(a_day_that_does_not_exist_is_wrong_type) :-
+    authority_notification_deadline(date(2025, 2, 29), Deadline, Hours),
     Deadline == input_problems([wrong_type(awareness_date)]),
     Hours == 72.
-test(an_hour_of_24_is_wrong_type) :-
-    authority_notification_period_end(date(2025, 10, 31), 24, input_problems([wrong_type(awareness_hour)])).
-test(a_negative_hour_is_wrong_type) :-
-    authority_notification_period_end(date(2025, 10, 31), -1, input_problems([wrong_type(awareness_hour)])).
-test(a_string_hour_is_wrong_type) :-
-    authority_notification_period_end(date(2025, 10, 31), "10", input_problems([wrong_type(awareness_hour)])).
+test(an_unbound_awareness_date_is_wrong_type) :-
+    authority_notification_deadline(_, Deadline, Hours),
+    Deadline == input_problems([wrong_type(awareness_date)]),
+    Hours == 72.
+test(year_zero_is_wrong_type) :-
+    authority_notification_deadline(date(0, 1, 1), Deadline, _),
+    Deadline == input_problems([wrong_type(awareness_date)]).
+test(an_hour_of_twenty_four_is_wrong_type) :-
+    authority_notification_period_end(date(2025, 1, 1), 24, PeriodEnd),
+    PeriodEnd == input_problems([wrong_type(awareness_hour)]).
+test(an_atom_hour_is_wrong_type) :-
+    authority_notification_period_end(date(2025, 1, 1), ten, PeriodEnd),
+    PeriodEnd == input_problems([wrong_type(awareness_hour)]).
+test(the_content_check_refuses_a_contradiction) :-
+    authority_notification_content_check([attribute(delay_justified_by_reasons, true), attribute(notification_accompanied_by_reasons_for_delay, false)], Result),
+    Result == input_problems([contradictory_inputs([delay_justified_by_reasons, notification_accompanied_by_reasons_for_delay])]).
+test(the_reexported_check_names_an_unknown_key) :-
+    gdpr_arts33_34_breach_notification_input_problems([attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
 
 :- end_module(test_input_mode).

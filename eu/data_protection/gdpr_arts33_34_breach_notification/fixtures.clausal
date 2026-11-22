@@ -1,26 +1,26 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % fixtures.clausal -- representative subjects for eu/data_protection/gdpr_arts33_34_breach_notification.
-% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
-% predicate it calls, and nothing else. Profile keys and subject ids are
-% atoms and need no import.
+% A TOP-LAYER consumer: it imports only the slice's PUBLIC predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
 %
-% A subject resolves to a REQUEST, breach_notification_request(Profile,
-% HoursElapsed): Profile is an attribute list [attribute(Key, Value), ...]
-% (the order's typed input contract) and HoursElapsed is the hours of the
-% period begun at the notification, a partial hour rounded UP (PERIODS).
-%
-% Every route has a positive case and a one-unit near-miss control:
-%   - 72 hours (in time) / 73 hours (after the period), same profile;
-%   - 0 hours (well-formed) / -1 hours (wrong_type(hours_elapsed));
-%   - without undue delay true / false inside the period;
-%   - justified reasons true / false after the period (reading (1));
-%   - J1 true (ineligible) / J1 false (eligible);
-%   - J1 unsure with the timing key / without it;
-%   - J1 present / absent;
-%   - J2 false / J2 true beside J1 true (reading (8));
-%   - Art 34(3)(c) true / false (obligation surfacing);
-%   - the authority's decision required_communication / no_decision.
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...]. Each subject is
+% breach_fixture(Subject, Profile, HoursElapsed); its case is
+% case(Profile, HoursElapsed), the case of the slice facade. Each route of
+% breach_notification_verdict/4 has a positive subject and a one-unit
+% near-miss control:
+% - timely_at_the_period_end (72 hours, eligible) and
+%   late_one_hour_past_without_reasons (73 hours, no reasons for the delay,
+%   notification_requirement_not_met(reasons_for_delay));
+% - unlikely_risk_notified_late (ineligible) and
+%   risk_notified_late_with_justified_reasons (J1 false, eligible);
+% - late_with_unjustified_reasons (justified false, a referral);
+% - notified_inside_the_period_without_undue_delay (eligible) and
+%   notified_inside_the_period_with_undue_delay
+%   (notification_requirement_not_met(without_undue_delay));
+% - risk_judgement_missing (indeterminate) and risk_judgement_unsure (a
+%   referral on J1);
+% - negative_hours_elapsed and contradictory_risk_judgements (input problems).
 % =====================================================================
 
 :- module(fixtures, [
@@ -31,222 +31,89 @@
 
 :- use_module(eu/data_protection/gdpr_arts33_34_breach_notification/breach_notification_verdict, [decide_breach_notification_verdict/2]).
 
-% ---- Subject registry (each subject once) ----------------------------
-gdpr_arts33_34_breach_notification_subject(timely_notification_eligible).
-gdpr_arts33_34_breach_notification_subject(timely_notification_unduly_delayed).
-gdpr_arts33_34_breach_notification_subject(seventy_two_hours_in_time).
-gdpr_arts33_34_breach_notification_subject(seventy_three_hours_without_reasons).
-gdpr_arts33_34_breach_notification_subject(seventy_three_hours_with_justified_reasons).
-gdpr_arts33_34_breach_notification_subject(seventy_three_hours_with_unjustified_reasons).
-gdpr_arts33_34_breach_notification_subject(unlikely_risk_ineligible).
-gdpr_arts33_34_breach_notification_subject(likely_risk_eligible).
-gdpr_arts33_34_breach_notification_subject(unlikely_risk_ineligible_after_the_period).
-gdpr_arts33_34_breach_notification_subject(unsure_risk_referred).
-gdpr_arts33_34_breach_notification_subject(unsure_risk_missing_undue_delay).
-gdpr_arts33_34_breach_notification_subject(missing_risk_judgement).
-gdpr_arts33_34_breach_notification_subject(consistent_risk_inputs).
-gdpr_arts33_34_breach_notification_subject(contradictory_risk_inputs).
-gdpr_arts33_34_breach_notification_subject(zero_hours_elapsed).
-gdpr_arts33_34_breach_notification_subject(negative_hours_elapsed).
-gdpr_arts33_34_breach_notification_subject(public_communication_substitute).
-gdpr_arts33_34_breach_notification_subject(direct_communication_owed).
-gdpr_arts33_34_breach_notification_subject(processor_notifies_controller).
-gdpr_arts33_34_breach_notification_subject(authority_required_communication).
-gdpr_arts33_34_breach_notification_subject(authority_no_decision_unlikely_risk).
+% ---- Subjects: profile and hours elapsed -----------------------------
+% The 72-hour boundary: at 72 hours the reasons key is not read, so it is
+% left out (a stated false would make a probe that sets
+% delay_justified_by_reasons true a contradictory pair of reading (8)).
+breach_fixture(timely_at_the_period_end, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, false),
+    attribute(notification_made_without_undue_delay, true)
+], 72).
+% Near miss: one hour later, with no reasons for the delay.
+breach_fixture(late_one_hour_past_without_reasons, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, false),
+    attribute(notification_made_without_undue_delay, true),
+    attribute(notification_accompanied_by_reasons_for_delay, false)
+], 73).
+% J1 true: no Art 33(1) duty, whatever the hours.
+breach_fixture(unlikely_risk_notified_late, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, true),
+    attribute(notification_accompanied_by_reasons_for_delay, true),
+    attribute(delay_justified_by_reasons, true)
+], 100).
+% Near miss: J1 false, the reasons justify the delay.
+breach_fixture(risk_notified_late_with_justified_reasons, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, false),
+    attribute(notification_accompanied_by_reasons_for_delay, true),
+    attribute(delay_justified_by_reasons, true)
+], 100).
+% The reasons do not justify the delay: never ineligible, a referral.
+breach_fixture(late_with_unjustified_reasons, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, false),
+    attribute(notification_accompanied_by_reasons_for_delay, true),
+    attribute(delay_justified_by_reasons, false)
+], 100).
+% Inside the period, without undue delay.
+breach_fixture(notified_inside_the_period_without_undue_delay, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, false),
+    attribute(notification_made_without_undue_delay, true)
+], 10).
+% Near miss: inside the period, but unduly delayed (reading (4)).
+breach_fixture(notified_inside_the_period_with_undue_delay, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, false),
+    attribute(notification_made_without_undue_delay, false)
+], 10).
+% The always needed judgement is absent.
+breach_fixture(risk_judgement_missing, [
+    attribute(party_role, controller),
+    attribute(notification_made_without_undue_delay, true)
+], 10).
+% Near miss: the judgement is present but unsure.
+breach_fixture(risk_judgement_unsure, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, unsure),
+    attribute(notification_made_without_undue_delay, true)
+], 10).
+% Input problems: a negative argument, and the contradictory risk pair.
+breach_fixture(negative_hours_elapsed, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, false),
+    attribute(notification_made_without_undue_delay, true)
+], -1).
+breach_fixture(contradictory_risk_judgements, [
+    attribute(party_role, controller),
+    attribute(breach_unlikely_to_result_in_risk, true),
+    attribute(breach_likely_to_result_in_high_risk, true)
+], 10).
 
-% ---- Requests ---------------------------------------------------------
-% Inside the period, notified without undue delay: eligible.
-gdpr_arts33_34_breach_notification_profile_for(timely_notification_eligible, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    40)).
-% Control: unduly delayed inside the period (reading (4)).
-gdpr_arts33_34_breach_notification_profile_for(timely_notification_unduly_delayed, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(notification_made_without_undue_delay, false)
-    ],
-    40)).
-% At the boundary: the 72nd hour is inside the period.
-gdpr_arts33_34_breach_notification_profile_for(seventy_two_hours_in_time, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(notification_made_without_undue_delay, true),
-        attribute(notification_accompanied_by_reasons_for_delay, false)
-    ],
-    72)).
-% Control: the same profile one hour later, with no reasons (reading (5)).
-gdpr_arts33_34_breach_notification_profile_for(seventy_three_hours_without_reasons, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(notification_made_without_undue_delay, true),
-        attribute(notification_accompanied_by_reasons_for_delay, false)
-    ],
-    73)).
-% After the period with justified reasons: eligible (reading (1)).
-gdpr_arts33_34_breach_notification_profile_for(seventy_three_hours_with_justified_reasons, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(delay_justified_by_reasons, true),
-        attribute(notification_accompanied_by_reasons_for_delay, true)
-    ],
-    73)).
-% Control: reasons given but not justifying: referred, never ineligible.
-gdpr_arts33_34_breach_notification_profile_for(seventy_three_hours_with_unjustified_reasons, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(delay_justified_by_reasons, false),
-        attribute(notification_accompanied_by_reasons_for_delay, true)
-    ],
-    73)).
-% Unlikely to result in a risk: no Art 33(1) duty, ineligible.
-gdpr_arts33_34_breach_notification_profile_for(unlikely_risk_ineligible, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, true),
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    10)).
-% Control: the same profile with the risk judged not unlikely.
-gdpr_arts33_34_breach_notification_profile_for(likely_risk_eligible, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    10)).
-% Ineligible whatever the hours elapsed.
-gdpr_arts33_34_breach_notification_profile_for(unlikely_risk_ineligible_after_the_period, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, true)
-    ],
-    200)).
-% An unsure risk with every timing key present: referred on the risk.
-gdpr_arts33_34_breach_notification_profile_for(unsure_risk_referred, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, unsure),
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    10)).
-% Control: the timing key absent is named first.
-gdpr_arts33_34_breach_notification_profile_for(unsure_risk_missing_undue_delay, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, unsure)
-    ],
-    10)).
-% The risk judgement absent: indeterminate, never defaulted.
-gdpr_arts33_34_breach_notification_profile_for(missing_risk_judgement, breach_notification_request(
-    [
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    10)).
-% Consistent risk inputs: unlikely risk, no high risk.
-gdpr_arts33_34_breach_notification_profile_for(consistent_risk_inputs, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, true),
-        attribute(breach_likely_to_result_in_high_risk, false)
-    ],
-    10)).
-% Control: unlikely risk with high risk is contradictory (reading (8)).
-gdpr_arts33_34_breach_notification_profile_for(contradictory_risk_inputs, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, true),
-        attribute(breach_likely_to_result_in_high_risk, true)
-    ],
-    10)).
-% Zero hours elapsed is a well-formed count.
-gdpr_arts33_34_breach_notification_profile_for(zero_hours_elapsed, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    0)).
-% Control: one below zero is wrong_type(hours_elapsed).
-gdpr_arts33_34_breach_notification_profile_for(negative_hours_elapsed, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    -1)).
-% The order's obligation example: point (c) holds, (a) and (b) do not.
-gdpr_arts33_34_breach_notification_profile_for(public_communication_substitute, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(breach_likely_to_result_in_high_risk, true),
-        attribute(party_role, controller),
-        attribute(notification_made_without_undue_delay, true),
-        attribute(supervisory_authority_decision_on_communication, no_decision),
-        attribute(appropriate_protection_measures_applied_to_affected_data, false),
-        attribute(subsequent_measures_ensure_high_risk_no_longer_likely, false),
-        attribute(communication_would_involve_disproportionate_effort, true)
-    ],
-    20)).
-% Control: point (c) false, so the communication itself is owed.
-gdpr_arts33_34_breach_notification_profile_for(direct_communication_owed, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(breach_likely_to_result_in_high_risk, true),
-        attribute(party_role, controller),
-        attribute(notification_made_without_undue_delay, true),
-        attribute(supervisory_authority_decision_on_communication, no_decision),
-        attribute(appropriate_protection_measures_applied_to_affected_data, false),
-        attribute(subsequent_measures_ensure_high_risk_no_longer_likely, false),
-        attribute(communication_would_involve_disproportionate_effort, false)
-    ],
-    20)).
-% A processor owes Art 33(2) alone (the verdict does not read party_role).
-gdpr_arts33_34_breach_notification_profile_for(processor_notifies_controller, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, false),
-        attribute(party_role, processor),
-        attribute(notification_made_without_undue_delay, true)
-    ],
-    5)).
-% The authority required the communication (reading (7)).
-gdpr_arts33_34_breach_notification_profile_for(authority_required_communication, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, true),
-        attribute(party_role, controller),
-        attribute(supervisory_authority_decision_on_communication, required_communication)
-    ],
-    5)).
-% Control: the authority decided nothing, so no Art 34 term.
-gdpr_arts33_34_breach_notification_profile_for(authority_no_decision_unlikely_risk, breach_notification_request(
-    [
-        attribute(breach_unlikely_to_result_in_risk, true),
-        attribute(party_role, controller),
-        attribute(supervisory_authority_decision_on_communication, no_decision)
-    ],
-    5)).
+% ---- Subject registry ------------------------------------------------
+gdpr_arts33_34_breach_notification_subject(Subject) :-
+    breach_fixture(Subject, _, _).
+
+% ---- Profiles --------------------------------------------------------
+gdpr_arts33_34_breach_notification_profile_for(Subject, Profile) :-
+    breach_fixture(Subject, Profile, _).
 
 % ---- Convenience wrapper ---------------------------------------------
 gdpr_arts33_34_breach_notification_assess(Subject, Result) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, Request),
-    decide_breach_notification_verdict(Request, Result).
-
-% ---- tests ---------------------------------------------------------
-subject_has_one_request(Subject) :-
-    findall(Request, gdpr_arts33_34_breach_notification_profile_for(Subject, Request), Requests),
-    length(Requests, 1).
-
-test(every_subject_has_exactly_one_request) :-
-    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects),
-    Subjects = [_|_],
-    maplist(subject_has_one_request, Subjects).
-test(every_subject_is_registered_once) :-
-    findall(Subject, gdpr_arts33_34_breach_notification_subject(Subject), Subjects),
-    sort(Subjects, Distinct),
-    length(Subjects, Count),
-    length(Distinct, Count).
-test(the_boundary_pair_differs_by_one_hour_only) :-
-    gdpr_arts33_34_breach_notification_profile_for(seventy_two_hours_in_time, breach_notification_request(InTimeProfile, InTimeHours)),
-    gdpr_arts33_34_breach_notification_profile_for(seventy_three_hours_without_reasons, breach_notification_request(LateProfile, LateHours)),
-    InTimeProfile == LateProfile,
-    InTimeHours == 72,
-    LateHours == 73.
-test(the_boundary_subject_is_eligible) :-
-    gdpr_arts33_34_breach_notification_assess(seventy_two_hours_in_time, breach_notification_verdict_verdict(eligible, [cite(eu_reg_2016_679_art_33_1)])).
-test(the_boundary_subject_is_not_late, fail) :-
-    gdpr_arts33_34_breach_notification_assess(seventy_two_hours_in_time, breach_notification_verdict_verdict(notification_requirement_not_met(_), _)).
+    breach_fixture(Subject, Profile, HoursElapsed),
+    decide_breach_notification_verdict(case(Profile, HoursElapsed), Result).
 
 :- end_module(fixtures).

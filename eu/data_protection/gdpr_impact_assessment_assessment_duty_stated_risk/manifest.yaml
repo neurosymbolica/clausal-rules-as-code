@@ -1,0 +1,253 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- gdpr_impact_assessment_assessment_duty_stated_risk.clausal --
+  - "decide_gdpr_impact_assessment_assessment_duty_stated_risk/2"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_status/2"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_checklist/2"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_decision_resolvable/1"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_status_values/1"
+  # -- queries.clausal --
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys/1"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_input_problems/2"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_what_if/4"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check/3"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_officer_status/2"
+  - "decide_impact_assessment_duty/2"
+  - "impact_assessment_officer_advice/2"
+  - "impact_assessment_verdict/6"
+  - "officer_advice_verdict/2"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "cross_reference_unresolved/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "approvals/2"
+  - "approval/5"
+  - "viewer/1"
+  - "resolution/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "outside_fact/2"
+  - "attested/2"
+  - "attestation/4"
+  - "url/2"
+  - "document/2"
+  # -- fixtures.clausal --
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_subject/1"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2"
+  - "gdpr_impact_assessment_assessment_duty_stated_risk_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. Only the kit's formalize_lib is imported; no backbone package.
+uses: []
+
+scope: "GDPR Article 35, split order of 2026-11-03 as amended 2026-11-18. Entry A (decide_impact_assessment_duty/2) decides whether a data protection impact assessment is required (Art 35(1) on the user's stated high-risk judgement, the always-required cases of Art 35(3)(a)-(c), the supervisory authority lists of Art 35(4) and (5) as attested outside facts, and the Art 35(10) legal-basis exemption, which outranks every trigger) and, when it is required, which Art 35(7)(a)-(d) minimum contents are missing. Entry O (impact_assessment_officer_advice/2) decides whether a controller that carried out an assessment and has designated a data protection officer sought that officer's advice (Art 35(2)). Open-textured judgements are the user's and an unsure one is referred to a lawyer; an absent Member State decision under Art 35(10) is referred as an unresolved cross-reference. Out of scope: prior consultation (Art 36), the proof routes, assessment bases and status queries of the sibling split orders, whether an officer had to be designated (Art 37), the competent authority (Arts 55, 56), the content of national lists or laws, and Art 35(8), (9) and (11)."
+
+sources:
+  - "Regulation (EU) 2016/679 [quotation omitted] 27 April 2016 (General Data Protection Regulation), OJ L 119, 4.5.2016, p. 1, consolidated text 02016R0679-20160504: Article 35(1), (2), (3)(a)-(c), (4), (5), (7)(a)-(d) and (10)"
+  - "Regulation (EU) 2016/679 Article 4(4) (definition of profiling), used for reasoning only, never cited in a verdict"
+  - "Supervisory authority lists under Article 35(4) and (5): Datenschutzkonferenz (de_dsk) items 1-17, Irish Data Protection Commission (ie_dpc) items 1-10, CNIL (fr_cnil) Art 35(4) and Art 35(5) lists, as attested national list item facts"
+
+query_interface:
+  3: "gdpr_impact_assessment_assessment_duty_stated_risk_status/2"             # status determination: entry A status
+  13: "gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check/3"  # compliance check: may the processing begin
+  7: "gdpr_impact_assessment_assessment_duty_stated_risk_checklist/2"          # justification: one cited item per Art 35 limb
+  16: "gdpr_impact_assessment_assessment_duty_stated_risk_what_if/4"           # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: article_headings
+  units:
+  - 02016R0679-20160504#art_004
+  - 02016R0679-20160504#art_035
+  reason: 'The titles of Articles 4 and 35 carry no obligation: document structure,
+    not operative law. Deferred so every unit of the pinned extracts is accounted
+    for.'
+  consequence: 'None for a caller: an article title carries no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+- debt: true
+  what: definitions_not_applied
+  units:
+  - 02016R0679-20160504#point_004_1
+  - 02016R0679-20160504#point_004_2
+  - 02016R0679-20160504#point_004_3
+  - 02016R0679-20160504#point_004_5
+  - 02016R0679-20160504#point_004_6
+  - 02016R0679-20160504#point_004_7
+  - 02016R0679-20160504#point_004_8
+  - 02016R0679-20160504#point_004_9
+  - 02016R0679-20160504#point_004_10
+  - 02016R0679-20160504#point_004_11
+  - 02016R0679-20160504#point_004_12
+  - 02016R0679-20160504#point_004_13
+  - 02016R0679-20160504#point_004_14
+  - 02016R0679-20160504#point_004_15
+  - 02016R0679-20160504#point_004_16
+  - 02016R0679-20160504#point_004_16_a
+  - 02016R0679-20160504#point_004_16_b
+  - 02016R0679-20160504#point_004_17
+  - 02016R0679-20160504#point_004_18
+  - 02016R0679-20160504#point_004_19
+  - 02016R0679-20160504#point_004_20
+  - 02016R0679-20160504#point_004_21
+  - 02016R0679-20160504#point_004_22
+  - 02016R0679-20160504#point_004_22_a
+  - 02016R0679-20160504#point_004_22_b
+  - 02016R0679-20160504#point_004_22_c
+  - 02016R0679-20160504#point_004_23
+  - 02016R0679-20160504#point_004_23_a
+  - 02016R0679-20160504#point_004_23_b
+  - 02016R0679-20160504#point_004_24
+  - 02016R0679-20160504#point_004_25
+  - 02016R0679-20160504#point_004_26
+  reason: 'Art 4 is pinned whole because the smallest document element that contains
+    Art 4(4) is the article. Only point (4), profiling, is read (it explains the flag
+    automated_evaluation_including_profiling). The other points define terms (personal
+    data, processing, controller, processor, consent, personal data breach, ...) that
+    no limb reads: the profile states the facts in those terms already.'
+  consequence: whether the data is personal data and who the controller is are not
+    tested. The caller must establish both itself (Art 4(1) and Art 4(7)) before relying
+    on any answer.
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- what: consistency_mechanism_for_lists
+  units:
+  - 02016R0679-20160504#parag_035.006
+  reason: Art 35(6) binds the supervisory authority when it adopts the lists of Art
+    35(4) and (5); it does not change what the controller must do. The lists are outside
+    facts.
+  consequence: 'None for a caller: Art 35(6) binds the supervisory authority; the
+    caller attests the Art 35(4) or (5) list as the authority published it.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- debt: true
+  what: codes_of_conduct_and_views_and_review
+  units:
+  - 02016R0679-20160504#parag_035.008
+  - 02016R0679-20160504#parag_035.009
+  - 02016R0679-20160504#parag_035.011
+  reason: Art 35(8) (due account of approved codes of conduct), 35(9) (views of data
+    subjects where appropriate) and 35(11) (review when the risk changes) are conduct
+    duties in carrying out and maintaining an assessment; none decides whether an
+    assessment or a consultation is required.
+  consequence: The answers do not check Art 35(8) codes of conduct, Art 35(9) views
+    of data subjects or the Art 35(11) review; an empty list of missing contents covers
+    Art 35(7) only, so the caller must check those duties itself and review the assessment
+    when the risk changes.
+  declaration: not_an_exception
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+- not_formalized_because: in_sibling
+  decided_in: gdpr-art6-lawfulness
+  what: art6_lawful_basis
+  instrument: Regulation (EU) 2016/679 Art 6(1)(c) and (e)
+  reason: Art 35(10) refers to [quotation omitted]
+    [quotation omitted]); whether the processing rests on those points is the crisp flag lawful_basis_is_legal_obligation_or_public_task,
+    determined by the sibling eu/data-protection/gdpr-art6-lawfulness.
+  consequence: The order takes lawful_basis_is_legal_obligation_or_public_task as
+    stated; the caller must establish under Art 6(1)(c) or (e) itself (for example
+    with the sibling Article 6 order) whether the processing rests on those points,
+    because the flag decides whether the Art 35(10) exemption can apply.
+  declaration: exception_modelled
+- not_formalized_because: in_sibling
+  decided_in: gdpr-special-categories
+  what: special_categories_and_criminal_data_meaning
+  instrument: Regulation (EU) 2016/679 Arts 9(1) and 10
+  reason: Art 35(3)(b) refers to them; whether the data is of those kinds is the crisp
+    flags special_category_data_processed and criminal_offence_data_processed (sibling
+    eu/data-protection/gdpr-special-categories).
+  consequence: The order takes special_category_data_processed and criminal_offence_data_processed
+    as stated; the caller must decide under Art 9(1) and Art 10 itself whether the
+    data is of those kinds, collapsing any judgement of the sibling special-categories
+    order to true or false first.
+  declaration: exception_modelled
+- not_formalized_because: institutional
+  what: member_state_and_authority_law_content
+  instrument: Union and Member State law and supervisory authority lists referred
+    to in Art 35(4), (5), (10) and Art 36(5)
+  reason: The existence of the list or law as it applies to this processing is an
+    outside fact (attested; fetcher none); its content is not formalized here.
+  consequence: The caller must find the supervisory authority list or the Union or
+    Member State law itself and attest whether it applies to this processing; the
+    answer copies the attestation and never checks the content of the list or law.
+  declaration: exception_modelled
+- debt: true
+  what: profiling_definition_read_through_the_flag
+  units:
+  - 02016R0679-20160504#point_004_4
+  reason: 'Art 4(4) defines profiling; the order uses it for reasoning only and never
+    cites it in a verdict (reading (11)). No limb tests the definition: whether the
+    evaluation is automated processing including profiling is the crisp flag automated_evaluation_including_profiling,
+    stated by the caller in the sense of Art 4(4).'
+  consequence: The answers do not check whether the processing meets the Art 4(4)
+    definition of profiling; the caller must apply Art 4(4) itself before setting
+    automated_evaluation_including_profiling.
+  declaration: answered_with_caveat
+  open: formalisable; to be formalised in a later change to the orders, not in this
+    order's rules; the deferral stands for this run.
+
+excluded_set:
+- what: recitals_and_guidelines
+  instrument: Regulation (EU) 2016/679 recitals and supervisory-authority or Board
+    guidelines on impact assessments
+  cites:
+  - 32016R0679#rct_84
+  - 32016R0679#rct_89
+  - 32016R0679#rct_90
+  - 32016R0679#rct_91
+  - 32016R0679#rct_92
+  - 32016R0679#rct_93
+  - 32016R0679#rct_94
+  - 32016R0679#rct_95
+  - 32016R0679#rct_96
+  - 02016R0679-20160504#parag_070.001
+  reason: No recital and no guideline is pinned, so none is quoted or cited. They
+    bear on what a high risk, a large scale and a residual risk are; that is why those
+    are judgements.
+  consequence: The order gives no test of high risk, large scale or residual risk;
+    the caller states those judgements itself, reading the recitals and any list or
+    guidelines of the supervisory authority or the Board.
+- what: competence_and_powers
+  instrument: Regulation (EU) 2016/679 Arts 55, 56, 58, 63, 68
+  cites:
+  - 02016R0679-20160504#art_055
+  - 02016R0679-20160504#art_056
+  - 02016R0679-20160504#art_058
+  - 02016R0679-20160504#art_063
+  - 02016R0679-20160504#art_068
+  reason: Which authority is competent for the lists, its powers after a consultation,
+    the consistency mechanism and the Board are not pinned. The authority whose list
+    is meant is named in the attestation of the outside fact.
+  consequence: The order does not identify the competent supervisory authority or
+    say what it may do after a consultation; a caller works out competence, powers
+    and the consistency mechanism under Arts 55, 56, 58, 63 and 68 itself.

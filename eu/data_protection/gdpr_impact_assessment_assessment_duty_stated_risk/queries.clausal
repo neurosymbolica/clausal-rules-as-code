@@ -1,0 +1,125 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY layer for eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls (and implements/1 for the provenance markers).
+%
+% The order's own relations, re-exported here for the package facade:
+%   decide_impact_assessment_duty/2        entry A (Art 35(1), (3), (4), (5), (7), (10))
+%   impact_assessment_officer_advice/2     entry O (Art 35(2))
+%   gdpr_impact_assessment_assessment_duty_stated_risk_input_problems/2
+%                                          THE INPUT CHECK (kernel)
+%
+% Declared query types:
+%   #3  status_determination
+%       gdpr_impact_assessment_assessment_duty_stated_risk_status/2 (slice)
+%       and gdpr_impact_assessment_assessment_duty_stated_risk_officer_status/2 (here)
+%   #13 compliance_check
+%       gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check/3:
+%       may the controller begin the processing? Art 35(1): the assessment is
+%       carried out 'prior to the processing'. A derived reading of entry A;
+%       it adds no rule. A non-final STATUS of entry A is passed through.
+%   #7  justification
+%       gdpr_impact_assessment_assessment_duty_stated_risk_checklist/2 (slice),
+%       one item per limb, each with its cite(...).
+%   #16 what-if
+%       gdpr_impact_assessment_assessment_duty_stated_risk_what_if/4: one key
+%       replaced in the attribute list, entry A re-evaluated. The profile is an
+%       attribute list, not a dict, so the kit's override_key/4 does not apply.
+%
+% RESULT CONSTRUCTORS (exported, never called as queries): data terms with
+% no clauses; the constructors directive below names their fields.
+% =====================================================================
+
+:- module(queries, [
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys/1,
+    gdpr_impact_assessment_assessment_duty_stated_risk_input_problems/2,
+    gdpr_impact_assessment_assessment_duty_stated_risk_what_if/4,
+    gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check/3,
+    gdpr_impact_assessment_assessment_duty_stated_risk_officer_status/2,
+    decide_impact_assessment_duty/2,
+    impact_assessment_officer_advice/2,
+    impact_assessment_verdict/6,
+    officer_advice_verdict/2,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    cross_reference_unresolved/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    approvals/2,
+    approval/5,
+    viewer/1,
+    resolution/2,
+    inputs_relied_on/1,
+    provenance/2,
+    outside_fact/2,
+    attested/2,
+    attestation/4,
+    url/2,
+    document/2
+]).
+
+:- use_module(eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk/kernel, [gdpr_impact_assessment_assessment_duty_stated_risk_input_problems/2]).
+:- use_module(eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk/citations, [implements/1]).
+:- use_module(eu/data_protection/gdpr_impact_assessment_assessment_duty_stated_risk/gdpr_impact_assessment_assessment_duty_stated_risk, [gdpr_impact_assessment_assessment_duty_stated_risk_status/2, decide_impact_assessment_duty/2, impact_assessment_officer_advice/2]).
+
+:- constructors([impact_assessment_verdict(status, bases, missing_contents, context, citations, routes_relied_on), officer_advice_verdict(status, citations), indeterminate(missing_keys), needs_legal_review(reason, context), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+gdpr_impact_assessment_assessment_duty_stated_risk_profile_keys([assessment_indicates_high_risk_absent_mitigation, automated_evaluation_including_profiling, criminal_offence_data_processed, data_protection_officer_advice_sought, data_protection_officer_designated, datasets_matched_or_combined, decisions_based_on_evaluation, decisions_produce_legal_effects, decisions_similarly_significantly_affect, description_of_processing_and_purposes_present, envisaged_measures_described, highly_personal_data_processed, impact_assessment_carried_out, lawful_basis_is_legal_obligation_or_public_task, legal_basis_with_general_impact_assessment, legitimate_interest_described, legitimate_interest_pursued, likely_high_risk_to_rights_and_freedoms, measures_reduce_residual_risk_below_high, member_state_requires_assessment_despite_general_one, member_state_requires_prior_authorisation, mitigating_measures_taken, monitoring_is_systematic, national_list_exempts_assessment, national_list_exempts_item, national_list_requires_assessment, national_list_requires_item, necessity_and_proportionality_assessed, processing_for_public_interest_task, processing_on_large_scale, processing_prevents_exercise_of_right_or_service, publicly_accessible_area_monitored, risks_to_data_subjects_assessed, route_approvals, special_category_data_processed, systematic_and_extensive_evaluation, uses_new_technologies, vulnerable_data_subjects]).
+
+% ---- #16 what-if --------------------------------------------------------
+% Every item of the key is removed and one attribute(Key, Value) appended;
+% entry A is then evaluated on the hypothesis (input check included).
+gdpr_impact_assessment_assessment_duty_stated_risk_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    replaced_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    gdpr_impact_assessment_assessment_duty_stated_risk_status(Hypothesis, NewStatus).
+
+replaced_profile(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    without_key(Profile, OverriddenKey, RemainingItems),
+    append(RemainingItems, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+without_key([], _, []).
+without_key([attribute(ItemKey, _)|Items], OverriddenKey, RemainingItems) :-
+    ItemKey == OverriddenKey,
+    without_key(Items, OverriddenKey, RemainingItems).
+without_key([attribute(ItemKey, ItemValue)|Items], OverriddenKey, [attribute(ItemKey, ItemValue)|RemainingItems]) :-
+    ItemKey \== OverriddenKey,
+    without_key(Items, OverriddenKey, RemainingItems).
+
+% ---- #13 compliance check: may the processing begin? --------------------
+% Art 35(1): the assessment is carried out 'prior to the processing', and
+% Art 35(7) states what it must at least contain.
+gdpr_impact_assessment_assessment_duty_stated_risk_compliance_check(Profile, Action, Result) :-
+    processing_action(Action),
+    decide_impact_assessment_duty(Profile, impact_assessment_verdict(Status, _Bases, MissingContents, _Context, _Citations, _RoutesReliedOn)),
+    processing_permission(Status, MissingContents, Result).
+
+processing_action(begin_processing).
+
+% No assessment is owed: the processing may begin.
+processing_permission(not_required, _, permitted) :-
+    implements(eu_reg_2016_679_art_35_1).
+% The assessment is owed and holds every minimum content.
+processing_permission(required, [], permitted) :-
+    implements(eu_reg_2016_679_art_35_1),
+    implements(eu_reg_2016_679_art_35_7_a),
+    implements(eu_reg_2016_679_art_35_7_d).
+% The assessment is owed and a minimum content is missing (or none was made).
+processing_permission(required, [_|_], prohibited) :-
+    implements(eu_reg_2016_679_art_35_1),
+    implements(eu_reg_2016_679_art_35_7_a),
+    implements(eu_reg_2016_679_art_35_7_d).
+% A non-final answer of entry A is passed through unchanged.
+processing_permission(indeterminate(MissingKeys), _, indeterminate(MissingKeys)).
+processing_permission(needs_legal_review(Reason, ReviewContext), _, needs_legal_review(Reason, ReviewContext)).
+processing_permission(input_problems(Problems), _, input_problems(Problems)).
+
+% ---- #3 status of entry O (Art 35(2)) -----------------------------------
+gdpr_impact_assessment_assessment_duty_stated_risk_officer_status(Profile, Status) :-
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(Status, _Citations)).
+
+:- end_module(queries).

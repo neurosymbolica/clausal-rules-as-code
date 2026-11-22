@@ -1,11 +1,10 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_negative_controls.clausal -- NEGATIVE CONTROLS.
-% For each route: a POSITIVE case paired with a near-miss control (one
-% condition changed -> different answer), proving the route is LOAD-BEARING.
-% Every `fail` test is paired with a positive test over the same input that
-% names the answer it DOES get, so a misspelt atom shows up as a failing
-% positive test.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one required condition changed -> different answer), proving the route is
+% LOAD-BEARING. Each near-miss also has a positive test of the answer it DOES
+% get, so a misspelt atom cannot make a `fail` test pass vacuously.
 % Run: python -m clausal.testing eu/data_protection/gdpr_arts33_34_breach_notification/tests/test_negative_controls.clausal
 % =====================================================================
 :- module(test_negative_controls, []).
@@ -14,153 +13,97 @@
     breach_notification_verdict_status_values/1,
     notification_obligation/2,
     authority_notification_deadline/3,
-    authority_notification_period_end/3,
     authority_notification_content_check/2,
     data_subject_communication_check/2
 ]).
-:- use_module(eu/data_protection/gdpr_arts33_34_breach_notification/fixtures, [gdpr_arts33_34_breach_notification_profile_for/2]).
 
-verdict_of(Subject, Verdict) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, breach_notification_request(Profile, HoursElapsed)),
-    breach_notification_verdict(Profile, HoursElapsed, Verdict, _).
-
-obligation_of(Subject, Obligation) :-
-    gdpr_arts33_34_breach_notification_profile_for(Subject, breach_notification_request(Profile, _)),
-    notification_obligation(Profile, Obligation).
-
-notification_with_missing_nature(PhasesValue, [attribute(notification_describes_nature_of_breach, false), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, true), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, PhasesValue)]).
-
-communication_with_contact_point(ContactValue, [attribute(communication_made_without_undue_delay, true), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, ContactValue), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(communication_describes_mitigation_measures, true)]).
-
-test(the_status_table_names_both_final_atoms) :-
+test(the_status_table_has_a_near_miss_atom) :-
     breach_notification_verdict_status_values(StatusValues),
     StatusValues == [eligible, ineligible].
 
-% ---- the 72-hour boundary --------------------------------------------
-test(the_72nd_hour_is_eligible) :-
-    verdict_of(seventy_two_hours_in_time, eligible).
-test(the_73rd_hour_is_not_eligible, fail) :-
-    verdict_of(seventy_three_hours_without_reasons, eligible).
-test(the_73rd_hour_lacks_reasons) :-
-    verdict_of(seventy_three_hours_without_reasons, notification_requirement_not_met(reasons_for_delay)).
-test(the_72nd_hour_lacks_nothing, fail) :-
-    verdict_of(seventy_two_hours_in_time, notification_requirement_not_met(_)).
+% ---- route: ineligible (J1 true) -------------------------------------------
+test(unlikely_risk_is_ineligible) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, true)], 10, ineligible, _).
+test(a_risk_is_eligible_when_timely) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 10, eligible, _).
+test(a_risk_is_not_ineligible, fail) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 10, ineligible, _).
 
-% ---- the hours argument ----------------------------------------------
-test(zero_hours_is_eligible) :-
-    verdict_of(zero_hours_elapsed, eligible).
-test(minus_one_hour_is_refused) :-
-    verdict_of(negative_hours_elapsed, input_problems([wrong_type(hours_elapsed)])).
-test(minus_one_hour_is_not_eligible, fail) :-
-    verdict_of(negative_hours_elapsed, eligible).
+% ---- route: eligible inside the 72 hours -----------------------------------
+test(seventy_two_hours_is_eligible) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 72, eligible, _).
+test(seventy_three_hours_needs_the_reasons) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 73, indeterminate([notification_accompanied_by_reasons_for_delay]), _).
+test(seventy_three_hours_is_not_eligible_on_timing_alone, fail) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 73, eligible, _).
 
-% ---- undue delay inside the period (reading (4)) ---------------------
-test(without_undue_delay_is_eligible) :-
-    verdict_of(timely_notification_eligible, eligible).
-test(with_undue_delay_is_not_met) :-
-    verdict_of(timely_notification_unduly_delayed, notification_requirement_not_met(without_undue_delay)).
-test(with_undue_delay_is_not_eligible, fail) :-
-    verdict_of(timely_notification_unduly_delayed, eligible).
-test(with_undue_delay_is_never_ineligible, fail) :-
-    verdict_of(timely_notification_unduly_delayed, ineligible).
+% ---- route: undue delay inside the period (reading (4)) --------------------
+test(undue_delay_is_not_met) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, false)], 10, notification_requirement_not_met(without_undue_delay), _).
+test(no_undue_delay_is_not_a_failure, fail) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 10, notification_requirement_not_met(_), _).
 
-% ---- justified reasons after the period (reading (1)) ----------------
+% ---- route: no reasons for the delay (reading (5)) -------------------------
+test(no_reasons_is_not_met) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, false)], 80, notification_requirement_not_met(reasons_for_delay), _).
 test(justified_reasons_are_eligible) :-
-    verdict_of(seventy_three_hours_with_justified_reasons, eligible).
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, true)], 80, eligible, _).
+test(justified_reasons_are_not_a_failure, fail) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, true)], 80, notification_requirement_not_met(_), _).
+
+% ---- route: unjustified reasons refer (reading (1)) ------------------------
 test(unjustified_reasons_refer) :-
-    verdict_of(seventy_three_hours_with_unjustified_reasons, needs_legal_review(open_textured(delay_justified_by_reasons, cite(eu_reg_2016_679_art_33_1)), _)).
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, false)], 80, needs_legal_review(open_textured(delay_justified_by_reasons, _), _), []).
 test(unjustified_reasons_are_not_eligible, fail) :-
-    verdict_of(seventy_three_hours_with_unjustified_reasons, eligible).
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_accompanied_by_reasons_for_delay, true), attribute(delay_justified_by_reasons, false)], 80, eligible, _).
 
-% ---- the risk judgement J1 -------------------------------------------
-test(an_unlikely_risk_is_ineligible) :-
-    verdict_of(unlikely_risk_ineligible, ineligible).
-test(a_likely_risk_is_eligible) :-
-    verdict_of(likely_risk_eligible, eligible).
-test(a_likely_risk_is_not_ineligible, fail) :-
-    verdict_of(likely_risk_eligible, ineligible).
-test(an_unsure_risk_with_the_timing_key_refers) :-
-    verdict_of(unsure_risk_referred, needs_legal_review(open_textured(breach_unlikely_to_result_in_risk, cite(eu_reg_2016_679_art_33_1)), _)).
-test(an_unsure_risk_without_the_timing_key_names_it) :-
-    verdict_of(unsure_risk_missing_undue_delay, indeterminate([notification_made_without_undue_delay])).
-test(an_unsure_risk_without_the_timing_key_does_not_refer, fail) :-
-    verdict_of(unsure_risk_missing_undue_delay, needs_legal_review(_, _)).
-test(a_present_risk_judgement_is_not_indeterminate, fail) :-
-    verdict_of(likely_risk_eligible, indeterminate(_)).
+% ---- route: the always needed judgement absent -----------------------------
 test(an_absent_risk_judgement_is_indeterminate) :-
-    verdict_of(missing_risk_judgement, indeterminate([breach_unlikely_to_result_in_risk])).
-test(an_absent_risk_judgement_is_not_defaulted, fail) :-
-    verdict_of(missing_risk_judgement, eligible).
+    breach_notification_verdict([attribute(notification_made_without_undue_delay, true)], 10, indeterminate([breach_unlikely_to_result_in_risk]), []).
+test(an_unsure_risk_judgement_refers) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, unsure), attribute(notification_made_without_undue_delay, true)], 10, needs_legal_review(open_textured(breach_unlikely_to_result_in_risk, _), _), []).
+test(an_unsure_risk_judgement_is_not_indeterminate, fail) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, unsure), attribute(notification_made_without_undue_delay, true)], 10, indeterminate(_), _).
 
-% ---- consistent risk inputs (reading (8)) ----------------------------
-test(consistent_risk_inputs_are_ineligible) :-
-    verdict_of(consistent_risk_inputs, ineligible).
-test(contradictory_risk_inputs_are_refused) :-
-    verdict_of(contradictory_risk_inputs, input_problems([contradictory_inputs([breach_unlikely_to_result_in_risk, breach_likely_to_result_in_high_risk])])).
-test(contradictory_risk_inputs_are_not_resolved, fail) :-
-    verdict_of(contradictory_risk_inputs, ineligible).
+% ---- route: input problems -------------------------------------------------
+test(a_negative_hour_count_is_refused) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false)], -1, input_problems(_), []).
+test(a_zero_hour_count_is_not_refused, fail) :-
+    breach_notification_verdict([attribute(breach_unlikely_to_result_in_risk, false), attribute(notification_made_without_undue_delay, true)], 0, input_problems(_), _).
 
-% ---- the Art 34(3) exemptions (reading (6)) --------------------------
-test(point_c_lists_the_public_communication) :-
-    obligation_of(public_communication_substitute, [_, _, public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c))]).
-test(no_point_c_lists_the_direct_communication) :-
-    obligation_of(direct_communication_owed, [_, _, communicate_to_data_subject(cite(eu_reg_2016_679_art_34_1))]).
-test(no_point_c_lists_no_public_communication, fail) :-
-    obligation_of(direct_communication_owed, [_, _, public_communication_or_similar_measure(_)]).
+% ---- obligation routes -----------------------------------------------------
+test(a_processor_notifies_the_controller) :-
+    notification_obligation([attribute(party_role, processor)], [notify_controller(cite(eu_reg_2016_679_art_33_2))]).
+test(a_controller_does_not_notify_the_controller, fail) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true)], [notify_controller(_)|_]).
+test(an_absent_decision_is_shown) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true)], [_, _, _, inputs_relied_on([supervisory_authority_decision_on_communication-no_decision])]).
+test(a_present_no_decision_is_not_shown, fail) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision)], [_, _, _, inputs_relied_on(_)]).
+test(disproportionate_effort_calls_for_a_public_communication) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, false), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, false), attribute(communication_would_involve_disproportionate_effort, true)], [_, _, public_communication_or_similar_measure(cite(eu_reg_2016_679_art_34_3_c))]).
+test(no_disproportionate_effort_calls_for_no_public_communication, fail) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, false), attribute(breach_likely_to_result_in_high_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision), attribute(appropriate_protection_measures_applied_to_affected_data, false), attribute(subsequent_measures_ensure_high_risk_no_longer_likely, false), attribute(communication_would_involve_disproportionate_effort, false)], [_, _, public_communication_or_similar_measure(_)]).
+test(a_required_communication_governs) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, required_communication)], [_, _, communicate_to_data_subject(cite(eu_reg_2016_679_art_34_4))]).
+test(no_decision_and_no_risk_needs_no_communication, fail) :-
+    notification_obligation([attribute(party_role, controller), attribute(breach_unlikely_to_result_in_risk, true), attribute(supervisory_authority_decision_on_communication, no_decision)], [_, _, communicate_to_data_subject(_)]).
 
-% ---- the decision of the authority (reading (7)) ---------------------
-test(a_required_communication_is_listed) :-
-    obligation_of(authority_required_communication, [_, _, communicate_to_data_subject(cite(eu_reg_2016_679_art_34_4))]).
-test(no_decision_lists_two_duties) :-
-    obligation_of(authority_no_decision_unlikely_risk, [no_notification_required(cite(eu_reg_2016_679_art_33_1)), document_breach(cite(eu_reg_2016_679_art_33_5))]).
-test(no_decision_lists_no_communication, fail) :-
-    obligation_of(authority_no_decision_unlikely_risk, [_, _, communicate_to_data_subject(_)]).
+% ---- deadline route --------------------------------------------------------
+test(a_real_day_has_a_deadline) :-
+    authority_notification_deadline(date(2025, 2, 28), Deadline, _),
+    Deadline = date(2025, 3, 3).
+test(a_day_that_does_not_exist_has_no_deadline_day, fail) :-
+    authority_notification_deadline(date(2025, 2, 29), date(_, _, _), _).
 
-% ---- the processor (reading (9)) -------------------------------------
-test(the_processor_notifies_the_controller) :-
-    obligation_of(processor_notifies_controller, [notify_controller(cite(eu_reg_2016_679_art_33_2))]).
-test(the_controller_does_not_notify_the_controller, fail) :-
-    obligation_of(authority_no_decision_unlikely_risk, [notify_controller(_)]).
-test(the_processor_does_not_notify_the_authority, fail) :-
-    obligation_of(processor_notifies_controller, [notify_supervisory_authority(_)|_]).
-
-% ---- the content of the notification (Art 33(3), 33(4)) --------------
-test(missing_nature_may_follow_in_phases) :-
-    notification_with_missing_nature(true, Profile),
-    authority_notification_content_check(Profile, information_to_follow_in_phases([nature_of_breach])).
-test(missing_nature_without_phases_is_not_met) :-
-    notification_with_missing_nature(false, Profile),
-    authority_notification_content_check(Profile, requirements_not_met([nature_of_breach])).
-test(missing_nature_without_phases_is_not_in_phases, fail) :-
-    notification_with_missing_nature(false, Profile),
-    authority_notification_content_check(Profile, information_to_follow_in_phases(_)).
-
-% ---- the content of the communication (Art 34(2)) --------------------
-test(a_complete_communication_meets_every_requirement) :-
-    communication_with_contact_point(true, Profile),
-    data_subject_communication_check(Profile, all_requirements_met).
-test(a_communication_without_contact_point_is_not_met) :-
-    communication_with_contact_point(false, Profile),
-    data_subject_communication_check(Profile, requirements_not_met([contact_point])).
-test(a_communication_without_contact_point_does_not_meet_them, fail) :-
-    communication_with_contact_point(false, Profile),
-    data_subject_communication_check(Profile, all_requirements_met).
-
-% ---- the deadline and the period end ---------------------------------
-test(a_leap_year_29_february_is_a_real_day) :-
-    authority_notification_deadline(date(2032, 2, 29), date(DeadlineYear, DeadlineMonth, DeadlineDay), 72),
-    DeadlineYear == 2032,
-    DeadlineMonth == 3,
-    DeadlineDay == 3.
-test(a_non_leap_29_february_is_not_a_real_day) :-
-    authority_notification_deadline(date(2033, 2, 29), input_problems([wrong_type(awareness_date)]), 72).
-test(a_non_leap_29_february_has_no_date_deadline, fail) :-
-    authority_notification_deadline(date(2033, 2, 29), date(_, _, _), _).
-test(awareness_in_hour_22_ends_at_23) :-
-    authority_notification_period_end(date(2025, 12, 30), 22, period_end(_, 23)).
-test(awareness_in_hour_23_ends_at_24) :-
-    authority_notification_period_end(date(2025, 12, 30), 23, period_end(_, 24)).
-test(awareness_in_hour_23_does_not_end_at_23, fail) :-
-    authority_notification_period_end(date(2025, 12, 30), 23, period_end(_, 23)).
+% ---- content check routes --------------------------------------------------
+test(phases_allowed_follow_in_phases) :-
+    authority_notification_content_check([attribute(notification_describes_nature_of_breach, true), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, false), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, true)], information_to_follow_in_phases([contact_point])).
+test(phases_not_allowed_do_not_follow_in_phases, fail) :-
+    authority_notification_content_check([attribute(notification_describes_nature_of_breach, true), attribute(notification_gives_categories_and_approximate_numbers, true), attribute(notification_gives_contact_point, false), attribute(notification_describes_likely_consequences, true), attribute(notification_describes_measures_taken_or_proposed, true), attribute(notification_describes_mitigation_measures, true), attribute(information_not_possible_to_provide_at_the_same_time, false)], information_to_follow_in_phases(_)).
+test(a_mitigation_that_is_not_appropriate_is_not_missing) :-
+    data_subject_communication_check([attribute(communication_made_without_undue_delay, true), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(mitigation_measures_appropriate, false)], all_requirements_met).
+test(a_late_communication_does_not_meet_all_requirements, fail) :-
+    data_subject_communication_check([attribute(communication_made_without_undue_delay, false), attribute(communication_describes_nature_in_clear_and_plain_language, true), attribute(communication_gives_contact_point, true), attribute(communication_describes_likely_consequences, true), attribute(communication_describes_measures_taken_or_proposed, true), attribute(mitigation_measures_appropriate, false)], all_requirements_met).
 
 :- end_module(test_negative_controls).

@@ -1,0 +1,73 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_gdpr_impact_assessment_assessment_duty_stated_risk, [decide_gdpr_impact_assessment_assessment_duty_stated_risk/2, decide_impact_assessment_duty/2, impact_assessment_officer_advice/2]).
+:- use_module(m__eu_data_protection_gdpr_impact_assessment_assessment_duty_stated_risk_fixtures, [gdpr_impact_assessment_assessment_duty_stated_risk_profile_for/2]).
+
+same_set(Citations, Expected) :-
+    clausal_msort(Citations, Sorted),
+    clausal_msort(Expected, SortedExpected),
+    Sorted == SortedExpected.
+
+entry_a(Subject, Verdict) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    decide_impact_assessment_duty(Profile, Verdict).
+
+officer_status_of(Subject, Status) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(Subject, Profile),
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(Status, _)).
+
+test(stated_high_risk_reads_out_in_full) :-
+    entry_a(stated_high_risk, Verdict),
+    Verdict == impact_assessment_verdict(required, [art35_1_high_risk], [], [outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, absent), inputs_relied_on([likely_high_risk_to_rights_and_freedoms - true, processing_on_large_scale - false])], [cite(eu_reg_2016_679_art_35_1)], []).
+test(public_area_monitoring_names_the_missing_measures) :-
+    entry_a(public_area_monitoring_missing_measures, impact_assessment_verdict(required, [art35_3_c_public_area_monitoring], [envisaged_measures], Context, Citations, [])),
+    Context == [outside_fact(legal_basis_with_general_impact_assessment, absent), outside_fact(national_list_exempts_assessment, absent), outside_fact(national_list_requires_assessment, absent), inputs_relied_on([likely_high_risk_to_rights_and_freedoms - false, monitoring_is_systematic - true, processing_on_large_scale - true])],
+    same_set(Citations, [cite(eu_reg_2016_679_art_35_3_c), cite(eu_reg_2016_679_art_35_7_d)]).
+test(no_assessment_lists_all_four_contents) :-
+    entry_a(large_scale_health_data_no_assessment, impact_assessment_verdict(required, [art35_3_b_large_scale_sensitive_data], MissingContents, _, Citations, [])),
+    MissingContents == [description_and_purposes, necessity_and_proportionality, risk_assessment, envisaged_measures],
+    same_set(Citations, [cite(eu_reg_2016_679_art_35_3_b), cite(eu_reg_2016_679_art_35_7_a), cite(eu_reg_2016_679_art_35_7_b), cite(eu_reg_2016_679_art_35_7_c), cite(eu_reg_2016_679_art_35_7_d)]).
+test(the_german_list_item_is_cited_and_copied) :-
+    entry_a(national_list_item_de_dsk, impact_assessment_verdict(required, [art35_4_national_list], [], Context, Citations, [])),
+    member(outside_fact(national_list_requires_item, attested(national_list_item(de_dsk, de_dsk_35_4_nr_1), _)), Context),
+    same_set(Citations, [cite(eu_reg_2016_679_art_35_4), cite(de_dsk_35_4_nr_1)]).
+test(the_cnil_exemption_list_is_cited) :-
+    entry_a(exempt_list_fr_cnil, impact_assessment_verdict(not_required, [art35_5_national_list_exemption], [], _, Citations, [])),
+    same_set(Citations, [cite(eu_reg_2016_679_art_35_5), cite(fr_cnil_35_5_list)]).
+test(a_missing_profiling_flag_is_named) :-
+    entry_a(missing_profiling_flag, Verdict),
+    Verdict == impact_assessment_verdict(indeterminate([automated_evaluation_including_profiling]), [], [], [], [], []).
+test(an_unsure_large_scale_is_referred) :-
+    entry_a(large_scale_unsure, Verdict),
+    Verdict == impact_assessment_verdict(needs_legal_review(open_textured(processing_on_large_scale, cite(eu_reg_2016_679_art_35_3_b)), [inputs_relied_on([likely_high_risk_to_rights_and_freedoms - false, processing_on_large_scale - unsure])]), [], [], [], [], []).
+test(the_legitimate_interest_key_is_named) :-
+    entry_a(legitimate_interest_unknown, Verdict),
+    Verdict == impact_assessment_verdict(indeterminate([legitimate_interest_pursued]), [], [], [], [], []).
+test(the_input_problems_read_out_in_order) :-
+    entry_a(duplicate_and_unknown_keys, Verdict),
+    Verdict == impact_assessment_verdict(input_problems([duplicate_key(processing_on_large_scale), unknown_key(colour)]), [], [], [], [], []).
+test(the_facade_verdict_carries_the_no_trigger_citations) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(well_formed_control, Profile),
+    decide_gdpr_impact_assessment_assessment_duty_stated_risk(Profile, gdpr_impact_assessment_assessment_duty_stated_risk_verdict(not_required, Citations)),
+    same_set(Citations, [cite(eu_reg_2016_679_art_35_1), cite(eu_reg_2016_679_art_35_3_a), cite(eu_reg_2016_679_art_35_3_b), cite(eu_reg_2016_679_art_35_3_c), cite(eu_reg_2016_679_art_35_4)]).
+test(entry_o_statuses_enumerate_over_the_officer_subjects) :-
+    findall(Subject - Status, (member(Subject, [officer_advice_sought, officer_not_consulted, no_officer_designated, officer_designated_advice_unknown, officer_both_absent, no_assessment_carried_out]), officer_status_of(Subject, Status)), Pairs),
+    Pairs == [officer_advice_sought - met, officer_not_consulted - not_met, no_officer_designated - not_applicable, officer_designated_advice_unknown - indeterminate([data_protection_officer_advice_sought]), officer_both_absent - indeterminate([impact_assessment_carried_out]), no_assessment_carried_out - not_applicable].
+test(a_non_final_officer_answer_has_no_citation) :-
+    gdpr_impact_assessment_assessment_duty_stated_risk_profile_for(officer_both_absent, Profile),
+    impact_assessment_officer_advice(Profile, officer_advice_verdict(_, Citations)),
+    Citations == [].
+
+cp_test_names([stated_high_risk_reads_out_in_full, public_area_monitoring_names_the_missing_measures, no_assessment_lists_all_four_contents, the_german_list_item_is_cited_and_copied, the_cnil_exemption_list_is_cited, a_missing_profiling_flag_is_named, an_unsure_large_scale_is_referred, the_legitimate_interest_key_is_named, the_input_problems_read_out_in_order, the_facade_verdict_carries_the_no_trigger_citations, entry_o_statuses_enumerate_over_the_officer_subjects, a_non_final_officer_answer_has_no_citation]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).
