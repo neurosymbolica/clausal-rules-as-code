@@ -1,0 +1,361 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_payment_related_incidents
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_payment_related_incidents"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_payment_related_incidents.clausal --
+  - "decide_dora_payment_related_incidents/2"
+  - "dora_payment_related_incidents_status/2"
+  - "dora_payment_related_incidents_checklist/2"
+  - "dora_payment_related_incidents_decision_resolvable/1"
+  - "dora_payment_related_incidents_status_values/1"
+  - "payment_related_incident_status/3"
+  - "payment_related_incident_report_recipients/3"
+  - "chapter_requirements_and_article_19_reporting_apply/0"
+  - "chapter_requirements_apply/0"
+  - "not_a_payment_related_incident/0"
+  - "not_an_article_23_entity/0"
+  - "relevant_competent_authority/0"
+  - "national_competent_authority_designated_under_directive_2013_36/0"
+  - "directive_2022_2555_competent_authority_or_csirt/0"
+  - "recipients/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "dora_payment_related_incidents_profile_keys/1"
+  - "dora_payment_related_incidents_input_problems/2"
+  - "dora_payment_related_incidents_what_if/4"
+  # -- fixtures.clausal --
+  - "dora_payment_related_incidents_subject/1"
+  - "dora_payment_related_incidents_profile_for/2"
+  - "dora_payment_related_incidents_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only kit modules (formalize_lib) and
+# library(reif), none of which is a shared backbone package.
+uses: []
+
+scope: >-
+  Article 23 of Regulation (EU) 2022/2554 (DORA), read with Article 2(1), points
+  (a) to (d), Article 3, points (9), (11), (32) and (35) to (39), Article 18(3),
+  point (a), and Article 19(1), first, third and sixth subparagraphs. For one
+  incident of one financial entity it decides (1) payment_related_incident_status:
+  whether Article 23 reaches the entity, whether the incident is an operational or
+  security payment-related incident, and whether it is a major one subject to the
+  reporting obligation of Article 19(1); and (2)
+  payment_related_incident_report_recipients: for a major incident, to whom the
+  entity reports (the relevant competent authority, or the national competent
+  authority designated under Directive 2013/36/EU for a significant credit
+  institution, and the Directive (EU) 2022/2555 authorities or CSIRTs where the
+  Member State has so determined). Whether the incident is payment-related and
+  whether it is major are the caller's judgements; unsure is referred to a lawyer
+  as open_textured. Out of scope: the reports, time limits and client information
+  (sibling order dora-incident-reporting), the content of reports, what the
+  authorities do with them, the classification criteria and thresholds, the scope
+  of the Regulation (presupposed), and Directive (EU) 2015/2366 (excluded).
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554), Article 23"
+  - "Regulation (EU) 2022/2554, Article 2(1), points (a) to (d) (entity terms; points (e) to (u) read only as values Article 23 does not reach)"
+  - "Regulation (EU) 2022/2554, Article 3, points (9) and (11) (operational or security payment-related incident; major one) and points (32) and (35) to (39) (entity definitions)"
+  - "Regulation (EU) 2022/2554, Article 18(3), point (a) (major payment-related incidents subject to the reporting obligation of Article 19(1))"
+  - "Regulation (EU) 2022/2554, Article 19(1), first, third and sixth subparagraphs (recipients of the reports)"
+
+query_interface:
+  2: "decide_dora_payment_related_incidents/2"      # eligibility: the status verdict with its citations
+  7: "dora_payment_related_incidents_checklist/2"   # justification: checklist items each carrying cite(...)
+  16: "dora_payment_related_incidents_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  - 32022R2554#art_018
+  - 32022R2554#art_019
+  reason: The headings of Articles 2, 18 and 19, and the heading of Article 3 with
+    the words introducing the definitions, carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: entity_terms_of_article_2_1
+  units:
+  - 32022R2554#parag_002.001
+  - 32022R2554#point_002.001_a
+  - 32022R2554#point_002.001_b
+  - 32022R2554#point_002.001_c
+  - 32022R2554#point_002.001_d
+  reason: Art 2(1), lead words and points (a) to (d), are quoted and relied on for
+    the reach of Article 23 (reading (2)); they set the scope of the Regulation, which
+    this order does not formalise.
+  consequence: The order reads them only to fix which values of dora_entity_type Article
+    23 reaches; it does not say whether an entity is within the scope of the Regulation.
+  declaration: answered_with_caveat
+  debt: true
+  open: the scope of the Regulation is presupposed; the deferral stands for this order
+    (open question (Q4)).
+- what: other_entity_types_of_article_2_1
+  units:
+  - 32022R2554#point_002.001_e
+  - 32022R2554#point_002.001_f
+  - 32022R2554#point_002.001_g
+  - 32022R2554#point_002.001_h
+  - 32022R2554#point_002.001_i
+  - 32022R2554#point_002.001_j
+  - 32022R2554#point_002.001_k
+  - 32022R2554#point_002.001_l
+  - 32022R2554#point_002.001_m
+  - 32022R2554#point_002.001_n
+  - 32022R2554#point_002.001_o
+  - 32022R2554#point_002.001_p
+  - 32022R2554#point_002.001_q
+  - 32022R2554#point_002.001_r
+  - 32022R2554#point_002.001_s
+  - 32022R2554#point_002.001_t
+  - 32022R2554#point_002.001_u
+  reason: Art 2(1), points (e) to (u), name kinds of entity that Article 23 does not
+    name. They are read only as values of dora_entity_type that give not_an_article_23_entity
+    (reading (2)).
+  consequence: None for a caller beyond that answer.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: scope_limits_of_article_2
+  units:
+  - 32022R2554#parag_002.002
+  - 32022R2554#parag_002.003
+  - 32022R2554#point_002.003_a
+  - 32022R2554#point_002.003_b
+  - 32022R2554#point_002.003_c
+  - 32022R2554#point_002.003_d
+  - 32022R2554#point_002.003_e
+  - 32022R2554#point_002.003_f
+  - 32022R2554#parag_002.004
+  reason: Art 2(2) to (4) (financial entities collectively, the entities to which
+    the Regulation does not apply, and the Member State option to exclude) decide
+    the scope of the Regulation, which this order presupposes (reading (8)).
+  consequence: An entity outside the scope of the Regulation gets the same answers
+    as one inside it.
+  declaration: answered_with_caveat
+  debt: true
+  open: the scope of the Regulation is presupposed; the deferral stands for this order
+    (open question (Q4)).
+- what: entity_definitions_read
+  units:
+  - 32022R2554#point_003_32
+  - 32022R2554#point_003_35
+  - 32022R2554#point_003_36
+  - 32022R2554#point_003_37
+  - 32022R2554#point_003_38
+  - 32022R2554#point_003_39
+  reason: Art 3, points (32) and (35) to (39), are quoted and relied on for the reach
+    of Article 23 (reading (2)). Each defines its term by reference to another Union
+    act, which is not pinned here; whether an entity meets the definition is the caller's
+    classification, stated in dora_entity_type.
+  consequence: The order takes the kind of entity as given; it does not test the definition
+    in the act referred to.
+  declaration: answered_with_caveat
+  debt: true
+  open: each definition needs its Union act pinned; the deferral stands for this order
+    (open question (Q1)).
+- what: definitions_this_order_does_not_read
+  units:
+  - 32022R2554#point_003_1
+  - 32022R2554#point_003_2
+  - 32022R2554#point_003_3
+  - 32022R2554#point_003_4
+  - 32022R2554#point_003_5
+  - 32022R2554#point_003_6
+  - 32022R2554#point_003_7
+  - 32022R2554#point_003_8
+  - 32022R2554#point_003_10
+  - 32022R2554#point_003_12
+  - 32022R2554#point_003_13
+  - 32022R2554#point_003_14
+  - 32022R2554#point_003_15
+  - 32022R2554#point_003_16
+  - 32022R2554#point_003_17
+  - 32022R2554#point_003_18
+  - 32022R2554#point_003_19
+  - 32022R2554#point_003_20
+  - 32022R2554#point_003_21
+  - 32022R2554#point_003_22
+  - 32022R2554#point_003_23
+  - 32022R2554#point_003_24
+  - 32022R2554#point_003_25
+  - 32022R2554#point_003_26
+  - 32022R2554#point_003_27
+  - 32022R2554#point_003_28
+  - 32022R2554#point_003_29
+  - 32022R2554#point_003_30
+  - 32022R2554#point_003_31
+  - 32022R2554#point_003_33
+  - 32022R2554#point_003_34
+  - 32022R2554#point_003_40
+  - 32022R2554#point_003_41
+  - 32022R2554#point_003_42
+  - 32022R2554#point_003_43
+  - 32022R2554#point_003_44
+  - 32022R2554#point_003_45
+  - 32022R2554#point_003_46
+  - 32022R2554#point_003_47
+  - 32022R2554#point_003_48
+  - 32022R2554#point_003_49
+  - 32022R2554#point_003_50
+  - 32022R2554#point_003_51
+  - 32022R2554#point_003_52
+  - 32022R2554#point_003_53
+  - 32022R2554#point_003_54
+  - 32022R2554#point_003_55
+  - 32022R2554#point_003_56
+  - 32022R2554#point_003_57
+  - 32022R2554#point_003_58
+  - 32022R2554#point_003_59
+  - 32022R2554#point_003_60
+  - 32022R2554#point_003_61
+  - 32022R2554#point_003_62
+  - 32022R2554#point_003_63
+  - 32022R2554#point_003_64
+  - 32022R2554#point_003_65
+  reason: The other points of Article 3, which its quoted lead words introduce as
+    definitions, are not read by any step of this order and are not quoted.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: classification_criteria
+  units:
+  - 32022R2554#parag_018.001
+  - 32022R2554#point_018.001_a
+  - 32022R2554#point_018.001_b
+  - 32022R2554#point_018.001_c
+  - 32022R2554#point_018.001_d
+  - 32022R2554#point_018.001_e
+  - 32022R2554#point_018.001_f
+  - 32022R2554#parag_018.002
+  reason: 'Art 18(1) and (2) set the criteria by which financial entities classify
+    ICT-related incidents and cyber threats. This order does not classify: whether
+    the incident is major is the caller''s judgement payment_related_incident_is_major
+    (reading (4)).'
+  consequence: The answers take the classification as given.
+  declaration: answered_with_caveat
+  debt: true
+  open: the classification is the caller's; the deferral stands for this order (open
+    question (Q6)).
+- what: materiality_thresholds_and_mandate_of_article_18_3_a
+  units:
+  - 32022R2554#point_018.003_a
+  partial: true
+  reason: 'PARTLY FORMALISED. Art 18(3), point (a), is read for its words that major
+    operational or security payment-related incidents are ''subject to the reporting
+    obligation laid down in Article 19(1)'' (reading (5)). Not formalised: the criteria
+    and materiality thresholds the regulatory technical standards are to specify.'
+  consequence: The order computes no threshold; payment_related_incident_is_major
+    carries the result.
+  declaration: answered_with_caveat
+  debt: true
+  open: the thresholds are in technical standards not pinned here; the deferral stands
+    for this order (open question (Q6)).
+- what: mandates_and_authority_side_rules
+  units:
+  - 32022R2554#parag_018.003
+  - 32022R2554#point_018.003_b
+  - 32022R2554#point_018.003_c
+  - 32022R2554#parag_018.004
+  - 32022R2554#parag_019.006
+  - 32022R2554#point_019.006_a
+  - 32022R2554#point_019.006_b
+  - 32022R2554#point_019.006_c
+  - 32022R2554#point_019.006_d
+  - 32022R2554#point_019.006_e
+  - 32022R2554#parag_019.007
+  - 32022R2554#parag_019.008
+  reason: The lead words of Art 18(3), its points (b) and (c), and Art 18(4) give
+    the ESAs the mandate for regulatory technical standards; Art 19(6) to (8) say
+    what the competent authority, the ESAs and the ECB do with a report. None is a
+    rule on the entity's facts (readings (4), (7)).
+  consequence: The answers say nothing of what the authorities do.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: authority_templates_and_content_words_of_article_19_1
+  units:
+  - 32022R2554#parag_019.001
+  partial: true
+  reason: 'PARTLY FORMALISED. Art 19(1) is read for the reporting obligation (reading
+    (5)) and for the recipients of its first, third and sixth subparagraphs (reading
+    (6)). Not formalised: the single competent authority a Member State designates
+    where several supervise, the transmission to the ECB by the national competent
+    authority, the templates, the alternative means, and the fifth subparagraph on
+    the information the reports must include (reading (7)).'
+  consequence: payment_related_incident_report_recipients names the recipients; it
+    does not say what a report contains or which single authority is designated.
+  declaration: answered_with_caveat
+  debt: true
+  open: the content of the reports and the templates are not pinned here; the deferral
+    stands for this order (open question (Q8)).
+- what: reports_time_limits_and_client_information
+  units:
+  - 32022R2554#parag_019.003
+  - 32022R2554#parag_019.004
+  - 32022R2554#point_019.004_a
+  - 32022R2554#point_019.004_b
+  - 32022R2554#point_019.004_c
+  reason: Art 19(3) and (4) (the information of clients, and the initial notification,
+    intermediate report and final report) are answered for a major ICT-related incident
+    by the order dora-incident-reporting; this order does not repeat them (reading
+    (5)).
+  consequence: A caller with the answer chapter_requirements_and_article_19_reporting_apply
+    asks that order's queries about the incident.
+  declaration: answered_with_caveat
+  not_formalized_because: in_sibling
+  decided_in: dora-incident-reporting
+- what: voluntary_notification_and_outsourcing
+  units:
+  - 32022R2554#parag_019.002
+  - 32022R2554#parag_019.005
+  reason: Art 19(2) lets financial entities notify significant cyber threats on a
+    voluntary basis; Art 19(5) lets them outsource the reporting and keeps them fully
+    responsible. Neither changes an answer of this order (reading (7)).
+  consequence: None for these answers.
+  declaration: answered_with_caveat
+  debt: true
+  open: a possibility rule and a responsibility rule with no effect on the answers;
+    the deferral stands for this order.
+
+excluded_set:
+- what: payment_services_directive
+  instrument: Directive (EU) 2015/2366 (payment services in the internal market)
+  cites:
+  - 32015L2366#art_096
+  reason: Not pinned in this domain. Whether and how Directive (EU) 2015/2366 still
+    applies to an incident Article 23 reaches is not decided here; this order relies
+    on no word of that Directive.
+  consequence: The answers say only what DORA requires (open question (Q5)).

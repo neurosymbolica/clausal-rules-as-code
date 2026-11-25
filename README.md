@@ -28,25 +28,25 @@ side-by-side statute report: <https://neurosymbolica.github.io/clausal-rules-as-
 
 These rules are drafted readings derived from the cited statutes. They were generated and tested by automated processes. They are not legal advice and have not been validated by a lawyer. Where a domain lists open questions or alternative readings, they are listed in that domain. The statute text prevails: the code is subsidiary to the statutes.
 
-Every domain folder added on 2026-11-16, 2026-11-18, 2026-11-21 or 2026-11-22 repeats this in its own `README.md`.
+Every domain folder added on 2026-11-16, 2026-11-18, 2026-11-21, 2026-11-22 or 2026-11-25 repeats this in its own `README.md`.
 
 ## What is in it
 
-125 domains and 24,953 tests (24,922 in the domains, 31 in the shared procurement vocabulary),
+149 domains and 29,605 tests (29,574 in the domains, 31 in the shared procurement vocabulary),
 all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in force.
 
 | Area | Domains |
 |---|---|
-| EU: GDPR (including the GDPR Procedural Regulation) | 44 |
-| EU: AI Act | 10 |
-| EU: NIS 2 Directive and its implementing regulation | 8 |
+| EU: GDPR (including the GDPR Procedural Regulation) | 45 |
+| EU: AI Act | 11 |
+| EU: NIS 2 Directive and its implementing regulation | 9 |
 | EU: public procurement (Directives 2014/24 and 2014/25) | 5, plus the shared vocabulary `eu/procurement/directive_2014_24/` |
 | EU: state aid (de minimis, single undertaking, SME definition, GBER general conditions) | 4 |
 | EU: working time (daily rest, weekly rest, weekly limit, night work) | 4 |
 | EU: anti-money laundering (AMLR beneficial ownership) | 2 |
 | EU: CBAM (de minimis, origin exclusions) | 2 |
 | EU: ePrivacy Directive | 2 |
-| EU: Digital Operational Resilience Act (DORA) | 9 |
+| EU: Digital Operational Resilience Act (DORA) | 30 |
 | EU: Cyber Resilience Act (Art 14 reporting, administrative fines, manufacturer duties) | 3 |
 | EU: Digital Markets Act (Art 3, Art 5(2), Arts 6(9) and 6(10)) | 3 |
 | EU: Digital Services Act (Art 14 terms and conditions, Art 28 minors) | 2 |
@@ -81,7 +81,7 @@ They are the only domains with a provision-tracking ledger and a side-by-side re
 | `eu/procurement/time_limits` | What is the minimum time limit for receipt (Art 27-31)? |
 | `eu/procurement/utilities_negotiated_without_prior_call` | May a utility negotiate without a prior call for competition (Directive 2014/25 Art 50)? |
 
-The other 111 domains were added on 2026-11-16 (66), 2026-11-18 (19), 2026-11-21 (25) and 2026-11-22 (1); on 2026-11-18 eight of
+The other 135 domains were added on 2026-11-16 (66), 2026-11-18 (19), 2026-11-21 (25), 2026-11-22 (1) and 2026-11-25 (24); on 2026-11-18 eight of
 the earlier ones, on 2026-11-21 seventeen and on 2026-11-22 one, were also replaced by amended versions. Each was produced through the Clausify
 harness, and its answers were scored against an independently written, sealed test oracle that
 is not published (the verdicts were recorded after the runs and are not authenticated); its
@@ -94,6 +94,15 @@ The Colorado Privacy Act and Texas Data Privacy and Security Act domains, added 
 
 Licence: EUPL-1.2 (see `LICENSE`). The legal texts quoted here are not official
 versions of the law; see `NOTICE`.
+
+## Catalogue by law
+
+`catalog.json` at the root lists every rule set in the repository: its folder, jurisdiction, the acts and
+articles its citation records cite, whether it has a provision-tracking ledger, and the date of the first
+release that contained it. `_index/by-law/` has one page per act (for example `gdpr.md`, `dora.md`,
+`nis2.md`, `ai-act.md`) listing the rule sets that cite it. Both are generated from the tree by
+`_tools/catalog.py generate`, and `_tools/catalog.py check` fails if either one differs from the tree.
+Folders and domain ids are unchanged.
 
 ## Running it
 

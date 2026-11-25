@@ -1,0 +1,321 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_risk_learning_and_evolving_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(pairs), [pairs_keys/2]).
+:- use_module(clausal_lists_extra, [subtract/3, clausal_msort/2]).
+:- use_module(m__eu_dora_ict_risk_learning_and_evolving_dora_ict_risk_learning_and_evolving, [decide_dora_ict_risk_learning_and_evolving/2, dora_ict_risk_learning_and_evolving_status/2, dora_ict_risk_learning_and_evolving_checklist/2, dora_ict_risk_learning_and_evolving_decision_resolvable/1, dora_ict_risk_learning_and_evolving_status_values/1]).
+:- use_module(m__eu_dora_ict_risk_learning_and_evolving_fixtures, [dora_ict_risk_learning_and_evolving_subject/1, dora_ict_risk_learning_and_evolving_profile_for/2, dora_ict_risk_learning_and_evolving_assess/2]).
+:- use_module(m__eu_dora_ict_risk_learning_and_evolving_dora_ict_risk_learning_and_evolving, [ict_risk_learning_and_evolving_duties_required/3, ict_risk_learning_and_evolving_duties_complete/3, ict_risk_learning_and_evolving_duties_outstanding/3]).
+:- use_module(m__eu_dora_ict_risk_learning_and_evolving_queries, [dora_ict_risk_learning_and_evolving_profile_keys/1, dora_ict_risk_learning_and_evolving_what_if/4, dora_ict_risk_learning_and_evolving_compliance_check/3]).
+:- use_module(m__eu_dora_ict_risk_learning_and_evolving_kernel, [dora_ict_risk_learning_and_evolving_input_problems/2]).
+
+expected_status(article_16_1_entity_simplified_framework, simplified_framework_entity).
+expected_status(gate_unanswered, indeterminate([financial_entity_is_article_16_1_entity])).
+expected_status(non_microenterprise_incident_request_all_performed, complete).
+expected_status(communication_after_request_not_performed, incomplete).
+expected_status(microenterprise_communication_not_performed, complete).
+expected_status(incident_without_request_communication_unanswered, complete).
+expected_status(incident_with_request_communication_unanswered, indeterminate([post_incident_review_changes_communicated_to_competent_authorities])).
+expected_status(microenterprise_without_incident_all_performed, complete).
+expected_status(microenterprise_yearly_report_not_performed, incomplete).
+expected_status(size_class_unanswered_all_performed, complete).
+expected_status(size_class_unanswered_technology_monitoring_not_performed, indeterminate([financial_entity_is_microenterprise])).
+expected_status(capabilities_judgement_unsure, needs_legal_review(open_textured(capabilities_and_staff_to_gather_and_analyse_threat_and_incident_information, cite(eu_reg_2022_2554_art_13_1)), _)).
+expected_status(capabilities_judgement_unsure_yearly_report_not_performed, incomplete).
+expected_status(unknown_key_given, input_problems([unknown_key(colour)])).
+expected_status(fact_key_given_unsure, input_problems([wrong_type(financial_entity_is_microenterprise)])).
+expected_status(gate_key_given_twice, input_problems([duplicate_key(financial_entity_is_article_16_1_entity)])).
+
+all_twenty_duties([threat_and_incident_information_capability, post_incident_reviews, communication_of_post_incident_changes, review_of_procedures_and_actions, review_of_response_promptness, review_of_forensic_analysis, review_of_incident_escalation, review_of_internal_and_external_communication, lessons_incorporated_into_ict_risk_assessment, findings_basis_for_framework_reviews, monitoring_of_resilience_strategy_effectiveness, mapping_of_ict_risk_evolution, analysis_of_ict_related_incidents, enhancement_of_cyber_maturity, yearly_report_to_management_body, compulsory_awareness_and_training_modules, training_for_all_staff_commensurate_to_remit, third_party_providers_in_training, monitoring_of_technological_developments, up_to_date_ict_risk_management_processes]).
+
+always_duties([threat_and_incident_information_capability, lessons_incorporated_into_ict_risk_assessment, findings_basis_for_framework_reviews, monitoring_of_resilience_strategy_effectiveness, mapping_of_ict_risk_evolution, analysis_of_ict_related_incidents, enhancement_of_cyber_maturity, yearly_report_to_management_body, compulsory_awareness_and_training_modules, training_for_all_staff_commensurate_to_remit, third_party_providers_in_training]).
+
+fixed_seven([cite(eu_reg_2022_2554_art_13_1), cite(eu_reg_2022_2554_art_13_2), cite(eu_reg_2022_2554_art_13_3), cite(eu_reg_2022_2554_art_13_4), cite(eu_reg_2022_2554_art_13_5), cite(eu_reg_2022_2554_art_13_6), cite(eu_reg_2022_2554_art_13_7)]).
+
+same_citations(Citations, ExpectedCitations) :-
+    clausal_msort(Citations, Sorted),
+    clausal_msort(ExpectedCitations, Sorted).
+
+required_answers(Subject, Answers) :-
+    dora_ict_risk_learning_and_evolving_profile_for(Subject, Profile),
+    findall(Result - Citations, ict_risk_learning_and_evolving_duties_required(Profile, Result, Citations), Answers).
+
+complete_answers(Subject, Answers) :-
+    dora_ict_risk_learning_and_evolving_profile_for(Subject, Profile),
+    findall(Result - Citations, ict_risk_learning_and_evolving_duties_complete(Profile, Result, Citations), Answers).
+
+outstanding_answers(Subject, Answers) :-
+    dora_ict_risk_learning_and_evolving_profile_for(Subject, Profile),
+    findall(Result - Citations, ict_risk_learning_and_evolving_duties_outstanding(Profile, Result, Citations), Answers).
+
+compliance_answers(Subject, Duty, Verdicts) :-
+    dora_ict_risk_learning_and_evolving_profile_for(Subject, Profile),
+    findall(Verdict, dora_ict_risk_learning_and_evolving_compliance_check(Profile, Duty, Verdict), Verdicts).
+
+subject_matches_expected(Subject) :-
+    expected_status(Subject, Expected),
+    findall(Status, dora_ict_risk_learning_and_evolving_assess(Subject, dora_ict_risk_learning_and_evolving_verdict(Status, _)), [Actual]),
+    subsumes_term(Expected, Actual).
+
+answers_once(Subject) :-
+    dora_ict_risk_learning_and_evolving_profile_for(Subject, Profile),
+    findall(Result, ict_risk_learning_and_evolving_duties_required(Profile, Result, _), RequiredResults),
+    length(RequiredResults, 1),
+    findall(Result, ict_risk_learning_and_evolving_duties_complete(Profile, Result, _), CompleteResults),
+    length(CompleteResults, 1),
+    findall(Result, ict_risk_learning_and_evolving_duties_outstanding(Profile, Result, _), OutstandingResults),
+    length(OutstandingResults, 1),
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems(Profile, Problems), ProblemLists),
+    length(ProblemLists, 1).
+
+checklist_is_cited(Subject) :-
+    dora_ict_risk_learning_and_evolving_profile_for(Subject, Profile),
+    dora_ict_risk_learning_and_evolving_checklist(Profile, [FirstItem|OtherItems]),
+    maplist(item_cited, [FirstItem|OtherItems]).
+
+item_cited(item(_, _, cite(CitationKey))) :-
+    atom(CitationKey).
+
+test(every_subject_resolves_to_its_expected_status) :-
+    findall(Subject, dora_ict_risk_learning_and_evolving_subject(Subject), Subjects),
+    length(Subjects, 16),
+    maplist(subject_matches_expected, Subjects).
+test(every_query_answers_every_subject_exactly_once) :-
+    findall(Subject, dora_ict_risk_learning_and_evolving_subject(Subject), Subjects),
+    maplist(answers_once, Subjects).
+test(every_subject_has_a_non_empty_cited_checklist) :-
+    findall(Subject, dora_ict_risk_learning_and_evolving_subject(Subject), Subjects),
+    maplist(checklist_is_cited, Subjects).
+test(every_subject_is_resolvable) :-
+    findall(Subject, dora_ict_risk_learning_and_evolving_subject(Subject), Subjects),
+    maplist(subject_resolvable, Subjects).
+test(final_status_values_are_the_three_final_answers) :-
+    dora_ict_risk_learning_and_evolving_status_values(StatusValues),
+    StatusValues == [complete, incomplete, simplified_framework_entity].
+test(gate_true_is_simplified_framework_entity_in_every_query) :-
+    required_answers(article_16_1_entity_simplified_framework, RequiredAnswers),
+    RequiredAnswers == [simplified_framework_entity - [cite(eu_reg_2022_2554_art_16_1)]],
+    complete_answers(article_16_1_entity_simplified_framework, CompleteAnswers),
+    CompleteAnswers == [simplified_framework_entity - [cite(eu_reg_2022_2554_art_16_1)]],
+    outstanding_answers(article_16_1_entity_simplified_framework, OutstandingAnswers),
+    OutstandingAnswers == [simplified_framework_entity - [cite(eu_reg_2022_2554_art_16_1)]].
+test(gate_false_near_miss_is_complete) :-
+    dora_ict_risk_learning_and_evolving_profile_for(non_microenterprise_incident_request_all_performed, Profile),
+    dora_ict_risk_learning_and_evolving_status(Profile, Status),
+    Status == complete.
+test(gate_absent_is_asked_first_in_every_query) :-
+    required_answers(gate_unanswered, RequiredAnswers),
+    RequiredAnswers == [indeterminate([financial_entity_is_article_16_1_entity]) - []],
+    complete_answers(gate_unanswered, CompleteAnswers),
+    CompleteAnswers == [indeterminate([financial_entity_is_article_16_1_entity]) - []],
+    outstanding_answers(gate_unanswered, OutstandingAnswers),
+    OutstandingAnswers == [indeterminate([financial_entity_is_article_16_1_entity]) - []].
+test(required_lists_all_twenty_after_incident_and_request) :-
+    all_twenty_duties(AllDuties),
+    required_answers(non_microenterprise_incident_request_all_performed, [required(Duties) - Citations]),
+    Duties == AllDuties,
+    fixed_seven(FixedCitations),
+    same_citations(Citations, FixedCitations).
+test(required_for_a_microenterprise_without_incident_is_the_eleven_standing_duties) :-
+    always_duties(AlwaysDuties),
+    required_answers(microenterprise_without_incident_all_performed, [required(Duties) - Citations]),
+    Duties == AlwaysDuties,
+    same_citations(Citations, [cite(eu_reg_2022_2554_art_13_1), cite(eu_reg_2022_2554_art_13_3), cite(eu_reg_2022_2554_art_13_4), cite(eu_reg_2022_2554_art_13_5), cite(eu_reg_2022_2554_art_13_6)]).
+test(required_for_a_microenterprise_after_incident_omits_communication_and_article_13_7) :-
+    all_twenty_duties(AllDuties),
+    subtract(AllDuties, [communication_of_post_incident_changes, monitoring_of_technological_developments, up_to_date_ict_risk_management_processes], ExpectedDuties),
+    required_answers(microenterprise_communication_not_performed, [required(Duties) - Citations]),
+    Duties == ExpectedDuties,
+    length(Duties, 17),
+    same_citations(Citations, [cite(eu_reg_2022_2554_art_13_1), cite(eu_reg_2022_2554_art_13_2), cite(eu_reg_2022_2554_art_13_3), cite(eu_reg_2022_2554_art_13_4), cite(eu_reg_2022_2554_art_13_5), cite(eu_reg_2022_2554_art_13_6)]).
+test(required_without_request_omits_only_the_communication) :-
+    all_twenty_duties(AllDuties),
+    subtract(AllDuties, [communication_of_post_incident_changes], ExpectedDuties),
+    required_answers(incident_without_request_communication_unanswered, [required(Duties) - _]),
+    Duties == ExpectedDuties.
+test(required_asks_the_size_class_while_it_can_change_the_list) :-
+    required_answers(size_class_unanswered_all_performed, Answers),
+    Answers == [indeterminate([financial_entity_is_microenterprise]) - []].
+test(all_performed_after_incident_and_request_is_complete_with_fixed_citations) :-
+    complete_answers(non_microenterprise_incident_request_all_performed, [complete - Citations]),
+    fixed_seven(FixedCitations),
+    same_citations(Citations, FixedCitations).
+test(communication_not_performed_after_request_is_incomplete) :-
+    complete_answers(communication_after_request_not_performed, [incomplete - Citations]),
+    fixed_seven(FixedCitations),
+    same_citations(Citations, FixedCitations).
+test(microenterprise_near_miss_owes_no_communication_and_is_complete) :-
+    complete_answers(microenterprise_communication_not_performed, Answers),
+    Answers = [complete - _].
+test(request_made_with_communication_unanswered_asks_for_it) :-
+    complete_answers(incident_with_request_communication_unanswered, Answers),
+    Answers == [indeterminate([post_incident_review_changes_communicated_to_competent_authorities]) - []].
+test(no_request_near_miss_with_communication_unanswered_is_complete) :-
+    complete_answers(incident_without_request_communication_unanswered, Answers),
+    Answers = [complete - _].
+test(yearly_report_not_performed_is_incomplete) :-
+    dora_ict_risk_learning_and_evolving_profile_for(microenterprise_yearly_report_not_performed, Profile),
+    dora_ict_risk_learning_and_evolving_status(Profile, Status),
+    Status == incomplete.
+test(yearly_report_performed_near_miss_is_complete) :-
+    dora_ict_risk_learning_and_evolving_profile_for(microenterprise_without_incident_all_performed, Profile),
+    dora_ict_risk_learning_and_evolving_status(Profile, Status),
+    Status == complete.
+test(size_class_matters_only_when_article_13_7_is_not_performed) :-
+    complete_answers(size_class_unanswered_technology_monitoring_not_performed, NotPerformedAnswers),
+    NotPerformedAnswers == [indeterminate([financial_entity_is_microenterprise]) - []],
+    complete_answers(size_class_unanswered_all_performed, PerformedAnswers),
+    PerformedAnswers = [complete - _].
+test(unsure_capabilities_judgement_goes_to_a_lawyer) :-
+    complete_answers(capabilities_judgement_unsure, [Result - Citations]),
+    Citations == [],
+    Result = needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on(Pairs)]),
+    JudgementKey == capabilities_and_staff_to_gather_and_analyse_threat_and_incident_information,
+    Citation == cite(eu_reg_2022_2554_art_13_1),
+    length(Pairs, 23),
+    member(capabilities_and_staff_to_gather_and_analyse_threat_and_incident_information - unsure, Pairs),
+    pairs_keys(Pairs, PairKeys),
+    dora_ict_risk_learning_and_evolving_profile_keys(ContractKeys),
+    subtract(ContractKeys, [competent_authority_requested_post_incident_review_changes], ExpectedKeys),
+    PairKeys == ExpectedKeys.
+test(a_false_duty_decides_incomplete_before_the_unsure_judgement) :-
+    complete_answers(capabilities_judgement_unsure_yearly_report_not_performed, Answers),
+    Answers = [incomplete - _].
+test(a_referral_context_may_carry_an_unscored_provenance_item) :-
+    complete_answers(capabilities_judgement_unsure, [needs_legal_review(_, [inputs_relied_on(Pairs)]) - []]),
+    WithProvenance = [inputs_relied_on(Pairs), provenance(complete_after_review, [cite(eu_reg_2022_2554_art_13_1)])],
+    WithProvenance = [inputs_relied_on(ScoredPairs)|Unscored],
+    ScoredPairs == Pairs,
+    Unscored = [provenance(Clause, ProvenanceCitations)],
+    Clause == complete_after_review,
+    ProvenanceCitations == [cite(eu_reg_2022_2554_art_13_1)].
+test(outstanding_names_the_communication_with_its_own_citation) :-
+    outstanding_answers(communication_after_request_not_performed, Answers),
+    Answers == [outstanding([communication_of_post_incident_changes]) - [cite(eu_reg_2022_2554_art_13_2)]].
+test(outstanding_names_the_yearly_report_with_its_own_citation) :-
+    outstanding_answers(microenterprise_yearly_report_not_performed, Answers),
+    Answers == [outstanding([yearly_report_to_management_body]) - [cite(eu_reg_2022_2554_art_13_5)]].
+test(none_outstanding_when_every_applying_duty_is_performed) :-
+    outstanding_answers(non_microenterprise_incident_request_all_performed, [none_outstanding - Citations]),
+    fixed_seven(FixedCitations),
+    same_citations(Citations, FixedCitations).
+test(microenterprise_near_miss_has_none_outstanding) :-
+    outstanding_answers(microenterprise_communication_not_performed, Answers),
+    Answers = [none_outstanding - _].
+test(outstanding_refers_the_unsure_judgement_despite_a_false_duty) :-
+    outstanding_answers(capabilities_judgement_unsure_yearly_report_not_performed, [Result - []]),
+    Result = needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on(_)]),
+    JudgementKey == capabilities_and_staff_to_gather_and_analyse_threat_and_incident_information,
+    Citation == cite(eu_reg_2022_2554_art_13_1).
+test(outstanding_asks_the_size_class_when_technology_monitoring_is_not_performed) :-
+    outstanding_answers(size_class_unanswered_technology_monitoring_not_performed, Answers),
+    Answers == [indeterminate([financial_entity_is_microenterprise]) - []].
+test(input_problems_come_first_in_every_query) :-
+    required_answers(unknown_key_given, RequiredAnswers),
+    RequiredAnswers == [input_problems([unknown_key(colour)]) - []],
+    complete_answers(fact_key_given_unsure, CompleteAnswers),
+    CompleteAnswers == [input_problems([wrong_type(financial_entity_is_microenterprise)]) - []],
+    outstanding_answers(gate_key_given_twice, OutstandingAnswers),
+    OutstandingAnswers == [input_problems([duplicate_key(financial_entity_is_article_16_1_entity)]) - []].
+test(a_well_formed_profile_has_no_problems) :-
+    dora_ict_risk_learning_and_evolving_profile_for(non_microenterprise_incident_request_all_performed, Profile),
+    dora_ict_risk_learning_and_evolving_input_problems(Profile, Problems),
+    Problems == [].
+test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+    dora_ict_risk_learning_and_evolving_input_problems(not_a_profile, Problems),
+    Problems == [wrong_type(profile)].
+test(checklist_carries_each_duty_with_its_own_citation) :-
+    dora_ict_risk_learning_and_evolving_profile_for(microenterprise_yearly_report_not_performed, Profile),
+    dora_ict_risk_learning_and_evolving_checklist(Profile, Items),
+    length(Items, 20),
+    member(item(yearly_report_to_management_body, unmet(not_performed), cite(eu_reg_2022_2554_art_13_5)), Items),
+    member(item(threat_and_incident_information_capability, met, cite(eu_reg_2022_2554_art_13_1)), Items),
+    member(item(review_of_forensic_analysis, inapplicable, cite(eu_reg_2022_2554_art_13_2_b)), Items).
+test(checklist_of_an_article_16_1_entity_cites_article_16_1) :-
+    dora_ict_risk_learning_and_evolving_profile_for(article_16_1_entity_simplified_framework, Profile),
+    dora_ict_risk_learning_and_evolving_checklist(Profile, Items),
+    Items == [item(article_16_1_entity, inapplicable, cite(eu_reg_2022_2554_art_16_1))].
+test(compliance_performed_applying_duty_is_compliant) :-
+    compliance_answers(non_microenterprise_incident_request_all_performed, post_incident_reviews, Verdicts),
+    Verdicts == [compliant].
+test(compliance_not_performed_applying_duty_is_non_compliant) :-
+    compliance_answers(communication_after_request_not_performed, communication_of_post_incident_changes, Verdicts),
+    Verdicts == [non_compliant].
+test(compliance_microenterprise_near_miss_is_not_applicable) :-
+    compliance_answers(microenterprise_communication_not_performed, communication_of_post_incident_changes, Verdicts),
+    Verdicts == [not_applicable].
+test(compliance_article_16_1_entity_is_simplified_framework_entity) :-
+    compliance_answers(article_16_1_entity_simplified_framework, yearly_report_to_management_body, Verdicts),
+    Verdicts == [simplified_framework_entity].
+test(compliance_gate_absent_is_indeterminate) :-
+    compliance_answers(gate_unanswered, yearly_report_to_management_body, Verdicts),
+    Verdicts == [indeterminate([financial_entity_is_article_16_1_entity])].
+test(compliance_absent_duty_key_is_indeterminate) :-
+    compliance_answers(incident_with_request_communication_unanswered, communication_of_post_incident_changes, Verdicts),
+    Verdicts == [indeterminate([post_incident_review_changes_communicated_to_competent_authorities])].
+test(compliance_open_condition_names_the_trigger) :-
+    compliance_answers(size_class_unanswered_technology_monitoring_not_performed, monitoring_of_technological_developments, Verdicts),
+    Verdicts == [indeterminate([financial_entity_is_microenterprise])].
+test(compliance_unsure_duty_goes_to_a_lawyer) :-
+    compliance_answers(capabilities_judgement_unsure, threat_and_incident_information_capability, [Verdict]),
+    Verdict = needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on(Pairs)]),
+    JudgementKey == capabilities_and_staff_to_gather_and_analyse_threat_and_incident_information,
+    Citation == cite(eu_reg_2022_2554_art_13_1),
+    length(Pairs, 23).
+test(compliance_input_problems_come_first) :-
+    compliance_answers(unknown_key_given, yearly_report_to_management_body, Verdicts),
+    Verdicts == [input_problems([unknown_key(colour)])].
+test(what_if_the_yearly_report_were_performed_it_would_be_complete) :-
+    dora_ict_risk_learning_and_evolving_profile_for(microenterprise_yearly_report_not_performed, Profile),
+    findall(Status, dora_ict_risk_learning_and_evolving_what_if(Profile, senior_ict_staff_report_findings_and_recommendations_at_least_yearly, true, Status), Statuses),
+    Statuses == [complete].
+test(what_if_the_entity_were_a_microenterprise_the_communication_would_not_be_owed) :-
+    dora_ict_risk_learning_and_evolving_profile_for(communication_after_request_not_performed, Profile),
+    dora_ict_risk_learning_and_evolving_what_if(Profile, financial_entity_is_microenterprise, true, Status),
+    Status == complete.
+test(what_if_the_gate_were_answered_true) :-
+    dora_ict_risk_learning_and_evolving_profile_for(gate_unanswered, Profile),
+    dora_ict_risk_learning_and_evolving_what_if(Profile, financial_entity_is_article_16_1_entity, true, Status),
+    Status == simplified_framework_entity.
+test(what_if_leaves_the_actual_verdict_unchanged) :-
+    dora_ict_risk_learning_and_evolving_profile_for(microenterprise_yearly_report_not_performed, Profile),
+    decide_dora_ict_risk_learning_and_evolving(Profile, dora_ict_risk_learning_and_evolving_verdict(Status, _)),
+    Status == incomplete.
+
+subject_resolvable(Subject) :-
+    dora_ict_risk_learning_and_evolving_profile_for(Subject, Profile),
+    dora_ict_risk_learning_and_evolving_decision_resolvable(Profile).
+
+test(gate_false_near_miss_is_not_simplified, fail) :-
+    dora_ict_risk_learning_and_evolving_profile_for(non_microenterprise_incident_request_all_performed, Profile),
+    dora_ict_risk_learning_and_evolving_status(Profile, simplified_framework_entity).
+test(communication_not_performed_after_request_is_not_complete, fail) :-
+    dora_ict_risk_learning_and_evolving_profile_for(communication_after_request_not_performed, Profile),
+    ict_risk_learning_and_evolving_duties_complete(Profile, complete, _).
+test(microenterprise_near_miss_is_not_incomplete, fail) :-
+    dora_ict_risk_learning_and_evolving_profile_for(microenterprise_communication_not_performed, Profile),
+    ict_risk_learning_and_evolving_duties_complete(Profile, incomplete, _).
+test(no_request_near_miss_does_not_ask_for_the_communication, fail) :-
+    dora_ict_risk_learning_and_evolving_profile_for(incident_without_request_communication_unanswered, Profile),
+    ict_risk_learning_and_evolving_duties_complete(Profile, indeterminate(_), _).
+test(the_unsure_subject_is_not_complete, fail) :-
+    dora_ict_risk_learning_and_evolving_profile_for(capabilities_judgement_unsure, Profile),
+    ict_risk_learning_and_evolving_duties_complete(Profile, complete, _).
+test(this_package_leaves_the_provenance_item_out, fail) :-
+    dora_ict_risk_learning_and_evolving_profile_for(capabilities_judgement_unsure, Profile),
+    ict_risk_learning_and_evolving_duties_complete(Profile, needs_legal_review(_, [inputs_relied_on(_), provenance(_, _)]), _).
+test(compliance_unknown_duty_has_no_answer, fail) :-
+    dora_ict_risk_learning_and_evolving_profile_for(non_microenterprise_incident_request_all_performed, Profile),
+    dora_ict_risk_learning_and_evolving_compliance_check(Profile, not_a_duty, _).
+
+cp_test_names([every_subject_resolves_to_its_expected_status, every_query_answers_every_subject_exactly_once, every_subject_has_a_non_empty_cited_checklist, every_subject_is_resolvable, final_status_values_are_the_three_final_answers, gate_true_is_simplified_framework_entity_in_every_query, gate_false_near_miss_is_complete, gate_absent_is_asked_first_in_every_query, required_lists_all_twenty_after_incident_and_request, required_for_a_microenterprise_without_incident_is_the_eleven_standing_duties, required_for_a_microenterprise_after_incident_omits_communication_and_article_13_7, required_without_request_omits_only_the_communication, required_asks_the_size_class_while_it_can_change_the_list, all_performed_after_incident_and_request_is_complete_with_fixed_citations, communication_not_performed_after_request_is_incomplete, microenterprise_near_miss_owes_no_communication_and_is_complete, request_made_with_communication_unanswered_asks_for_it, no_request_near_miss_with_communication_unanswered_is_complete, yearly_report_not_performed_is_incomplete, yearly_report_performed_near_miss_is_complete, size_class_matters_only_when_article_13_7_is_not_performed, unsure_capabilities_judgement_goes_to_a_lawyer, a_false_duty_decides_incomplete_before_the_unsure_judgement, a_referral_context_may_carry_an_unscored_provenance_item, outstanding_names_the_communication_with_its_own_citation, outstanding_names_the_yearly_report_with_its_own_citation, none_outstanding_when_every_applying_duty_is_performed, microenterprise_near_miss_has_none_outstanding, outstanding_refers_the_unsure_judgement_despite_a_false_duty, outstanding_asks_the_size_class_when_technology_monitoring_is_not_performed, input_problems_come_first_in_every_query, a_well_formed_profile_has_no_problems, a_term_that_is_not_an_attribute_list_is_wrong_type_profile, checklist_carries_each_duty_with_its_own_citation, checklist_of_an_article_16_1_entity_cites_article_16_1, compliance_performed_applying_duty_is_compliant, compliance_not_performed_applying_duty_is_non_compliant, compliance_microenterprise_near_miss_is_not_applicable, compliance_article_16_1_entity_is_simplified_framework_entity, compliance_gate_absent_is_indeterminate, compliance_absent_duty_key_is_indeterminate, compliance_open_condition_names_the_trigger, compliance_unsure_duty_goes_to_a_lawyer, compliance_input_problems_come_first, what_if_the_yearly_report_were_performed_it_would_be_complete, what_if_the_entity_were_a_microenterprise_the_communication_would_not_be_owed, what_if_the_gate_were_answered_true, what_if_leaves_the_actual_verdict_unchanged]).
+cp_test_fail_names([gate_false_near_miss_is_not_simplified, communication_not_performed_after_request_is_not_complete, microenterprise_near_miss_is_not_incomplete, no_request_near_miss_does_not_ask_for_the_communication, the_unsure_subject_is_not_complete, this_package_leaves_the_provenance_item_out, compliance_unknown_duty_has_no_answer]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

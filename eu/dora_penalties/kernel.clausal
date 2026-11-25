@@ -1,0 +1,233 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/dora_penalties (deontic family).
+% Source: Regulation (EU) 2022/2554 (Digital Operational Resilience Act,
+% DORA), Articles 50 to 52, from the pinned original OJ text 32022R2554
+% (OJ L 333, 27.12.2022, p. 1). Pin folder eu/dora_penalties/sources/.
+%
+% DAG root of the determination-slices layout. The only determination
+% slice is dora_penalties.clausal, so no rule predicate is shared and
+% none lives here. The one exception is the order's input check,
+% dora_penalties_input_problems/2. The scaffold writes it here from the
+% order's typed input contract, exported for the slice and the facade to
+% import:
+%   :- use_module(eu/dora_penalties/kernel, [dora_penalties_input_problems/2]).
+% It decides no statutory condition (it is profile plumbing), so it
+% carries no provenance marker.
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms, so that every file spells
+% them alike.
+%
+% Result terms of the order's queries (each yields exactly ONE solution):
+%   administrative_penalty_rules_required(Profile, Result, Citations)
+%     Result: required | not_required_criminal_penalties, or a status
+%     compound; Citations: a set-like list of cite(Key), [] for a status.
+%   minimum_powers(Profile, Powers)
+%     Powers: an ordered list of power(Kind, Measure, cite(Key)), with
+%     Kind supervisory | penalty | extension, or a status compound.
+%   penalty_decision_safeguards(Profile, Safeguards)
+%     Safeguards: [] | [properly_reasoned(cite(Key)),
+%     right_of_appeal(cite(Key))], or a status compound.
+%   circumstances_to_take_into_account(Profile, Circumstances)
+%     Circumstances: an ordered list of circumstance(Atom, cite(Key)),
+%     headed by intent_or_negligence, or a status compound.
+%   criminal_penalty_liaison_duties(Profile, Duties)
+%     Duties: [] | [receive_criminal_proceedings_information(cite(Key)),
+%     provide_information_to_authorities_and_esas(cite(Key))], or a
+%     status compound.
+% Status compounds (never written as bare atoms):
+%   indeterminate([Key])            -- exactly one missing key
+%   needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                      [inputs_relied_on(Pairs)])
+%   input_problems(Problems)        -- Problems from the check below:
+%     duplicate_key(Key), wrong_type(Key), unknown_key(Key),
+%     or [wrong_type(profile)] alone.
+% Facade verdict of the slice: dora_penalties_verdict(status, citations),
+% status the slice's own verdict atom, citations a list of cite(Key).
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
+% =====================================================================
+
+:- module(kernel, [dora_penalties_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% dora_penalties_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+dora_penalties_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [breach_subject_to_criminal_penalties_under_national_law, member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, member_state_laid_down_criminal_penalties_for_breaches, national_law_permits_requiring_data_traffic_records, measures_applied_to_legal_person, decision_imposes_art_50_2_c_measure, breach_materiality_gravity_duration_relevant, degree_of_responsibility_relevant, financial_strength_relevant, profits_gained_or_losses_avoided_relevant, third_party_losses_relevant, cooperation_with_authority_relevant, previous_breaches_relevant],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(breach_subject_to_criminal_penalties_under_national_law, fact).
+key_type(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, fact).
+key_type(member_state_laid_down_criminal_penalties_for_breaches, fact).
+key_type(national_law_permits_requiring_data_traffic_records, fact).
+key_type(measures_applied_to_legal_person, fact).
+key_type(decision_imposes_art_50_2_c_measure, fact).
+key_type(breach_materiality_gravity_duration_relevant, judgement).
+key_type(degree_of_responsibility_relevant, judgement).
+key_type(financial_strength_relevant, judgement).
+key_type(profits_gained_or_losses_avoided_relevant, judgement).
+key_type(third_party_losses_relevant, judgement).
+key_type(cooperation_with_authority_relevant, judgement).
+key_type(previous_breaches_relevant, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(fact, Value, T) :-
+    in_type_t(boolean, Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

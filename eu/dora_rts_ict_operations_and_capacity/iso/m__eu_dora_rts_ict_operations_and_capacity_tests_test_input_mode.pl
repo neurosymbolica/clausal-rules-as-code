@@ -1,0 +1,129 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_ict_operations_and_capacity_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_dora_rts_ict_operations_and_capacity_dora_rts_ict_operations_and_capacity, [rts_ict_operations_and_capacity_duties_required/3, rts_ict_operations_and_capacity_duties_complete/3, rts_ict_operations_and_capacity_duties_outstanding/3, dora_rts_ict_operations_and_capacity_status/2, dora_rts_ict_operations_and_capacity_status_values/1]).
+:- use_module(m__eu_dora_rts_ict_operations_and_capacity_kernel, [dora_rts_ict_operations_and_capacity_input_problems/2]).
+:- use_module(m__eu_dora_rts_ict_operations_and_capacity_fixtures, [dora_rts_ict_operations_and_capacity_profile_for/2]).
+
+fixed_citations([cite(eu_reg_2024_1774_art_8_1), cite(eu_reg_2024_1774_art_8_2), cite(eu_reg_2024_1774_art_9_1), cite(eu_reg_2024_1774_art_9_2)]).
+
+same_citations(Citations, Expected) :-
+    clausal_msort(Citations, Sorted),
+    clausal_msort(Expected, Sorted).
+
+test(status_holds_with_the_verdict_bound) :-
+    dora_rts_ict_operations_and_capacity_profile_for(todo_baseline_subject, Profile),
+    findall(Status, dora_rts_ict_operations_and_capacity_status(Profile, Status), [BaselineStatus]),
+    dora_rts_ict_operations_and_capacity_status(Profile, BaselineStatus).
+test(an_article_16_1_entity_is_bound_as_the_simplified_framework) :-
+    dora_rts_ict_operations_and_capacity_profile_for(article_16_1_entity, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]),
+    rts_ict_operations_and_capacity_duties_required(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]),
+    rts_ict_operations_and_capacity_duties_outstanding(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+test(every_duty_performed_is_bound_as_complete) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_without_production, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, complete, Citations),
+    fixed_citations(Fixed),
+    same_citations(Citations, Fixed).
+test(one_duty_not_performed_is_bound_as_incomplete) :-
+    dora_rts_ict_operations_and_capacity_profile_for(one_duty_not_performed, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, incomplete, Citations),
+    fixed_citations(Fixed),
+    same_citations(Citations, Fixed).
+test(a_failing_duty_with_others_unstated_is_bound_as_incomplete) :-
+    dora_rts_ict_operations_and_capacity_profile_for(failing_duty_with_others_unstated, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, incomplete, _).
+test(production_security_not_ensured_is_bound_as_incomplete) :-
+    dora_rts_ict_operations_and_capacity_profile_for(production_security_not_ensured, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, incomplete, _).
+test(no_production_security_not_ensured_is_bound_as_complete) :-
+    dora_rts_ict_operations_and_capacity_profile_for(no_production_security_not_ensured, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, complete, _).
+test(the_unstated_gate_is_bound_as_named) :-
+    dora_rts_ict_operations_and_capacity_profile_for(gate_not_stated, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []).
+test(the_unstated_trigger_is_bound_as_named) :-
+    dora_rts_ict_operations_and_capacity_profile_for(production_unstated_security_not_ensured, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, indeterminate([development_or_testing_performed_in_production_environment]), []).
+test(the_unstated_duty_is_bound_as_named) :-
+    dora_rts_ict_operations_and_capacity_profile_for(one_duty_unstated, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, indeterminate([capacity_procedures_apply_resource_optimisation]), []).
+test(the_unsure_duty_is_bound_as_referred) :-
+    dora_rts_ict_operations_and_capacity_profile_for(one_duty_unsure, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, needs_legal_review(open_textured(capacity_procedures_apply_resource_optimisation, cite(eu_reg_2024_1774_art_9_1_b)), [inputs_relied_on(_)]), []).
+test(required_without_production_is_bound) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_without_production, Profile),
+    rts_ict_operations_and_capacity_duties_required(Profile, required(Duties), _),
+    length(Duties, 24).
+test(required_asks_for_the_trigger_when_bound) :-
+    rts_ict_operations_and_capacity_duties_required([attribute(financial_entity_is_article_16_1_entity, false)], indeterminate([development_or_testing_performed_in_production_environment]), []).
+test(outstanding_one_duty_is_bound) :-
+    dora_rts_ict_operations_and_capacity_profile_for(one_duty_not_performed, Profile),
+    rts_ict_operations_and_capacity_duties_outstanding(Profile, outstanding([backup_and_restore_requirements]), [cite(eu_reg_2024_1774_art_8_2_b_i)]).
+test(a_repeated_gate_is_bound_as_a_duplicate) :-
+    dora_rts_ict_operations_and_capacity_profile_for(repeated_gate, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, input_problems([duplicate_key(financial_entity_is_article_16_1_entity)]), []).
+test(an_unsure_gate_is_bound_as_a_wrong_type) :-
+    dora_rts_ict_operations_and_capacity_profile_for(gate_given_unsure, Profile),
+    rts_ict_operations_and_capacity_duties_outstanding(Profile, input_problems([wrong_type(financial_entity_is_article_16_1_entity)]), []).
+test(an_unknown_key_is_bound_as_named) :-
+    dora_rts_ict_operations_and_capacity_profile_for(unknown_key_given, Profile),
+    rts_ict_operations_and_capacity_duties_required(Profile, input_problems([unknown_key(office_colour)]), []).
+test(a_well_formed_profile_has_no_input_problem) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_with_production, Profile),
+    dora_rts_ict_operations_and_capacity_input_problems(Profile, []).
+test(an_empty_profile_has_no_input_problem) :-
+    dora_rts_ict_operations_and_capacity_input_problems([], []).
+test(a_term_that_is_not_a_list_is_a_wrong_type_profile) :-
+    dora_rts_ict_operations_and_capacity_input_problems(profile_text, [wrong_type(profile)]).
+test(an_unbound_profile_is_a_wrong_type_profile) :-
+    dora_rts_ict_operations_and_capacity_input_problems(_, [wrong_type(profile)]).
+test(a_partial_list_is_a_wrong_type_profile) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(financial_entity_is_article_16_1_entity, false)|_], [wrong_type(profile)]).
+test(an_item_that_is_not_an_attribute_is_a_wrong_type_profile) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(office_colour, blue), colour(blue)], [wrong_type(profile)]).
+test(an_unbound_key_is_an_unknown_key_as_given) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(Key, true)], [unknown_key(Named)]),
+    Named == Key.
+test(two_distinct_unbound_keys_are_two_unknown_keys) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(First, true), attribute(Second, true)], [unknown_key(FirstNamed), unknown_key(SecondNamed)]),
+    FirstNamed == First,
+    SecondNamed == Second.
+test(the_same_unbound_key_twice_is_one_unknown_key) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(Key, true), attribute(Key, false)], [unknown_key(Named)]),
+    Named == Key.
+test(a_compound_key_is_an_unknown_key) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(key(one), true)], [unknown_key(key(one))]).
+test(an_unbound_value_is_a_wrong_type) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(capacity_procedures_apply_resource_optimisation, _)], [wrong_type(capacity_procedures_apply_resource_optimisation)]).
+test(a_float_is_a_wrong_type) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(capacity_procedures_apply_resource_optimisation, 1.0)], [wrong_type(capacity_procedures_apply_resource_optimisation)]).
+test(unsure_is_a_wrong_type_for_the_trigger) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(development_or_testing_performed_in_production_environment, unsure)], [wrong_type(development_or_testing_performed_in_production_environment)]).
+test(unsure_is_a_judgement_value) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(capacity_procedures_apply_resource_optimisation, unsure)], []).
+test(a_duplicate_is_never_also_a_wrong_type) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(capacity_procedures_apply_resource_optimisation, maybe), attribute(capacity_procedures_apply_resource_optimisation, true)], [duplicate_key(capacity_procedures_apply_resource_optimisation)]).
+test(problems_are_listed_in_contract_order_then_unknown_keys) :-
+    dora_rts_ict_operations_and_capacity_input_problems([attribute(office_colour, blue), attribute(capacity_procedures_apply_resource_optimisation, maybe), attribute(office_colour, red), attribute(financial_entity_is_article_16_1_entity, unsure)], [wrong_type(financial_entity_is_article_16_1_entity), wrong_type(capacity_procedures_apply_resource_optimisation), unknown_key(office_colour)]).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_rts_ict_operations_and_capacity_profile_for(todo_baseline_subject, Profile),
+    findall(Status, dora_rts_ict_operations_and_capacity_status(Profile, Status), [BaselineStatus]),
+    dora_rts_ict_operations_and_capacity_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_rts_ict_operations_and_capacity_status(Profile, Other).
+
+cp_test_names([status_holds_with_the_verdict_bound, an_article_16_1_entity_is_bound_as_the_simplified_framework, every_duty_performed_is_bound_as_complete, one_duty_not_performed_is_bound_as_incomplete, a_failing_duty_with_others_unstated_is_bound_as_incomplete, production_security_not_ensured_is_bound_as_incomplete, no_production_security_not_ensured_is_bound_as_complete, the_unstated_gate_is_bound_as_named, the_unstated_trigger_is_bound_as_named, the_unstated_duty_is_bound_as_named, the_unsure_duty_is_bound_as_referred, required_without_production_is_bound, required_asks_for_the_trigger_when_bound, outstanding_one_duty_is_bound, a_repeated_gate_is_bound_as_a_duplicate, an_unsure_gate_is_bound_as_a_wrong_type, an_unknown_key_is_bound_as_named, a_well_formed_profile_has_no_input_problem, an_empty_profile_has_no_input_problem, a_term_that_is_not_a_list_is_a_wrong_type_profile, an_unbound_profile_is_a_wrong_type_profile, a_partial_list_is_a_wrong_type_profile, an_item_that_is_not_an_attribute_is_a_wrong_type_profile, an_unbound_key_is_an_unknown_key_as_given, two_distinct_unbound_keys_are_two_unknown_keys, the_same_unbound_key_twice_is_one_unknown_key, a_compound_key_is_an_unknown_key, an_unbound_value_is_a_wrong_type, a_float_is_a_wrong_type, unsure_is_a_wrong_type_for_the_trigger, unsure_is_a_judgement_value, a_duplicate_is_never_also_a_wrong_type, problems_are_listed_in_contract_order_then_unknown_keys]).
+cp_test_fail_names([every_other_bound_status_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,142 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_review_report_format_fixtures, [dora_rts_review_report_format_subject/1, dora_rts_review_report_format_profile_for/2, dora_rts_review_report_format_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_rts_review_report_format_dora_rts_review_report_format, [decide_dora_rts_review_report_format/2]).
+
+dora_rts_review_report_format_subject(scheduled_review_complete).
+dora_rts_review_report_format_subject(missing_executive_summary).
+dora_rts_review_report_format_subject(article_16_1_entity).
+dora_rts_review_report_format_subject(not_requested).
+dora_rts_review_report_format_subject(gate_absent).
+dora_rts_review_report_format_subject(request_absent).
+dora_rts_review_report_format_subject(microenterprise_absent).
+dora_rts_review_report_format_subject(microenterprise_absent_audit_missing).
+dora_rts_review_report_format_subject(microenterprise_without_internal_audit).
+dora_rts_review_report_format_subject(other_entity_without_internal_audit).
+dora_rts_review_report_format_subject(all_conditions_complete).
+dora_rts_review_report_format_subject(supervisory_initiation_references_missing).
+dora_rts_review_report_format_subject(scheduled_review_references_missing).
+dora_rts_review_report_format_subject(incident_initiation_list_missing).
+dora_rts_review_report_format_subject(scheduled_review_incident_list_missing).
+dora_rts_review_report_format_subject(uncorrected_weaknesses_explanation_missing).
+dora_rts_review_report_format_subject(corrected_weaknesses_explanation_missing).
+dora_rts_review_report_format_subject(ineffective_measures_improvements_missing).
+dora_rts_review_report_format_subject(effective_measures_improvements_missing).
+dora_rts_review_report_format_subject(unsure_format).
+dora_rts_review_report_format_subject(false_beats_unsure).
+dora_rts_review_report_format_subject(absent_format).
+dora_rts_review_report_format_subject(absent_beats_unsure).
+dora_rts_review_report_format_subject(input_duplicate_and_unknown).
+dora_rts_review_report_format_subject(input_wrong_type_fact).
+dora_rts_review_report_format_subject(not_attribute_list).
+
+dora_rts_review_report_format_profile_for(scheduled_review_complete, Profile) :-
+    baseline_profile(Profile).
+dora_rts_review_report_format_profile_for(missing_executive_summary, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_gives_executive_summary, false, Profile).
+dora_rts_review_report_format_profile_for(article_16_1_entity, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, financial_entity_is_article_16_1_entity, true, Profile).
+dora_rts_review_report_format_profile_for(not_requested, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, authority_requested_framework_review_report, false, Profile).
+dora_rts_review_report_format_profile_for(gate_absent, Profile) :-
+    baseline_profile(Baseline),
+    without_key(Baseline, financial_entity_is_article_16_1_entity, Profile).
+dora_rts_review_report_format_profile_for(request_absent, Profile) :-
+    baseline_profile(Baseline),
+    without_key(Baseline, authority_requested_framework_review_report, Profile).
+dora_rts_review_report_format_profile_for(microenterprise_absent, Profile) :-
+    baseline_profile(Baseline),
+    without_key(Baseline, financial_entity_is_microenterprise, Profile).
+dora_rts_review_report_format_profile_for(microenterprise_absent_audit_missing, Profile) :-
+    baseline_profile(Baseline),
+    without_key(Baseline, financial_entity_is_microenterprise, Partial),
+    with_value(Partial, review_report_uses_internal_audit_results, false, Profile).
+dora_rts_review_report_format_profile_for(microenterprise_without_internal_audit, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, financial_entity_is_microenterprise, true, Partial),
+    with_value(Partial, review_report_uses_internal_audit_results, false, Profile).
+dora_rts_review_report_format_profile_for(other_entity_without_internal_audit, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_uses_internal_audit_results, false, Profile).
+dora_rts_review_report_format_profile_for(all_conditions_complete, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, true, First),
+    with_value(First, review_initiated_following_ict_related_incidents, true, Second),
+    with_value(Second, identified_weaknesses_not_subject_to_corrective_measures, true, Third),
+    with_value(Third, past_corrective_measures_proved_ineffective_or_created_unexpected_challenges, true, Profile).
+dora_rts_review_report_format_profile_for(supervisory_initiation_references_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, true, Partial),
+    with_value(Partial, review_report_references_initiating_instructions_or_conclusions, false, Profile).
+dora_rts_review_report_format_profile_for(scheduled_review_references_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_references_initiating_instructions_or_conclusions, false, Profile).
+dora_rts_review_report_format_profile_for(incident_initiation_list_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_initiated_following_ict_related_incidents, true, Partial),
+    with_value(Partial, review_report_lists_incidents_with_root_cause_analysis, false, Profile).
+dora_rts_review_report_format_profile_for(scheduled_review_incident_list_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_lists_incidents_with_root_cause_analysis, false, Profile).
+dora_rts_review_report_format_profile_for(uncorrected_weaknesses_explanation_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, identified_weaknesses_not_subject_to_corrective_measures, true, Partial),
+    with_value(Partial, review_report_explains_residual_risk_acceptance, false, Profile).
+dora_rts_review_report_format_profile_for(corrected_weaknesses_explanation_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_explains_residual_risk_acceptance, false, Profile).
+dora_rts_review_report_format_profile_for(ineffective_measures_improvements_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, past_corrective_measures_proved_ineffective_or_created_unexpected_challenges, true, Partial),
+    with_value(Partial, review_report_describes_corrective_measure_improvements, false, Profile).
+dora_rts_review_report_format_profile_for(effective_measures_improvements_missing, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_describes_corrective_measure_improvements, false, Profile).
+dora_rts_review_report_format_profile_for(unsure_format, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_in_searchable_electronic_format, unsure, Profile).
+dora_rts_review_report_format_profile_for(false_beats_unsure, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_in_searchable_electronic_format, unsure, Partial),
+    with_value(Partial, review_report_gives_executive_summary, false, Profile).
+dora_rts_review_report_format_profile_for(absent_format, Profile) :-
+    baseline_profile(Baseline),
+    without_key(Baseline, review_report_in_searchable_electronic_format, Profile).
+dora_rts_review_report_format_profile_for(absent_beats_unsure, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, review_report_in_searchable_electronic_format, unsure, Partial),
+    without_key(Partial, review_report_gives_executive_summary, Profile).
+dora_rts_review_report_format_profile_for(input_duplicate_and_unknown, Profile) :-
+    Profile = [attribute(financial_entity_is_article_16_1_entity, true), attribute(colour, red), attribute(financial_entity_is_article_16_1_entity, false)].
+dora_rts_review_report_format_profile_for(input_wrong_type_fact, Profile) :-
+    baseline_profile(Baseline),
+    with_value(Baseline, financial_entity_is_microenterprise, unsure, Profile).
+dora_rts_review_report_format_profile_for(not_attribute_list, Profile) :-
+    Profile = not_an_attribute_list.
+
+baseline_profile(Profile) :-
+    Profile = [attribute(financial_entity_is_article_16_1_entity, false), attribute(authority_requested_framework_review_report, true), attribute(financial_entity_is_microenterprise, false), attribute(review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, false), attribute(review_initiated_following_ict_related_incidents, false), attribute(identified_weaknesses_not_subject_to_corrective_measures, false), attribute(past_corrective_measures_proved_ineffective_or_created_unexpected_challenges, false), attribute(review_report_in_searchable_electronic_format, true), attribute(review_report_identifies_entity_and_group_structure, true), attribute(review_report_describes_context, true), attribute(review_report_summarises_changes_since_previous_report, true), attribute(review_report_gives_executive_summary, true), attribute(review_report_states_approval_date, true), attribute(review_report_describes_reason_for_review, true), attribute(review_report_references_initiating_instructions_or_conclusions, true), attribute(review_report_lists_incidents_with_root_cause_analysis, true), attribute(review_report_states_review_period_dates, true), attribute(review_report_indicates_responsible_function, true), attribute(review_report_describes_major_changes_and_improvements, true), attribute(review_report_analyses_impact_of_changes, true), attribute(review_report_summarises_findings_and_severity, true), attribute(review_report_summarises_remediation_measures, true), attribute(review_report_gives_measure_dates_and_progress, true), attribute(review_report_gives_measure_tools_and_functions, true), attribute(review_report_describes_resource_impact, true), attribute(review_report_informs_on_authority_information_process, true), attribute(review_report_explains_residual_risk_acceptance, true), attribute(review_report_informs_on_planned_developments, true), attribute(review_report_states_conclusions, true), attribute(review_report_lists_past_reviews, true), attribute(review_report_states_corrective_measure_implementation, true), attribute(review_report_describes_corrective_measure_improvements, true), attribute(review_report_uses_internal_audit_results, true), attribute(review_report_uses_compliance_assessments, true), attribute(review_report_uses_resilience_testing_results, true), attribute(review_report_uses_external_sources, true)].
+
+with_value([], _, _, []).
+with_value([attribute(ProfileKey, _)|Elements], ProfileKey, NewValue, [attribute(ProfileKey, NewValue)|Edited]) :-
+    with_value(Elements, ProfileKey, NewValue, Edited).
+with_value([attribute(OtherKey, OtherValue)|Elements], ProfileKey, NewValue, [attribute(OtherKey, OtherValue)|Edited]) :-
+    dif(OtherKey, ProfileKey),
+    with_value(Elements, ProfileKey, NewValue, Edited).
+
+without_key([], _, []).
+without_key([attribute(ProfileKey, _)|Elements], ProfileKey, Edited) :-
+    without_key(Elements, ProfileKey, Edited).
+without_key([attribute(OtherKey, OtherValue)|Elements], ProfileKey, [attribute(OtherKey, OtherValue)|Edited]) :-
+    dif(OtherKey, ProfileKey),
+    without_key(Elements, ProfileKey, Edited).
+
+dora_rts_review_report_format_assess(Subject, Result) :-
+    dora_rts_review_report_format_profile_for(Subject, Profile),
+    decide_dora_rts_review_report_format(Profile, Result).

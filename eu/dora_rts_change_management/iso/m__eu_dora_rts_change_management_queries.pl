@@ -1,0 +1,110 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_change_management_queries, [dora_rts_change_management_profile_keys/1, dora_rts_change_management_what_if/4, complete/0, incomplete/0, none_outstanding/0, simplified_framework_entity/0, financial_entity_is_article_16_1_entity/0, dora_entity_type/0, significant_changes_made_to_ict_systems/0, change_procedures_verify_whether_ict_security_requirements_met/0, change_procedures_ensure_independence_of_approving_functions/0, change_roles_described_for_specifying_and_planning/0, change_roles_described_for_designing_adequate_transition/0, change_roles_described_for_controlled_testing_and_finalisation/0, change_roles_described_for_effective_quality_assurance/0, change_purpose_and_scope_documented_and_communicated/0, change_implementation_timeline_documented_and_communicated/0, change_expected_outcomes_documented_and_communicated/0, change_fall_back_procedures_and_responsibilities_identified/0, emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards/0, emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation/0, change_impact_on_ict_security_measures_identified_and_assessed/0, ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions/0, clearing_members_clients_and_other_parties_involved_in_testing/0, users_service_providers_and_other_parties_involved_in_testing/0, verification_of_ict_security_requirements/0, independence_of_change_approval_functions/0, roles_for_specifying_and_planning_changes/0, roles_for_designing_the_transition/0, roles_for_controlled_testing_and_finalisation/0, roles_for_quality_assurance/0, documentation_of_purpose_and_scope_of_change/0, documentation_of_implementation_timeline/0, documentation_of_expected_outcomes/0, fall_back_procedures_and_responsibilities/0, management_of_emergency_changes/0, review_of_emergency_changes_after_implementation/0, impact_of_change_on_ict_security_measures/0, stringent_testing_after_significant_changes/0, central_counterparty_involvement_of_parties_in_testing/0, central_securities_depository_involvement_of_parties_in_testing/0, central_counterparty/0, central_securities_depository/0, unsure/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_rts_change_management_kernel, [dora_rts_change_management_input_problems/2]).
+:- use_module(m__eu_dora_rts_change_management_dora_rts_change_management, [dora_rts_change_management_status/2]).
+
+dora_rts_change_management_profile_keys([financial_entity_is_article_16_1_entity, dora_entity_type, significant_changes_made_to_ict_systems, change_procedures_verify_whether_ict_security_requirements_met, change_procedures_ensure_independence_of_approving_functions, change_roles_described_for_specifying_and_planning, change_roles_described_for_designing_adequate_transition, change_roles_described_for_controlled_testing_and_finalisation, change_roles_described_for_effective_quality_assurance, change_purpose_and_scope_documented_and_communicated, change_implementation_timeline_documented_and_communicated, change_expected_outcomes_documented_and_communicated, change_fall_back_procedures_and_responsibilities_identified, emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards, emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation, change_impact_on_ict_security_measures_identified_and_assessed, ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions, clearing_members_clients_and_other_parties_involved_in_testing, users_service_providers_and_other_parties_involved_in_testing]).
+
+dora_rts_change_management_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_rts_change_management_status(Hypothesis, NewStatus).
+
+attribute_override(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    attributes_without_key(Profile, OverriddenKey, KeptAttributes),
+    append(KeptAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attributes_without_key([], _, []).
+attributes_without_key([attribute(ElementKey, _)|Elements], OverriddenKey, KeptAttributes) :-
+    ElementKey == OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, KeptAttributes).
+attributes_without_key([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, [attribute(ElementKey, ElementValue)|KeptAttributes]) :-
+    ElementKey \== OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, KeptAttributes).
+
+complete.
+
+incomplete.
+
+none_outstanding.
+
+simplified_framework_entity.
+
+financial_entity_is_article_16_1_entity.
+
+dora_entity_type.
+
+significant_changes_made_to_ict_systems.
+
+change_procedures_verify_whether_ict_security_requirements_met.
+
+change_procedures_ensure_independence_of_approving_functions.
+
+change_roles_described_for_specifying_and_planning.
+
+change_roles_described_for_designing_adequate_transition.
+
+change_roles_described_for_controlled_testing_and_finalisation.
+
+change_roles_described_for_effective_quality_assurance.
+
+change_purpose_and_scope_documented_and_communicated.
+
+change_implementation_timeline_documented_and_communicated.
+
+change_expected_outcomes_documented_and_communicated.
+
+change_fall_back_procedures_and_responsibilities_identified.
+
+emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards.
+
+emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation.
+
+change_impact_on_ict_security_measures_identified_and_assessed.
+
+ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions.
+
+clearing_members_clients_and_other_parties_involved_in_testing.
+
+users_service_providers_and_other_parties_involved_in_testing.
+
+verification_of_ict_security_requirements.
+
+independence_of_change_approval_functions.
+
+roles_for_specifying_and_planning_changes.
+
+roles_for_designing_the_transition.
+
+roles_for_controlled_testing_and_finalisation.
+
+roles_for_quality_assurance.
+
+documentation_of_purpose_and_scope_of_change.
+
+documentation_of_implementation_timeline.
+
+documentation_of_expected_outcomes.
+
+fall_back_procedures_and_responsibilities.
+
+management_of_emergency_changes.
+
+review_of_emergency_changes_after_implementation.
+
+impact_of_change_on_ict_security_measures.
+
+stringent_testing_after_significant_changes.
+
+central_counterparty_involvement_of_parties_in_testing.
+
+central_securities_depository_involvement_of_parties_in_testing.
+
+central_counterparty.
+
+central_securities_depository.
+
+unsure.

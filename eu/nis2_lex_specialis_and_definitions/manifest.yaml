@@ -1,0 +1,249 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/nis2_lex_specialis_and_definitions
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "nis2_lex_specialis_and_definitions"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The result atoms and result constructors are
+# listed because the order requires them as package-root names.
+public_interface:
+  # -- kernel.clausal --
+  # (nis2_lex_specialis_and_definitions_input_problems/2 is re-exported by queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- nis2_lex_specialis_and_definitions.clausal --
+  - "nis2_risk_management_provisions_status/3"
+  - "nis2_incident_notification_provisions_status/3"
+  - "decide_nis2_lex_specialis_and_definitions/2"
+  - "nis2_lex_specialis_and_definitions_status/2"
+  - "nis2_lex_specialis_and_definitions_checklist/2"
+  - "nis2_lex_specialis_and_definitions_decision_resolvable/1"
+  - "nis2_lex_specialis_and_definitions_status_values/1"
+  - "nis2_provisions_disapplied/0"
+  - "nis2_provisions_apply/0"
+  - "out_of_scope/0"
+  - "essential_entity/0"
+  - "important_entity/0"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "nis2_lex_specialis_and_definitions_profile_keys/1"
+  - "nis2_lex_specialis_and_definitions_input_problems/2"
+  - "nis2_lex_specialis_and_definitions_what_if/4"
+  # -- fixtures.clausal --
+  - "nis2_lex_specialis_and_definitions_subject/1"
+  - "nis2_lex_specialis_and_definitions_profile_for/2"
+  - "nis2_lex_specialis_and_definitions_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: no shared backbone package is imported (only the
+# kit's formalize_lib, which is not a backbone package).
+uses: []
+
+scope: >-
+  Article 4(1), first sentence, and Article 4(2) with points (a) and (b) of
+  Directive (EU) 2022/2555 (NIS 2), read with Article 1(2) of Regulation (EU)
+  2022/2554 (DORA), for a financial entity presupposed to be within DORA (open
+  question Q5). Two questions are answered, one per group of requirements:
+  nis2_risk_management_provisions_status (point (a) test) and
+  nis2_incident_notification_provisions_status (point (b) test, both of its
+  conditions), each giving nis2_provisions_disapplied, nis2_provisions_apply or
+  out_of_scope, or a status (indeterminate, needs_legal_review, input_problems).
+  The entity class (essential, important, out of scope) is a caller key; whether
+  DORA's requirements are at least equivalent in effect is the caller's judgement,
+  and an unsure judgement that decides is referred to a lawyer as open-textured.
+  Out of scope: who is a financial entity and DORA's scope, the entity's class
+  under Articles 2 and 3 of the Directive, the content of Articles 21 and 23 and
+  Chapter VII, Article 4(1) second sentence, Article 4(3) guidelines, Articles 6
+  and 25 of the Directive and DORA Article 1 except paragraph 2. Every reading is
+  the drafter's, not a lawyer's.
+
+sources:
+  - "Directive (EU) 2022/2555 (NIS 2 Directive), OJ L 333, 27.12.2022, p. 80 (CELEX 32022L2555): Article 4(1), first sentence; Article 4(2), lead words and points (a) and (b); Article 4(3), Articles 6 and 25 pinned and deferred"
+  - "Regulation (EU) 2022/2554 (Digital Operational Resilience Act, DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554): Article 1(2); the rest of Article 1 pinned and deferred"
+
+query_interface:
+  2: "nis2_lex_specialis_and_definitions_status/2"      # eligibility/status verdict over both groups
+  7: "nis2_lex_specialis_and_definitions_checklist/2"   # justification: one item per group with its cite(...) list
+  16: "nis2_lex_specialis_and_definitions_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022L2555#art_004
+  - 32022L2555#art_025
+  reason: The headings of Articles 4 and 25 carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: entities_not_covered_by_the_sector_specific_act
+  units:
+  - 32022L2555#parag_004.001
+  partial: true
+  debt: true
+  reason: Article 4(1) is quoted and its first sentence is formalised. Its second
+    sentence (the relevant provisions continue to apply to entities of the sector
+    that the sector-specific Union legal act does not cover) never decides an answer
+    here, because the order presupposes a financial entity to which DORA applies;
+    it is not formalised.
+  consequence: The order does not answer for an entity that DORA does not cover; such
+    an entity keeps the Directive's provisions under the quoted second sentence (open
+    question (Q5)).
+- what: commission_guidelines
+  units:
+  - 32022L2555#parag_004.003
+  reason: Article 4(3) binds the Commission to provide and review guidelines on the
+    application of Article 4(1) and (2); it gives no rule on facts about an entity.
+  consequence: None for a caller; the guidelines are not read, and a caller's judgements
+    on equivalence may rest on them (open question (Q7)).
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: definitions
+  units:
+  - 32022L2555#art_006
+  - 32022L2555#point_006_1
+  - 32022L2555#point_006_1_a
+  - 32022L2555#point_006_1_b
+  - 32022L2555#point_006_1_c
+  - 32022L2555#point_006_2
+  - 32022L2555#point_006_3
+  - 32022L2555#point_006_4
+  - 32022L2555#point_006_5
+  - 32022L2555#point_006_6
+  - 32022L2555#point_006_7
+  - 32022L2555#point_006_8
+  - 32022L2555#point_006_9
+  - 32022L2555#point_006_10
+  - 32022L2555#point_006_11
+  - 32022L2555#point_006_12
+  - 32022L2555#point_006_13
+  - 32022L2555#point_006_14
+  - 32022L2555#point_006_15
+  - 32022L2555#point_006_16
+  - 32022L2555#point_006_17
+  - 32022L2555#point_006_18
+  - 32022L2555#point_006_19
+  - 32022L2555#point_006_20
+  - 32022L2555#point_006_20_a
+  - 32022L2555#point_006_20_b
+  - 32022L2555#point_006_21
+  - 32022L2555#point_006_22
+  - 32022L2555#point_006_23
+  - 32022L2555#point_006_24
+  - 32022L2555#point_006_25
+  - 32022L2555#point_006_26
+  - 32022L2555#point_006_27
+  - 32022L2555#point_006_28
+  - 32022L2555#point_006_29
+  - 32022L2555#point_006_30
+  - 32022L2555#point_006_31
+  - 32022L2555#point_006_32
+  - 32022L2555#point_006_33
+  - 32022L2555#point_006_34
+  - 32022L2555#point_006_35
+  - 32022L2555#point_006_35_a
+  - 32022L2555#point_006_35_b
+  - 32022L2555#point_006_35_c
+  - 32022L2555#point_006_35_d
+  - 32022L2555#point_006_36
+  - 32022L2555#point_006_37
+  - 32022L2555#point_006_38
+  - 32022L2555#point_006_39
+  - 32022L2555#point_006_40
+  - 32022L2555#point_006_41
+  reason: 'Article 6 gives the definitions for the whole Directive. No answer of this
+    order turns on any of them: the terms Article 4 uses are not defined there, or
+    sit inside the caller''s judgements. An order that reads a defined term takes
+    it as a caller key.'
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: standardisation
+  units:
+  - 32022L2555#parag_025.001
+  - 32022L2555#parag_025.002
+  reason: Article 25 binds the Member States to encourage the use of European and
+    international standards and technical specifications, and ENISA to draw up advice
+    and guidelines; it gives no rule on facts about an entity.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: dora_article_1_other_than_paragraph_2
+  units:
+  - 32022R2554#art_001
+  - 32022R2554#parag_001.001
+  - 32022R2554#point_001.001_a
+  - 32022R2554#point_001.001_a_i
+  - 32022R2554#point_001.001_a_ii
+  - 32022R2554#point_001.001_a_iii
+  - 32022R2554#point_001.001_a_iv
+  - 32022R2554#point_001.001_a_v
+  - 32022R2554#point_001.001_a_vi
+  - 32022R2554#point_001.001_b
+  - 32022R2554#point_001.001_c
+  - 32022R2554#point_001.001_d
+  - 32022R2554#parag_001.003
+  reason: Of Article 1 of DORA the order relies on paragraph 2 only. The heading,
+    paragraph 1 with its points (the subject matter of DORA) and paragraph 3 (the
+    responsibility of the Member States for essential State functions) carry no rule
+    this order applies, and the order says nothing about what they or any other provision
+    of DORA require.
+  consequence: 'None for a caller: whether DORA''s requirements are at least equivalent
+    in effect is the caller''s judgement.'
+  declaration: not_an_exception
+  not_formalized_because: structural
+
+excluded_set:
+- what: scope_and_class
+  instrument: Directive (EU) 2022/2555 Articles 2 and 3
+  cites:
+  - 32022L2555#art_002
+  - 32022L2555#art_003
+  reason: Not pinned in this domain. The order does not decide whether the Directive
+    applies to the entity or its class; that is decided in the order nis2-scope-entity-class,
+    whose answer the caller gives as the key entity_class. The order quotes and relies
+    on no text of the instrument named.
+  consequence: The answers take the entity's class as given.
+- what: dora_scope
+  instrument: Regulation (EU) 2022/2554 Article 2
+  cites:
+  - 32022R2554#art_002
+  reason: Not pinned in this domain. The order does not decide whether the entity
+    is a financial entity or whether DORA applies to it; that is presupposed. The
+    order quotes and relies on no text of the instrument named.
+  consequence: The answers presuppose a financial entity to which DORA applies (open
+    question (Q5)).
+- what: provisions_compared
+  instrument: Directive (EU) 2022/2555 Articles 21 and 23 and Chapter VII
+  cites:
+  - 32022L2555#art_021
+  - 32022L2555#art_023
+  reason: 'Not pinned in this domain. The quoted Article 4 names Article 21(1) and
+    (2), Article 23(1) to (6) and Chapter VII. The order does not formalise them and
+    relies on no text of them: the comparison with DORA is inside the caller''s judgements,
+    and the answers name the group of provisions, not the articles.'
+  consequence: The answers do not list the articles that cease to apply (open question
+    (Q3)).

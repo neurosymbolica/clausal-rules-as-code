@@ -1,0 +1,136 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_incident_policy_and_detection_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_rts_incident_policy_and_detection_dora_rts_incident_policy_and_detection, [rts_incident_policy_and_detection_duties_required/3, rts_incident_policy_and_detection_duties_complete/3, rts_incident_policy_and_detection_duties_outstanding/3, dora_rts_incident_policy_and_detection_status/2, dora_rts_incident_policy_and_detection_status_values/1]).
+:- use_module(m__eu_dora_rts_incident_policy_and_detection_kernel, [dora_rts_incident_policy_and_detection_input_problems/2]).
+:- use_module(m__eu_dora_rts_incident_policy_and_detection_fixtures, [dora_rts_incident_policy_and_detection_profile_for/2]).
+
+test(complete_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(complete_entity, Profile),
+    rts_incident_policy_and_detection_duties_complete(Profile, complete, Citations),
+    length(Citations, 7),
+    member(cite(eu_reg_2024_1774_art_23_6), Citations).
+test(incomplete_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(prioritisation_not_performed, Profile),
+    rts_incident_policy_and_detection_duties_complete(Profile, incomplete, Citations),
+    length(Citations, 7).
+test(simplified_framework_entity_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(simplified_entity, Profile),
+    rts_incident_policy_and_detection_duties_required(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+test(gate_question_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(gate_not_stated, Profile),
+    rts_incident_policy_and_detection_duties_outstanding(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []).
+test(absent_duty_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(retention_not_answered, Profile),
+    rts_incident_policy_and_detection_duties_complete(Profile, indeterminate([incident_evidence_retained_for_a_period_no_longer_than_necessary]), []).
+test(outstanding_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(several_duties_not_performed, Profile),
+    rts_incident_policy_and_detection_duties_outstanding(Profile, outstanding([ict_related_incident_policy, secure_retention_of_incident_evidence, consideration_of_criticality_of_affected_services]), [cite(eu_reg_2024_1774_art_22), cite(eu_reg_2024_1774_art_23_6)]).
+test(none_outstanding_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(complete_entity, Profile),
+    rts_incident_policy_and_detection_duties_outstanding(Profile, none_outstanding, Citations),
+    length(Citations, 7).
+test(referral_holds_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(two_duties_unsure, Profile),
+    rts_incident_policy_and_detection_duties_complete(Profile, needs_legal_review(open_textured(ict_related_incident_policy_developed_documented_and_implemented, cite(eu_reg_2024_1774_art_22)), [inputs_relied_on(Pairs)]), []),
+    Pairs = [financial_entity_is_article_16_1_entity - false, ict_related_incident_policy_developed_documented_and_implemented - unsure|_],
+    length(Pairs, 18).
+test(input_problems_hold_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(several_input_problems, Profile),
+    rts_incident_policy_and_detection_duties_required(Profile, input_problems([wrong_type(financial_entity_is_article_16_1_entity), duplicate_key(alerts_prioritised_within_expected_resolution_time), unknown_key(financial_entity_is_microenterprise)]), []).
+test(status_holds_with_the_verdict_bound) :-
+    dora_rts_incident_policy_and_detection_profile_for(complete_entity, Profile),
+    dora_rts_incident_policy_and_detection_status(Profile, complete).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    dora_rts_incident_policy_and_detection_input_problems(_, Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_profile_gets_input_problems_from_every_query) :-
+    rts_incident_policy_and_detection_duties_required(_, input_problems([wrong_type(profile)]), []),
+    rts_incident_policy_and_detection_duties_complete(_, input_problems([wrong_type(profile)]), []),
+    rts_incident_policy_and_detection_duties_outstanding(_, input_problems([wrong_type(profile)]), []).
+test(a_partial_list_is_not_an_attribute_list) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(financial_entity_is_article_16_1_entity, false)|_], Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_element_is_not_an_attribute) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(financial_entity_is_article_16_1_entity, false), _], Problems),
+    Problems == [wrong_type(profile)].
+test(an_atom_is_not_an_attribute_list) :-
+    dora_rts_incident_policy_and_detection_input_problems(profile, Problems),
+    Problems == [wrong_type(profile)].
+test(the_empty_profile_has_no_problem) :-
+    dora_rts_incident_policy_and_detection_input_problems([], Problems),
+    Problems == [].
+test(an_unbound_key_is_named_as_given) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(UnboundKey, true)], Problems),
+    Problems = [unknown_key(FoundKey)],
+    FoundKey == UnboundKey.
+test(two_distinct_unbound_keys_are_two_keys) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(FirstKey, true), attribute(SecondKey, true)], Problems),
+    Problems = [unknown_key(FirstFound), unknown_key(SecondFound)],
+    FirstFound == FirstKey,
+    SecondFound == SecondKey.
+test(the_same_unbound_key_twice_is_one_key) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(SameKey, true), attribute(SameKey, false)], Problems),
+    Problems = [unknown_key(FoundKey)],
+    FoundKey == SameKey.
+test(an_integer_key_and_a_float_key_are_two_keys) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(7, true), attribute(7.0, true)], Problems),
+    Problems == [unknown_key(7), unknown_key(7.0)].
+test(a_compound_key_is_unknown_as_given) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(entity(kind), true)], Problems),
+    Problems == [unknown_key(entity(kind))].
+test(an_unknown_key_with_an_unbound_value_is_only_unknown) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(mystery, _)], Problems),
+    Problems == [unknown_key(mystery)].
+test(an_unknown_key_repeated_is_named_once) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(mystery, 1), attribute(mystery, 2)], Problems),
+    Problems == [unknown_key(mystery)].
+test(an_unbound_value_of_a_contract_key_is_wrong_type) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(criticality_of_affected_services_considered, _)], Problems),
+    Problems == [wrong_type(criticality_of_affected_services_considered)].
+test(a_float_judgement_is_wrong_type) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(criticality_of_affected_services_considered, 1.0)], Problems),
+    Problems == [wrong_type(criticality_of_affected_services_considered)].
+test(a_string_judgement_is_wrong_type) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(criticality_of_affected_services_considered, "true")], Problems),
+    Problems == [wrong_type(criticality_of_affected_services_considered)].
+test(unsure_is_a_judgement_value) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(criticality_of_affected_services_considered, unsure)], Problems),
+    Problems == [].
+test(unsure_is_wrong_type_for_the_gate) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(financial_entity_is_article_16_1_entity, unsure)], Problems),
+    Problems == [wrong_type(financial_entity_is_article_16_1_entity)].
+test(a_duplicate_with_equal_values_is_only_duplicate) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_article_16_1_entity, false)], Problems),
+    Problems == [duplicate_key(financial_entity_is_article_16_1_entity)].
+test(a_duplicate_with_bad_values_is_only_duplicate) :-
+    dora_rts_incident_policy_and_detection_input_problems([attribute(financial_entity_is_article_16_1_entity, 3), attribute(financial_entity_is_article_16_1_entity, unsure)], Problems),
+    Problems == [duplicate_key(financial_entity_is_article_16_1_entity)].
+test(the_gate_true_with_duty_keys_present_is_no_problem) :-
+    dora_rts_incident_policy_and_detection_profile_for(simplified_entity_with_failures, Profile),
+    dora_rts_incident_policy_and_detection_input_problems(Profile, Problems),
+    Problems == [].
+test(a_present_duty_key_is_checked_in_the_required_query) :-
+    rts_incident_policy_and_detection_duties_required([attribute(financial_entity_is_article_16_1_entity, false), attribute(alerts_prioritised_within_expected_resolution_time, maybe)], input_problems([wrong_type(alerts_prioritised_within_expected_resolution_time)]), []).
+test(the_input_check_answers_once_for_an_unbound_profile) :-
+    findall(Problems, dora_rts_incident_policy_and_detection_input_problems(_, Problems), Answers),
+    length(Answers, 1).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_rts_incident_policy_and_detection_profile_for(complete_entity, Profile),
+    dora_rts_incident_policy_and_detection_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, complete),
+    dora_rts_incident_policy_and_detection_status(Profile, Other).
+
+cp_test_names([complete_holds_bound, incomplete_holds_bound, simplified_framework_entity_holds_bound, gate_question_holds_bound, absent_duty_holds_bound, outstanding_holds_bound, none_outstanding_holds_bound, referral_holds_bound, input_problems_hold_bound, status_holds_with_the_verdict_bound, an_unbound_profile_is_not_an_attribute_list, an_unbound_profile_gets_input_problems_from_every_query, a_partial_list_is_not_an_attribute_list, an_unbound_element_is_not_an_attribute, an_atom_is_not_an_attribute_list, the_empty_profile_has_no_problem, an_unbound_key_is_named_as_given, two_distinct_unbound_keys_are_two_keys, the_same_unbound_key_twice_is_one_key, an_integer_key_and_a_float_key_are_two_keys, a_compound_key_is_unknown_as_given, an_unknown_key_with_an_unbound_value_is_only_unknown, an_unknown_key_repeated_is_named_once, an_unbound_value_of_a_contract_key_is_wrong_type, a_float_judgement_is_wrong_type, a_string_judgement_is_wrong_type, unsure_is_a_judgement_value, unsure_is_wrong_type_for_the_gate, a_duplicate_with_equal_values_is_only_duplicate, a_duplicate_with_bad_values_is_only_duplicate, the_gate_true_with_duty_keys_present_is_no_problem, a_present_duty_key_is_checked_in_the_required_query, the_input_check_answers_once_for_an_unbound_profile]).
+cp_test_fail_names([every_other_bound_status_is_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

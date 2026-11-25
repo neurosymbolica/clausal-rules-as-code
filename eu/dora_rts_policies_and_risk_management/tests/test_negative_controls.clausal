@@ -1,0 +1,162 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one key moved by one value -> a different answer), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. Every `fail` test is
+% paired with a positive test over the same profile, so a misspelt atom
+% shows up as a failing positive test.
+% Run: python -m clausal.testing eu/dora_rts_policies_and_risk_management/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_rts_policies_and_risk_management/dora_rts_policies_and_risk_management, [
+    dora_rts_policies_and_risk_management_status/2,
+    dora_rts_policies_and_risk_management_status_values/1,
+    rts_policies_and_risk_management_duties_required/3,
+    rts_policies_and_risk_management_duties_complete/3,
+    rts_policies_and_risk_management_duties_outstanding/3
+]).
+:- use_module(eu/dora_rts_policies_and_risk_management/fixtures, [dora_rts_policies_and_risk_management_profile_for/2]).
+:- use_module(library(reif), [if_/3]).
+
+with_value(Profile, ProfileKey, Value, NewProfile) :-
+    maplist(replaced_attribute(ProfileKey, Value), Profile, NewProfile).
+
+replaced_attribute(ProfileKey, Value, attribute(OtherKey, OldValue), attribute(OtherKey, NewValue)) :-
+    if_(OtherKey = ProfileKey, NewValue = Value, NewValue = OldValue).
+
+% ---- the near-miss atoms are the slice's own verdict atoms ------------
+test(the_status_table_holds_the_near_miss_atoms) :-
+    dora_rts_policies_and_risk_management_status_values(StatusValues),
+    member(complete, StatusValues),
+    member(incomplete, StatusValues),
+    member(simplified_framework_entity, StatusValues).
+
+% ---- (S4) complete / near miss (S1) incomplete ------------------------
+test(every_duty_performed_is_complete) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    dora_rts_policies_and_risk_management_status(Profile, complete).
+
+test(one_duty_not_performed_is_incomplete) :-
+    dora_rts_policies_and_risk_management_profile_for(one_duty_not_performed, Profile),
+    dora_rts_policies_and_risk_management_status(Profile, incomplete).
+
+test(one_duty_not_performed_is_not_complete, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(one_duty_not_performed, Profile),
+    dora_rts_policies_and_risk_management_status(Profile, complete).
+
+test(every_duty_performed_is_not_incomplete, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    dora_rts_policies_and_risk_management_status(Profile, incomplete).
+
+% ---- (S-G1) the gate true / near miss the gate false ------------------
+test(an_article_16_1_entity_is_simplified_framework_entity) :-
+    dora_rts_policies_and_risk_management_profile_for(simplified_framework_entity_with_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+
+test(the_gate_false_is_not_simplified_framework_entity, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, simplified_framework_entity, _Citations).
+
+test(an_article_16_1_entity_is_not_complete, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(simplified_framework_entity_with_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, complete, _Citations).
+
+% ---- (S-G2) the gate absent / near miss the gate given ----------------
+test(the_gate_absent_is_asked) :-
+    dora_rts_policies_and_risk_management_profile_for(gate_unanswered, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []).
+
+test(the_gate_given_is_not_asked, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, indeterminate(_), _Citations).
+
+% ---- (R1) required / near miss the gate true ---------------------------
+test(the_gate_false_requires_the_duties) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_required(Profile, required([_|_]), _Citations).
+
+test(the_gate_true_requires_no_duty, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(simplified_framework_entity_with_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_required(Profile, required(_), _Citations).
+
+% ---- (S2) an absent duty key / near miss every key present ------------
+test(an_absent_duty_key_is_asked) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_unanswered, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, indeterminate([security_policies_contain_safeguards_against_intrusions_and_data_misuse]), []).
+
+test(an_absent_duty_key_is_not_complete, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_unanswered, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, complete, _Citations).
+
+test(every_key_present_is_not_indeterminate, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, indeterminate(_), _Citations).
+
+% ---- (S3) an unsure duty / near miss the same duty false ---------------
+test(an_unsure_duty_is_referred) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_judgement_unsure, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, needs_legal_review(open_textured(security_policies_contain_indicators_and_measures_for_implementation_and_exceptions, cite(eu_reg_2024_1774_art_2_2_c)), _Context), []).
+
+test(the_same_duty_false_is_incomplete) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_judgement_unsure, Profile),
+    with_value(Profile, security_policies_contain_indicators_and_measures_for_implementation_and_exceptions, false, FalseProfile),
+    rts_policies_and_risk_management_duties_complete(FalseProfile, incomplete, _Citations).
+
+test(the_same_duty_false_is_not_referred, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_judgement_unsure, Profile),
+    with_value(Profile, security_policies_contain_indicators_and_measures_for_implementation_and_exceptions, false, FalseProfile),
+    rts_policies_and_risk_management_duties_complete(FalseProfile, needs_legal_review(_, _), _Citations).
+
+test(an_unsure_duty_is_not_outstanding_yet, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_judgement_unsure, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, outstanding(_), _Citations).
+
+% ---- (S1 vs M1) a false duty and an absent key -------------------------
+test(complete_is_settled_by_the_false_duty) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_not_performed_and_another_unanswered, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, incomplete, _Citations).
+
+test(outstanding_still_asks_the_absent_key) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_not_performed_and_another_unanswered, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, indeterminate([size_risk_profile_and_complexity_taken_into_account]), []).
+
+test(outstanding_does_not_list_before_the_absent_key_is_answered, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_not_performed_and_another_unanswered, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, outstanding(_), _Citations).
+
+test(complete_does_not_ask_the_absent_key, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(duty_not_performed_and_another_unanswered, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, indeterminate(_), _Citations).
+
+% ---- (M3) outstanding / near miss none_outstanding ---------------------
+test(a_failing_duty_is_outstanding) :-
+    dora_rts_policies_and_risk_management_profile_for(one_duty_not_performed, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, outstanding([network_security]), [cite(eu_reg_2024_1774_art_2_1_a)]).
+
+test(every_duty_performed_is_none_outstanding) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, none_outstanding, _Citations).
+
+test(every_duty_performed_has_nothing_outstanding, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, outstanding(_), _Citations).
+
+test(a_failing_duty_is_not_none_outstanding, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(one_duty_not_performed, Profile),
+    rts_policies_and_risk_management_duties_outstanding(Profile, none_outstanding, _Citations).
+
+% ---- (R0/S0/M0) input problems / near miss a clean profile -------------
+test(an_unknown_key_is_an_input_problem) :-
+    dora_rts_policies_and_risk_management_profile_for(unknown_key_present, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, input_problems([unknown_key(colour)]), []).
+
+test(an_unknown_key_gets_no_final_answer, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(unknown_key_present, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, complete, _Citations).
+
+test(a_clean_profile_has_no_input_problem, fail) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, input_problems(_), _Citations).
+
+:- end_module(test_negative_controls).

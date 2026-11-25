@@ -1,0 +1,165 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_rts_change_management.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% dora_rts_change_management_what_if/4      (#16 what-if): override one key -> re-evaluate
+% dora_rts_change_management_profile_keys/1: top-level profile key schema
+% dora_rts_change_management_input_problems/2: the problems a profile has ([] = none)
+%
+% The declared query types are served by the slice's public predicates,
+% which the package facade re-exports:
+%   #13 compliance_check: ict_change_management_duties_complete/3 (are the
+%       duties of Article 17 of Delegated Regulation (EU) 2024/1774
+%       performed, as the caller judges them);
+%   #2 eligibility: dora_rts_change_management_status/2 (complete |
+%       incomplete | simplified_framework_entity, or a status compound);
+%   #7 justification: dora_rts_change_management_checklist/2 (one
+%       item(Duty, Status, cite(Key)) per duty, every item cited).
+% This layer adds the what-if combinator, the key schema, and the
+% RESULT CONSTRUCTORS and root atoms the order requires to be exported.
+% The result constructors with arguments are data: they are declared
+% with constructors/1 and have no clauses.
+% =====================================================================
+
+:- module(queries, [
+    dora_rts_change_management_profile_keys/1,
+    dora_rts_change_management_input_problems/2,
+    dora_rts_change_management_what_if/4,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    financial_entity_is_article_16_1_entity/0,
+    dora_entity_type/0,
+    significant_changes_made_to_ict_systems/0,
+    change_procedures_verify_whether_ict_security_requirements_met/0,
+    change_procedures_ensure_independence_of_approving_functions/0,
+    change_roles_described_for_specifying_and_planning/0,
+    change_roles_described_for_designing_adequate_transition/0,
+    change_roles_described_for_controlled_testing_and_finalisation/0,
+    change_roles_described_for_effective_quality_assurance/0,
+    change_purpose_and_scope_documented_and_communicated/0,
+    change_implementation_timeline_documented_and_communicated/0,
+    change_expected_outcomes_documented_and_communicated/0,
+    change_fall_back_procedures_and_responsibilities_identified/0,
+    emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards/0,
+    emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation/0,
+    change_impact_on_ict_security_measures_identified_and_assessed/0,
+    ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions/0,
+    clearing_members_clients_and_other_parties_involved_in_testing/0,
+    users_service_providers_and_other_parties_involved_in_testing/0,
+    verification_of_ict_security_requirements/0,
+    independence_of_change_approval_functions/0,
+    roles_for_specifying_and_planning_changes/0,
+    roles_for_designing_the_transition/0,
+    roles_for_controlled_testing_and_finalisation/0,
+    roles_for_quality_assurance/0,
+    documentation_of_purpose_and_scope_of_change/0,
+    documentation_of_implementation_timeline/0,
+    documentation_of_expected_outcomes/0,
+    fall_back_procedures_and_responsibilities/0,
+    management_of_emergency_changes/0,
+    review_of_emergency_changes_after_implementation/0,
+    impact_of_change_on_ict_security_measures/0,
+    stringent_testing_after_significant_changes/0,
+    central_counterparty_involvement_of_parties_in_testing/0,
+    central_securities_depository_involvement_of_parties_in_testing/0,
+    central_counterparty/0,
+    central_securities_depository/0,
+    unsure/0
+]).
+
+:- use_module(eu/dora_rts_change_management/kernel, [dora_rts_change_management_input_problems/2]).
+:- use_module(eu/dora_rts_change_management/dora_rts_change_management, [dora_rts_change_management_status/2]).
+
+:- constructors([required(duties), outstanding(duties), indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(key, citation), inputs_relied_on(pairs), provenance(clause, citations), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_rts_change_management_profile_keys([financial_entity_is_article_16_1_entity, dora_entity_type, significant_changes_made_to_ict_systems, change_procedures_verify_whether_ict_security_requirements_met, change_procedures_ensure_independence_of_approving_functions, change_roles_described_for_specifying_and_planning, change_roles_described_for_designing_adequate_transition, change_roles_described_for_controlled_testing_and_finalisation, change_roles_described_for_effective_quality_assurance, change_purpose_and_scope_documented_and_communicated, change_implementation_timeline_documented_and_communicated, change_expected_outcomes_documented_and_communicated, change_fall_back_procedures_and_responsibilities_identified, emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards, emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation, change_impact_on_ict_security_measures_identified_and_assessed, ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions, clearing_members_clients_and_other_parties_involved_in_testing, users_service_providers_and_other_parties_involved_in_testing]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% Fix side (a) THE LOGIC: the profile of this order is an ATTRIBUTE LIST, and
+% query_combinators' override_key/4 works on dicts only (it raised
+% type_error(dict, ...)), so the override is done on the attribute list here.
+dora_rts_change_management_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_rts_change_management_status(Hypothesis, NewStatus).
+
+% attribute_override(Profile, Key, Value, Hypothesis): every attribute of Key
+% is dropped and attribute(Key, Value) is added once at the end.
+attribute_override(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    attributes_without_key(Profile, OverriddenKey, KeptAttributes),
+    append(KeptAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attributes_without_key([], _, []).
+attributes_without_key([attribute(ElementKey, _)|Elements], OverriddenKey, KeptAttributes) :-
+    ElementKey == OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, KeptAttributes).
+attributes_without_key([attribute(ElementKey, ElementValue)|Elements], OverriddenKey, [attribute(ElementKey, ElementValue)|KeptAttributes]) :-
+    ElementKey \== OverriddenKey,
+    attributes_without_key(Elements, OverriddenKey, KeptAttributes).
+
+% ---- result atoms (exported, never called as queries) ------------------
+complete.
+incomplete.
+none_outstanding.
+simplified_framework_entity.
+
+% ---- root atoms: the nineteen profile keys, in root_exports order -----
+financial_entity_is_article_16_1_entity.
+dora_entity_type.
+significant_changes_made_to_ict_systems.
+change_procedures_verify_whether_ict_security_requirements_met.
+change_procedures_ensure_independence_of_approving_functions.
+change_roles_described_for_specifying_and_planning.
+change_roles_described_for_designing_adequate_transition.
+change_roles_described_for_controlled_testing_and_finalisation.
+change_roles_described_for_effective_quality_assurance.
+change_purpose_and_scope_documented_and_communicated.
+change_implementation_timeline_documented_and_communicated.
+change_expected_outcomes_documented_and_communicated.
+change_fall_back_procedures_and_responsibilities_identified.
+emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards.
+emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation.
+change_impact_on_ict_security_measures_identified_and_assessed.
+ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions.
+clearing_members_clients_and_other_parties_involved_in_testing.
+users_service_providers_and_other_parties_involved_in_testing.
+
+% ---- root atoms: the sixteen duties, in duty order --------------------
+verification_of_ict_security_requirements.
+independence_of_change_approval_functions.
+roles_for_specifying_and_planning_changes.
+roles_for_designing_the_transition.
+roles_for_controlled_testing_and_finalisation.
+roles_for_quality_assurance.
+documentation_of_purpose_and_scope_of_change.
+documentation_of_implementation_timeline.
+documentation_of_expected_outcomes.
+fall_back_procedures_and_responsibilities.
+management_of_emergency_changes.
+review_of_emergency_changes_after_implementation.
+impact_of_change_on_ict_security_measures.
+stringent_testing_after_significant_changes.
+central_counterparty_involvement_of_parties_in_testing.
+central_securities_depository_involvement_of_parties_in_testing.
+
+% ---- root atoms: the two entity types read, and the judgement value ---
+central_counterparty.
+central_securities_depository.
+unsure.
+
+:- end_module(queries).

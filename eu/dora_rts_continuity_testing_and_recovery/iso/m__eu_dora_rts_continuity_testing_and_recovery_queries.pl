@@ -1,0 +1,198 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_continuity_testing_and_recovery_queries, [dora_rts_continuity_testing_and_recovery_profile_keys/1, dora_rts_continuity_testing_and_recovery_what_if/4, dora_rts_continuity_testing_and_recovery_compliance_check/2, dora_rts_continuity_testing_and_recovery_eligibility/2, complete/0, incomplete/0, none_outstanding/0, simplified_framework_entity/0, unsure/0, central_counterparty/0, central_securities_depository/0, testing_informed_by_business_impact_analysis_and_ict_risk_assessment/0, assessment_of_continuity_of_critical_or_important_functions/0, testing_on_disruption_scenarios/0, testing_of_ict_third_party_services/0, testing_of_switchover_scenarios/0, testing_challenges_plan_assumptions/0, testing_verifies_ability_to_respond/0, involvement_of_central_counterparty_parties_in_testing/0, involvement_of_central_securities_depository_parties_in_testing/0, documentation_of_test_results/0, handling_of_test_deficiencies/0, response_and_recovery_plans_informed_by_business_impact_analysis/0, activation_and_deactivation_conditions/0, actions_for_critical_or_important_ict_systems_and_services/0, design_to_meet_recovery_objectives/0, documentation_and_availability_of_plans/0, short_and_long_term_recovery_options/0, plan_objectives_and_success_conditions/0, identification_of_relevant_scenarios/0, scenarios_based_on_threats_and_lessons_learned/0, listed_disruption_scenarios/0, alternative_recovery_options/0, continuity_measures_for_ict_third_party_service_provider_failures/0, financial_entity_is_article_16_1_entity/0, financial_entity_is_microenterprise/0, dora_entity_type/0, financial_entity_uses_ict_services_of_ict_third_party_service_providers/0, continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment/0, continuity_testing_assesses_continuity_of_critical_or_important_functions/0, continuity_testing_based_on_scenarios_including_severe_but_plausible_scenarios/0, continuity_testing_contains_testing_of_ict_services_of_ict_third_party_service_providers/0, continuity_testing_contains_switchover_scenarios/0, continuity_testing_challenges_assumptions_of_business_continuity_plans/0, continuity_testing_contains_procedures_to_verify_ability_to_respond/0, continuity_testing_involves_clearing_members_external_providers_and_interdependent_institutions/0, continuity_testing_involves_users_utilities_market_infrastructures_and_interdependent_institutions/0, continuity_test_results_documented/0, continuity_test_deficiencies_analysed_addressed_and_reported_to_management_body/0, response_and_recovery_plans_take_into_account_business_impact_analysis/0, response_and_recovery_plans_specify_activation_and_deactivation_conditions_and_exceptions/0, response_and_recovery_plans_describe_actions_for_ict_systems_and_services_supporting_critical_or_important_functions/0, response_and_recovery_plans_designed_to_meet_recovery_objectives/0, response_and_recovery_plans_documented_available_and_accessible_with_roles_and_responsibilities/0, response_and_recovery_plans_provide_short_term_and_long_term_recovery_options/0, response_and_recovery_plans_lay_down_objectives_and_conditions_of_successful_execution/0, response_and_recovery_plans_identify_relevant_scenarios/0, response_and_recovery_plans_develop_scenarios_on_current_threat_information_and_lessons_learned/0, listed_disruption_scenarios_duly_taken_into_account/0, response_and_recovery_plans_consider_alternative_options_where_primary_recovery_measures_may_not_be_feasible/0, continuity_measures_for_ict_third_party_service_provider_failures_considered_and_implemented/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_rts_continuity_testing_and_recovery_kernel, [dora_rts_continuity_testing_and_recovery_input_problems/2]).
+:- use_module(m__eu_dora_rts_continuity_testing_and_recovery_dora_rts_continuity_testing_and_recovery, [rts_continuity_testing_and_recovery_duties_required/3, rts_continuity_testing_and_recovery_duties_complete/3, rts_continuity_testing_and_recovery_duties_outstanding/3, dora_rts_continuity_testing_and_recovery_status/2, dora_rts_continuity_testing_and_recovery_checklist/2]).
+
+dora_rts_continuity_testing_and_recovery_profile_keys([financial_entity_is_article_16_1_entity, financial_entity_is_microenterprise, dora_entity_type, financial_entity_uses_ict_services_of_ict_third_party_service_providers, continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment, continuity_testing_assesses_continuity_of_critical_or_important_functions, continuity_testing_based_on_scenarios_including_severe_but_plausible_scenarios, continuity_testing_contains_testing_of_ict_services_of_ict_third_party_service_providers, continuity_testing_contains_switchover_scenarios, continuity_testing_challenges_assumptions_of_business_continuity_plans, continuity_testing_contains_procedures_to_verify_ability_to_respond, continuity_testing_involves_clearing_members_external_providers_and_interdependent_institutions, continuity_testing_involves_users_utilities_market_infrastructures_and_interdependent_institutions, continuity_test_results_documented, continuity_test_deficiencies_analysed_addressed_and_reported_to_management_body, response_and_recovery_plans_take_into_account_business_impact_analysis, response_and_recovery_plans_specify_activation_and_deactivation_conditions_and_exceptions, response_and_recovery_plans_describe_actions_for_ict_systems_and_services_supporting_critical_or_important_functions, response_and_recovery_plans_designed_to_meet_recovery_objectives, response_and_recovery_plans_documented_available_and_accessible_with_roles_and_responsibilities, response_and_recovery_plans_provide_short_term_and_long_term_recovery_options, response_and_recovery_plans_lay_down_objectives_and_conditions_of_successful_execution, response_and_recovery_plans_identify_relevant_scenarios, response_and_recovery_plans_develop_scenarios_on_current_threat_information_and_lessons_learned, listed_disruption_scenarios_duly_taken_into_account, response_and_recovery_plans_consider_alternative_options_where_primary_recovery_measures_may_not_be_feasible, continuity_measures_for_ict_third_party_service_provider_failures_considered_and_implemented]).
+
+dora_rts_continuity_testing_and_recovery_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    dora_rts_continuity_testing_and_recovery_input_problems(Profile, Problems),
+    what_if_profile(Problems, Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_rts_continuity_testing_and_recovery_status(Hypothesis, NewStatus).
+
+what_if_profile([], Profile, OverriddenKey, NewValue, Hypothesis) :-
+    overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis).
+what_if_profile([_|_], Profile, _, _, Profile).
+
+overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    attributes_without_key(Profile, OverriddenKey, OtherAttributes),
+    append(OtherAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attributes_without_key([], _, []).
+attributes_without_key([attribute(AttributeKey, _)|LaterAttributes], WantedKey, Kept) :-
+    AttributeKey == WantedKey,
+    attributes_without_key(LaterAttributes, WantedKey, Kept).
+attributes_without_key([attribute(AttributeKey, AttributeValue)|LaterAttributes], WantedKey, [attribute(AttributeKey, AttributeValue)|Kept]) :-
+    AttributeKey \== WantedKey,
+    attributes_without_key(LaterAttributes, WantedKey, Kept).
+
+dora_rts_continuity_testing_and_recovery_compliance_check(Profile, Verdict) :-
+    rts_continuity_testing_and_recovery_duties_outstanding(Profile, Result, Citations),
+    compliance_verdict_of(Result, Citations, Verdict).
+
+compliance_verdict_of(none_outstanding, Citations, compliance_verdict(compliant, [], Citations)).
+compliance_verdict_of(outstanding(Duties), Citations, compliance_verdict(non_compliant, Duties, Citations)).
+compliance_verdict_of(simplified_framework_entity, Citations, compliance_verdict(not_applicable, [], Citations)).
+compliance_verdict_of(indeterminate(MissingKeys), _, compliance_verdict(indeterminate(MissingKeys), [], [])).
+compliance_verdict_of(needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on(Pairs)|Provenance]), _, compliance_verdict(needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on(Pairs)|Provenance]), [], [])).
+compliance_verdict_of(input_problems(Problems), _, compliance_verdict(input_problems(Problems), [], [])).
+
+dora_rts_continuity_testing_and_recovery_eligibility(Profile, eligibility_assessment(Decision, Checklist)) :-
+    rts_continuity_testing_and_recovery_duties_complete(Profile, Result, _Citations),
+    eligibility_decision_of(Result, Decision),
+    dora_rts_continuity_testing_and_recovery_checklist(Profile, Checklist).
+
+eligibility_decision_of(complete, eligible).
+eligibility_decision_of(incomplete, ineligible).
+eligibility_decision_of(simplified_framework_entity, not_applicable).
+eligibility_decision_of(indeterminate(_), indeterminate_eligibility).
+eligibility_decision_of(needs_legal_review(_, _), indeterminate_eligibility).
+eligibility_decision_of(input_problems(_), indeterminate_eligibility).
+
+complete.
+
+incomplete.
+
+none_outstanding.
+
+simplified_framework_entity.
+
+unsure.
+
+central_counterparty.
+
+central_securities_depository.
+
+testing_informed_by_business_impact_analysis_and_ict_risk_assessment.
+
+assessment_of_continuity_of_critical_or_important_functions.
+
+testing_on_disruption_scenarios.
+
+testing_of_ict_third_party_services.
+
+testing_of_switchover_scenarios.
+
+testing_challenges_plan_assumptions.
+
+testing_verifies_ability_to_respond.
+
+involvement_of_central_counterparty_parties_in_testing.
+
+involvement_of_central_securities_depository_parties_in_testing.
+
+documentation_of_test_results.
+
+handling_of_test_deficiencies.
+
+response_and_recovery_plans_informed_by_business_impact_analysis.
+
+activation_and_deactivation_conditions.
+
+actions_for_critical_or_important_ict_systems_and_services.
+
+design_to_meet_recovery_objectives.
+
+documentation_and_availability_of_plans.
+
+short_and_long_term_recovery_options.
+
+plan_objectives_and_success_conditions.
+
+identification_of_relevant_scenarios.
+
+scenarios_based_on_threats_and_lessons_learned.
+
+listed_disruption_scenarios.
+
+alternative_recovery_options.
+
+continuity_measures_for_ict_third_party_service_provider_failures.
+
+financial_entity_is_article_16_1_entity.
+
+financial_entity_is_microenterprise.
+
+dora_entity_type.
+
+financial_entity_uses_ict_services_of_ict_third_party_service_providers.
+
+continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment.
+
+continuity_testing_assesses_continuity_of_critical_or_important_functions.
+
+continuity_testing_based_on_scenarios_including_severe_but_plausible_scenarios.
+
+continuity_testing_contains_testing_of_ict_services_of_ict_third_party_service_providers.
+
+continuity_testing_contains_switchover_scenarios.
+
+continuity_testing_challenges_assumptions_of_business_continuity_plans.
+
+continuity_testing_contains_procedures_to_verify_ability_to_respond.
+
+continuity_testing_involves_clearing_members_external_providers_and_interdependent_institutions.
+
+continuity_testing_involves_users_utilities_market_infrastructures_and_interdependent_institutions.
+
+continuity_test_results_documented.
+
+continuity_test_deficiencies_analysed_addressed_and_reported_to_management_body.
+
+response_and_recovery_plans_take_into_account_business_impact_analysis.
+
+response_and_recovery_plans_specify_activation_and_deactivation_conditions_and_exceptions.
+
+response_and_recovery_plans_describe_actions_for_ict_systems_and_services_supporting_critical_or_important_functions.
+
+response_and_recovery_plans_designed_to_meet_recovery_objectives.
+
+response_and_recovery_plans_documented_available_and_accessible_with_roles_and_responsibilities.
+
+response_and_recovery_plans_provide_short_term_and_long_term_recovery_options.
+
+response_and_recovery_plans_lay_down_objectives_and_conditions_of_successful_execution.
+
+response_and_recovery_plans_identify_relevant_scenarios.
+
+response_and_recovery_plans_develop_scenarios_on_current_threat_information_and_lessons_learned.
+
+listed_disruption_scenarios_duly_taken_into_account.
+
+response_and_recovery_plans_consider_alternative_options_where_primary_recovery_measures_may_not_be_feasible.
+
+continuity_measures_for_ict_third_party_service_provider_failures_considered_and_implemented.
+
+test(the_profile_schema_has_twenty_seven_keys) :-
+    dora_rts_continuity_testing_and_recovery_profile_keys(ProfileKeys),
+    length(ProfileKeys, 27).
+test(an_article_16_entity_is_not_applicable_for_compliance) :-
+    findall(Verdict, dora_rts_continuity_testing_and_recovery_compliance_check([attribute(financial_entity_is_article_16_1_entity, true)], Verdict), Verdicts),
+    Verdicts == [compliance_verdict(not_applicable, [], [cite(eu_reg_2022_2554_art_16_1)])].
+test(an_empty_profile_is_indeterminate_for_eligibility) :-
+    dora_rts_continuity_testing_and_recovery_eligibility([], eligibility_assessment(indeterminate_eligibility, [_FirstItem|_OtherItems])).
+test(the_root_result_atoms_are_facts) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    simplified_framework_entity,
+    unsure,
+    central_counterparty,
+    central_securities_depository.
+test(what_if_overrides_an_attribute_list_profile) :-
+    findall(NewStatus, dora_rts_continuity_testing_and_recovery_what_if([attribute(financial_entity_is_article_16_1_entity, false)], financial_entity_is_article_16_1_entity, true, NewStatus), NewStatuses),
+    NewStatuses == [simplified_framework_entity].
+test(required_lists_the_duties_of_a_microenterprise_without_providers) :-
+    rts_continuity_testing_and_recovery_duties_required([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, true), attribute(dora_entity_type, credit_institution), attribute(financial_entity_uses_ict_services_of_ict_third_party_service_providers, false)], required(Duties), _Citations),
+    length(Duties, 18).
+test(an_unsure_duty_is_referred_with_its_inputs_through_compliance) :-
+    dora_rts_continuity_testing_and_recovery_compliance_check([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, true), attribute(dora_entity_type, credit_institution), attribute(financial_entity_uses_ict_services_of_ict_third_party_service_providers, false), attribute(continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment, unsure)], compliance_verdict(Status, [], [])),
+    dif(Status, compliant),
+    Status = indeterminate(_).
+
+test(an_article_16_entity_is_not_compliant, fail) :-
+    dora_rts_continuity_testing_and_recovery_compliance_check([attribute(financial_entity_is_article_16_1_entity, true)], compliance_verdict(compliant, _, _)).

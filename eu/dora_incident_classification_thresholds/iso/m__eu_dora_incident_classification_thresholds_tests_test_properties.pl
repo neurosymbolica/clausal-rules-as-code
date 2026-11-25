@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_incident_classification_thresholds_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_incident_classification_thresholds_dora_incident_classification_thresholds, [dora_incident_threshold_status/4]).
+:- use_module(m__eu_dora_incident_classification_thresholds_fixtures, [dora_incident_classification_thresholds_subject/1, dora_incident_classification_thresholds_profile_for/2, dora_incident_classification_thresholds_assess/2]).
+
+condition_list([critical_services_affected, data_losses_malicious_access_threshold_met, clients_financial_counterparts_and_transactions_threshold_met, reputational_impact_threshold_met, duration_and_service_downtime_threshold_met, geographical_spread_threshold_met, data_losses_impact_threshold_met, economic_impact_threshold_met]).
+
+citation_vocabulary([cite(eu_reg_2022_2554_art_18_1), cite(eu_reg_2024_1772_art_8_1), cite(eu_reg_2024_1772_art_6), cite(eu_reg_2024_1772_art_9_5_b), cite(eu_reg_2024_1772_art_9_1), cite(eu_reg_2024_1772_art_1), cite(eu_reg_2024_1772_art_9_2), cite(eu_reg_2024_1772_art_2), cite(eu_reg_2024_1772_art_9_3), cite(eu_reg_2024_1772_art_3), cite(eu_reg_2024_1772_art_9_4), cite(eu_reg_2024_1772_art_4), cite(eu_reg_2024_1772_art_9_5_a), cite(eu_reg_2024_1772_art_5), cite(eu_reg_2024_1772_art_9_6), cite(eu_reg_2024_1772_art_7), cite(eu_reg_2025_301_art_5_1_c), cite(eu_reg_2025_301_art_5_4), cite(eu_reg_2025_301_art_5_5), cite(eu_reg_2025_301_art_5_6)]).
+
+final_answer(met).
+final_answer(not_met).
+final_answer(on_time).
+final_answer(late(month_limit)).
+
+status_compound(indeterminate([_MissingKey])).
+status_compound(needs_legal_review(open_textured(_InputKey, cite(_CitationKey)), [inputs_relied_on(_KeyValuePairs)])).
+status_compound(input_problems([_FirstProblem|_OtherProblems])).
+
+in_vocabulary(Vocabulary, Citation) :-
+    member(Citation, Vocabulary).
+
+well_cited(dora_incident_classification_thresholds_verdict(Status, Citations)) :-
+    final_answer(Status),
+    Citations = [_|_],
+    citation_vocabulary(Vocabulary),
+    maplist(in_vocabulary(Vocabulary), Citations).
+well_cited(dora_incident_classification_thresholds_verdict(Status, [])) :-
+    status_compound(Status).
+
+subject_has_one_result(Subject) :-
+    findall(Result, dora_incident_classification_thresholds_assess(Subject, Result), Results),
+    length(Results, 1).
+
+subject_is_well_cited(Subject) :-
+    dora_incident_classification_thresholds_assess(Subject, Result),
+    well_cited(Result).
+
+profile_condition_single(Profile, Condition) :-
+    findall(Status, dora_incident_threshold_status(Profile, Condition, Status, _Citations), Statuses),
+    length(Statuses, 1).
+
+subject_single_for_every_condition(Conditions, Subject) :-
+    dora_incident_classification_thresholds_profile_for(Subject, Profile),
+    maplist(profile_condition_single(Profile), Conditions).
+
+all_subjects(SubjectSet) :-
+    findall(Subject, dora_incident_classification_thresholds_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet).
+
+test(totality_and_determinism_every_subject_has_one_verdict) :-
+    all_subjects(SubjectSet),
+    SubjectSet = [_|_],
+    maplist(subject_has_one_result, SubjectSet).
+test(determinism_every_profile_every_condition) :-
+    all_subjects(SubjectSet),
+    condition_list(Conditions),
+    maplist(subject_single_for_every_condition(Conditions), SubjectSet).
+test(citation_completeness_every_subject) :-
+    all_subjects(SubjectSet),
+    maplist(subject_is_well_cited, SubjectSet).
+test(monotone_duration_flips_once_above_a_day) :-
+    maplist(duration_status, [0, 7200, 86400, 86401, 172800], Statuses),
+    Statuses == [not_met, not_met, not_met, met, met].
+test(monotone_downtime_flips_once_above_two_hours) :-
+    maplist(downtime_status, [0, 7199, 7200, 7201, 86400], Statuses),
+    Statuses == [not_met, not_met, not_met, met, met].
+test(monotone_economic_impact_flips_once_above_the_limit) :-
+    maplist(economic_status, [0, 9999999, 10000000, 10000001, 50000000], Statuses),
+    Statuses == [not_met, not_met, not_met, met, met].
+test(a_met_point_stays_met_whatever_else_is_given) :-
+    maplist(met_with_addition, [attribute(clients_using_affected_service, 100000000), attribute(relevant_clients_or_financial_counterparts_affected, unsure), attribute(relevant_clients_or_financial_counterparts_affected, false), attribute(reference_period_days, 0), attribute(affected_financial_counterparts, 0)]).
+
+duration_status(DurationSeconds, Status) :-
+    dora_incident_threshold_status([attribute(incident_duration_seconds, DurationSeconds), attribute(critical_or_important_function_service_downtime_seconds, 0)], duration_and_service_downtime_threshold_met, Status, _Citations).
+
+downtime_status(DowntimeSeconds, Status) :-
+    dora_incident_threshold_status([attribute(incident_duration_seconds, 0), attribute(critical_or_important_function_service_downtime_seconds, DowntimeSeconds)], duration_and_service_downtime_threshold_met, Status, _Citations).
+
+economic_status(AdvisoryCents, Status) :-
+    dora_incident_threshold_status([attribute(expropriated_funds_and_assets_cents, 0), attribute(replacement_and_relocation_costs_cents, 0), attribute(staff_costs_cents, 0), attribute(contractual_non_compliance_fees_cents, 0), attribute(redress_and_compensation_costs_cents, 0), attribute(forgone_revenue_losses_cents, 0), attribute(communication_costs_cents, 0), attribute(advisory_costs_cents, AdvisoryCents), attribute(costs_and_losses_likely_to_exceed_threshold, false)], economic_impact_threshold_met, Status, _Citations).
+
+met_with_addition(Addition) :-
+    dora_incident_threshold_status([attribute(affected_clients, 100001), Addition], clients_financial_counterparts_and_transactions_threshold_met, met, _Citations).
+
+cp_test_names([totality_and_determinism_every_subject_has_one_verdict, determinism_every_profile_every_condition, citation_completeness_every_subject, monotone_duration_flips_once_above_a_day, monotone_downtime_flips_once_above_two_hours, monotone_economic_impact_flips_once_above_the_limit, a_met_point_stays_met_whatever_else_is_given]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

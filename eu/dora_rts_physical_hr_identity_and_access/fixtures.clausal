@@ -1,0 +1,133 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dora_rts_physical_hr_identity_and_access.
+% A TOP-LAYER consumer: it imports the slice's decide_/2 only. Profile keys
+% and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...]. There is no
+% numeric threshold in this order (readings (8), (17)), so each route is
+% paired with a ONE-KEY near-miss control: the same profile with one value
+% changed, which gets the opposite verdict.
+%
+% Routes and their controls (verdict = the complete query's answer):
+%   article_16_1_entity            simplified_framework_entity
+%     control all_duties_performed (gate false)          complete
+%   gate_absent                    indeterminate([gate])
+%     control all_duties_performed                       complete
+%   one_duty_not_performed         incomplete
+%     control all_duties_performed                       complete
+%   first_absent_duty              indeterminate([dedicated accounts key])
+%     control all_duties_performed                       complete
+%   unsure_referral                needs_legal_review(open_textured(...), ...)
+%     control all_duties_performed                       complete
+%   failing_duty_with_absent_duty  incomplete (outstanding: indeterminate)
+%     control first_absent_duty                          indeterminate
+%   closing_subparagraph_duties_outstanding  incomplete
+%     (outstanding: the three closing duties of Art 21)
+%   duplicate_and_wrong_type       input_problems([...])
+%     control all_duties_performed                       complete
+%   unknown_key                    input_problems([unknown_key(colour)])
+%     control gate_only_false                            indeterminate
+%   gate_only_false                indeterminate([first duty key])
+% =====================================================================
+
+:- module(fixtures, [
+    dora_rts_physical_hr_identity_and_access_subject/1,
+    dora_rts_physical_hr_identity_and_access_profile_for/2,
+    dora_rts_physical_hr_identity_and_access_assess/2
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/dora_rts_physical_hr_identity_and_access, [decide_dora_rts_physical_hr_identity_and_access/2]).
+
+% ---- Subject registry ------------------------------------------------
+dora_rts_physical_hr_identity_and_access_subject(article_16_1_entity).
+dora_rts_physical_hr_identity_and_access_subject(all_duties_performed).
+dora_rts_physical_hr_identity_and_access_subject(gate_absent).
+dora_rts_physical_hr_identity_and_access_subject(one_duty_not_performed).
+dora_rts_physical_hr_identity_and_access_subject(first_absent_duty).
+dora_rts_physical_hr_identity_and_access_subject(unsure_referral).
+dora_rts_physical_hr_identity_and_access_subject(failing_duty_with_absent_duty).
+dora_rts_physical_hr_identity_and_access_subject(closing_subparagraph_duties_outstanding).
+dora_rts_physical_hr_identity_and_access_subject(duplicate_and_wrong_type).
+dora_rts_physical_hr_identity_and_access_subject(unknown_key).
+dora_rts_physical_hr_identity_and_access_subject(gate_only_false).
+
+% ---- Profiles --------------------------------------------------------
+dora_rts_physical_hr_identity_and_access_profile_for(article_16_1_entity, Profile) :-
+    profile_built(true, [], Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile) :-
+    profile_built(false, [], Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(gate_absent, Profile) :-
+    profile_built(absent, [], Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile) :-
+    profile_built(false, [access_control_policy_contains_segregation_of_duties-false], Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(first_absent_duty, Profile) :-
+    profile_built(false, [dedicated_accounts_used_for_administrative_tasks_where_possible-absent], Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(unsure_referral, Profile) :-
+    profile_built(false, [access_control_policy_contains_segregation_of_duties-unsure], Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(failing_duty_with_absent_duty, Profile) :-
+    profile_built(false,
+                  [physical_security_policy_contains_clear_desk_policy_for_papers-false,
+                   dedicated_accounts_used_for_administrative_tasks_where_possible-absent],
+                  Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(closing_subparagraph_duties_outstanding, Profile) :-
+    profile_built(false,
+                  [retention_period_for_the_purposes_of_point_e_i_established-false,
+                   dedicated_accounts_used_for_administrative_tasks_where_possible-false,
+                   automated_solutions_for_privileged_access_management_deployed_where_feasible_and_appropriate-false],
+                  Profile).
+dora_rts_physical_hr_identity_and_access_profile_for(duplicate_and_wrong_type, Profile) :-
+    profile_built(false, [access_control_policy_contains_segregation_of_duties-maybe], Built),
+    Profile = [attribute(financial_entity_is_article_16_1_entity, true)|Built].
+dora_rts_physical_hr_identity_and_access_profile_for(unknown_key, [attribute(financial_entity_is_article_16_1_entity, false), attribute(colour, blue)]).
+dora_rts_physical_hr_identity_and_access_profile_for(gate_only_false, [attribute(financial_entity_is_article_16_1_entity, false)]).
+
+% ---- Profile construction ---------------------------------------------
+% The thirty-six duty keys, in root_exports (duty) order.
+duty_keys([physical_and_environmental_security_policy_specified_documented_and_implemented, physical_security_policy_designed_in_light_of_threat_landscape_classification_and_risk_profile, physical_security_policy_refers_to_section_on_physical_access_controls, physical_security_policy_contains_measures_protecting_premises_data_centres_and_sensitive_areas, physical_security_policy_contains_measures_securing_ict_assets_within_and_outside_premises, physical_security_policy_contains_measures_of_appropriate_maintenance, physical_security_policy_contains_clear_desk_policy_for_papers, physical_security_policy_contains_clear_screen_policy_for_information_processing_facilities, physical_security_policy_contains_measures_protecting_unattended_ict_assets, human_resource_policy_identifies_and_assigns_ict_security_responsibilities, human_resource_policy_requires_staff_to_be_informed_of_and_adhere_to_ict_security_policies, human_resource_policy_requires_staff_to_be_aware_of_reporting_channels, human_resource_policy_requires_staff_to_return_assets_upon_termination_of_employment, identity_management_policies_and_procedures_developed_documented_and_implemented, identity_management_assigns_unique_identity_corresponding_to_unique_user_account, identity_management_contains_lifecycle_management_process_for_identities_and_accounts, records_of_all_identity_assignments_maintained_and_kept, automated_solutions_for_lifecycle_identity_management_deployed_where_feasible_and_appropriate, access_control_policy_developed_documented_and_implemented, access_control_policy_assigns_access_rights_on_need_to_know_need_to_use_and_least_privilege, access_control_policy_contains_segregation_of_duties, access_control_policy_contains_provision_on_user_accountability, access_control_policy_contains_provision_on_restrictions_of_access_to_ict_assets, account_management_procedures_assign_roles_for_granting_reviewing_and_revoking_access_rights, account_management_procedures_assign_privileged_emergency_and_administrator_access_on_need_to_use_or_ad_hoc_basis, account_management_procedures_withdraw_access_rights_without_undue_delay, account_management_procedures_update_access_rights_where_necessary_and_at_the_required_intervals, access_control_policy_uses_authentication_methods_commensurate_to_classification_and_risk_profile, access_control_policy_uses_strong_authentication_methods_where_required, physical_access_controls_identify_and_log_persons_authorised_to_access_premises, physical_access_rights_to_critical_ict_assets_granted_to_authorised_persons_only, physical_access_to_premises_data_centres_and_sensitive_areas_monitored, physical_access_rights_reviewed_and_unnecessary_rights_promptly_revoked, retention_period_for_the_purposes_of_point_e_i_established, dedicated_accounts_used_for_administrative_tasks_where_possible, automated_solutions_for_privileged_access_management_deployed_where_feasible_and_appropriate]).
+
+% profile_built(GateValue, Overrides, Profile): the gate (absent leaves it
+% out), then every duty key true unless an Override Key-Value says otherwise
+% (the value absent leaves the key out).
+profile_built(GateValue, Overrides, Profile) :-
+    duty_keys(Keys),
+    duty_attributes(Keys, Overrides, DutyAttributes),
+    add_attribute(GateValue, financial_entity_is_article_16_1_entity, DutyAttributes, Profile).
+
+duty_attributes([], _, []).
+duty_attributes([Key|Keys], Overrides, Attributes) :-
+    override_value(Key, Overrides, Value),
+    duty_attributes(Keys, Overrides, LaterAttributes),
+    add_attribute(Value, Key, LaterAttributes, Attributes).
+
+add_attribute(absent, _, Attributes, Attributes).
+add_attribute(Value, Key, Attributes, [attribute(Key, Value)|Attributes]) :-
+    dif(Value, absent).
+
+override_value(Key, Overrides, Value) :-
+    pairs_keys(Overrides, OverrideKeys),
+    memberd_t(Key, OverrideKeys, Overridden),
+    chosen_value(Overridden, Key, Overrides, Value).
+
+chosen_value(true, Key, Overrides, Value) :-
+    member(Key-Value, Overrides).
+chosen_value(false, _, _, true).
+
+% ---- Convenience wrapper ---------------------------------------------
+dora_rts_physical_hr_identity_and_access_assess(Subject, Result) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(Subject, Profile),
+    decide_dora_rts_physical_hr_identity_and_access(Profile, Result).
+
+test(every_subject_has_one_profile) :-
+    findall(Subject, dora_rts_physical_hr_identity_and_access_subject(Subject), Subjects),
+    findall(Subject, ( member(Subject, Subjects), dora_rts_physical_hr_identity_and_access_profile_for(Subject, _) ), WithProfiles),
+    Subjects == WithProfiles.
+test(the_full_profile_has_thirty_seven_attributes) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    length(Profile, 37).
+test(an_absent_override_drops_the_key) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(first_absent_duty, Profile),
+    length(Profile, 36).
+
+:- end_module(fixtures).

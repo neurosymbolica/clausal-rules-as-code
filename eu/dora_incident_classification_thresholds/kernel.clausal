@@ -1,0 +1,288 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/dora_incident_classification_thresholds (temporal family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. This package has ONE
+% determination slice (dora_incident_classification_thresholds.clausal),
+% so the only shared predicate is the order's input check
+% dora_incident_classification_thresholds_input_problems/2, which the
+% scaffold writes here from the order's typed input contract and which the
+% slice and queries.clausal both import:
+%   :- use_module(eu/dora_incident_classification_thresholds/kernel, [dora_incident_classification_thresholds_input_problems/2]).
+%
+% Source: the order's typed input contract (INTERFACE - THE PROFILE AND
+% THE ATOMS, INTERFACE - THE INPUT CHECK) for the profile of ONE
+% ICT-related incident classified under Regulation (EU) 2022/2554 (DORA)
+% Art 18(1), measured as Commission Delegated Regulation (EU) 2024/1772
+% Arts 1 to 7 say and thresholded by its Art 9(1) to (6); and the final
+% report time limit of Commission Delegated Regulation (EU) 2025/301
+% Art 5(1)(c) with Art 5(4) to (6). The input check itself decides no
+% statutory condition, so it carries no implements/1 marker.
+%
+% Atoms and data terms need NO declaration and NO import. This comment
+% block only RECORDS the result terms so every file spells them alike.
+%
+% RESULT TERMS (spelled exactly as the order pins them):
+%   dora_incident_classification_thresholds_verdict(Status, Citations)
+%     the slice's result term; Status is the answer of the called query,
+%     Citations the list of cite(Key) terms of a final answer, [] for a
+%     status compound.
+%   dora_incident_threshold_status/4 STATUS:
+%     met | not_met                      final answers
+%     indeterminate([Key])               one bare absent key; the
+%                                        bare atom indeterminate is NEVER written
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%                                        Pairs: Key-Value pairs of the
+%                                        condition present in the profile, in
+%                                        root_exports order
+%     input_problems(Problems)           the input check, then
+%                                        wrong_type(threshold)
+%   dora_final_report_timeliness/5 RESULT:
+%     on_time | late(month_limit)        final answers
+%     indeterminate([final_report_weekend_extension])
+%     input_problems(Problems)           the input check, then
+%                                        wrong_type(latest_intermediate_date),
+%                                        wrong_type(final_date)
+%   Problems: duplicate_key(Key), wrong_type(Key), unknown_key(Key), or
+%     [wrong_type(profile)] alone for a profile that is not an attribute list.
+%   THRESHOLD atoms (the eight conditions of Art 8(1) of 2024/1772):
+%     critical_services_affected, data_losses_malicious_access_threshold_met,
+%     clients_financial_counterparts_and_transactions_threshold_met,
+%     reputational_impact_threshold_met,
+%     duration_and_service_downtime_threshold_met,
+%     geographical_spread_threshold_met, data_losses_impact_threshold_met,
+%     economic_impact_threshold_met.
+%   Judgement values: true | false | unsure. Part and point states inside the
+%     slice and in its checklist: met | closed | open.
+% =====================================================================
+
+:- module(kernel, [dora_incident_classification_thresholds_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% dora_incident_classification_thresholds_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+dora_incident_classification_thresholds_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [affects_ict_services_supporting_critical_or_important_functions, affects_authorised_registered_or_supervised_financial_services, successful_malicious_unauthorised_access, access_may_result_in_data_losses, affected_clients, clients_using_affected_service, affected_financial_counterparts, financial_counterparts_of_affected_service, affected_transactions_number, affected_transactions_amount, reference_period_transactions_number, reference_period_transactions_amount, reference_period_days, relevant_clients_or_financial_counterparts_affected, incident_reflected_in_media, repetitive_complaints_from_different_clients_or_counterparts, regulatory_requirements_likely_not_met, material_loss_of_clients_or_counterparts_likely, incident_duration_seconds, critical_or_important_function_service_downtime_seconds, member_states_with_impact, data_impact_adverse_to_business_objectives_or_regulatory_requirements, data_availability_impact, data_authenticity_impact, data_integrity_impact, data_confidentiality_impact, expropriated_funds_and_assets_cents, replacement_and_relocation_costs_cents, staff_costs_cents, contractual_non_compliance_fees_cents, redress_and_compensation_costs_cents, forgone_revenue_losses_cents, communication_costs_cents, advisory_costs_cents, costs_and_losses_likely_to_exceed_threshold, final_report_weekend_extension],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(affects_ict_services_supporting_critical_or_important_functions, judgement).
+key_type(affects_authorised_registered_or_supervised_financial_services, judgement).
+key_type(successful_malicious_unauthorised_access, judgement).
+key_type(access_may_result_in_data_losses, judgement).
+key_type(affected_clients, non_negative_integer).
+key_type(clients_using_affected_service, non_negative_integer).
+key_type(affected_financial_counterparts, non_negative_integer).
+key_type(financial_counterparts_of_affected_service, non_negative_integer).
+key_type(affected_transactions_number, non_negative_integer).
+key_type(affected_transactions_amount, non_negative_integer).
+key_type(reference_period_transactions_number, non_negative_integer).
+key_type(reference_period_transactions_amount, non_negative_integer).
+key_type(reference_period_days, non_negative_integer).
+key_type(relevant_clients_or_financial_counterparts_affected, judgement).
+key_type(incident_reflected_in_media, judgement).
+key_type(repetitive_complaints_from_different_clients_or_counterparts, judgement).
+key_type(regulatory_requirements_likely_not_met, judgement).
+key_type(material_loss_of_clients_or_counterparts_likely, judgement).
+key_type(incident_duration_seconds, non_negative_integer).
+key_type(critical_or_important_function_service_downtime_seconds, non_negative_integer).
+key_type(member_states_with_impact, non_negative_integer).
+key_type(data_impact_adverse_to_business_objectives_or_regulatory_requirements, judgement).
+key_type(data_availability_impact, judgement).
+key_type(data_authenticity_impact, judgement).
+key_type(data_integrity_impact, judgement).
+key_type(data_confidentiality_impact, judgement).
+key_type(expropriated_funds_and_assets_cents, non_negative_integer).
+key_type(replacement_and_relocation_costs_cents, non_negative_integer).
+key_type(staff_costs_cents, non_negative_integer).
+key_type(contractual_non_compliance_fees_cents, non_negative_integer).
+key_type(redress_and_compensation_costs_cents, non_negative_integer).
+key_type(forgone_revenue_losses_cents, non_negative_integer).
+key_type(communication_costs_cents, non_negative_integer).
+key_type(advisory_costs_cents, non_negative_integer).
+key_type(costs_and_losses_likely_to_exceed_threshold, judgement).
+key_type(final_report_weekend_extension, fact).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(fact, Value, T) :-
+    in_type_t(boolean, Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+in_type_t(non_negative_integer, Value, T) :-
+    non_negative_integer_t(Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+% integer_t(Value, T): for a ground Value, T is true when it is an integer and false when it is a
+% float, an atom or a compound term.
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+% non_negative_integer_t(Value, T): for a ground Value, T is true when it is an integer of 0 or
+% more.
+non_negative_integer_t(Value, T) :-
+    integer_t(Value, IsInteger),
+    not_below_zero_t(IsInteger, Value, T).
+
+not_below_zero_t(false, _, false).
+not_below_zero_t(true, Value, true) :-
+    Value >= 0.
+not_below_zero_t(true, Value, false) :-
+    Value < 0.
+
+:- end_module(kernel).

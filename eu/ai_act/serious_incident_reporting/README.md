@@ -4,7 +4,7 @@
 
 ## Scope
 
-For one incident or malfunctioning of an AI system whose provider (or the caller acting for it) is the provider of a system placed on the Union market: whether the provider must report it as a serious incident under Article 73 of Regulation (EU) 2024/1689 (Artificial Intelligence Act, consolidated text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744), to which authority (Art 73(1) and (10)), by which last calendar day (2, 10 or 15 days after awareness, Art 73(2) to (4)), with the follow-up duties of Art 73(6) listed; and whether a first report made on a given day was in time. Decided here are the dates of application read from Art 113 third paragraph point (c)(i) and (ii), the systems already on the market of Art 111(2), the definition of serious incident of Art 3(49), the point (c) limitation of Art 73(9) and (10), and the widespread infringement of Art 3(61) as a judgement. Out of scope and handed to the caller or a lawyer: high-risk classification under Art 6 and the Annexes, whether the event is an incident of a provider's system placed on the market, open-textured judgements (significant change in design, equivalent Union reporting obligations, widespread ...
+For one incident or malfunctioning of an AI system whose provider (or someone acting for it) asks, under Regulation (EU) 2024/1689 as consolidated on 27 July 2026 (amended by Regulation (EU) 2026/1744): whether the report of a serious incident under Art 73(1) is due (Art 3(49) and (61), Art 73(1) to (4), (9) and (10), Art 75(1a), Art 111(2), Art 113 third paragraph point (c)), to which recipient (the market surveillance authority, the national competent authority of Art 73(10), or the AI Office), within 2, 10 or 15 calendar days of awareness and by which last day, with the follow-up duties of Art 73(6) listed; and whether a first report made on a given day was in time (Art 73(2) to (5)). Open-textured judgements (significant change in design, use by public authorities, equivalent Union reporting obligations, widespread infringement, immediacy) are handed to the caller or a lawyer. Out of scope: classification as high-risk (Art 6, Annexes I and III), whether Art 75(1) applies (attested outside fact), the severity rule of Art 73(2) second subparagraph, the content of reports and follow-up, the authorities' side of Art 73(7), (8) and (11), Art 111(1) and the period rules of ...
 
 ## Where the open questions are
 
@@ -14,7 +14,7 @@ For one incident or malfunctioning of an AI system whose provider (or the caller
 
 ## What was checked
 
-- 262 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
+- 247 tests, passing on Clausal Prolog, Scryer Prolog and Trealla Prolog (see the repository README).
 - Every citation record quotes its statute word for word against the pinned text under `sources/` (`_tools/check_citations.py`).
 - This domain has no provision-tracking ledger (`provisions.yaml`): the share of the statute it covers has not been accounted unit by unit.
 

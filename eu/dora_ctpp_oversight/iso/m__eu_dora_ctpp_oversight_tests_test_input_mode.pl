@@ -1,0 +1,128 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ctpp_oversight_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ctpp_oversight_kernel, [dora_ctpp_oversight_input_problems/2]).
+:- use_module(m__eu_dora_ctpp_oversight_dora_ctpp_oversight, [ctpp_oversight_duties_required/3, ctpp_lead_overseer_powers/3, ctpp_response_window_status/3, ctpp_periodic_penalty_payment_status/3, ctpp_periodic_penalty_payment_limits/3, ctpp_competent_authority_measure_condition/3, dora_ctpp_oversight_status/2, dora_ctpp_oversight_status_values/1]).
+:- use_module(m__eu_dora_ctpp_oversight_fixtures, [dora_ctpp_oversight_profile_for/2]).
+
+test(status_holds_with_the_verdict_bound) :-
+    dora_ctpp_oversight_profile_for(designated_provider_full_profile, Profile),
+    dora_ctpp_oversight_status(Profile, subject_to_lead_overseer_oversight).
+test(not_designated_status_bound) :-
+    dora_ctpp_oversight_profile_for(not_designated_provider, Profile),
+    dora_ctpp_oversight_status(Profile, not_designated_as_critical).
+test(duties_bound) :-
+    dora_ctpp_oversight_profile_for(duties_with_planned_subcontracting, Profile),
+    ctpp_oversight_duties_required(Profile, required([transmit_subcontracting_information_to_lead_overseer, cooperate_in_good_faith_with_lead_overseer]), _Citations).
+test(powers_bound) :-
+    dora_ctpp_oversight_profile_for(powers_risk_not_deemed, Profile),
+    ctpp_lead_overseer_powers(Profile, powers([request_information_and_documentation, conduct_general_investigations_and_inspections, request_remediation_reports, issue_recommendations]), _Citations).
+test(window_bound) :-
+    dora_ctpp_oversight_profile_for(statement_window_day_after_last_day, Profile),
+    ctpp_response_window_status(Profile, window_closed(date(2026, 3, 17)), [cite(eu_reg_2022_2554_art_33_4)]).
+test(penalty_status_bound) :-
+    dora_ctpp_oversight_profile_for(penalty_thirtieth_day_after_receipt, Profile),
+    ctpp_periodic_penalty_payment_status(Profile, penalty_waiting_period_running(date(2026, 2, 1)), [cite(eu_reg_2022_2554_art_35_6)]).
+test(penalty_limits_bound) :-
+    dora_ctpp_oversight_profile_for(limits_notified_end_of_august_before_leap_year, Profile),
+    ctpp_periodic_penalty_payment_limits(Profile, penalty_limits(amount(1, 36600), date(2028, 2, 29)), _Citations).
+test(measure_bound) :-
+    dora_ctpp_oversight_profile_for(measure_plan_not_adopted, Profile),
+    ctpp_competent_authority_measure_condition(Profile, no_article_33_5_condition, [cite(eu_reg_2022_2554_art_33_5)]).
+test(indeterminate_bound) :-
+    dora_ctpp_oversight_profile_for(designation_unstated, Profile),
+    ctpp_competent_authority_measure_condition(Profile, indeterminate([provider_designated_as_critical]), []).
+test(an_unbound_profile_gets_input_problems) :-
+    ctpp_oversight_duties_required(_, input_problems([wrong_type(profile)]), []).
+test(an_atom_profile_gets_input_problems) :-
+    ctpp_lead_overseer_powers(profile, input_problems([wrong_type(profile)]), []).
+test(a_list_with_a_non_attribute_is_wrong_type_profile_alone) :-
+    dora_ctpp_oversight_input_problems([attribute(colour, blue), colour], Problems),
+    Problems == [wrong_type(profile)].
+test(a_list_with_an_unbound_element_is_wrong_type_profile) :-
+    dora_ctpp_oversight_input_problems([attribute(colour, blue), _], Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_value_of_a_contract_key_is_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(provider_designated_as_critical, _)], Problems),
+    Problems == [wrong_type(provider_designated_as_critical)].
+test(a_date_with_an_unbound_part_is_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(assessment_date, date(2026, 1, _))], Problems),
+    Problems == [wrong_type(assessment_date)].
+test(the_atom_unsure_on_a_crisp_key_is_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(oversight_activities_completed, unsure)], Problems),
+    Problems == [wrong_type(oversight_activities_completed)].
+test(a_float_turnover_is_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(preceding_business_year_worldwide_turnover, 1.0)], Problems),
+    Problems == [wrong_type(preceding_business_year_worldwide_turnover)].
+test(a_negative_turnover_is_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(preceding_business_year_worldwide_turnover, -1)], Problems),
+    Problems == [wrong_type(preceding_business_year_worldwide_turnover)].
+test(a_quoted_value_on_a_crisp_key_is_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(provider_designated_as_critical, "true")], Problems),
+    Problems == [wrong_type(provider_designated_as_critical)].
+test(an_unknown_enumeration_value_is_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(response_window, other_window)], Problems),
+    Problems == [wrong_type(response_window)].
+test(an_unbound_key_is_named_as_given) :-
+    dora_ctpp_oversight_input_problems([attribute(Key, value_given)], Problems),
+    Problems = [unknown_key(Named)],
+    Named == Key.
+test(two_distinct_unbound_keys_are_two_unknown_keys) :-
+    dora_ctpp_oversight_input_problems([attribute(FirstKey, one), attribute(SecondKey, two)], Problems),
+    Problems = [unknown_key(FirstNamed), unknown_key(SecondNamed)],
+    FirstNamed == FirstKey,
+    SecondNamed == SecondKey.
+test(the_same_unbound_key_twice_is_one_unknown_key) :-
+    dora_ctpp_oversight_input_problems([attribute(Key, one), attribute(Key, two)], Problems),
+    Problems = [unknown_key(Named)],
+    Named == Key.
+test(a_number_key_is_an_unknown_key) :-
+    dora_ctpp_oversight_input_problems([attribute(7, seven)], Problems),
+    Problems == [unknown_key(7)].
+test(seven_and_seven_point_zero_are_two_keys) :-
+    dora_ctpp_oversight_input_problems([attribute(7, seven), attribute(7.0, seven)], Problems),
+    Problems == [unknown_key(7), unknown_key(7.0)].
+test(a_duplicate_key_is_never_also_wrong_type) :-
+    dora_ctpp_oversight_input_problems([attribute(measure_power, bad), attribute(measure_power, worse)], Problems),
+    Problems == [duplicate_key(measure_power)].
+test(an_unknown_key_with_an_unbound_value_is_unknown_key_only) :-
+    dora_ctpp_oversight_input_problems([attribute(colour, _)], Problems),
+    Problems == [unknown_key(colour)].
+test(an_absent_key_is_not_a_problem) :-
+    dora_ctpp_oversight_input_problems([], Problems),
+    Problems == [].
+test(input_problems_come_before_the_designation) :-
+    ctpp_periodic_penalty_payment_status([attribute(provider_designated_as_critical, false), attribute(measure_power, bad)], input_problems([wrong_type(measure_power)]), []).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_ctpp_oversight_profile_for(designated_provider_full_profile, Profile),
+    dora_ctpp_oversight_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, subject_to_lead_overseer_oversight),
+    dora_ctpp_oversight_status(Profile, Other).
+test(duties_in_another_order_are_rejected, fail) :-
+    dora_ctpp_oversight_profile_for(duties_with_planned_subcontracting, Profile),
+    ctpp_oversight_duties_required(Profile, required([cooperate_in_good_faith_with_lead_overseer, transmit_subcontracting_information_to_lead_overseer]), _Citations).
+test(window_bound_last_day_must_match, fail) :-
+    dora_ctpp_oversight_profile_for(statement_window_day_after_last_day, Profile),
+    ctpp_response_window_status(Profile, window_closed(date(2026, 3, 18)), _Citations).
+test(penalty_limits_unreduced_fraction_is_rejected, fail) :-
+    dora_ctpp_oversight_profile_for(limits_notified_end_of_august, Profile),
+    ctpp_periodic_penalty_payment_limits(Profile, penalty_limits(amount(36500000, 36500), _LastDay), _Citations).
+test(bare_indeterminate_atom_is_rejected, fail) :-
+    dora_ctpp_oversight_profile_for(designation_unstated, Profile),
+    ctpp_competent_authority_measure_condition(Profile, indeterminate, _Citations).
+test(an_input_problem_is_never_a_final_answer, fail) :-
+    ctpp_periodic_penalty_payment_status([attribute(provider_designated_as_critical, false), attribute(measure_power, bad)], not_designated_as_critical, _Citations).
+
+cp_test_names([status_holds_with_the_verdict_bound, not_designated_status_bound, duties_bound, powers_bound, window_bound, penalty_status_bound, penalty_limits_bound, measure_bound, indeterminate_bound, an_unbound_profile_gets_input_problems, an_atom_profile_gets_input_problems, a_list_with_a_non_attribute_is_wrong_type_profile_alone, a_list_with_an_unbound_element_is_wrong_type_profile, an_unbound_value_of_a_contract_key_is_wrong_type, a_date_with_an_unbound_part_is_wrong_type, the_atom_unsure_on_a_crisp_key_is_wrong_type, a_float_turnover_is_wrong_type, a_negative_turnover_is_wrong_type, a_quoted_value_on_a_crisp_key_is_wrong_type, an_unknown_enumeration_value_is_wrong_type, an_unbound_key_is_named_as_given, two_distinct_unbound_keys_are_two_unknown_keys, the_same_unbound_key_twice_is_one_unknown_key, a_number_key_is_an_unknown_key, seven_and_seven_point_zero_are_two_keys, a_duplicate_key_is_never_also_wrong_type, an_unknown_key_with_an_unbound_value_is_unknown_key_only, an_absent_key_is_not_a_problem, input_problems_come_before_the_designation]).
+cp_test_fail_names([every_other_bound_status_is_rejected, duties_in_another_order_are_rejected, window_bound_last_day_must_match, penalty_limits_unreduced_fraction_is_rejected, bare_indeterminate_atom_is_rejected, an_input_problem_is_never_a_final_answer]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

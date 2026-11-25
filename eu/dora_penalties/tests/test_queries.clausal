@@ -1,0 +1,148 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer: the profile
+% keys, the #16 what-if combinator, the #7 justification checklist and the
+% root-export vocabulary of queries.clausal.
+% Run: python -m clausal.testing eu/dora_penalties/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_penalties/queries, [
+    dora_penalties_profile_keys/1,
+    dora_penalties_what_if/4,
+    required/0,
+    not_required_criminal_penalties/0,
+    supervisory/0,
+    penalty/0,
+    extension/0,
+    access_to_documents_and_data/0,
+    on_site_inspections_and_investigations/0,
+    require_corrective_and_remedial_measures/0,
+    cease_and_desist_order/0,
+    cessation_of_practice_or_conduct/0,
+    measures_to_ensure_continued_compliance/0,
+    require_data_traffic_records/0,
+    public_notice/0,
+    management_body_and_responsible_individuals/0,
+    intent_or_negligence/0,
+    materiality_gravity_and_duration/0,
+    degree_of_responsibility/0,
+    financial_strength/0,
+    profits_gained_or_losses_avoided/0,
+    losses_for_third_parties/0,
+    cooperation_with_competent_authority/0,
+    previous_breaches/0
+]).
+:- use_module(eu/dora_penalties/dora_penalties, [dora_penalties_checklist/2]).
+:- use_module(eu/dora_penalties/fixtures, [dora_penalties_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_penalties_profile_keys(ProfileKeys),
+    ProfileKeys == [breach_subject_to_criminal_penalties_under_national_law, member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, member_state_laid_down_criminal_penalties_for_breaches, national_law_permits_requiring_data_traffic_records, measures_applied_to_legal_person, decision_imposes_art_50_2_c_measure, breach_materiality_gravity_duration_relevant, degree_of_responsibility_relevant, financial_strength_relevant, profits_gained_or_losses_avoided_relevant, third_party_losses_relevant, cooperation_with_authority_relevant, previous_breaches_relevant].
+
+% ---- #16 what-if -------------------------------------------------------
+test(what_if_option_not_used_flips_to_required) :-
+    dora_penalties_profile_for(option_used, Profile),
+    findall(Status, dora_penalties_what_if(Profile, member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, false, Status), Statuses),
+    Statuses == [required].
+
+test(what_if_same_value_keeps_status) :-
+    dora_penalties_profile_for(option_used, Profile),
+    findall(Status, dora_penalties_what_if(Profile, member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true, Status), Statuses),
+    Statuses == [not_required_criminal_penalties].
+
+test(what_if_supplies_an_absent_key) :-
+    dora_penalties_profile_for(breach_criminal_choice_absent, Profile),
+    findall(Status, dora_penalties_what_if(Profile, member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true, Status), Statuses),
+    Statuses == [not_required_criminal_penalties].
+
+test(what_if_replaces_a_duplicated_key) :-
+    dora_penalties_profile_for(duplicate_breach_key, Profile),
+    findall(Status, dora_penalties_what_if(Profile, breach_subject_to_criminal_penalties_under_national_law, false, Status), Statuses),
+    Statuses == [required].
+
+test(what_if_wrong_type_value_is_an_input_problem) :-
+    dora_penalties_profile_for(option_used, Profile),
+    dora_penalties_what_if(Profile, breach_subject_to_criminal_penalties_under_national_law, unsure, input_problems).
+
+test(what_if_on_an_empty_list_has_an_answer) :-
+    dora_penalties_what_if([], breach_subject_to_criminal_penalties_under_national_law, false, required).
+
+test(what_if_on_a_non_list_has_no_answer, fail) :-
+    dora_penalties_what_if(not_a_list, breach_subject_to_criminal_penalties_under_national_law, false, _).
+
+% ---- #7 justification: the cited checklist -----------------------------
+test(checklist_cites_each_item) :-
+    dora_penalties_profile_for(option_used, Profile),
+    findall(Checklist, dora_penalties_checklist(Profile, Checklist), [Items]),
+    Items = [
+        item(administrative_penalty_rules_required, not_required_criminal_penalties, [cite(eu_reg_2022_2554_art_52_1)]),
+        item(minimum_powers, _, PowersCitations),
+        item(penalty_decision_safeguards, _, SafeguardsCitations),
+        item(circumstances_to_take_into_account, _, CircumstancesCitations),
+        item(criminal_penalty_liaison_duties, _, DutiesCitations)
+    ],
+    PowersCitations == [cite(eu_reg_2022_2554_art_50_2_a), cite(eu_reg_2022_2554_art_50_2_b), cite(eu_reg_2022_2554_art_50_2_c), cite(eu_reg_2022_2554_art_50_5)],
+    SafeguardsCitations == [cite(eu_reg_2022_2554_art_50_6), cite(eu_reg_2022_2554_art_50_6)],
+    CircumstancesCitations == [cite(eu_reg_2022_2554_art_51_2), cite(eu_reg_2022_2554_art_51_2_a), cite(eu_reg_2022_2554_art_51_2_c), cite(eu_reg_2022_2554_art_51_2_f), cite(eu_reg_2022_2554_art_51_2_g)],
+    DutiesCitations == [cite(eu_reg_2022_2554_art_52_2), cite(eu_reg_2022_2554_art_52_2)].
+
+test(checklist_referral_cites_its_row) :-
+    dora_penalties_profile_for(judgement_unsure, Profile),
+    dora_penalties_checklist(Profile, Items),
+    member(item(circumstances_to_take_into_account, needs_legal_review(_, _), [cite(eu_reg_2022_2554_art_51_2_b)]), Items).
+
+test(checklist_status_items_carry_no_citation) :-
+    dora_penalties_checklist([], Items),
+    member(item(administrative_penalty_rules_required, indeterminate([breach_subject_to_criminal_penalties_under_national_law]), []), Items),
+    member(item(minimum_powers, indeterminate([breach_subject_to_criminal_penalties_under_national_law]), []), Items).
+
+% ---- root-export vocabulary --------------------------------------------
+test(result_and_measure_atoms_are_defined) :-
+    required,
+    not_required_criminal_penalties,
+    supervisory,
+    penalty,
+    extension,
+    access_to_documents_and_data,
+    on_site_inspections_and_investigations,
+    require_corrective_and_remedial_measures,
+    cease_and_desist_order,
+    cessation_of_practice_or_conduct,
+    measures_to_ensure_continued_compliance,
+    require_data_traffic_records,
+    public_notice,
+    management_body_and_responsible_individuals.
+
+test(circumstance_atoms_are_defined) :-
+    intent_or_negligence,
+    materiality_gravity_and_duration,
+    degree_of_responsibility,
+    financial_strength,
+    profits_gained_or_losses_avoided,
+    losses_for_third_parties,
+    cooperation_with_competent_authority,
+    previous_breaches.
+
+% The result constructors are data: their terms build and are compound.
+test(result_constructors_build_terms) :-
+    Terms = [
+        power(supervisory, access_to_documents_and_data, cite(eu_reg_2022_2554_art_50_2_a)),
+        circumstance(intent_or_negligence, cite(eu_reg_2022_2554_art_51_2)),
+        properly_reasoned(cite(eu_reg_2022_2554_art_50_6)),
+        right_of_appeal(cite(eu_reg_2022_2554_art_50_6)),
+        receive_criminal_proceedings_information(cite(eu_reg_2022_2554_art_52_2)),
+        provide_information_to_authorities_and_esas(cite(eu_reg_2022_2554_art_52_2)),
+        indeterminate([measures_applied_to_legal_person]),
+        needs_legal_review(open_textured(previous_breaches_relevant, cite(eu_reg_2022_2554_art_51_2_g)), [inputs_relied_on([])]),
+        open_textured(previous_breaches_relevant, cite(eu_reg_2022_2554_art_51_2_g)),
+        inputs_relied_on([]),
+        provenance(circumstances_by_unsure, []),
+        input_problems([unknown_key(colour)]),
+        unknown_key(colour),
+        wrong_type(profile),
+        duplicate_key(measures_applied_to_legal_person)
+    ],
+    length(Terms, 15),
+    maplist(compound, Terms).
+
+:- end_module(test_queries).

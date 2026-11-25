@@ -1,0 +1,117 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/dora_ict_incident_management_process loads (kernel and citations),
+% the result terms of the order build and destructure, the verdict atoms
+% are distinct, and the real citation records resolve.
+% Self-contained: the determination slice is not referenced here.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/dora_ict_incident_management_process/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/dora_ict_incident_management_process/kernel, [dora_ict_incident_management_process_input_problems/2]).
+:- use_module(eu/dora_ict_incident_management_process/citations, [citation/2, implements/1]).
+
+% ---- the kernel loads: its input check answers ----------------------
+
+test(the_kernel_input_check_accepts_an_empty_profile) :-
+    dora_ict_incident_management_process_input_problems([], []).
+
+test(the_kernel_input_check_accepts_a_false_judgement) :-
+    dora_ict_incident_management_process_input_problems([attribute(incident_response_procedures_established, false)], []).
+
+test(the_kernel_input_check_names_a_wrong_value) :-
+    dora_ict_incident_management_process_input_problems([attribute(incident_response_procedures_established, maybe)], [wrong_type(incident_response_procedures_established)]).
+
+test(the_kernel_input_check_does_not_accept_a_wrong_value, fail) :-
+    dora_ict_incident_management_process_input_problems([attribute(incident_response_procedures_established, maybe)], []).
+
+test(the_kernel_input_check_refuses_a_non_list_profile) :-
+    dora_ict_incident_management_process_input_problems(not_a_list, [wrong_type(profile)]).
+
+% ---- the verdict atoms are distinct ---------------------------------
+
+test(complete_and_incomplete_are_distinct) :-
+    dif(complete, incomplete).
+
+test(none_outstanding_and_complete_are_distinct) :-
+    dif(none_outstanding, complete).
+
+test(none_outstanding_and_incomplete_are_distinct) :-
+    dif(none_outstanding, incomplete).
+
+test(the_judgement_values_are_distinct) :-
+    dif(true, false),
+    dif(true, unsure),
+    dif(false, unsure).
+
+% ---- the result terms build and destructure -------------------------
+
+test(the_required_result_builds_and_destructures) :-
+    Result = required([incident_management_process, recording_of_incidents_and_significant_cyber_threats, monitoring_handling_and_follow_up_procedures, early_warning_indicators, identification_and_classification_procedures, incident_roles_and_responsibilities, communication_and_escalation_plans, reporting_to_senior_management_and_management_body, incident_response_procedures, classification_of_significant_cyber_threats]),
+    Result = required(Duties),
+    length(Duties, 10),
+    Duties = [FirstDuty|_],
+    FirstDuty == incident_management_process,
+    last(Duties, LastDuty),
+    LastDuty == classification_of_significant_cyber_threats.
+
+test(the_outstanding_result_builds_and_destructures) :-
+    Result = outstanding([early_warning_indicators, incident_response_procedures]),
+    Result = outstanding(Duties),
+    Duties == [early_warning_indicators, incident_response_procedures].
+
+test(the_indeterminate_status_holds_one_bare_key) :-
+    Status = indeterminate([early_warning_indicators_put_in_place]),
+    Status = indeterminate(MissingKeys),
+    MissingKeys = [MissingKey],
+    atom(MissingKey),
+    MissingKey == early_warning_indicators_put_in_place.
+
+test(the_referral_status_builds_and_destructures) :-
+    Status = needs_legal_review(open_textured(early_warning_indicators_put_in_place, cite(eu_reg_2022_2554_art_17_3_a)), [inputs_relied_on([early_warning_indicators_put_in_place-unsure])]),
+    Status = needs_legal_review(Reason, Context),
+    Reason = open_textured(JudgementKey, cite(CitationKey)),
+    JudgementKey == early_warning_indicators_put_in_place,
+    citation(CitationKey, _Record),
+    Context = [inputs_relied_on(Pairs)],
+    Pairs == [early_warning_indicators_put_in_place-unsure].
+
+test(the_input_problems_status_builds_and_destructures) :-
+    Status = input_problems([duplicate_key(incident_response_procedures_established), unknown_key(colour)]),
+    Status = input_problems(Problems),
+    Problems = [FirstProblem, SecondProblem],
+    FirstProblem = duplicate_key(DuplicatedKey),
+    DuplicatedKey == incident_response_procedures_established,
+    SecondProblem = unknown_key(UnknownKey),
+    UnknownKey == colour.
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = dora_ict_incident_management_process_verdict(complete, [cite(eu_reg_2022_2554_art_17_1), cite(eu_reg_2022_2554_art_17_2), cite(eu_reg_2022_2554_art_17_3), cite(eu_reg_2022_2554_art_18_2)]),
+    Verdict = dora_ict_incident_management_process_verdict(Status, Citations),
+    Status == complete,
+    length(Citations, 4).
+
+% ---- the real citation records resolve ------------------------------
+
+test(the_article_17_1_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_17_1, _Record).
+
+test(the_fixed_citations_are_recorded) :-
+    implements(eu_reg_2022_2554_art_17_1),
+    implements(eu_reg_2022_2554_art_17_2),
+    implements(eu_reg_2022_2554_art_17_3),
+    implements(eu_reg_2022_2554_art_18_2).
+
+test(the_point_citations_are_recorded) :-
+    implements(eu_reg_2022_2554_art_17_3_a),
+    implements(eu_reg_2022_2554_art_17_3_b),
+    implements(eu_reg_2022_2554_art_17_3_c),
+    implements(eu_reg_2022_2554_art_17_3_d),
+    implements(eu_reg_2022_2554_art_17_3_e),
+    implements(eu_reg_2022_2554_art_17_3_f).
+
+test(a_shortened_citation_is_not_recorded, fail) :-
+    citation(dora_art_17_1, _Record).
+
+:- end_module(test_load).

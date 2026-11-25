@@ -1,0 +1,257 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_rts_logging_and_network_security
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_rts_logging_and_network_security"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (dora_rts_logging_and_network_security_input_problems/2 is listed once, under queries.clausal, which re-exports it)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_rts_logging_and_network_security.clausal --
+  - "decide_dora_rts_logging_and_network_security/2"
+  - "dora_rts_logging_and_network_security_status/2"
+  - "dora_rts_logging_and_network_security_checklist/2"
+  - "dora_rts_logging_and_network_security_decision_resolvable/1"
+  - "dora_rts_logging_and_network_security_status_values/1"
+  - "rts_logging_and_network_security_duties_required/3"
+  - "rts_logging_and_network_security_duties_complete/3"
+  - "rts_logging_and_network_security_duties_outstanding/3"
+  - "complete/0"
+  - "incomplete/0"
+  - "none_outstanding/0"
+  - "simplified_framework_entity/0"
+  - "required/1"
+  - "outstanding/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "dora_rts_logging_and_network_security_profile_keys/1"
+  - "dora_rts_logging_and_network_security_input_problems/2"
+  - "dora_rts_logging_and_network_security_what_if/4"
+  # -- fixtures.clausal --
+  - "dora_rts_logging_and_network_security_subject/1"
+  - "dora_rts_logging_and_network_security_profile_for/2"
+  - "dora_rts_logging_and_network_security_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. This domain imports only the kit (formalize_lib) and its own
+# modules, no shared backbone package.
+uses: []
+
+scope: "For ONE financial entity within the scope of DORA (presupposed, not decided):
+  which of the duties on logging (Article 12), network security management (Article 13)
+  and securing information in transit (Article 14) of Commission Delegated Regulation
+  (EU) 2024/1774 apply to it, whether it has performed all of them, and which are outstanding,
+  with the rule of Regulation (EU) 2022/2554 (DORA) Article 16(1), first subparagraph,
+  that Articles 5 to 15 of DORA do not apply to the entities it lists (answered
+  simplified_framework_entity). Each duty is the caller's judgement (true, false or
+  unsure); an unsure judgement that decides goes to a lawyer as needs_legal_review.
+  Out of scope: the simplified ICT risk management framework of DORA Article 16(1),
+  second subparagraph, (2) and (3) (deferred); the other articles of the technical
+  standards, DORA Articles 2 to 15, the proportionality principle, the standards of
+  Regulation (EU) No 1025/2012 and the dates of application (excluded; sibling orders)."
+
+sources:
+  - "Commission Delegated Regulation (EU) 2024/1774 of 13 March 2024 supplementing Regulation (EU) 2022/2554 with regard to regulatory technical standards specifying ICT risk management tools, methods, processes and policies and the simplified ICT risk management framework (CELEX 32024R1774, base act as published), Article 12 (logging), Article 13 (network security management), Article 14 (securing information in transit)"
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554), Article 16(1), first subparagraph"
+
+query_interface:
+  2: "dora_rts_logging_and_network_security_status/2"        # eligibility/status verdict over the completeness query
+  7: "dora_rts_logging_and_network_security_checklist/2"     # justification: one cited item per duty
+  13: "rts_logging_and_network_security_duties_complete/3"   # compliance_check: are the obligations performed
+  16: "dora_rts_logging_and_network_security_what_if/4"      # what_if: re-evaluate under one changed key
+
+deferred_set:
+- what: headings
+  units:
+  - 32024R1774#art_012
+  - 32024R1774#art_014
+  - 32022R2554#art_016
+  reason: The headings of Articles 12 and 14 of the technical standards and of Article
+    16 of DORA carry no rule of their own. The heading of Article 13 is part of the
+    article unit that holds its lead words and is quoted with it.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: simplified_framework_duties
+  units:
+  - 32022R2554#parag_016.001
+  partial: true
+  reason: 'DORA Art 16(1), first subparagraph (Articles 5 to 15 do not apply to the
+    entities it lists), is formalised as the gate of every query (reading (2)). Not
+    formalised: who those entities are, which the caller states, and the lead words
+    of the second subparagraph, which introduce the duties of the simplified ICT risk
+    management framework; those are the subject of the orders on the simplified framework.'
+  consequence: simplified_framework_entity says only that Articles 12 to 14 of the
+    technical standards do not apply; it gives none of the duties the entity has instead.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised in the orders on the simplified framework; the deferral stands
+    for this order (open question (Q1)).
+- what: simplified_framework_duty_list
+  units:
+  - 32022R2554#point_016.001_a
+  - 32022R2554#point_016.001_b
+  - 32022R2554#point_016.001_c
+  - 32022R2554#point_016.001_d
+  - 32022R2554#point_016.001_e
+  - 32022R2554#point_016.001_f
+  - 32022R2554#point_016.001_g
+  - 32022R2554#point_016.001_h
+  - 32022R2554#parag_016.002
+  reason: DORA Art 16(1), second subparagraph, points (a) to (h), list the duties
+    of the simplified ICT risk management framework, and Art 16(2) requires that framework
+    to be documented and reviewed. They bind only the entities of Article 16(1), for
+    which every query answers simplified_framework_entity.
+  consequence: The order does not check the simplified framework.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised in the orders on the simplified framework; the deferral stands
+    for this order (reading (18)).
+- what: technical_standards_mandate
+  units:
+  - 32022R2554#parag_016.003
+  - 32022R2554#point_016.003_a
+  - 32022R2554#point_016.003_b
+  - 32022R2554#point_016.003_c
+  - 32022R2554#point_016.003_d
+  - 32022R2554#point_016.003_e
+  reason: DORA Art 16(3) gives the European Supervisory Authorities a mandate to draft
+    regulatory technical standards on the simplified framework, and the Commission
+    power to adopt them.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+
+excluded_set:
+- what: scope_and_entity_types
+  instrument: Regulation (EU) 2022/2554 Articles 2 and 3
+  cites:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: Not pinned in this domain. Whether the entity is a financial entity within
+    the scope of DORA is presupposed (reading (1)); the definitions of microenterprise
+    (Article 3(60)) and of critical or important function (Article 3(22)) are applied
+    by the caller (readings (7), (8)).
+  consequence: The answers presuppose a financial entity within scope (open question
+    (Q5)).
+- what: proportionality_principle
+  instrument: Regulation (EU) 2022/2554 Article 4 and Delegated Regulation (EU) 2024/1774
+    Article 1
+  cites:
+  - 32022R2554#art_004
+  - 32024R1774#art_001
+  reason: Not pinned in this domain. The principle of proportionality is read as removing
+    no duty (reading (14)).
+  consequence: No duty is removed for size beyond Art 16(1) and Art 13(i) (open question
+    (Q14)).
+- what: other_articles_of_the_technical_standards
+  instrument: Delegated Regulation (EU) 2024/1774 Articles 1 to 11 and 15 to 41
+  cites:
+  - 32024R1774#art_001
+  - 32024R1774#art_002
+  - 32024R1774#art_003
+  - 32024R1774#art_004
+  - 32024R1774#art_005
+  - 32024R1774#art_006
+  - 32024R1774#art_007
+  - 32024R1774#art_008
+  - 32024R1774#art_009
+  - 32024R1774#art_010
+  - 32024R1774#art_011
+  - 32024R1774#art_015
+  - 32024R1774#art_016
+  - 32024R1774#art_017
+  - 32024R1774#art_018
+  - 32024R1774#art_019
+  - 32024R1774#art_020
+  - 32024R1774#art_021
+  - 32024R1774#art_022
+  - 32024R1774#art_023
+  - 32024R1774#art_024
+  - 32024R1774#art_025
+  - 32024R1774#art_026
+  - 32024R1774#art_027
+  - 32024R1774#art_028
+  - 32024R1774#art_029
+  - 32024R1774#art_030
+  - 32024R1774#art_031
+  - 32024R1774#art_032
+  - 32024R1774#art_033
+  - 32024R1774#art_034
+  - 32024R1774#art_035
+  - 32024R1774#art_036
+  - 32024R1774#art_037
+  - 32024R1774#art_038
+  - 32024R1774#art_039
+  - 32024R1774#art_040
+  - 32024R1774#art_041
+  reason: Not pinned in this domain. The other articles of the technical standards
+    are formalised, or to be formalised, in their own orders; Art 12(2)(b) names Article
+    24, Art 12(2)(c)(i) names Article 21 and Art 13(e) names Article 6(2), which are
+    not read (readings (13), (18)).
+  consequence: complete and none_outstanding say nothing about those articles (open
+    question (Q18)).
+- what: dora_ict_risk_management_articles
+  instrument: Regulation (EU) 2022/2554 Articles 5 to 15
+  cites:
+  - 32022R2554#art_005
+  - 32022R2554#art_006
+  - 32022R2554#art_007
+  - 32022R2554#art_008
+  - 32022R2554#art_009
+  - 32022R2554#art_010
+  - 32022R2554#art_011
+  - 32022R2554#art_012
+  - 32022R2554#art_013
+  - 32022R2554#art_014
+  - 32022R2554#art_015
+  reason: Not pinned in this domain. DORA Articles 5 to 15 are formalised in the DORA
+    orders on ICT risk management; Art 13(a)(ii) and the closing subparagraph of Article
+    13 name the classification of DORA Article 8(1), which is not read (reading (13)).
+  consequence: The order does not check the classification it names (open question
+    (Q13)).
+- what: european_standardisation
+  instrument: Regulation (EU) No 1025/2012 Article 2
+  cites:
+  - 32012R1025#art_002
+  reason: Not pinned in this domain. Art 13(k) names the standards defined in Article
+    2, point (1), of that Regulation; they are part of the caller's judgement (readings
+    (12), (13)).
+  consequence: The order does not check which standards apply (open question (Q11)).
+- what: date_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64 and Delegated Regulation (EU) 2024/1774
+    Article 42
+  cites:
+  - 32022R2554#art_064
+  - 32024R1774#art_042
+  reason: Not pinned in this domain. The order answers on the technical standards
+    as they apply and reads no date (reading (15)).
+  consequence: No answer depends on a date (open question (Q15)).

@@ -1,152 +1,147 @@
 % SPDX-License-Identifier: EUPL-1.2
 % =====================================================================
 % test_negative_controls.clausal -- NEGATIVE CONTROLS.
-% For each route: a POSITIVE case paired with a near-miss control (one
-% condition changed -> a different answer), proving the route is LOAD-BEARING.
-% A negative states "no solution" as `test(Name, fail) :- Goal.`; every
-% near-miss atom is shown to be a real answer atom by a positive test.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one required condition changed -> different verdict), proving the route
+% is LOAD-BEARING and a wrong answer is NOT produced. A negative states
+% "no solution" as `test(Name, fail) :- Goal.`; each near-miss also gets a
+% positive test of the verdict it DOES get, so a misspelt atom shows up as a
+% failing positive test, and the atoms used are checked against the slice's
+% status table.
 % Run: python -m clausal.testing eu/ai_act/serious_incident_reporting/tests/test_negative_controls.clausal
 % =====================================================================
 :- module(test_negative_controls, []).
-:- use_module(eu/ai_act/serious_incident_reporting/serious_incident_reporting, [serious_incident_reporting_status_values/1]).
-:- use_module(eu/ai_act/serious_incident_reporting/fixtures, [serious_incident_reporting_assess/2]).
+:- use_module(eu/ai_act/serious_incident_reporting/serious_incident_reporting, [
+    serious_incident_reporting_status/2,
+    serious_incident_reporting_status_values/1
+]).
+:- use_module(eu/ai_act/serious_incident_reporting/fixtures, [serious_incident_reporting_profile_for/2]).
 
-answer_status(Subject, Status) :-
-    serious_incident_reporting_assess(Subject, serious_incident_reporting_verdict(Status, _)).
+status_of(Subject, Status) :-
+    serious_incident_reporting_profile_for(Subject, Case),
+    serious_incident_reporting_status(Case, Status).
 
-real_status_atom(Status) :-
+test(every_atom_used_here_is_a_table_status) :-
     serious_incident_reporting_status_values(StatusValues),
-    member(Status, StatusValues).
+    subtract([not_applicable_on_date, not_a_high_risk_ai_system, not_covered_placed_before_application_date, not_a_serious_incident, not_a_reportable_incident, report_in_time, report_after_time_limit, report_not_immediate], StatusValues, Missing),
+    Missing == [].
 
-% ---- the near-miss atoms are real answer atoms ----------------------------
-test(the_near_miss_atoms_are_real_answer_atoms) :-
-    real_status_atom(not_applicable_on_date),
-    real_status_atom(not_a_high_risk_ai_system),
-    real_status_atom(not_covered_placed_before_application_date),
-    real_status_atom(not_a_serious_incident),
-    real_status_atom(not_a_reportable_incident),
-    real_status_atom(report_in_time),
-    real_status_atom(report_after_time_limit),
-    real_status_atom(report_not_immediate).
+% Step (1): the first date of application, 2 December 2027.
+test(before_the_first_date_is_not_applicable) :-
+    status_of(awareness_before_first_application_date, not_applicable_on_date).
+test(on_the_first_date_is_not_not_applicable, fail) :-
+    status_of(awareness_on_first_application_date, not_applicable_on_date).
+test(on_the_first_date_a_report_is_due) :-
+    status_of(awareness_on_first_application_date, report_due(_, 10, _, _)).
 
-% ---- Art 113(c)(i): the day before and the day of 2 December 2027 --------
-test(before_the_annex_iii_date_is_not_applicable) :-
-    answer_status(before_annex_iii_application_date, not_applicable_on_date).
-test(on_the_annex_iii_date_is_not_not_applicable, fail) :-
-    answer_status(on_annex_iii_application_date, not_applicable_on_date).
-test(on_the_annex_iii_date_a_report_is_due) :-
-    answer_status(on_annex_iii_application_date, report_due(_, 10, _, _)).
-
-% ---- Art 113(c)(ii): the day before and the day of 2 August 2028 ---------
+% Step (4): the Annex I date, 2 August 2028.
 test(annex_i_before_its_date_is_not_applicable) :-
-    answer_status(annex_i_before_application_date, not_applicable_on_date).
+    status_of(annex_i_awareness_before_application_date, not_applicable_on_date).
 test(annex_i_on_its_date_is_not_not_applicable, fail) :-
-    answer_status(annex_i_on_application_date, not_applicable_on_date).
+    status_of(annex_i_awareness_on_application_date, not_applicable_on_date).
 test(annex_i_on_its_date_a_report_is_due) :-
-    answer_status(annex_i_on_application_date, report_due(_, 2, _, _)).
+    status_of(annex_i_awareness_on_application_date, report_due(_, _, _, _)).
 
-% ---- Art 73(1): high-risk or not ------------------------------------------
+% Step (3): not high-risk.
 test(a_system_not_high_risk_has_no_duty) :-
-    answer_status(not_high_risk_system, not_a_high_risk_ai_system).
-test(a_missing_classification_is_not_not_high_risk, fail) :-
-    answer_status(classification_missing, not_a_high_risk_ai_system).
-test(a_missing_classification_is_indeterminate) :-
-    answer_status(classification_missing, indeterminate([high_risk_classification])).
+    status_of(system_not_high_risk, not_a_high_risk_ai_system).
+test(an_absent_classification_is_not_not_high_risk, fail) :-
+    status_of(classification_absent, not_a_high_risk_ai_system).
+test(an_absent_classification_is_indeterminate) :-
+    status_of(classification_absent, indeterminate([high_risk_classification])).
 
-% ---- Art 111(2): early systems -------------------------------------------
+% Step (5): Art 111(2), significant change.
 test(an_early_unchanged_system_is_not_covered) :-
-    answer_status(early_unchanged_public_day_before_2030, not_covered_placed_before_application_date).
-test(an_early_public_system_on_2_august_2030_is_covered, fail) :-
-    answer_status(early_unchanged_public_on_2030, not_covered_placed_before_application_date).
-test(an_early_changed_system_is_covered, fail) :-
-    answer_status(early_significantly_changed, not_covered_placed_before_application_date).
+    status_of(placed_early_without_significant_change, not_covered_placed_before_application_date).
+test(an_early_changed_system_is_not_not_covered, fail) :-
+    status_of(placed_early_with_significant_change, not_covered_placed_before_application_date).
+test(an_early_changed_system_reports) :-
+    status_of(placed_early_with_significant_change, report_due(_, 10, _, _)).
 
-% ---- Art 3(49): serious incident ------------------------------------------
-test(no_qualifying_harm_is_not_serious) :-
-    answer_status(no_qualifying_harm, not_a_serious_incident).
-test(harm_to_property_is_serious, fail) :-
-    answer_status(harm_to_property, not_a_serious_incident).
-test(harm_to_property_gets_a_report) :-
-    answer_status(harm_to_property, report_due(_, 15, _, _)).
+% Step (5): Art 111(2), public authorities from 2 August 2030.
+test(a_public_authority_system_the_day_before_is_not_covered) :-
+    status_of(public_authority_system_before_compliance_date, not_covered_placed_before_application_date).
+test(a_public_authority_system_on_the_day_is_not_not_covered, fail) :-
+    status_of(public_authority_system_on_compliance_date, not_covered_placed_before_application_date).
+test(a_public_authority_system_on_the_day_reports) :-
+    status_of(public_authority_system_on_compliance_date, report_due(_, _, _, _)).
 
-% ---- Art 73(10): the device case ------------------------------------------
-test(a_device_without_point_c_is_not_reportable) :-
-    answer_status(device_without_point_c, not_a_reportable_incident).
-test(a_device_with_point_c_is_reportable, fail) :-
-    answer_status(device_with_point_c, not_a_reportable_incident).
-test(a_device_report_goes_to_the_national_authority) :-
-    answer_status(device_with_point_c, report_due(national_competent_authority_chosen_by_member_state_where_incident_occurred, _, _, _)).
-test(a_device_report_does_not_go_to_market_surveillance, fail) :-
-    answer_status(device_with_point_c, report_due(market_surveillance_authority_of_member_state_where_incident_occurred, _, _, _)).
-
-% ---- Art 73(9): equivalent obligations -----------------------------------
+% Step (8): Art 73(9), equivalent reporting obligations.
 test(equivalent_obligations_without_point_c_are_not_reportable) :-
-    answer_status(equivalent_obligations_without_point_c, not_a_reportable_incident).
-test(equivalent_obligations_with_point_c_are_reportable, fail) :-
-    answer_status(equivalent_obligations_with_point_c, not_a_reportable_incident).
+    status_of(equivalent_obligations_without_fundamental_rights, not_a_reportable_incident).
+test(equivalent_obligations_with_point_c_are_not_unreportable, fail) :-
+    status_of(equivalent_obligations_with_fundamental_rights, not_a_reportable_incident).
+test(equivalent_obligations_with_point_c_report) :-
+    status_of(equivalent_obligations_with_fundamental_rights, report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, _, _)).
 
-% ---- Art 73(2) to (4): the limit -----------------------------------------
-test(a_death_gives_ten_days) :-
-    answer_status(on_annex_iii_application_date, report_due(_, 10, date(2027, 12, 12), _)).
-test(a_death_does_not_give_fifteen_days, fail) :-
-    answer_status(on_annex_iii_application_date, report_due(_, 15, _, _)).
-test(serious_harm_without_death_does_not_give_ten_days, fail) :-
-    answer_status(year_crossing_general_limit, report_due(_, 10, _, _)).
-test(critical_infrastructure_does_not_give_fifteen_days, fail) :-
-    answer_status(leap_day_critical_infrastructure, report_due(_, 15, _, _)).
+% Step (8): Art 73(10), devices.
+test(a_device_without_point_c_is_not_reportable) :-
+    status_of(device_without_fundamental_rights, not_a_reportable_incident).
+test(a_device_with_point_c_is_not_unreportable, fail) :-
+    status_of(device_with_fundamental_rights, not_a_reportable_incident).
+test(a_device_with_point_c_reports_to_the_national_authority) :-
+    status_of(device_with_fundamental_rights, report_due(national_competent_authority_chosen_by_member_state_where_incident_occurred, _, _, _)).
 
-% ---- timeliness: the last day and the day after --------------------------
+% Step (11): Art 75(1a), the AI Office.
+test(a_system_under_the_ai_office_reports_to_it) :-
+    status_of(device_under_ai_office, report_due(ai_office, _, _, _)).
+test(a_system_not_under_the_ai_office_does_not_report_to_it, fail) :-
+    status_of(device_not_under_ai_office, report_due(ai_office, _, _, _)).
+test(a_system_not_under_the_ai_office_reports_nationally) :-
+    status_of(device_not_under_ai_office, report_due(national_competent_authority_chosen_by_member_state_where_incident_occurred, _, _, _)).
+
+% Step (9): Art 3(49).
+test(no_listed_harm_is_not_a_serious_incident) :-
+    status_of(no_listed_harm, not_a_serious_incident).
+test(property_harm_is_not_not_serious, fail) :-
+    status_of(property_harm_only, not_a_serious_incident).
+test(property_harm_reports_in_fifteen_days) :-
+    status_of(property_harm_only, report_due(_, 15, _, _)).
+
+% Step (10): Art 73(3) critical infrastructure against Art 73(4) death.
+test(critical_infrastructure_gives_two_days) :-
+    status_of(critical_infrastructure_disrupted_in_leap_year, report_due(_, 2, _, _)).
+test(a_death_alone_is_not_two_days, fail) :-
+    status_of(death_in_leap_year, report_due(_, 2, _, _)).
+test(a_death_alone_gives_ten_days) :-
+    status_of(death_in_leap_year, report_due(_, 10, _, _)).
+
+% Step (10): Art 73(3) widespread infringement against Art 73(2).
+test(a_widespread_infringement_gives_two_days) :-
+    status_of(widespread_infringement_with_health_harm, report_due(_, 2, _, _)).
+test(without_widespread_infringement_it_is_not_two_days, fail) :-
+    status_of(health_harm_without_widespread_infringement, report_due(_, 2, _, _)).
+test(without_widespread_infringement_it_is_fifteen_days) :-
+    status_of(health_harm_without_widespread_infringement, report_due(_, 15, _, _)).
+
+% Step (14): LAST_DAY.
 test(a_report_on_the_last_day_is_in_time) :-
-    answer_status(report_on_last_day_made_immediately, report_in_time).
+    status_of(report_on_last_day_made_immediately, report_in_time).
 test(a_report_the_day_after_is_not_in_time, fail) :-
-    answer_status(report_day_after_last_day, report_in_time).
+    status_of(report_day_after_last_day, report_in_time).
 test(a_report_the_day_after_is_late) :-
-    answer_status(report_day_after_last_day, report_after_time_limit).
-test(a_report_on_the_last_day_is_not_late, fail) :-
-    answer_status(report_on_last_day_made_immediately, report_after_time_limit).
+    status_of(report_day_after_last_day, report_after_time_limit).
 
-% ---- timeliness: immediacy ------------------------------------------------
+% Step (14): immediacy.
 test(a_report_not_made_immediately_is_not_immediate) :-
-    answer_status(report_on_last_day_not_immediate, report_not_immediate).
-test(a_report_not_made_immediately_is_not_in_time, fail) :-
-    answer_status(report_on_last_day_not_immediate, report_in_time).
+    status_of(report_in_time_not_immediate, report_not_immediate).
+test(a_report_made_immediately_is_not_not_immediate, fail) :-
+    status_of(report_on_last_day_made_immediately, report_not_immediate).
 
-% ---- THE UNSURE RULE -------------------------------------------------------
-test(an_unsure_change_on_an_early_system_goes_to_a_lawyer) :-
-    answer_status(significant_change_unsure_placed_early, needs_legal_review(open_textured(significant_change_in_design_since_that_date, _), _)).
-test(an_unsure_change_on_a_late_system_does_not_go_to_a_lawyer, fail) :-
-    answer_status(significant_change_unsure_placed_late, needs_legal_review(_, _)).
-test(an_unsure_change_on_a_late_system_is_settled) :-
-    answer_status(significant_change_unsure_placed_late, report_due(_, 10, _, _)).
-test(an_unsure_widespread_infringement_that_turns_the_limit_goes_to_a_lawyer) :-
-    answer_status(widespread_unsure_turns_the_limit, needs_legal_review(open_textured(widespread_infringement, cite(eu_reg_2024_1689_art_3_61)), _)).
-test(an_unsure_widespread_infringement_beside_critical_infrastructure_is_settled, fail) :-
-    answer_status(widespread_unsure_with_critical_infrastructure, needs_legal_review(_, _)).
-test(an_unsure_widespread_infringement_beside_critical_infrastructure_gives_two_days) :-
-    answer_status(widespread_unsure_with_critical_infrastructure, report_due(_, 2, _, _)).
-test(a_missing_fact_beside_an_unsure_judgement_is_named) :-
-    answer_status(widespread_unsure_health_missing, indeterminate([harm_to_health])).
-test(a_missing_fact_beside_an_unsure_judgement_is_not_referred, fail) :-
-    answer_status(widespread_unsure_health_missing, needs_legal_review(_, _)).
-test(an_unsure_equivalence_without_point_c_goes_to_a_lawyer) :-
-    answer_status(equivalence_unsure_without_point_c, needs_legal_review(open_textured(provider_subject_to_equivalent_union_reporting_obligations, _), _)).
-test(an_unsure_equivalence_with_point_c_is_not_referred, fail) :-
-    answer_status(equivalence_unsure_with_point_c, needs_legal_review(_, _)).
-test(a_late_report_with_unsure_immediacy_is_late) :-
-    answer_status(late_report_immediacy_unsure, report_after_time_limit).
-test(a_late_report_with_unsure_immediacy_is_not_referred, fail) :-
-    answer_status(late_report_immediacy_unsure, needs_legal_review(_, _)).
+% THE UNSURE RULE: a referral only where the judgement turns the answer.
+test(an_unsure_immediacy_in_time_is_referred) :-
+    status_of(report_immediacy_unsure, needs_legal_review(open_textured(report_made_immediately, _), _)).
+test(an_unsure_immediacy_on_a_late_report_is_not_referred, fail) :-
+    status_of(late_report_immediacy_unsure, needs_legal_review(_, _)).
+test(an_unsure_immediacy_on_a_late_report_is_late) :-
+    status_of(late_report_immediacy_unsure, report_after_time_limit).
 
-% ---- THE INPUT CHECK -------------------------------------------------------
-test(a_crisp_key_given_unsure_is_an_input_problem) :-
-    answer_status(crisp_key_given_unsure, input_problems([wrong_type(critical_infrastructure_disruption)])).
-test(a_real_leap_day_is_not_an_input_problem, fail) :-
-    answer_status(awareness_on_leap_day, input_problems(_)).
-test(a_duplicate_key_is_an_input_problem) :-
-    answer_status(duplicate_classification, input_problems([duplicate_key(high_risk_classification)])).
-test(an_unknown_key_is_an_input_problem) :-
-    answer_status(unknown_key_present, input_problems([unknown_key(colour)])).
-test(an_unknown_key_profile_is_not_decided, fail) :-
-    answer_status(unknown_key_present, not_a_high_risk_ai_system).
+% Steps (0) and (12): real calendar days.
+test(a_day_that_does_not_exist_is_an_input_problem) :-
+    status_of(awareness_date_not_a_calendar_day, input_problems([wrong_type(awareness_date)])).
+test(a_leap_day_is_not_an_input_problem, fail) :-
+    status_of(awareness_on_leap_day, input_problems(_)).
+test(a_leap_day_gets_a_report) :-
+    status_of(awareness_on_leap_day, report_due(_, 10, _, _)).
 
 :- end_module(test_negative_controls).

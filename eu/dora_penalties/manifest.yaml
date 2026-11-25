@@ -1,0 +1,234 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_penalties
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_penalties"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_penalties.clausal --
+  - "administrative_penalty_rules_required/3"
+  - "minimum_powers/2"
+  - "penalty_decision_safeguards/2"
+  - "circumstances_to_take_into_account/2"
+  - "criminal_penalty_liaison_duties/2"
+  - "decide_dora_penalties/2"
+  - "dora_penalties_status/2"
+  - "dora_penalties_checklist/2"
+  - "dora_penalties_decision_resolvable/1"
+  - "dora_penalties_status_values/1"
+  # -- queries.clausal --
+  - "dora_penalties_profile_keys/1"
+  - "dora_penalties_input_problems/2"
+  - "dora_penalties_what_if/4"
+  - "required/0"
+  - "not_required_criminal_penalties/0"
+  - "supervisory/0"
+  - "penalty/0"
+  - "extension/0"
+  - "access_to_documents_and_data/0"
+  - "on_site_inspections_and_investigations/0"
+  - "require_corrective_and_remedial_measures/0"
+  - "cease_and_desist_order/0"
+  - "cessation_of_practice_or_conduct/0"
+  - "measures_to_ensure_continued_compliance/0"
+  - "require_data_traffic_records/0"
+  - "public_notice/0"
+  - "management_body_and_responsible_individuals/0"
+  - "intent_or_negligence/0"
+  - "materiality_gravity_and_duration/0"
+  - "degree_of_responsibility/0"
+  - "financial_strength/0"
+  - "profits_gained_or_losses_avoided/0"
+  - "losses_for_third_parties/0"
+  - "cooperation_with_competent_authority/0"
+  - "previous_breaches/0"
+  - "power/3"
+  - "circumstance/2"
+  - "properly_reasoned/1"
+  - "right_of_appeal/1"
+  - "receive_criminal_proceedings_information/1"
+  - "provide_information_to_authorities_and_esas/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "dora_penalties_subject/1"
+  - "dora_penalties_profile_for/2"
+  - "dora_penalties_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. The domain imports only the kit (formalize_lib), no shared
+# backbone package.
+uses: []
+
+scope: "Regulation (EU) 2022/2554 (DORA), Articles 50 to 52, for one breach of the
+  Regulation by a financial entity, from the pinned original OJ text 32022R2554. Given
+  the national choices and facts the caller states, the order answers five questions:
+  whether administrative penalty rules are required for the breach (Art 50(3) with the
+  option of Art 52(1)); the minimum supervisory and investigatory powers (Art 50(2)) and
+  administrative penalties and remedial measures (Art 50(4)) the competent authorities
+  must have, with the extension of Art 50(5); the safeguards of Art 50(6) for a decision
+  imposing measures of Art 50(2) point (c); the circumstances Art 51(2) requires the
+  authority to take into account; and the liaison duties of Art 52(2). Out of scope:
+  the general clause of Art 50(1), the quality of the penalties (Art 50(3) second
+  sentence), the ways of exercise (Art 51(1)), the conditions national law sets, and
+  Articles 35(6), 53 and 54; an unsure Art 51(2) appraisal is handed to a lawyer. Every
+  reading is the drafter's, not a lawyer's."
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December
+    2022 on digital operational resilience for the financial sector (DORA), OJ L 333,
+    27.12.2022, p. 1 (CELEX 32022R2554), Articles 50(1) to 50(6), 51(1) and 51(2), 52(1)
+    and 52(2); pin folder eu/dora_penalties/sources/"
+
+query_interface:
+  2: "dora_penalties_status/2"      # eligibility/status verdict over administrative_penalty_rules_required/3
+  7: "dora_penalties_checklist/2"   # justification: one item per question, each with its cite(...) terms
+  16: "dora_penalties_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_050
+  - 32022R2554#art_051
+  - 32022R2554#art_052
+  reason: The headings of Articles 50, 51 and 52 carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: power_and_penalty_lead_ins
+  units:
+  - 32022R2554#parag_050.002
+  - 32022R2554#parag_050.004
+  reason: Art 50(2) and 50(4) open the lists of powers and of penalties and remedial
+    measures with lead words; the points are answered by minimum_powers, and the lead
+    words add only 'at least' (reading (1)).
+  consequence: None for a caller beyond the points already answered.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: general_powers_clause
+  units:
+  - 32022R2554#parag_050.001
+  reason: Art 50(1) gives the competent authorities all supervisory, investigatory
+    and sanctioning powers necessary to fulfil their duties under the Regulation.
+    It lists no power of its own; reading (3) relies on it for the place of Art 50(2),
+    point (c).
+  consequence: minimum_powers gives the least powers the Regulation lists, not every
+    power an authority needs.
+  declaration: answered_with_caveat
+  debt: true
+  open: not formalisable as a list; the deferral stands for this order (open question
+    (Q2)).
+- what: quality_of_penalties
+  units:
+  - 32022R2554#parag_050.003
+  partial: true
+  reason: 'PARTLY FORMALISED. Art 50(3), first sentence, the duty to lay down rules
+    for administrative penalties and remedial measures without prejudice to Article
+    52, is formalised (reading (2)). Not formalised: the duty to ensure their effective
+    implementation and the second sentence, that they be effective, proportionate
+    and dissuasive.'
+  consequence: required says that rules must be laid down; it says nothing of their
+    quality.
+  declaration: answered_with_caveat
+  debt: true
+  open: not settled by a caller's fact; the deferral stands for this order (open question
+    (Q7)).
+- what: data_traffic_records_suspicion
+  units:
+  - 32022R2554#point_050.004_d
+  partial: true
+  reason: 'PARTLY FORMALISED. Art 50(4)(d) is listed where national law permits it
+    (reading (4)). Not formalised: ''where there is a reasonable suspicion of a breach
+    of this Regulation and where such records may be relevant to an investigation'',
+    read as a condition on using the power in a case.'
+  consequence: The answer says the power must exist; it does not say when it may be
+    used.
+  declaration: answered_with_caveat
+  debt: true
+  open: a condition on a case, not on the power; the deferral stands for this order
+    (open question (Q3)).
+- what: extension_national_conditions
+  units:
+  - 32022R2554#parag_050.005
+  partial: true
+  reason: 'PARTLY FORMALISED. Art 50(5), the extension to members of the management
+    body and other responsible individuals, is formalised (reading (5)). Not formalised:
+    ''subject to the conditions provided for in national law'', and who under national
+    law is responsible for the breach.'
+  consequence: The answer says the power must exist; the conditions and the persons
+    are for national law.
+  declaration: answered_with_caveat
+  debt: true
+  open: national law; the deferral stands for this order (open question (Q6)).
+- what: ways_of_exercise
+  units:
+  - 32022R2554#parag_051.001
+  - 32022R2554#point_051.001_a
+  - 32022R2554#point_051.001_b
+  - 32022R2554#point_051.001_c
+  - 32022R2554#point_051.001_d
+  reason: Art 51(1) lets the competent authorities exercise the powers directly, in
+    collaboration, by delegation or by application to the judicial authorities, in
+    accordance with their national legal frameworks (reading (11)).
+  consequence: No answer depends on how a power is exercised.
+  declaration: not_an_exception
+  not_formalized_because: national_law
+
+excluded_set:
+- what: periodic_penalty_payments_on_ctpps
+  instrument: Regulation (EU) 2022/2554 Article 35(6)
+  cites:
+  - 32022R2554#parag_035.006
+  reason: Not pinned in this domain. Periodic penalty payments on critical ICT third-party
+    service providers belong to the oversight framework of DORA; they are not formalised
+    in this order, which relies on none of it.
+  consequence: The answers say nothing about periodic penalty payments (open question
+    (Q12)).
+- what: notification_and_publication
+  instrument: Regulation (EU) 2022/2554 Articles 53 and 54
+  cites:
+  - 32022R2554#art_053
+  - 32022R2554#art_054
+  reason: Not pinned in this domain. The notification of the national provisions (Article
+    53) and the publication of administrative penalties (Article 54) are not formalised;
+    this order relies on neither.
+  consequence: The answers say nothing about notification or publication (open question
+    (Q12)).
+- what: scope_and_entity_types
+  instrument: Regulation (EU) 2022/2554 Articles 2 and 3
+  cites:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: Not pinned in this domain. Whether the person in breach is a financial entity
+    within the scope of DORA is presupposed (SCOPE); Articles 2 and 3 are not formalised
+    in this order.
+  consequence: The answers presuppose a breach by a financial entity within scope
+    (open question (Q1)).

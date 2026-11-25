@@ -1,0 +1,98 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_penalties_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_penalties_kernel, [dora_penalties_input_problems/2]).
+:- use_module(m__eu_dora_penalties_dora_penalties, [administrative_penalty_rules_required/3, minimum_powers/2, penalty_decision_safeguards/2, circumstances_to_take_into_account/2, criminal_penalty_liaison_duties/2, dora_penalties_status/2, dora_penalties_status_values/1]).
+:- use_module(m__eu_dora_penalties_fixtures, [dora_penalties_profile_for/2]).
+
+test(status_bound_option_used) :-
+    dora_penalties_profile_for(option_used, Profile),
+    dora_penalties_status(Profile, not_required_criminal_penalties).
+test(status_bound_option_not_used) :-
+    dora_penalties_profile_for(option_not_used, Profile),
+    dora_penalties_status(Profile, required).
+test(rules_bound_result_and_citations) :-
+    dora_penalties_profile_for(option_not_used, Profile),
+    administrative_penalty_rules_required(Profile, required, [cite(eu_reg_2022_2554_art_50_3), cite(eu_reg_2022_2554_art_52_1)]).
+test(powers_bound_option_used) :-
+    dora_penalties_profile_for(option_used, Profile),
+    minimum_powers(Profile, [power(supervisory, access_to_documents_and_data, cite(eu_reg_2022_2554_art_50_2_a)), power(supervisory, on_site_inspections_and_investigations, cite(eu_reg_2022_2554_art_50_2_b)), power(supervisory, require_corrective_and_remedial_measures, cite(eu_reg_2022_2554_art_50_2_c)), power(extension, management_body_and_responsible_individuals, cite(eu_reg_2022_2554_art_50_5))]).
+test(safeguards_bound_point_c_decision) :-
+    dora_penalties_profile_for(option_used, Profile),
+    penalty_decision_safeguards(Profile, [properly_reasoned(cite(eu_reg_2022_2554_art_50_6)), right_of_appeal(cite(eu_reg_2022_2554_art_50_6))]).
+test(duties_bound_empty) :-
+    dora_penalties_profile_for(no_criminal_penalties_laid_down, Profile),
+    criminal_penalty_liaison_duties(Profile, []).
+test(circumstances_bound_referral) :-
+    dora_penalties_profile_for(judgement_unsure, Profile),
+    circumstances_to_take_into_account(Profile, needs_legal_review(open_textured(degree_of_responsibility_relevant, cite(eu_reg_2022_2554_art_51_2_b)), [inputs_relied_on([breach_materiality_gravity_duration_relevant - true, degree_of_responsibility_relevant - unsure, financial_strength_relevant - true, profits_gained_or_losses_avoided_relevant - false, third_party_losses_relevant - false, cooperation_with_authority_relevant - true, previous_breaches_relevant - true])])).
+test(number_profile_is_not_an_attribute_list) :-
+    minimum_powers(42, input_problems([wrong_type(profile)])).
+test(atom_profile_is_not_an_attribute_list) :-
+    administrative_penalty_rules_required(not_a_list, input_problems([wrong_type(profile)]), []).
+test(partial_list_is_not_an_attribute_list) :-
+    dora_penalties_input_problems([attribute(measures_applied_to_legal_person, true)|_UnboundTail], [wrong_type(profile)]).
+test(unbound_element_is_not_an_attribute_list) :-
+    dora_penalties_input_problems([attribute(measures_applied_to_legal_person, true), _UnboundElement], [wrong_type(profile)]).
+test(foreign_element_is_not_an_attribute_list) :-
+    dora_penalties_input_problems([attribute(colour, blue), colour], [wrong_type(profile)]).
+test(empty_profile_is_well_formed) :-
+    dora_penalties_input_problems([], []).
+test(unbound_value_is_wrong_type) :-
+    dora_penalties_input_problems([attribute(measures_applied_to_legal_person, _UnboundValue)], [wrong_type(measures_applied_to_legal_person)]).
+test(float_value_is_wrong_type) :-
+    dora_penalties_input_problems([attribute(measures_applied_to_legal_person, 1.0)], [wrong_type(measures_applied_to_legal_person)]).
+test(string_value_is_wrong_type) :-
+    dora_penalties_input_problems([attribute(decision_imposes_art_50_2_c_measure, "true")], [wrong_type(decision_imposes_art_50_2_c_measure)]).
+test(unsure_fact_is_wrong_type) :-
+    dora_penalties_input_problems([attribute(member_state_laid_down_criminal_penalties_for_breaches, unsure)], [wrong_type(member_state_laid_down_criminal_penalties_for_breaches)]).
+test(unsure_judgement_is_well_formed) :-
+    dora_penalties_input_problems([attribute(previous_breaches_relevant, unsure)], []).
+test(unknown_key_value_is_not_checked) :-
+    dora_penalties_input_problems([attribute(colour, _AnyValue)], [unknown_key(colour)]).
+test(number_key_is_unknown) :-
+    dora_penalties_input_problems([attribute(7, true)], [unknown_key(7)]).
+test(unbound_key_named_as_given) :-
+    dora_penalties_input_problems([attribute(UnboundKey, true)], Problems),
+    Problems = [unknown_key(ReportedKey)],
+    ReportedKey == UnboundKey.
+test(two_distinct_unbound_keys_are_two_keys) :-
+    dora_penalties_input_problems([attribute(FirstKey, true), attribute(SecondKey, false)], Problems),
+    Problems = [unknown_key(FirstReported), unknown_key(SecondReported)],
+    FirstReported == FirstKey,
+    SecondReported == SecondKey.
+test(the_same_unbound_key_twice_is_one_key) :-
+    dora_penalties_input_problems([attribute(SameKey, true), attribute(SameKey, false)], Problems),
+    Problems = [unknown_key(ReportedKey)],
+    ReportedKey == SameKey.
+test(duplicate_key_with_equal_values) :-
+    dora_penalties_input_problems([attribute(measures_applied_to_legal_person, true), attribute(measures_applied_to_legal_person, true)], [duplicate_key(measures_applied_to_legal_person)]).
+test(duplicate_key_is_never_also_wrong_type) :-
+    dora_penalties_input_problems([attribute(measures_applied_to_legal_person, maybe), attribute(measures_applied_to_legal_person, true)], [duplicate_key(measures_applied_to_legal_person)]).
+test(problems_in_the_fixed_order) :-
+    dora_penalties_input_problems([attribute(colour, blue), attribute(previous_breaches_relevant, maybe), attribute(breach_subject_to_criminal_penalties_under_national_law, true), attribute(colour, red), attribute(breach_subject_to_criminal_penalties_under_national_law, false)], [duplicate_key(breach_subject_to_criminal_penalties_under_national_law), wrong_type(previous_breaches_relevant), unknown_key(colour)]).
+test(input_check_has_exactly_one_answer) :-
+    findall(Problems, dora_penalties_input_problems([attribute(colour, blue), attribute(colour, blue)], Problems), Answers),
+    Answers == [[unknown_key(colour)]].
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_penalties_profile_for(option_used, Profile),
+    dora_penalties_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, not_required_criminal_penalties),
+    dora_penalties_status(Profile, Other).
+test(rules_bound_short_citations_rejected, fail) :-
+    dora_penalties_profile_for(option_not_used, Profile),
+    administrative_penalty_rules_required(Profile, required, [cite(eu_reg_2022_2554_art_50_3)]).
+
+cp_test_names([status_bound_option_used, status_bound_option_not_used, rules_bound_result_and_citations, powers_bound_option_used, safeguards_bound_point_c_decision, duties_bound_empty, circumstances_bound_referral, number_profile_is_not_an_attribute_list, atom_profile_is_not_an_attribute_list, partial_list_is_not_an_attribute_list, unbound_element_is_not_an_attribute_list, foreign_element_is_not_an_attribute_list, empty_profile_is_well_formed, unbound_value_is_wrong_type, float_value_is_wrong_type, string_value_is_wrong_type, unsure_fact_is_wrong_type, unsure_judgement_is_well_formed, unknown_key_value_is_not_checked, number_key_is_unknown, unbound_key_named_as_given, two_distinct_unbound_keys_are_two_keys, the_same_unbound_key_twice_is_one_key, duplicate_key_with_equal_values, duplicate_key_is_never_also_wrong_type, problems_in_the_fixed_order, input_check_has_exactly_one_answer]).
+cp_test_fail_names([every_other_bound_status_is_rejected, rules_bound_short_citations_rejected]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,110 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: one group per query
+% type registered in manifest query_interface (#2/#7 eligibility with its
+% cited checklist, #13 compliance check, #16 what-if), the profile key
+% schema, the re-exported input check and the root atoms.
+% Run: python -m clausal.testing eu/dora_register_of_information/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_register_of_information/queries, [
+    dora_register_of_information_profile_keys/1,
+    dora_register_of_information_input_problems/2,
+    dora_register_of_information_what_if/4,
+    dora_register_of_information_eligibility/2,
+    dora_register_of_information_compliance_check/3,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    unsure/0,
+    data_quality/0,
+    register_maintained_and_updated_at_entity_level/0
+]).
+:- use_module(eu/dora_register_of_information/fixtures, [dora_register_of_information_profile_for/2]).
+
+cited([cite(_)|_]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_register_of_information_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_responsible_for_sub_consolidated_register, financial_entity_responsible_for_consolidated_register, competent_authority_requested_register, entity_plans_arrangement_supporting_critical_or_important_function, function_has_become_critical_or_important, entity_uses_ict_services_supporting_critical_or_important_functions, entity_has_branches_outside_home_country, ict_service_supply_chain_partly_intra_group, register_maintained_and_updated_at_entity_level, register_maintained_and_updated_at_sub_consolidated_level, register_maintained_and_updated_at_consolidated_level, arrangements_documented_distinguishing_critical_or_important_functions, reported_to_competent_authorities_at_least_yearly, register_made_available_to_competent_authority_on_request, competent_authority_informed_of_planned_arrangement, competent_authority_informed_that_function_has_become_critical_or_important, rank_assigned_to_each_ict_third_party_service_provider, templates_include_information_on_all_ict_services_of_direct_providers, templates_include_information_on_subcontractors_underpinning_critical_or_important_functions, template_information_meets_data_quality_principles, template_information_reviewed_regularly_and_errors_corrected, entity_level_information_consistent_with_sub_consolidated_level, entity_level_information_consistent_with_consolidated_level, providers_identified_by_legal_entity_identifier_or_european_unique_identifier, subcontractors_identified_by_legal_entity_identifier_or_european_unique_identifier, data_elements_completed_with_single_values, all_data_elements_completed_at_each_applicable_level, register_includes_general_information_on_maintaining_entity, register_includes_general_information_on_entities_in_consolidation, register_includes_identification_of_branches_outside_home_country, register_includes_general_information_on_contractual_arrangements, register_includes_specific_information_on_contractual_arrangements, register_includes_links_between_intra_group_and_other_arrangements, register_includes_entities_signing_arrangements_for_receiving_ict_services, register_includes_providers_signing_arrangements_for_providing_ict_services, register_includes_entities_providing_ict_services_within_consolidation, register_includes_entities_making_use_of_ict_services, register_includes_information_on_direct_providers_and_subcontractors, register_includes_information_on_ict_service_supply_chain, register_includes_identification_of_functions, register_includes_assessment_of_ict_services_supporting_critical_or_important_functions, register_includes_terminology_and_closed_lists].
+
+% ---- the re-exported input check -----------------------------------
+test(input_check_is_reachable_through_queries) :-
+    dora_register_of_information_input_problems([attribute(dora_entity_type, credit_institution)], Problems),
+    Problems == [unknown_key(dora_entity_type)].
+
+% ---- root atoms are defined ------------------------------------------
+test(root_atoms_are_defined) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    unsure,
+    data_quality,
+    register_maintained_and_updated_at_entity_level.
+
+% ---- #16 what-if --------------------------------------------------
+test(what_if_a_missed_report_gives_incomplete) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    findall(Status, dora_register_of_information_what_if(Profile, reported_to_competent_authorities_at_least_yearly, false, Status), Statuses),
+    Statuses == [incomplete].
+test(what_if_the_missed_report_is_made_gives_complete) :-
+    dora_register_of_information_profile_for(solo_entity_yearly_report_missed, Profile),
+    dora_register_of_information_what_if(Profile, reported_to_competent_authorities_at_least_yearly, true, complete).
+test(what_if_replaces_every_duplicate_entry) :-
+    dora_register_of_information_profile_for(duplicate_judgement, Profile),
+    dora_register_of_information_what_if(Profile, template_information_meets_data_quality_principles, true, complete).
+test(what_if_adds_an_absent_key) :-
+    dora_register_of_information_profile_for(branches_template_unanswered, Profile),
+    dora_register_of_information_what_if(Profile, register_includes_identification_of_branches_outside_home_country, true, complete).
+test(what_if_on_a_non_list_keeps_the_input_problems) :-
+    dora_register_of_information_what_if(not_an_attribute_list, data_quality, true, input_problems).
+test(what_if_a_missed_report_is_not_complete, fail) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    dora_register_of_information_what_if(Profile, reported_to_competent_authorities_at_least_yearly, false, complete).
+
+% ---- #2 eligibility with #7 justification -------------------------
+test(eligibility_gives_the_decision_and_a_cited_checklist) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    findall(Assessment, dora_register_of_information_eligibility(Profile, Assessment), Assessments),
+    Assessments = [assessment(dora_register_of_information_duties, complete, Items)],
+    length(Items, 34),
+    findall(Citations, member(item(_, _, Citations), Items), CitationLists),
+    maplist(cited, CitationLists),
+    member(item(yearly_report_to_competent_authorities, met, [cite(eu_reg_2022_2554_art_28_3)]), Items).
+test(eligibility_marks_the_missed_duty_unmet) :-
+    dora_register_of_information_profile_for(solo_entity_yearly_report_missed, Profile),
+    dora_register_of_information_eligibility(Profile, assessment(_, incomplete, Items)),
+    member(item(yearly_report_to_competent_authorities, unmet(_), _), Items).
+test(eligibility_indeterminate_names_the_open_template) :-
+    dora_register_of_information_profile_for(branches_template_unanswered, Profile),
+    dora_register_of_information_eligibility(Profile, assessment(_, indeterminate, Items)),
+    member(item(identification_of_branches_outside_home_country, unknown([register_includes_identification_of_branches_outside_home_country]), _), Items).
+test(eligibility_refuses_a_bad_profile) :-
+    dora_register_of_information_profile_for(unsure_trigger, Profile),
+    dora_register_of_information_eligibility(Profile, input_problems([wrong_type(competent_authority_requested_register)])).
+
+% ---- #13 compliance check ------------------------------------------
+test(leaving_an_applying_duty_unperformed_is_forbidden) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    findall(Verdict, dora_register_of_information_compliance_check(Profile, leave_unperformed(register_at_entity_level), Verdict), Verdicts),
+    Verdicts == [forbidden].
+test(leaving_a_defeated_duty_unperformed_is_permitted) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    dora_register_of_information_compliance_check(Profile, leave_unperformed(register_at_sub_consolidated_level), permitted).
+test(leaving_a_defeated_duty_is_not_forbidden, fail) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    dora_register_of_information_compliance_check(Profile, leave_unperformed(register_at_sub_consolidated_level), forbidden).
+test(the_group_duty_applies_to_the_parent) :-
+    dora_register_of_information_profile_for(group_parent_all_performed, Profile),
+    dora_register_of_information_compliance_check(Profile, leave_unperformed(register_at_sub_consolidated_level), forbidden).
+test(a_duty_on_an_absent_trigger_is_indeterminate) :-
+    dora_register_of_information_profile_for(triggers_unanswered, Profile),
+    dora_register_of_information_compliance_check(Profile, leave_unperformed(register_at_sub_consolidated_level), indeterminate([financial_entity_responsible_for_sub_consolidated_register])).
+test(an_unknown_duty_is_an_input_problem) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    dora_register_of_information_compliance_check(Profile, leave_unperformed(no_such_duty), input_problems([unknown_key(no_such_duty)])).
+test(a_bad_profile_is_refused_first) :-
+    dora_register_of_information_profile_for(duplicate_judgement, Profile),
+    dora_register_of_information_compliance_check(Profile, leave_unperformed(data_quality), input_problems([duplicate_key(template_information_meets_data_quality_principles)])).
+
+:- end_module(test_queries).

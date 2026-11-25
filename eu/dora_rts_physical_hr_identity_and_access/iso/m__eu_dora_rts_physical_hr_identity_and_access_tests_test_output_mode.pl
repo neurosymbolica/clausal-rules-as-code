@@ -1,0 +1,89 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_physical_hr_identity_and_access_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [last/2, clausal_msort/2]).
+:- use_module(m__eu_dora_rts_physical_hr_identity_and_access_dora_rts_physical_hr_identity_and_access, [physical_hr_identity_and_access_duties_required/3, physical_hr_identity_and_access_duties_complete/3, physical_hr_identity_and_access_duties_outstanding/3, decide_dora_rts_physical_hr_identity_and_access/2, dora_rts_physical_hr_identity_and_access_status/2, dora_rts_physical_hr_identity_and_access_checklist/2]).
+:- use_module(m__eu_dora_rts_physical_hr_identity_and_access_fixtures, [dora_rts_physical_hr_identity_and_access_profile_for/2]).
+
+fixed_six(Sorted) :-
+    clausal_msort([cite(eu_reg_2024_1774_art_18_1), cite(eu_reg_2024_1774_art_18_2), cite(eu_reg_2024_1774_art_19), cite(eu_reg_2024_1774_art_20_1), cite(eu_reg_2024_1774_art_20_2), cite(eu_reg_2024_1774_art_21)], Sorted).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    findall(Status, dora_rts_physical_hr_identity_and_access_status(Profile, Status), Statuses),
+    Statuses == [complete].
+test(the_verdict_carries_the_fixed_citations) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    decide_dora_rts_physical_hr_identity_and_access(Profile, dora_rts_physical_hr_identity_and_access_verdict(complete, Citations)),
+    clausal_msort(Citations, Sorted),
+    fixed_six(Sorted).
+test(incomplete_carries_the_fixed_citations) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_complete(Profile, Result, Citations), [incomplete - Citations]),
+    clausal_msort(Citations, Sorted),
+    fixed_six(Sorted).
+test(required_lists_every_duty_once_in_duty_order) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(gate_only_false, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_required(Profile, Result, Citations), [required(Duties) - Citations]),
+    length(Duties, 36),
+    sort(Duties, DutySet),
+    length(DutySet, 36),
+    Duties = [physical_and_environmental_security_policy, physical_security_policy_design_basis, reference_to_physical_access_controls_section|_],
+    last(Duties, automated_privileged_access_management),
+    clausal_msort(Citations, Sorted),
+    fixed_six(Sorted).
+test(required_puts_the_closing_duties_after_the_points) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    physical_hr_identity_and_access_duties_required(Profile, required(Duties), _),
+    append(_, [review_of_physical_access_rights, retention_period_for_point_e_i, dedicated_administrative_accounts, automated_privileged_access_management], Duties).
+test(required_for_an_article_16_1_entity) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(article_16_1_entity, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_required(Profile, Result, Citations), Answers),
+    Answers == [simplified_framework_entity - [cite(eu_reg_2022_2554_art_16_1)]].
+test(required_with_the_gate_absent) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(gate_absent, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_required(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([financial_entity_is_article_16_1_entity]) - []].
+test(the_referral_carries_every_present_pair) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(unsure_referral, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_complete(Profile, Result, Citations), [Result - []]),
+    Result = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)|_]),
+    Key == access_control_policy_contains_segregation_of_duties,
+    Citation == cite(eu_reg_2024_1774_art_21_b),
+    length(Pairs, 37),
+    Pairs = [financial_entity_is_article_16_1_entity - false, physical_and_environmental_security_policy_specified_documented_and_implemented - true|_],
+    member(access_control_policy_contains_segregation_of_duties - unsure, Pairs).
+test(the_outstanding_referral_is_the_same) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(unsure_referral, Profile),
+    physical_hr_identity_and_access_duties_outstanding(Profile, needs_legal_review(open_textured(access_control_policy_contains_segregation_of_duties, cite(eu_reg_2024_1774_art_21_b)), _), []).
+test(outstanding_names_the_absent_key_despite_a_failing_duty) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(failing_duty_with_absent_duty, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_outstanding(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([dedicated_accounts_used_for_administrative_tasks_where_possible]) - []].
+test(outstanding_lists_the_closing_duties_of_article_21) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(closing_subparagraph_duties_outstanding, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_outstanding(Profile, Result, Citations), Answers),
+    Answers == [outstanding([retention_period_for_point_e_i, dedicated_administrative_accounts, automated_privileged_access_management]) - [cite(eu_reg_2024_1774_art_21)]].
+test(none_outstanding_carries_the_fixed_citations) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    findall(Result - Citations, physical_hr_identity_and_access_duties_outstanding(Profile, Result, Citations), [none_outstanding - Citations]),
+    clausal_msort(Citations, Sorted),
+    fixed_six(Sorted).
+test(the_checklist_cites_every_row) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_checklist(Profile, Items),
+    length(Items, 37),
+    member(item(segregation_of_duties, unmet(_), cite(eu_reg_2024_1774_art_21_b)), Items),
+    member(item(financial_entity_is_article_16_1_entity, met, cite(eu_reg_2022_2554_art_16_1)), Items).
+
+cp_test_names([the_baseline_profile_yields_exactly_one_status, the_verdict_carries_the_fixed_citations, incomplete_carries_the_fixed_citations, required_lists_every_duty_once_in_duty_order, required_puts_the_closing_duties_after_the_points, required_for_an_article_16_1_entity, required_with_the_gate_absent, the_referral_carries_every_present_pair, the_outstanding_referral_is_the_same, outstanding_names_the_absent_key_despite_a_failing_duty, outstanding_lists_the_closing_duties_of_article_21, none_outstanding_carries_the_fixed_citations, the_checklist_cites_every_row]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

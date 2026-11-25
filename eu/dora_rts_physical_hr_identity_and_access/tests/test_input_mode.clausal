@@ -1,0 +1,144 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and input-tolerance
+% checks of THE INPUT CHECK (badly formed profiles, odd keys and values).
+% Run: python -m clausal.testing eu/dora_rts_physical_hr_identity_and_access/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/dora_rts_physical_hr_identity_and_access, [
+    physical_hr_identity_and_access_duties_required/3,
+    physical_hr_identity_and_access_duties_complete/3,
+    physical_hr_identity_and_access_duties_outstanding/3,
+    dora_rts_physical_hr_identity_and_access_status/2,
+    dora_rts_physical_hr_identity_and_access_status_values/1
+]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/kernel, [dora_rts_physical_hr_identity_and_access_input_problems/2]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/fixtures, [dora_rts_physical_hr_identity_and_access_profile_for/2]).
+
+% ---- bound verdicts, one per route -----------------------------------------
+test(an_article_16_1_entity_is_bound_to_simplified_framework_entity) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(article_16_1_entity, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, simplified_framework_entity).
+test(all_duties_performed_is_bound_to_complete) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, complete).
+test(one_duty_not_performed_is_bound_to_incomplete) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, incomplete).
+test(an_absent_gate_is_bound_to_indeterminate) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(gate_absent, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, indeterminate([financial_entity_is_article_16_1_entity])).
+test(an_absent_duty_is_bound_to_indeterminate) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(first_absent_duty, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, indeterminate([dedicated_accounts_used_for_administrative_tasks_where_possible])).
+test(only_the_gate_given_asks_the_first_duty) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(gate_only_false, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, indeterminate([physical_and_environmental_security_policy_specified_documented_and_implemented])).
+test(an_unsure_duty_is_bound_to_needs_legal_review) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(unsure_referral, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, needs_legal_review(open_textured(access_control_policy_contains_segregation_of_duties, cite(eu_reg_2024_1774_art_21_b)), [inputs_relied_on(_)])).
+test(a_failing_duty_with_an_absent_duty_is_bound_to_incomplete) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(failing_duty_with_absent_duty, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, incomplete).
+test(a_duplicate_and_a_wrong_type_are_bound_to_input_problems) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(duplicate_and_wrong_type, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, input_problems([duplicate_key(financial_entity_is_article_16_1_entity), wrong_type(access_control_policy_contains_segregation_of_duties)])).
+test(an_unknown_key_is_bound_to_input_problems) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(unknown_key, Profile),
+    dora_rts_physical_hr_identity_and_access_status(Profile, input_problems([unknown_key(colour)])).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, complete),
+    dora_rts_physical_hr_identity_and_access_status(Profile, Other).
+
+test(required_is_bound_with_its_citations) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    physical_hr_identity_and_access_duties_required(Profile, required([physical_and_environmental_security_policy|_]), [_|_]).
+test(outstanding_is_bound_to_the_one_failing_duty) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    physical_hr_identity_and_access_duties_outstanding(Profile, outstanding([segregation_of_duties]), [cite(eu_reg_2024_1774_art_21_b)]).
+test(complete_is_bound_with_empty_citations_for_a_status) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(gate_absent, Profile),
+    physical_hr_identity_and_access_duties_complete(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []).
+
+% ---- input tolerance ---------------------------------------------------------
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(_, [wrong_type(profile)]).
+test(a_partial_list_is_not_an_attribute_list) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(financial_entity_is_article_16_1_entity, false)|_], [wrong_type(profile)]).
+test(an_atom_is_not_an_attribute_list) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(not_a_profile, [wrong_type(profile)]).
+test(a_foreign_element_is_not_an_attribute_list) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(financial_entity_is_article_16_1_entity, false), colour],
+        [wrong_type(profile)]).
+test(an_unbound_element_is_not_an_attribute_list) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(financial_entity_is_article_16_1_entity, false), _],
+        [wrong_type(profile)]).
+test(a_number_key_is_unknown) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(7, yes)], [unknown_key(7)]).
+test(an_integer_and_a_float_key_are_two_keys) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(7, yes), attribute(7.0, yes)], Problems),
+    Problems == [unknown_key(7), unknown_key(7.0)].
+test(an_unbound_key_is_named_as_given) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(Key, yes)], [unknown_key(Named)]),
+    Named == Key.
+test(the_same_unbound_key_twice_is_one_key) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(Key, yes), attribute(Key, no)], Problems),
+    length(Problems, 1).
+test(two_unbound_keys_are_two_keys) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(_, yes), attribute(_, no)], Problems),
+    length(Problems, 2).
+test(an_unknown_key_value_is_not_checked) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(colour, _)], [unknown_key(colour)]).
+test(an_unknown_key_repeated_is_named_once) :-
+    dora_rts_physical_hr_identity_and_access_input_problems([attribute(colour, blue), attribute(colour, red)], [unknown_key(colour)]).
+test(an_unbound_value_of_a_contract_key_is_wrong_type) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(access_control_policy_contains_segregation_of_duties, _)],
+        [wrong_type(access_control_policy_contains_segregation_of_duties)]).
+test(a_number_value_is_wrong_type) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(access_control_policy_contains_segregation_of_duties, 1.0)],
+        [wrong_type(access_control_policy_contains_segregation_of_duties)]).
+test(a_string_value_is_wrong_type) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(financial_entity_is_article_16_1_entity, "true")],
+        [wrong_type(financial_entity_is_article_16_1_entity)]).
+test(contract_problems_come_before_unknown_keys) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(colour, blue),
+         attribute(financial_entity_is_article_16_1_entity, unsure)],
+        [wrong_type(financial_entity_is_article_16_1_entity), unknown_key(colour)]).
+test(contract_problems_follow_contract_order) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(access_control_policy_contains_segregation_of_duties, maybe),
+         attribute(financial_entity_is_article_16_1_entity, maybe)],
+        [wrong_type(financial_entity_is_article_16_1_entity), wrong_type(access_control_policy_contains_segregation_of_duties)]).
+test(a_duplicate_with_equal_values_is_a_duplicate) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(
+        [attribute(access_control_policy_contains_segregation_of_duties, true),
+         attribute(access_control_policy_contains_segregation_of_duties, true)],
+        [duplicate_key(access_control_policy_contains_segregation_of_duties)]).
+test(a_present_duty_key_is_checked_by_the_required_query) :-
+    physical_hr_identity_and_access_duties_required(
+        [attribute(financial_entity_is_article_16_1_entity, false),
+         attribute(access_control_policy_contains_segregation_of_duties, maybe)],
+        input_problems([wrong_type(access_control_policy_contains_segregation_of_duties)]),
+        []).
+test(an_input_problem_comes_before_the_gate) :-
+    physical_hr_identity_and_access_duties_outstanding(
+        [attribute(financial_entity_is_article_16_1_entity, true),
+         attribute(colour, blue)],
+        input_problems([unknown_key(colour)]),
+        []).
+test(the_gate_true_with_duty_keys_is_no_problem) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(article_16_1_entity, Profile),
+    dora_rts_physical_hr_identity_and_access_input_problems(Profile, []).
+
+:- end_module(test_input_mode).

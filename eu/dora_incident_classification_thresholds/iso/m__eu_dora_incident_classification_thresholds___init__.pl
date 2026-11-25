@@ -1,0 +1,69 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_incident_classification_thresholds___init__, [root_export/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_incident_classification_thresholds_kernel, [dora_incident_classification_thresholds_input_problems/2]).
+:- use_module(m__eu_dora_incident_classification_thresholds_citations, [citation/2, implements/1]).
+:- use_module(m__eu_dora_incident_classification_thresholds_dora_incident_classification_thresholds, [decide_dora_incident_classification_thresholds/2, dora_final_report_timeliness/5, dora_incident_classification_thresholds_checklist/2, dora_incident_classification_thresholds_decision_resolvable/1, dora_incident_classification_thresholds_status/2, dora_incident_classification_thresholds_status_values/1, dora_incident_threshold_status/4]).
+:- use_module(m__eu_dora_incident_classification_thresholds_queries, [access_may_result_in_data_losses/0, advisory_costs_cents/0, affected_clients/0, affected_financial_counterparts/0, affected_transactions_amount/0, affected_transactions_number/0, affects_authorised_registered_or_supervised_financial_services/0, affects_ict_services_supporting_critical_or_important_functions/0, clients_financial_counterparts_and_transactions_threshold_met/0, clients_using_affected_service/0, communication_costs_cents/0, contractual_non_compliance_fees_cents/0, costs_and_losses_likely_to_exceed_threshold/0, critical_or_important_function_service_downtime_seconds/0, critical_services_affected/0, data_authenticity_impact/0, data_availability_impact/0, data_confidentiality_impact/0, data_impact_adverse_to_business_objectives_or_regulatory_requirements/0, data_integrity_impact/0, data_losses_impact_threshold_met/0, data_losses_malicious_access_threshold_met/0, dora_incident_classification_thresholds_profile_keys/1, dora_incident_classification_thresholds_what_if/4, duration_and_service_downtime_threshold_met/0, economic_impact_threshold_met/0, expropriated_funds_and_assets_cents/0, final_report_weekend_extension/0, financial_counterparts_of_affected_service/0, forgone_revenue_losses_cents/0, geographical_spread_threshold_met/0, incident_duration_seconds/0, incident_reflected_in_media/0, indeterminate/1, late/1, material_loss_of_clients_or_counterparts_likely/0, member_states_with_impact/0, met/0, month_limit/0, not_met/0, on_time/0, redress_and_compensation_costs_cents/0, reference_period_days/0, reference_period_transactions_amount/0, reference_period_transactions_number/0, regulatory_requirements_likely_not_met/0, relevant_clients_or_financial_counterparts_affected/0, repetitive_complaints_from_different_clients_or_counterparts/0, replacement_and_relocation_costs_cents/0, reputational_impact_threshold_met/0, staff_costs_cents/0, successful_malicious_unauthorised_access/0, unsure/0]).
+:- use_module(m__eu_dora_incident_classification_thresholds_fixtures, [dora_incident_classification_thresholds_assess/2, dora_incident_classification_thresholds_profile_for/2, dora_incident_classification_thresholds_subject/1]).
+
+root_export(access_may_result_in_data_losses).
+root_export(advisory_costs_cents).
+root_export(affected_clients).
+root_export(affected_financial_counterparts).
+root_export(affected_transactions_amount).
+root_export(affected_transactions_number).
+root_export(affects_authorised_registered_or_supervised_financial_services).
+root_export(affects_ict_services_supporting_critical_or_important_functions).
+root_export(clients_financial_counterparts_and_transactions_threshold_met).
+root_export(clients_using_affected_service).
+root_export(communication_costs_cents).
+root_export(contractual_non_compliance_fees_cents).
+root_export(costs_and_losses_likely_to_exceed_threshold).
+root_export(critical_or_important_function_service_downtime_seconds).
+root_export(critical_services_affected).
+root_export(data_authenticity_impact).
+root_export(data_availability_impact).
+root_export(data_confidentiality_impact).
+root_export(data_impact_adverse_to_business_objectives_or_regulatory_requirements).
+root_export(data_integrity_impact).
+root_export(data_losses_impact_threshold_met).
+root_export(data_losses_malicious_access_threshold_met).
+root_export(duplicate_key).
+root_export(duration_and_service_downtime_threshold_met).
+root_export(economic_impact_threshold_met).
+root_export(expropriated_funds_and_assets_cents).
+root_export(final_report_weekend_extension).
+root_export(financial_counterparts_of_affected_service).
+root_export(forgone_revenue_losses_cents).
+root_export(geographical_spread_threshold_met).
+root_export(incident_duration_seconds).
+root_export(incident_reflected_in_media).
+root_export(input_problems).
+root_export(inputs_relied_on).
+root_export(material_loss_of_clients_or_counterparts_likely).
+root_export(member_states_with_impact).
+root_export(met).
+root_export(month_limit).
+root_export(needs_legal_review).
+root_export(not_met).
+root_export(on_time).
+root_export(open_textured).
+root_export(provenance).
+root_export(redress_and_compensation_costs_cents).
+root_export(reference_period_days).
+root_export(reference_period_transactions_amount).
+root_export(reference_period_transactions_number).
+root_export(regulatory_requirements_likely_not_met).
+root_export(relevant_clients_or_financial_counterparts_affected).
+root_export(repetitive_complaints_from_different_clients_or_counterparts).
+root_export(replacement_and_relocation_costs_cents).
+root_export(reputational_impact_threshold_met).
+root_export(staff_costs_cents).
+root_export(successful_malicious_unauthorised_access).
+root_export(unknown_key).
+root_export(unsure).
+root_export(wrong_type).

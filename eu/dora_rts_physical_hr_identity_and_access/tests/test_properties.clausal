@@ -1,0 +1,114 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_properties.clausal -- structural PROPERTIES over the subject set.
+% Totality and determinism of every query on every fixture profile, the
+% citation shape of each answer form, and two invariants over every duty
+% key: one false duty makes the complete query incomplete, and one unsure
+% duty is referred with that very key.
+% Run: python -m clausal.testing eu/dora_rts_physical_hr_identity_and_access/tests/test_properties.clausal
+% =====================================================================
+:- module(test_properties, []).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/dora_rts_physical_hr_identity_and_access, [
+    physical_hr_identity_and_access_duties_required/3,
+    physical_hr_identity_and_access_duties_complete/3,
+    physical_hr_identity_and_access_duties_outstanding/3,
+    decide_dora_rts_physical_hr_identity_and_access/2
+]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/queries, [
+    dora_rts_physical_hr_identity_and_access_profile_keys/1,
+    dora_rts_physical_hr_identity_and_access_what_if/4
+]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/fixtures, [
+    dora_rts_physical_hr_identity_and_access_subject/1,
+    dora_rts_physical_hr_identity_and_access_profile_for/2
+]).
+
+subjects(Subjects) :-
+    findall(Subject, dora_rts_physical_hr_identity_and_access_subject(Subject), Subjects).
+
+subject_classifies(Subject) :-
+    dora_rts_physical_hr_identity_and_access_subject(Subject),
+    dora_rts_physical_hr_identity_and_access_profile_for(Subject, Profile),
+    decide_dora_rts_physical_hr_identity_and_access(Profile, _Verdict).
+
+% one_fitting_answer(Query, Subject): the query has exactly one answer on
+% the subject's profile, and its citations fit its result form.
+one_fitting_answer(Query, Subject) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(Subject, Profile),
+    findall(Result-Citations, call(Query, Profile, Result, Citations), [Result-Citations]),
+    answer_fits(Result, Citations).
+
+answer_fits(required([_|_]), [_|_]).
+answer_fits(complete, [_|_]).
+answer_fits(incomplete, [_|_]).
+answer_fits(none_outstanding, [_|_]).
+answer_fits(outstanding([_|_]), [_|_]).
+answer_fits(simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+answer_fits(indeterminate([_]), []).
+answer_fits(needs_legal_review(open_textured(_, cite(_)), [inputs_relied_on(_)|_]), []).
+answer_fits(input_problems([_|_]), []).
+
+required_never_refers(Subject) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(Subject, Profile),
+    physical_hr_identity_and_access_duties_required(Profile, Result, _),
+    required_form(Result).
+
+required_form(required(_)).
+required_form(simplified_framework_entity).
+required_form(indeterminate(_)).
+required_form(input_problems(_)).
+
+failing_key_is_incomplete(Profile, Key) :-
+    dora_rts_physical_hr_identity_and_access_what_if(Profile, Key, false, incomplete).
+
+unsure_key_is_referred(Profile, Key) :-
+    dora_rts_physical_hr_identity_and_access_what_if(Profile, Key, unsure, needs_legal_review(open_textured(Key, cite(_)), _)).
+
+absent_key_is_asked(Key) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    remove_key(Profile, Key, Kept),
+    physical_hr_identity_and_access_duties_outstanding(Kept, indeterminate([Key]), []).
+
+remove_key([], _, []).
+remove_key([attribute(Key, _)|Elements], Key, Kept) :-
+    remove_key(Elements, Key, Kept).
+remove_key([attribute(Other, Value)|Elements], Key, [attribute(Other, Value)|Kept]) :-
+    dif(Other, Key),
+    remove_key(Elements, Key, Kept).
+
+test(totality_every_subject_classifies) :-
+    subjects(Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_of_the_required_query) :-
+    subjects(Subjects),
+    maplist(one_fitting_answer(physical_hr_identity_and_access_duties_required), Subjects).
+test(determinism_of_the_complete_query) :-
+    subjects(Subjects),
+    maplist(one_fitting_answer(physical_hr_identity_and_access_duties_complete), Subjects).
+test(determinism_of_the_outstanding_query) :-
+    subjects(Subjects),
+    maplist(one_fitting_answer(physical_hr_identity_and_access_duties_outstanding), Subjects).
+test(the_required_query_never_refers) :-
+    subjects(Subjects),
+    maplist(required_never_refers, Subjects).
+test(every_failing_duty_makes_the_duties_incomplete) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_profile_keys([_|DutyKeys]),
+    maplist(failing_key_is_incomplete(Profile), DutyKeys).
+test(every_unsure_duty_is_referred_with_its_own_key) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_profile_keys([_|DutyKeys]),
+    maplist(unsure_key_is_referred(Profile), DutyKeys).
+test(every_absent_duty_is_asked_by_name) :-
+    dora_rts_physical_hr_identity_and_access_profile_keys([_|DutyKeys]),
+    maplist(absent_key_is_asked, DutyKeys).
+test(complete_and_none_outstanding_agree) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    physical_hr_identity_and_access_duties_complete(Profile, complete, CompleteCitations),
+    physical_hr_identity_and_access_duties_outstanding(Profile, none_outstanding, OutstandingCitations),
+    msort(CompleteCitations, Sorted),
+    msort(OutstandingCitations, Sorted).
+
+:- end_module(test_properties).

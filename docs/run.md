@@ -5,7 +5,7 @@ Everything below runs on an ordinary computer with Python 3.13 or later.
 ```sh
 git clone https://github.com/neurosymbolica/clausal-rules-as-code
 cd clausal-rules-as-code
-pip install 'clausal>=1.2.0' pyyaml   # the engine (Clausal Prolog) and YAML for the tools
+pip install 'clausal>=1.4.0' pyyaml   # the engine (Clausal Prolog) and YAML for the tools
 
 python run_tests.py               # every domain's tests
 python run_tests.py eu/procurement/time_limits   # one domain
@@ -21,7 +21,7 @@ python run_iso_tests.py trealla /path/to/tpl
 python run_iso_tests.py trealla /path/to/tpl eu/procurement/time_limits   # one domain
 ```
 
-All three engines pass the same 24,953 tests (tested with Clausal Prolog 1.4.0 from PyPI, Scryer Prolog
+All three engines pass the same 29,605 tests (tested with Clausal Prolog 1.4.0 from PyPI, Scryer Prolog
 v0.10.0-137-g9acba77a and Trealla Prolog v2.92.3).
 
 The public checks for one domain:

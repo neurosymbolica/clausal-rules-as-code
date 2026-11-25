@@ -1,0 +1,159 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/nis2_lex_specialis_and_definitions.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract), keys in contract order. There are no thresholds
+% in this order, so the 'one-unit near miss' of each route is a ONE-KEY
+% change: the same profile with one key moved by one value (or dropped,
+% or given) so that the route does not fire and another answer comes back.
+%
+% Routes covered (risk group A, notification group B), with each positive
+% case and its near-miss control:
+%   A3 disapplied     essential_all_equivalent  / essential_risk_not_equivalent
+%   B6 disapplied     essential_all_equivalent  / important_requirements_not_equivalent
+%   B3 access false   important_only_point_a_met / essential_all_equivalent
+%   A2/B2 out_of_scope out_of_scope_entity      / essential_judgements_missing
+%   A1/B1 class absent class_missing            / class_given_all_unsure
+%   A5/B5a referral   class_given_all_unsure    / essential_all_equivalent
+%   A5 beside B3      unsure_risk_measures
+%   A4/B4a absent     access_missing_requirements_unsure
+%   B4b absent        access_unsure_requirements_missing
+%   B5b referral      access_true_requirements_unsure / essential_all_equivalent
+%   A0/B0 problems    malformed_duplicate_and_unknown, malformed_wrong_type
+%                     / essential_all_equivalent (well-formed control)
+% The expected answers are asserted in tests/test_public_interface.clausal.
+% =====================================================================
+
+:- module(fixtures, [
+    nis2_lex_specialis_and_definitions_subject/1,
+    nis2_lex_specialis_and_definitions_profile_for/2,
+    nis2_lex_specialis_and_definitions_assess/2
+]).
+
+:- use_module(eu/nis2_lex_specialis_and_definitions/nis2_lex_specialis_and_definitions, [decide_nis2_lex_specialis_and_definitions/2]).
+
+% ---- Subject registry ------------------------------------------------
+nis2_lex_specialis_and_definitions_subject(essential_all_equivalent).
+nis2_lex_specialis_and_definitions_subject(essential_risk_not_equivalent).
+nis2_lex_specialis_and_definitions_subject(important_only_point_a_met).
+nis2_lex_specialis_and_definitions_subject(important_requirements_not_equivalent).
+nis2_lex_specialis_and_definitions_subject(out_of_scope_entity).
+nis2_lex_specialis_and_definitions_subject(essential_judgements_missing).
+nis2_lex_specialis_and_definitions_subject(class_missing).
+nis2_lex_specialis_and_definitions_subject(class_given_all_unsure).
+nis2_lex_specialis_and_definitions_subject(unsure_risk_measures).
+nis2_lex_specialis_and_definitions_subject(access_missing_requirements_unsure).
+nis2_lex_specialis_and_definitions_subject(access_unsure_requirements_missing).
+nis2_lex_specialis_and_definitions_subject(access_true_requirements_unsure).
+nis2_lex_specialis_and_definitions_subject(malformed_duplicate_and_unknown).
+nis2_lex_specialis_and_definitions_subject(malformed_wrong_type).
+
+% ---- Profiles --------------------------------------------------------
+% Both Art 4(2) tests met: both groups disapplied.
+nis2_lex_specialis_and_definitions_profile_for(essential_all_equivalent, [
+    attribute(entity_class, essential_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true),
+    attribute(dora_gives_immediate_access_to_incident_notifications, true),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, true)
+]).
+
+% Near miss of A3: the point (a) judgement moved from true to false.
+nis2_lex_specialis_and_definitions_profile_for(essential_risk_not_equivalent, [
+    attribute(entity_class, essential_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, false),
+    attribute(dora_gives_immediate_access_to_incident_notifications, true),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, true)
+]).
+
+% Reading (3), Q1: point (a) met, point (b) not (no immediate access).
+nis2_lex_specialis_and_definitions_profile_for(important_only_point_a_met, [
+    attribute(entity_class, important_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true),
+    attribute(dora_gives_immediate_access_to_incident_notifications, false),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, true)
+]).
+
+% Near miss of B6: the notification equivalence moved from true to false.
+nis2_lex_specialis_and_definitions_profile_for(important_requirements_not_equivalent, [
+    attribute(entity_class, important_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true),
+    attribute(dora_gives_immediate_access_to_incident_notifications, true),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, false)
+]).
+
+% out_of_scope decides alone, with every judgement absent.
+nis2_lex_specialis_and_definitions_profile_for(out_of_scope_entity, [
+    attribute(entity_class, out_of_scope)
+]).
+
+% Near miss of out_of_scope: the class moved to essential_entity.
+nis2_lex_specialis_and_definitions_profile_for(essential_judgements_missing, [
+    attribute(entity_class, essential_entity)
+]).
+
+% entity_class absent: named first, the unsure judgements behind it.
+nis2_lex_specialis_and_definitions_profile_for(class_missing, [
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, unsure),
+    attribute(dora_gives_immediate_access_to_incident_notifications, unsure),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, unsure)
+]).
+
+% Near miss of class_missing: the class given; every judgement unsure.
+nis2_lex_specialis_and_definitions_profile_for(class_given_all_unsure, [
+    attribute(entity_class, essential_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, unsure),
+    attribute(dora_gives_immediate_access_to_incident_notifications, unsure),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, unsure)
+]).
+
+% Risk referred; notification decided by a false access beside an absent key.
+nis2_lex_specialis_and_definitions_profile_for(unsure_risk_measures, [
+    attribute(entity_class, essential_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, unsure),
+    attribute(dora_gives_immediate_access_to_incident_notifications, false)
+]).
+
+% <<DNUM>>, Q8: an absent access is named before an unsure equivalence.
+nis2_lex_specialis_and_definitions_profile_for(access_missing_requirements_unsure, [
+    attribute(entity_class, important_entity),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, unsure)
+]).
+
+% <<DNUM>>: an absent equivalence is named before an unsure access.
+nis2_lex_specialis_and_definitions_profile_for(access_unsure_requirements_missing, [
+    attribute(entity_class, important_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true),
+    attribute(dora_gives_immediate_access_to_incident_notifications, unsure)
+]).
+
+% B5b: access true, equivalence unsure: the equivalence is referred.
+nis2_lex_specialis_and_definitions_profile_for(access_true_requirements_unsure, [
+    attribute(entity_class, essential_entity),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true),
+    attribute(dora_gives_immediate_access_to_incident_notifications, true),
+    attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, unsure)
+]).
+
+% Input problems: entity_class twice, and a key outside the contract.
+nis2_lex_specialis_and_definitions_profile_for(malformed_duplicate_and_unknown, [
+    attribute(entity_class, essential_entity),
+    attribute(entity_class, important_entity),
+    attribute(sector, banking)
+]).
+
+% Input problems: entity_class given a value outside its enumeration.
+nis2_lex_specialis_and_definitions_profile_for(malformed_wrong_type, [
+    attribute(entity_class, large),
+    attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+nis2_lex_specialis_and_definitions_assess(Subject, Result) :-
+    nis2_lex_specialis_and_definitions_profile_for(Subject, Profile),
+    decide_nis2_lex_specialis_and_definitions(Profile, Result).
+
+:- end_module(fixtures).

@@ -1,0 +1,412 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_rts_physical_hr_identity_and_access.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls (status/2, checklist/2), the kernel's input check
+% (re-exported here as the scaffold wrote it) and the provenance marker.
+%
+% dora_rts_physical_hr_identity_and_access_profile_keys/1: the 37 contract keys, root_exports order
+% dora_rts_physical_hr_identity_and_access_input_problems/2: THE INPUT CHECK ([] = none)
+% dora_rts_physical_hr_identity_and_access_what_if/4 (#16 what-if): one key overridden, the
+%     status (the complete query's answer) re-evaluated
+% dora_rts_physical_hr_identity_and_access_compliance_check/3 (#13 compliance_check): does the
+%     entity's current state meet the obligation Duty of RTS Articles 18 to 21?
+%     satisfied | violated | indeterminate([Key]) |
+%     needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]) |
+%     simplified_framework_entity | input_problems(Problems)
+% The eligibility verdict (#2) and the cited checklist (#7) are the slice's
+% status/2 and checklist/2, which the package facade exports.
+%
+% Every route is complementary clauses: exactly one answer per call with a
+% bound Duty. An unsure judgement is never given a crisp test: it is handed
+% to the user as needs_legal_review (readings (3), (13)).
+%
+% This module also owns the ROOT_EXPORTS names: the result atoms, the
+% judgement value unsure, the thirty-seven profile keys and the thirty-six
+% duty atoms (each a fact naming a term of the interface; none decides
+% anything, and no query calls them), and the result constructors, which
+% are data: they are exported and declared with constructors/1, and have
+% no clauses.
+% =====================================================================
+
+:- module(queries, [
+    dora_rts_physical_hr_identity_and_access_profile_keys/1,
+    dora_rts_physical_hr_identity_and_access_input_problems/2,
+    dora_rts_physical_hr_identity_and_access_what_if/4,
+    dora_rts_physical_hr_identity_and_access_compliance_check/3,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0,
+    unsure/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    financial_entity_is_article_16_1_entity/0,
+    physical_and_environmental_security_policy_specified_documented_and_implemented/0,
+    physical_security_policy_designed_in_light_of_threat_landscape_classification_and_risk_profile/0,
+    physical_security_policy_refers_to_section_on_physical_access_controls/0,
+    physical_security_policy_contains_measures_protecting_premises_data_centres_and_sensitive_areas/0,
+    physical_security_policy_contains_measures_securing_ict_assets_within_and_outside_premises/0,
+    physical_security_policy_contains_measures_of_appropriate_maintenance/0,
+    physical_security_policy_contains_clear_desk_policy_for_papers/0,
+    physical_security_policy_contains_clear_screen_policy_for_information_processing_facilities/0,
+    physical_security_policy_contains_measures_protecting_unattended_ict_assets/0,
+    human_resource_policy_identifies_and_assigns_ict_security_responsibilities/0,
+    human_resource_policy_requires_staff_to_be_informed_of_and_adhere_to_ict_security_policies/0,
+    human_resource_policy_requires_staff_to_be_aware_of_reporting_channels/0,
+    human_resource_policy_requires_staff_to_return_assets_upon_termination_of_employment/0,
+    identity_management_policies_and_procedures_developed_documented_and_implemented/0,
+    identity_management_assigns_unique_identity_corresponding_to_unique_user_account/0,
+    identity_management_contains_lifecycle_management_process_for_identities_and_accounts/0,
+    records_of_all_identity_assignments_maintained_and_kept/0,
+    automated_solutions_for_lifecycle_identity_management_deployed_where_feasible_and_appropriate/0,
+    access_control_policy_developed_documented_and_implemented/0,
+    access_control_policy_assigns_access_rights_on_need_to_know_need_to_use_and_least_privilege/0,
+    access_control_policy_contains_segregation_of_duties/0,
+    access_control_policy_contains_provision_on_user_accountability/0,
+    access_control_policy_contains_provision_on_restrictions_of_access_to_ict_assets/0,
+    account_management_procedures_assign_roles_for_granting_reviewing_and_revoking_access_rights/0,
+    account_management_procedures_assign_privileged_emergency_and_administrator_access_on_need_to_use_or_ad_hoc_basis/0,
+    account_management_procedures_withdraw_access_rights_without_undue_delay/0,
+    account_management_procedures_update_access_rights_where_necessary_and_at_the_required_intervals/0,
+    access_control_policy_uses_authentication_methods_commensurate_to_classification_and_risk_profile/0,
+    access_control_policy_uses_strong_authentication_methods_where_required/0,
+    physical_access_controls_identify_and_log_persons_authorised_to_access_premises/0,
+    physical_access_rights_to_critical_ict_assets_granted_to_authorised_persons_only/0,
+    physical_access_to_premises_data_centres_and_sensitive_areas_monitored/0,
+    physical_access_rights_reviewed_and_unnecessary_rights_promptly_revoked/0,
+    retention_period_for_the_purposes_of_point_e_i_established/0,
+    dedicated_accounts_used_for_administrative_tasks_where_possible/0,
+    automated_solutions_for_privileged_access_management_deployed_where_feasible_and_appropriate/0,
+    physical_and_environmental_security_policy/0,
+    physical_security_policy_design_basis/0,
+    reference_to_physical_access_controls_section/0,
+    protection_of_premises_data_centres_and_sensitive_areas/0,
+    securing_of_ict_assets_within_and_outside_premises/0,
+    appropriate_maintenance_of_assets_and_access_control_devices/0,
+    clear_desk_policy_for_papers/0,
+    clear_screen_policy/0,
+    protection_of_unattended_ict_assets/0,
+    ict_security_responsibilities/0,
+    staff_informed_of_and_adhering_to_ict_security_policies/0,
+    staff_aware_of_reporting_channels/0,
+    return_of_assets_upon_termination_of_employment/0,
+    identity_management_policies_and_procedures/0,
+    unique_identity_for_each_user_account/0,
+    identity_and_account_lifecycle_management_process/0,
+    records_of_identity_assignments/0,
+    automated_identity_lifecycle_solutions/0,
+    access_control_policy/0,
+    need_to_know_and_least_privilege_access_rights/0,
+    segregation_of_duties/0,
+    user_accountability/0,
+    restrictions_of_access_to_ict_assets/0,
+    roles_for_granting_reviewing_and_revoking_access/0,
+    privileged_emergency_and_administrator_access/0,
+    withdrawal_of_access_rights/0,
+    update_of_access_rights/0,
+    authentication_methods_commensurate_to_classification_and_risk/0,
+    strong_authentication_methods/0,
+    identification_and_logging_of_authorised_persons/0,
+    physical_access_rights_to_critical_ict_assets/0,
+    monitoring_of_physical_access/0,
+    review_of_physical_access_rights/0,
+    retention_period_for_point_e_i/0,
+    dedicated_administrative_accounts/0,
+    automated_privileged_access_management/0
+]).
+
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/kernel, [dora_rts_physical_hr_identity_and_access_input_problems/2]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/dora_rts_physical_hr_identity_and_access, [dora_rts_physical_hr_identity_and_access_status/2, dora_rts_physical_hr_identity_and_access_checklist/2]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/citations, [implements/1]).
+
+% The result constructors: data, with named fields and no clauses.
+:- constructors([
+    required(duties),
+    outstanding(duties),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_rts_physical_hr_identity_and_access_profile_keys([financial_entity_is_article_16_1_entity, physical_and_environmental_security_policy_specified_documented_and_implemented, physical_security_policy_designed_in_light_of_threat_landscape_classification_and_risk_profile, physical_security_policy_refers_to_section_on_physical_access_controls, physical_security_policy_contains_measures_protecting_premises_data_centres_and_sensitive_areas, physical_security_policy_contains_measures_securing_ict_assets_within_and_outside_premises, physical_security_policy_contains_measures_of_appropriate_maintenance, physical_security_policy_contains_clear_desk_policy_for_papers, physical_security_policy_contains_clear_screen_policy_for_information_processing_facilities, physical_security_policy_contains_measures_protecting_unattended_ict_assets, human_resource_policy_identifies_and_assigns_ict_security_responsibilities, human_resource_policy_requires_staff_to_be_informed_of_and_adhere_to_ict_security_policies, human_resource_policy_requires_staff_to_be_aware_of_reporting_channels, human_resource_policy_requires_staff_to_return_assets_upon_termination_of_employment, identity_management_policies_and_procedures_developed_documented_and_implemented, identity_management_assigns_unique_identity_corresponding_to_unique_user_account, identity_management_contains_lifecycle_management_process_for_identities_and_accounts, records_of_all_identity_assignments_maintained_and_kept, automated_solutions_for_lifecycle_identity_management_deployed_where_feasible_and_appropriate, access_control_policy_developed_documented_and_implemented, access_control_policy_assigns_access_rights_on_need_to_know_need_to_use_and_least_privilege, access_control_policy_contains_segregation_of_duties, access_control_policy_contains_provision_on_user_accountability, access_control_policy_contains_provision_on_restrictions_of_access_to_ict_assets, account_management_procedures_assign_roles_for_granting_reviewing_and_revoking_access_rights, account_management_procedures_assign_privileged_emergency_and_administrator_access_on_need_to_use_or_ad_hoc_basis, account_management_procedures_withdraw_access_rights_without_undue_delay, account_management_procedures_update_access_rights_where_necessary_and_at_the_required_intervals, access_control_policy_uses_authentication_methods_commensurate_to_classification_and_risk_profile, access_control_policy_uses_strong_authentication_methods_where_required, physical_access_controls_identify_and_log_persons_authorised_to_access_premises, physical_access_rights_to_critical_ict_assets_granted_to_authorised_persons_only, physical_access_to_premises_data_centres_and_sensitive_areas_monitored, physical_access_rights_reviewed_and_unnecessary_rights_promptly_revoked, retention_period_for_the_purposes_of_point_e_i_established, dedicated_accounts_used_for_administrative_tasks_where_possible, automated_solutions_for_privileged_access_management_deployed_where_feasible_and_appropriate]).
+
+% ---- root_exports: result atoms -----------------------------------------
+% Each name is read as a package-root attribute by the scorer. These facts
+% decide nothing; no query calls them.
+complete.
+incomplete.
+none_outstanding.
+simplified_framework_entity.
+unsure.
+
+% The thirty-seven profile keys, root_exports order.
+financial_entity_is_article_16_1_entity.
+physical_and_environmental_security_policy_specified_documented_and_implemented.
+physical_security_policy_designed_in_light_of_threat_landscape_classification_and_risk_profile.
+physical_security_policy_refers_to_section_on_physical_access_controls.
+physical_security_policy_contains_measures_protecting_premises_data_centres_and_sensitive_areas.
+physical_security_policy_contains_measures_securing_ict_assets_within_and_outside_premises.
+physical_security_policy_contains_measures_of_appropriate_maintenance.
+physical_security_policy_contains_clear_desk_policy_for_papers.
+physical_security_policy_contains_clear_screen_policy_for_information_processing_facilities.
+physical_security_policy_contains_measures_protecting_unattended_ict_assets.
+human_resource_policy_identifies_and_assigns_ict_security_responsibilities.
+human_resource_policy_requires_staff_to_be_informed_of_and_adhere_to_ict_security_policies.
+human_resource_policy_requires_staff_to_be_aware_of_reporting_channels.
+human_resource_policy_requires_staff_to_return_assets_upon_termination_of_employment.
+identity_management_policies_and_procedures_developed_documented_and_implemented.
+identity_management_assigns_unique_identity_corresponding_to_unique_user_account.
+identity_management_contains_lifecycle_management_process_for_identities_and_accounts.
+records_of_all_identity_assignments_maintained_and_kept.
+automated_solutions_for_lifecycle_identity_management_deployed_where_feasible_and_appropriate.
+access_control_policy_developed_documented_and_implemented.
+access_control_policy_assigns_access_rights_on_need_to_know_need_to_use_and_least_privilege.
+access_control_policy_contains_segregation_of_duties.
+access_control_policy_contains_provision_on_user_accountability.
+access_control_policy_contains_provision_on_restrictions_of_access_to_ict_assets.
+account_management_procedures_assign_roles_for_granting_reviewing_and_revoking_access_rights.
+account_management_procedures_assign_privileged_emergency_and_administrator_access_on_need_to_use_or_ad_hoc_basis.
+account_management_procedures_withdraw_access_rights_without_undue_delay.
+account_management_procedures_update_access_rights_where_necessary_and_at_the_required_intervals.
+access_control_policy_uses_authentication_methods_commensurate_to_classification_and_risk_profile.
+access_control_policy_uses_strong_authentication_methods_where_required.
+physical_access_controls_identify_and_log_persons_authorised_to_access_premises.
+physical_access_rights_to_critical_ict_assets_granted_to_authorised_persons_only.
+physical_access_to_premises_data_centres_and_sensitive_areas_monitored.
+physical_access_rights_reviewed_and_unnecessary_rights_promptly_revoked.
+retention_period_for_the_purposes_of_point_e_i_established.
+dedicated_accounts_used_for_administrative_tasks_where_possible.
+automated_solutions_for_privileged_access_management_deployed_where_feasible_and_appropriate.
+
+% The thirty-six duty atoms, duty order.
+physical_and_environmental_security_policy.
+physical_security_policy_design_basis.
+reference_to_physical_access_controls_section.
+protection_of_premises_data_centres_and_sensitive_areas.
+securing_of_ict_assets_within_and_outside_premises.
+appropriate_maintenance_of_assets_and_access_control_devices.
+clear_desk_policy_for_papers.
+clear_screen_policy.
+protection_of_unattended_ict_assets.
+ict_security_responsibilities.
+staff_informed_of_and_adhering_to_ict_security_policies.
+staff_aware_of_reporting_channels.
+return_of_assets_upon_termination_of_employment.
+identity_management_policies_and_procedures.
+unique_identity_for_each_user_account.
+identity_and_account_lifecycle_management_process.
+records_of_identity_assignments.
+automated_identity_lifecycle_solutions.
+access_control_policy.
+need_to_know_and_least_privilege_access_rights.
+segregation_of_duties.
+user_accountability.
+restrictions_of_access_to_ict_assets.
+roles_for_granting_reviewing_and_revoking_access.
+privileged_emergency_and_administrator_access.
+withdrawal_of_access_rights.
+update_of_access_rights.
+authentication_methods_commensurate_to_classification_and_risk.
+strong_authentication_methods.
+identification_and_logging_of_authorised_persons.
+physical_access_rights_to_critical_ict_assets.
+monitoring_of_physical_access.
+review_of_physical_access_rights.
+retention_period_for_point_e_i.
+dedicated_administrative_accounts.
+automated_privileged_access_management.
+
+% ---- #16 what-if --------------------------------------------------------
+% The input check comes first: a profile with problems gives them as its
+% answer. Otherwise every attribute of OverriddenKey is dropped and one
+% attribute(OverriddenKey, NewValue) added, so the hypothesis holds one value
+% for the key; the hypothesis goes through the input check again (a bad
+% NewValue gives input_problems).
+dora_rts_physical_hr_identity_and_access_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(Profile, Problems),
+    what_if_step(Problems, Profile, OverriddenKey, NewValue, NewStatus).
+
+what_if_step([Problem|Problems], _, _, _, input_problems([Problem|Problems])).
+what_if_step([], Profile, OverriddenKey, NewValue, NewStatus) :-
+    without_key(Profile, OverriddenKey, Kept),
+    append(Kept, [attribute(OverriddenKey, NewValue)], Hypothesis),
+    dora_rts_physical_hr_identity_and_access_status(Hypothesis, NewStatus).
+
+% without_key(Attributes, Key, Kept): Attributes less every attribute of Key
+% (identity by ==). Only a well-formed attribute list reaches here.
+without_key([], _, []).
+without_key([attribute(ElementKey, _)|Elements], Key, Kept) :-
+    ElementKey == Key,
+    without_key(Elements, Key, Kept).
+without_key([attribute(ElementKey, Value)|Elements], Key, [attribute(ElementKey, Value)|Kept]) :-
+    ElementKey \== Key,
+    without_key(Elements, Key, Kept).
+
+% ---- #13 compliance check ------------------------------------------------
+% Each duty is an obligation of the financial entity; the gate of DORA
+% Art 16(1), first subparagraph, defeats every one. Read from the slice's
+% cited checklist: the gate row first, then the duty's own row.
+dora_rts_physical_hr_identity_and_access_compliance_check(Profile, Duty, Verdict) :-
+    dora_rts_physical_hr_identity_and_access_input_problems(Profile, Problems),
+    compliance_with_problems(Problems, Profile, Duty, Verdict).
+
+compliance_with_problems([Problem|Problems], _, _, input_problems([Problem|Problems])).
+compliance_with_problems([], Profile, Duty, Verdict) :-
+    dora_rts_physical_hr_identity_and_access_checklist(Profile, [GateItem|DutyItems]),
+    findall(KnownDuty, member(item(KnownDuty, _, _), DutyItems), KnownDuties),
+    memberd_t(Duty, KnownDuties, IsDuty),
+    compliance_for_duty(IsDuty, GateItem, DutyItems, Profile, Duty, Verdict).
+
+% A Duty that is not one of the thirty-six is outside the contract.
+compliance_for_duty(false, _, _, _, Duty, input_problems([unknown_key(Duty)])).
+compliance_for_duty(true, item(_, GateStatus, _), DutyItems, Profile, Duty, Verdict) :-
+    gate_compliance(GateStatus, DutyItems, Profile, Duty, Verdict).
+
+% The gate true defeats the obligation; the gate absent is asked first.
+gate_compliance(unmet(simplified_framework_entity), _, _, _, simplified_framework_entity) :-
+    implements(eu_reg_2022_2554_art_16_1).
+gate_compliance(unknown(Keys), _, _, _, indeterminate(Keys)) :-
+    implements(eu_reg_2022_2554_art_16_1).
+gate_compliance(met, DutyItems, Profile, Duty, Verdict) :-
+    implements(eu_reg_2022_2554_art_16_1),
+    member(item(Duty, Status, Citation), DutyItems),
+    duty_compliance(Status, Citation, Profile, Verdict).
+
+% The duty's own row: performed, not performed, absent (asked), or unsure
+% (handed to a lawyer with its referral citation). The row's citation is
+% the duty's referral citation, already recorded in the slice's duty table.
+duty_compliance(met, cite(_), _, satisfied).
+duty_compliance(unmet(_), cite(_), _, violated).
+duty_compliance(unknown([Key]), cite(_), Profile, indeterminate([Key])) :-
+    profile_lacks(Profile, Key).
+duty_compliance(unknown([Key]), cite(CitationKey), Profile, needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)])) :-
+    profile_get(Profile, Key, unsure),
+    relied_on_pairs(Profile, Pairs).
+
+% PAIRS: every contract Key-Value present in the profile, root_exports order.
+relied_on_pairs(Profile, Pairs) :-
+    dora_rts_physical_hr_identity_and_access_profile_keys(Keys),
+    findall(Key-Value,
+            ( member(Key, Keys),
+              profile_has(Profile, Key),
+              profile_get(Profile, Key, Value) ),
+            Pairs).
+
+% ---- tests ----------------------------------------------------------------
+duty_attributes_true(Attributes) :-
+    dora_rts_physical_hr_identity_and_access_profile_keys([_|DutyKeys]),
+    findall(attribute(Key, true), member(Key, DutyKeys), Attributes).
+
+test(the_schema_has_thirty_seven_keys) :-
+    dora_rts_physical_hr_identity_and_access_profile_keys(Keys),
+    length(Keys, 37).
+test(what_if_the_entity_is_not_an_article_16_1_entity) :-
+    duty_attributes_true(Attributes),
+    dora_rts_physical_hr_identity_and_access_what_if(
+        [attribute(financial_entity_is_article_16_1_entity, true)|Attributes],
+        financial_entity_is_article_16_1_entity,
+        false,
+        complete).
+test(what_if_the_entity_is_an_article_16_1_entity) :-
+    duty_attributes_true(Attributes),
+    dora_rts_physical_hr_identity_and_access_what_if(
+        [attribute(financial_entity_is_article_16_1_entity, false)|Attributes],
+        financial_entity_is_article_16_1_entity,
+        true,
+        simplified_framework_entity).
+test(what_if_a_duty_is_not_performed_has_one_answer) :-
+    duty_attributes_true(Attributes),
+    findall(Status,
+            dora_rts_physical_hr_identity_and_access_what_if(
+                [attribute(financial_entity_is_article_16_1_entity, false)|Attributes],
+                access_control_policy_contains_segregation_of_duties,
+                false,
+                Status),
+            Statuses),
+    Statuses == [incomplete].
+test(what_if_a_bad_value_is_an_input_problem) :-
+    duty_attributes_true(Attributes),
+    dora_rts_physical_hr_identity_and_access_what_if(
+        [attribute(financial_entity_is_article_16_1_entity, false)|Attributes],
+        financial_entity_is_article_16_1_entity,
+        unsure,
+        input_problems([wrong_type(financial_entity_is_article_16_1_entity)])).
+test(a_performed_duty_is_satisfied) :-
+    duty_attributes_true(Attributes),
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        [attribute(financial_entity_is_article_16_1_entity, false)|Attributes],
+        segregation_of_duties,
+        satisfied).
+test(a_performed_duty_is_not_violated, fail) :-
+    duty_attributes_true(Attributes),
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        [attribute(financial_entity_is_article_16_1_entity, false)|Attributes],
+        segregation_of_duties,
+        violated).
+test(a_duty_not_performed_is_violated) :-
+    duty_attributes_true(Attributes),
+    without_key(Attributes, access_control_policy_contains_segregation_of_duties, Kept),
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        [attribute(financial_entity_is_article_16_1_entity, false),
+         attribute(access_control_policy_contains_segregation_of_duties, false)|Kept],
+        segregation_of_duties,
+        violated).
+test(an_absent_duty_is_asked) :-
+    duty_attributes_true(Attributes),
+    without_key(Attributes, access_control_policy_contains_segregation_of_duties, Kept),
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        [attribute(financial_entity_is_article_16_1_entity, false)|Kept],
+        segregation_of_duties,
+        indeterminate([access_control_policy_contains_segregation_of_duties])).
+test(an_unsure_duty_goes_to_a_lawyer) :-
+    duty_attributes_true(Attributes),
+    without_key(Attributes, access_control_policy_contains_segregation_of_duties, Kept),
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        [attribute(financial_entity_is_article_16_1_entity, false),
+         attribute(access_control_policy_contains_segregation_of_duties, unsure)|Kept],
+        segregation_of_duties,
+        needs_legal_review(open_textured(access_control_policy_contains_segregation_of_duties, cite(eu_reg_2024_1774_art_21_b)), [inputs_relied_on(Pairs)])),
+    length(Pairs, 37).
+test(the_gate_defeats_the_obligation) :-
+    duty_attributes_true(Attributes),
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        [attribute(financial_entity_is_article_16_1_entity, true)|Attributes],
+        segregation_of_duties,
+        simplified_framework_entity).
+test(an_absent_gate_is_asked_first) :-
+    duty_attributes_true(Attributes),
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        Attributes,
+        segregation_of_duties,
+        indeterminate([financial_entity_is_article_16_1_entity])).
+test(an_unknown_duty_is_an_input_problem) :-
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        [attribute(financial_entity_is_article_16_1_entity, false)],
+        colour,
+        input_problems([unknown_key(colour)])).
+test(a_bad_profile_is_an_input_problem) :-
+    dora_rts_physical_hr_identity_and_access_compliance_check(
+        not_a_list,
+        segregation_of_duties,
+        input_problems([wrong_type(profile)])).
+
+:- end_module(queries).

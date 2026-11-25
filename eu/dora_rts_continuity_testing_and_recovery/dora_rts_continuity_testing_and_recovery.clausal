@@ -1,0 +1,658 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% dora_rts_continuity_testing_and_recovery.clausal -- the "dora_rts_continuity_testing_and_recovery" DETERMINATION for
+% eu/dora_rts_continuity_testing_and_recovery, self-contained top to bottom: the duty table
+% (the statutory classification of the twenty-three duties of Articles 25
+% and 26 of the RTS, each row with READY-MADE cite(Key) terms), the
+% condition states, the three queries, the checklist and the verdict.
+%
+% Source: Commission Delegated Regulation (EU) 2024/1774, Articles 25
+% (testing of the ICT business continuity plans) and 26 (ICT response and
+% recovery plans), pinned text 32024R1774; Regulation (EU) 2022/2554
+% (DORA), Article 16(1), first subparagraph (the gate), pinned text
+% 32022R2554.
+%
+% deontic family: each duty is an obligation with at most one condition
+% (financial_entity_is_microenterprise false, dora_entity_type equal to one
+% atom, or financial_entity_uses_ict_services_of_ict_third_party_service_providers
+% true); its performance is one caller judgement (true, false or unsure).
+% A failing condition DEFEATS the duty (it does not apply); the defeat is
+% written as complementary guarded clauses, cut-free.
+%
+% Every query yields exactly ONE solution: each step is complementary
+% clauses on a derived value (a key state, a list shape).
+% =====================================================================
+
+:- module(dora_rts_continuity_testing_and_recovery, [
+    rts_continuity_testing_and_recovery_duties_required/3,
+    rts_continuity_testing_and_recovery_duties_complete/3,
+    rts_continuity_testing_and_recovery_duties_outstanding/3,
+    decide_dora_rts_continuity_testing_and_recovery/2,
+    dora_rts_continuity_testing_and_recovery_status/2,
+    dora_rts_continuity_testing_and_recovery_checklist/2,
+    dora_rts_continuity_testing_and_recovery_decision_resolvable/1,
+    dora_rts_continuity_testing_and_recovery_status_values/1
+]).
+
+:- use_module(library(clpz)).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2, not_member/2]).
+:- use_module(eu/dora_rts_continuity_testing_and_recovery/kernel, [dora_rts_continuity_testing_and_recovery_input_problems/2]).
+:- use_module(eu/dora_rts_continuity_testing_and_recovery/citations, [implements/1]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+
+% The final RESULT atoms of rts_continuity_testing_and_recovery_duties_complete/3.
+dora_rts_continuity_testing_and_recovery_status_values([complete, incomplete, simplified_framework_entity]).
+
+% THE FIXED CITATIONS (reading (18)): the nine paragraph keys, cited as checked.
+fixed_citations([
+    cite(eu_reg_2024_1774_art_25_1),
+    cite(eu_reg_2024_1774_art_25_2),
+    cite(eu_reg_2024_1774_art_25_3),
+    cite(eu_reg_2024_1774_art_25_4),
+    cite(eu_reg_2024_1774_art_25_5),
+    cite(eu_reg_2024_1774_art_26_1),
+    cite(eu_reg_2024_1774_art_26_2),
+    cite(eu_reg_2024_1774_art_26_3),
+    cite(eu_reg_2024_1774_art_26_4)
+]).
+
+% The keys that carry conditions, with their root_exports position.
+condition_key(2, financial_entity_is_microenterprise).
+condition_key(3, dora_entity_type).
+condition_key(4, financial_entity_uses_ict_services_of_ict_third_party_service_providers).
+
+% The values of each key that carries conditions.
+key_values(financial_entity_is_microenterprise, [true, false]).
+key_values(financial_entity_uses_ict_services_of_ict_third_party_service_providers, [true, false]).
+key_values(dora_entity_type, [credit_institution, institution_exempted_pursuant_to_directive_2013_36, payment_institution, exempted_payment_institution, account_information_service_provider, electronic_money_institution, exempted_electronic_money_institution, investment_firm, crypto_asset_service_provider, issuer_of_asset_referenced_tokens, central_securities_depository, central_counterparty, trading_venue, trade_repository, manager_of_alternative_investment_funds, management_company, data_reporting_service_provider, insurance_undertaking, reinsurance_undertaking, insurance_intermediary, reinsurance_intermediary, ancillary_insurance_intermediary, institution_for_occupational_retirement_provision, credit_rating_agency, administrator_of_critical_benchmarks, crowdfunding_service_provider, securitisation_repository, ict_third_party_service_provider, none_of_the_listed_types]).
+
+% THE TWENTY-THREE DUTIES, in DUTY ORDER:
+% duty(Number, DutyAtom, ProfileKey, Condition, Citations, Paragraph).
+duty(1,
+    testing_informed_by_business_impact_analysis_and_ict_risk_assessment,
+    continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment,
+    always,
+    [cite(eu_reg_2024_1774_art_25_1)],
+    cite(eu_reg_2024_1774_art_25_1)).
+duty(2,
+    assessment_of_continuity_of_critical_or_important_functions,
+    continuity_testing_assesses_continuity_of_critical_or_important_functions,
+    always,
+    [cite(eu_reg_2024_1774_art_25_2)],
+    cite(eu_reg_2024_1774_art_25_2)).
+duty(3,
+    testing_on_disruption_scenarios,
+    continuity_testing_based_on_scenarios_including_severe_but_plausible_scenarios,
+    always,
+    [cite(eu_reg_2024_1774_art_25_2_a), cite(eu_reg_2024_1774_art_25_2)],
+    cite(eu_reg_2024_1774_art_25_2)).
+duty(4,
+    testing_of_ict_third_party_services,
+    continuity_testing_contains_testing_of_ict_services_of_ict_third_party_service_providers,
+    condition(financial_entity_uses_ict_services_of_ict_third_party_service_providers, true),
+    [cite(eu_reg_2024_1774_art_25_2_b), cite(eu_reg_2024_1774_art_25_2)],
+    cite(eu_reg_2024_1774_art_25_2)).
+duty(5,
+    testing_of_switchover_scenarios,
+    continuity_testing_contains_switchover_scenarios,
+    condition(financial_entity_is_microenterprise, false),
+    [cite(eu_reg_2024_1774_art_25_2_c), cite(eu_reg_2024_1774_art_25_2)],
+    cite(eu_reg_2024_1774_art_25_2)).
+duty(6,
+    testing_challenges_plan_assumptions,
+    continuity_testing_challenges_assumptions_of_business_continuity_plans,
+    always,
+    [cite(eu_reg_2024_1774_art_25_2_d)],
+    cite(eu_reg_2024_1774_art_25_2)).
+duty(7,
+    testing_verifies_ability_to_respond,
+    continuity_testing_contains_procedures_to_verify_ability_to_respond,
+    always,
+    [cite(eu_reg_2024_1774_art_25_2_e)],
+    cite(eu_reg_2024_1774_art_25_2)).
+duty(8,
+    involvement_of_central_counterparty_parties_in_testing,
+    continuity_testing_involves_clearing_members_external_providers_and_interdependent_institutions,
+    condition(dora_entity_type, central_counterparty),
+    [cite(eu_reg_2024_1774_art_25_3), cite(eu_reg_2024_1774_art_25_3_a), cite(eu_reg_2024_1774_art_25_3_b), cite(eu_reg_2024_1774_art_25_3_c)],
+    cite(eu_reg_2024_1774_art_25_3)).
+duty(9,
+    involvement_of_central_securities_depository_parties_in_testing,
+    continuity_testing_involves_users_utilities_market_infrastructures_and_interdependent_institutions,
+    condition(dora_entity_type, central_securities_depository),
+    [cite(eu_reg_2024_1774_art_25_4), cite(eu_reg_2024_1774_art_25_4_a), cite(eu_reg_2024_1774_art_25_4_b), cite(eu_reg_2024_1774_art_25_4_c), cite(eu_reg_2024_1774_art_25_4_d), cite(eu_reg_2024_1774_art_25_4_e)],
+    cite(eu_reg_2024_1774_art_25_4)).
+duty(10,
+    documentation_of_test_results,
+    continuity_test_results_documented,
+    always,
+    [cite(eu_reg_2024_1774_art_25_5)],
+    cite(eu_reg_2024_1774_art_25_5)).
+duty(11,
+    handling_of_test_deficiencies,
+    continuity_test_deficiencies_analysed_addressed_and_reported_to_management_body,
+    always,
+    [cite(eu_reg_2024_1774_art_25_5)],
+    cite(eu_reg_2024_1774_art_25_5)).
+duty(12,
+    response_and_recovery_plans_informed_by_business_impact_analysis,
+    response_and_recovery_plans_take_into_account_business_impact_analysis,
+    always,
+    [cite(eu_reg_2024_1774_art_26_1)],
+    cite(eu_reg_2024_1774_art_26_1)).
+duty(13,
+    activation_and_deactivation_conditions,
+    response_and_recovery_plans_specify_activation_and_deactivation_conditions_and_exceptions,
+    always,
+    [cite(eu_reg_2024_1774_art_26_1_a)],
+    cite(eu_reg_2024_1774_art_26_1)).
+duty(14,
+    actions_for_critical_or_important_ict_systems_and_services,
+    response_and_recovery_plans_describe_actions_for_ict_systems_and_services_supporting_critical_or_important_functions,
+    always,
+    [cite(eu_reg_2024_1774_art_26_1_b)],
+    cite(eu_reg_2024_1774_art_26_1)).
+duty(15,
+    design_to_meet_recovery_objectives,
+    response_and_recovery_plans_designed_to_meet_recovery_objectives,
+    always,
+    [cite(eu_reg_2024_1774_art_26_1_c)],
+    cite(eu_reg_2024_1774_art_26_1)).
+duty(16,
+    documentation_and_availability_of_plans,
+    response_and_recovery_plans_documented_available_and_accessible_with_roles_and_responsibilities,
+    always,
+    [cite(eu_reg_2024_1774_art_26_1_d), cite(eu_reg_2024_1774_art_26_1)],
+    cite(eu_reg_2024_1774_art_26_1)).
+duty(17,
+    short_and_long_term_recovery_options,
+    response_and_recovery_plans_provide_short_term_and_long_term_recovery_options,
+    always,
+    [cite(eu_reg_2024_1774_art_26_1_e)],
+    cite(eu_reg_2024_1774_art_26_1)).
+duty(18,
+    plan_objectives_and_success_conditions,
+    response_and_recovery_plans_lay_down_objectives_and_conditions_of_successful_execution,
+    always,
+    [cite(eu_reg_2024_1774_art_26_1_f)],
+    cite(eu_reg_2024_1774_art_26_1)).
+duty(19,
+    identification_of_relevant_scenarios,
+    response_and_recovery_plans_identify_relevant_scenarios,
+    always,
+    [cite(eu_reg_2024_1774_art_26_2)],
+    cite(eu_reg_2024_1774_art_26_2)).
+duty(20,
+    scenarios_based_on_threats_and_lessons_learned,
+    response_and_recovery_plans_develop_scenarios_on_current_threat_information_and_lessons_learned,
+    always,
+    [cite(eu_reg_2024_1774_art_26_2)],
+    cite(eu_reg_2024_1774_art_26_2)).
+duty(21,
+    listed_disruption_scenarios,
+    listed_disruption_scenarios_duly_taken_into_account,
+    always,
+    [cite(eu_reg_2024_1774_art_26_2), cite(eu_reg_2024_1774_art_26_2_a), cite(eu_reg_2024_1774_art_26_2_b), cite(eu_reg_2024_1774_art_26_2_c), cite(eu_reg_2024_1774_art_26_2_d), cite(eu_reg_2024_1774_art_26_2_e), cite(eu_reg_2024_1774_art_26_2_f), cite(eu_reg_2024_1774_art_26_2_g), cite(eu_reg_2024_1774_art_26_2_h), cite(eu_reg_2024_1774_art_26_2_i)],
+    cite(eu_reg_2024_1774_art_26_2)).
+duty(22,
+    alternative_recovery_options,
+    response_and_recovery_plans_consider_alternative_options_where_primary_recovery_measures_may_not_be_feasible,
+    always,
+    [cite(eu_reg_2024_1774_art_26_3)],
+    cite(eu_reg_2024_1774_art_26_3)).
+duty(23,
+    continuity_measures_for_ict_third_party_service_provider_failures,
+    continuity_measures_for_ict_third_party_service_provider_failures_considered_and_implemented,
+    condition(financial_entity_uses_ict_services_of_ict_third_party_service_providers, true),
+    [cite(eu_reg_2024_1774_art_26_4)],
+    cite(eu_reg_2024_1774_art_26_4)).
+
+% ---- profile plumbing --------------------------------------------------
+
+% key_state(Profile, Key, State): absent, or present(Value). The input check
+% has run first, so a present key occurs once.
+key_state(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
+key_state(Profile, Key, present(Value)) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+
+% The twenty-seven keys in root_exports order.
+root_keys(Keys) :-
+    findall(DutyKey, duty(_, _, DutyKey, _, _, _), DutyKeys),
+    Keys = [financial_entity_is_article_16_1_entity, financial_entity_is_microenterprise, dora_entity_type, financial_entity_uses_ict_services_of_ict_third_party_service_providers|DutyKeys].
+
+% PAIRS: every Key-Value present in the profile, in root_exports order.
+present_pairs(_, [], []).
+present_pairs(Profile, [Key|Keys], Pairs) :-
+    key_state(Profile, Key, State),
+    present_pairs(Profile, Keys, LaterPairs),
+    add_pair(State, Key, LaterPairs, Pairs).
+
+add_pair(absent, _, Pairs, Pairs).
+add_pair(present(Value), Key, Pairs, [Key-Value|Pairs]).
+
+open_state(holds).
+open_state(open).
+
+not_true(absent).
+not_true(false).
+not_true(unsure).
+
+% ---- conditions and duty states ------------------------------------------
+
+% condition_state(Profile, Condition, State): holds, fails or open.
+% One clause per condition, each with its own literal provenance marker
+% (readings (3), (6), (7)).
+condition_state(_, always, holds).
+condition_state(Profile, condition(financial_entity_is_microenterprise, false), State) :-
+    implements(eu_reg_2024_1774_art_25_2_c),
+    key_state(Profile, financial_entity_is_microenterprise, KeyState),
+    condition_value_state(KeyState, false, State).
+condition_state(Profile, condition(dora_entity_type, central_counterparty), State) :-
+    implements(eu_reg_2024_1774_art_25_3),
+    key_state(Profile, dora_entity_type, KeyState),
+    condition_value_state(KeyState, central_counterparty, State).
+condition_state(Profile, condition(dora_entity_type, central_securities_depository), State) :-
+    implements(eu_reg_2024_1774_art_25_4),
+    key_state(Profile, dora_entity_type, KeyState),
+    condition_value_state(KeyState, central_securities_depository, State).
+condition_state(Profile, condition(financial_entity_uses_ict_services_of_ict_third_party_service_providers, true), State) :-
+    implements(eu_reg_2024_1774_art_25_2_b),
+    implements(eu_reg_2024_1774_art_26_4),
+    key_state(Profile, financial_entity_uses_ict_services_of_ict_third_party_service_providers, KeyState),
+    condition_value_state(KeyState, true, State).
+
+condition_value_state(absent, _, open).
+condition_value_state(present(Value), Wanted, holds) :-
+    Value == Wanted.
+condition_value_state(present(Value), Wanted, fails) :-
+    Value \== Wanted.
+
+judgement_state(Profile, Key, Judgement) :-
+    key_state(Profile, Key, KeyState),
+    judgement_of(KeyState, Judgement).
+
+judgement_of(absent, absent).
+judgement_of(present(Value), Value).
+
+% One state(Number, Duty, Key, Condition, ConditionState, Judgement) per duty.
+duty_profile_state(Profile, state(Number, Duty, Key, Condition, ConditionState, Judgement)) :-
+    duty(Number, Duty, Key, Condition, _, _),
+    condition_state(Profile, Condition, ConditionState),
+    judgement_state(Profile, Key, Judgement).
+
+duty_states(Profile, States) :-
+    findall(State, duty_profile_state(Profile, State), States).
+
+% A duty FAILS when it applies and its key is false.
+failing_duties(States, Failing) :-
+    findall(Duty, member(state(_, Duty, _, _, holds, false), States), Failing).
+
+unperformed_open_duties(States, Unperformed) :-
+    findall(Duty, unperformed_open_duty(States, Duty), Unperformed).
+
+unperformed_open_duty(States, Duty) :-
+    member(state(_, Duty, _, _, ConditionState, Judgement), States),
+    open_state(ConditionState),
+    not_true(Judgement).
+
+% Conditions of duties whose key is false while the condition is open.
+blocked_conditions(States, Blocked) :-
+    findall(Condition, member(state(_, _, _, Condition, open, false), States), Blocked).
+
+referral_citation(Key, Citation) :-
+    duty(_, _, Key, _, [Citation|_], _).
+
+referral_result(Key, Profile, needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)])) :-
+    referral_citation(Key, Citation),
+    root_keys(Keys),
+    present_pairs(Profile, Keys, Pairs).
+
+% ---- (A) rts_continuity_testing_and_recovery_duties_required/3 -------------
+
+rts_continuity_testing_and_recovery_duties_required(Profile, Result, Citations) :-
+    dora_rts_continuity_testing_and_recovery_input_problems(Profile, Problems),
+    required_after_input(Problems, Profile, Result, Citations).
+
+required_after_input([Problem|Problems], _, input_problems([Problem|Problems]), []).
+required_after_input([], Profile, Result, Citations) :-
+    key_state(Profile, financial_entity_is_article_16_1_entity, GateState),
+    required_after_gate(GateState, Profile, Result, Citations).
+
+required_after_gate(present(true), _, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+required_after_gate(absent, _, indeterminate([financial_entity_is_article_16_1_entity]), []) :-
+    implements(eu_reg_2022_2554_art_16_1).
+required_after_gate(present(false), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_16_1),
+    first_absent_key(Profile, [financial_entity_is_microenterprise, dora_entity_type, financial_entity_uses_ict_services_of_ict_third_party_service_providers], First),
+    required_after_conditions(First, Profile, Result, Citations).
+
+first_absent_key(_, [], none).
+first_absent_key(Profile, [Key|Keys], First) :-
+    key_state(Profile, Key, State),
+    first_absent_step(State, Key, Profile, Keys, First).
+
+first_absent_step(absent, Key, _, _, key(Key)).
+first_absent_step(present(_), _, Profile, Keys, First) :-
+    first_absent_key(Profile, Keys, First).
+
+required_after_conditions(key(Key), _, indeterminate([Key]), []).
+required_after_conditions(none, Profile, required(Duties), Citations) :-
+    implements(eu_reg_2024_1774_art_25_1),
+    duty_states(Profile, States),
+    findall(Duty, member(state(_, Duty, _, _, holds, _), States), Duties),
+    findall(Paragraph, applying_paragraph(States, Paragraph), Paragraphs),
+    sort(Paragraphs, Citations).
+
+applying_paragraph(States, Paragraph) :-
+    member(state(_, Duty, _, _, holds, _), States),
+    duty(_, Duty, _, _, _, Paragraph).
+
+% ---- (B) rts_continuity_testing_and_recovery_duties_complete/3 -------------
+
+rts_continuity_testing_and_recovery_duties_complete(Profile, Result, Citations) :-
+    dora_rts_continuity_testing_and_recovery_input_problems(Profile, Problems),
+    complete_after_input(Problems, Profile, Result, Citations).
+
+complete_after_input([Problem|Problems], _, input_problems([Problem|Problems]), []).
+complete_after_input([], Profile, Result, Citations) :-
+    key_state(Profile, financial_entity_is_article_16_1_entity, GateState),
+    complete_after_gate(GateState, Profile, Result, Citations).
+
+complete_after_gate(present(true), _, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+complete_after_gate(absent, _, indeterminate([financial_entity_is_article_16_1_entity]), []) :-
+    implements(eu_reg_2022_2554_art_16_1).
+complete_after_gate(present(false), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_16_1),
+    duty_states(Profile, States),
+    failing_duties(States, Failing),
+    complete_after_failing(Failing, Profile, States, Result, Citations).
+
+% (S1) a failing duty decides before any absent or unsure key.
+complete_after_failing([_|_], _, _, incomplete, Citations) :-
+    implements(eu_reg_2024_1774_art_25_1),
+    fixed_citations(Citations).
+complete_after_failing([], Profile, States, Result, Citations) :-
+    unperformed_open_duties(States, Unperformed),
+    complete_after_unperformed(Unperformed, Profile, States, Result, Citations).
+
+% (S2) every open duty performed.
+complete_after_unperformed([], _, _, complete, Citations) :-
+    implements(eu_reg_2024_1774_art_25_1),
+    fixed_citations(Citations).
+complete_after_unperformed([_|_], Profile, States, Result, Citations) :-
+    blocked_conditions(States, Blocked),
+    complete_candidates(Profile, States, Blocked, Candidates),
+    complete_after_candidates(Candidates, Profile, States, Blocked, Result, Citations).
+
+% (S3) the absent keys that can still change the answer, as Index-Key.
+complete_candidates(Profile, States, Blocked, Candidates) :-
+    findall(Index-Key, complete_candidate(Profile, States, Blocked, Index, Key), Found),
+    sort(Found, Candidates).
+
+% (a) the key of an open duty, not blocked by a false duty under the same open condition.
+complete_candidate(_, States, Blocked, Index, Key) :-
+    member(state(Number, _, Key, Condition, ConditionState, absent), States),
+    open_state(ConditionState),
+    not_member(Condition, Blocked),
+    Index #= Number + 4.
+% (b) an absent key that carries conditions, with two values that part.
+complete_candidate(Profile, States, Blocked, Index, Key) :-
+    condition_key(Index, Key),
+    key_state(Profile, Key, absent),
+    member(state(_, _, _, condition(Key, Value), open, Judgement), States),
+    not_true(Judgement),
+    key_values(Key, Values),
+    member(Other, Values),
+    Other \== Value,
+    not_member(condition(Key, Other), Blocked).
+
+% A key DECIDES ALONE: the key of a duty that applies, or a key that carries
+% the condition of a duty whose key is false.
+decides_alone(States, Key) :-
+    member(state(_, _, Key, _, holds, _), States).
+decides_alone(States, Key) :-
+    member(state(_, _, _, condition(Key, _), _, false), States).
+
+decides_alone_candidates(States, Candidates, Alone) :-
+    findall(Index-Key, alone_candidate(States, Candidates, Index, Key), Found),
+    sort(Found, Alone).
+
+alone_candidate(States, Candidates, Index, Key) :-
+    member(Index-Key, Candidates),
+    decides_alone(States, Key).
+
+complete_after_candidates([Candidate|Candidates], _, States, _, indeterminate([Key]), []) :-
+    decides_alone_candidates(States, [Candidate|Candidates], Alone),
+    named_candidate(Alone, [Candidate|Candidates], Key).
+complete_after_candidates([], Profile, States, Blocked, Result, Citations) :-
+    complete_unsure_candidates(States, Blocked, Unsure),
+    complete_referral(Unsure, Profile, Result, Citations).
+
+% <<DNUM>>: a key behind another is not named; the first key that decides alone wins.
+named_candidate([_-Key|_], _, Key).
+named_candidate([], [_-Key|_], Key).
+
+% (S4) the first unsure judgement key that can still change the answer by (a).
+complete_unsure_candidates(States, Blocked, Unsure) :-
+    findall(Number-Key, complete_unsure_candidate(States, Blocked, Number, Key), Found),
+    sort(Found, Unsure).
+
+complete_unsure_candidate(States, Blocked, Number, Key) :-
+    member(state(Number, _, Key, Condition, ConditionState, unsure), States),
+    open_state(ConditionState),
+    not_member(Condition, Blocked).
+
+complete_referral([_-Key|_], Profile, Result, []) :-
+    referral_result(Key, Profile, Result).
+
+% ---- (C) rts_continuity_testing_and_recovery_duties_outstanding/3 ----------
+
+rts_continuity_testing_and_recovery_duties_outstanding(Profile, Result, Citations) :-
+    dora_rts_continuity_testing_and_recovery_input_problems(Profile, Problems),
+    outstanding_after_input(Problems, Profile, Result, Citations).
+
+outstanding_after_input([Problem|Problems], _, input_problems([Problem|Problems]), []).
+outstanding_after_input([], Profile, Result, Citations) :-
+    key_state(Profile, financial_entity_is_article_16_1_entity, GateState),
+    outstanding_after_gate(GateState, Profile, Result, Citations).
+
+outstanding_after_gate(present(true), _, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+outstanding_after_gate(absent, _, indeterminate([financial_entity_is_article_16_1_entity]), []) :-
+    implements(eu_reg_2022_2554_art_16_1).
+outstanding_after_gate(present(false), Profile, Result, Citations) :-
+    implements(eu_reg_2022_2554_art_16_1),
+    duty_states(Profile, States),
+    findall(Index-Key, outstanding_candidate(Profile, States, Index, Key), Found),
+    sort(Found, Candidates),
+    outstanding_after_candidates(Candidates, Profile, States, Result, Citations).
+
+% (M1) the key of an open duty, or a key carrying the condition of an open
+% duty whose key is not true.
+outstanding_candidate(_, States, Index, Key) :-
+    member(state(Number, _, Key, _, ConditionState, absent), States),
+    open_state(ConditionState),
+    Index #= Number + 4.
+outstanding_candidate(Profile, States, Index, Key) :-
+    condition_key(Index, Key),
+    key_state(Profile, Key, absent),
+    member(state(_, _, _, condition(Key, _), ConditionState, Judgement), States),
+    open_state(ConditionState),
+    not_true(Judgement).
+
+outstanding_after_candidates([_-Key|_], _, _, indeterminate([Key]), []).
+outstanding_after_candidates([], Profile, States, Result, Citations) :-
+    findall(Number-Key, outstanding_unsure(States, Number, Key), Found),
+    sort(Found, Unsure),
+    outstanding_after_unsure(Unsure, Profile, States, Result, Citations).
+
+% (M2) the first unsure judgement key of an open duty.
+outstanding_unsure(States, Number, Key) :-
+    member(state(Number, _, Key, _, ConditionState, unsure), States),
+    open_state(ConditionState).
+
+outstanding_after_unsure([_-Key|_], Profile, _, Result, []) :-
+    referral_result(Key, Profile, Result).
+outstanding_after_unsure([], _, States, Result, Citations) :-
+    failing_duties(States, Failing),
+    outstanding_answer(Failing, Result, Citations).
+
+% (M3) the final answer.
+outstanding_answer([], none_outstanding, Citations) :-
+    implements(eu_reg_2024_1774_art_25_1),
+    fixed_citations(Citations).
+outstanding_answer([Duty|Duties], outstanding([Duty|Duties]), Citations) :-
+    implements(eu_reg_2024_1774_art_25_1),
+    findall(Citation, outstanding_citation([Duty|Duties], Citation), Found),
+    sort(Found, Citations).
+
+outstanding_citation(Duties, Citation) :-
+    member(Duty, Duties),
+    duty(_, Duty, _, _, DutyCitations, _),
+    member(Citation, DutyCitations).
+
+% ---- verdict assembly and status projection -----------------------------
+
+decide_dora_rts_continuity_testing_and_recovery(Profile, dora_rts_continuity_testing_and_recovery_verdict(Status, Citations)) :-
+    rts_continuity_testing_and_recovery_duties_complete(Profile, Status, Citations).
+
+dora_rts_continuity_testing_and_recovery_status(Profile, Status) :-
+    decide_dora_rts_continuity_testing_and_recovery(Profile, dora_rts_continuity_testing_and_recovery_verdict(Status, _Citations)).
+
+dora_rts_continuity_testing_and_recovery_decision_resolvable(Profile) :-
+    decide_dora_rts_continuity_testing_and_recovery(Profile, _Verdict).
+
+% ---- checklist: one row for the gate, one row per duty --------------------
+
+dora_rts_continuity_testing_and_recovery_checklist(Profile, Items) :-
+    dora_rts_continuity_testing_and_recovery_input_problems(Profile, Problems),
+    checklist_after_input(Problems, Profile, Items).
+
+checklist_after_input([Problem|Problems], _, [item(input_check, unmet(input_problems([Problem|Problems])), [])]).
+checklist_after_input([], Profile, Items) :-
+    key_state(Profile, financial_entity_is_article_16_1_entity, GateState),
+    checklist_after_gate(GateState, Profile, Items).
+
+checklist_after_gate(present(true), _, [item(article_16_1_entity, unmet(simplified_framework_entity), [cite(eu_reg_2022_2554_art_16_1)])]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+checklist_after_gate(absent, _, [item(article_16_1_entity, unknown([financial_entity_is_article_16_1_entity]), [cite(eu_reg_2022_2554_art_16_1)])]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+checklist_after_gate(present(false), Profile, [item(article_16_1_entity, met, [cite(eu_reg_2022_2554_art_16_1)])|DutyItems]) :-
+    implements(eu_reg_2022_2554_art_16_1),
+    duty_states(Profile, States),
+    maplist(duty_item, States, DutyItems).
+
+duty_item(state(_, Duty, _, _, ConditionState, Judgement), item(Duty, Status, Citations)) :-
+    duty(_, Duty, _, Condition, Citations, _),
+    duty_item_status(ConditionState, Judgement, Duty, Condition, Status).
+
+duty_item_status(fails, _, _, _, inapplicable).
+duty_item_status(holds, true, _, _, met).
+duty_item_status(holds, false, _, _, unmet(not_performed)).
+duty_item_status(holds, unsure, Duty, _, unknown([Key])) :-
+    duty(_, Duty, Key, _, _, _).
+duty_item_status(holds, absent, Duty, _, unknown([Key])) :-
+    duty(_, Duty, Key, _, _, _).
+duty_item_status(open, true, _, _, met).
+duty_item_status(open, false, _, condition(Key, _), unknown([Key])).
+duty_item_status(open, unsure, _, condition(Key, _), unknown([Key])).
+duty_item_status(open, absent, _, condition(Key, _), unknown([Key])).
+
+% ---- test fixtures (internal) --------------------------------------------
+
+performed_profile(Profile) :-
+    findall(attribute(Key, true), duty(_, _, Key, _, _, _), DutyAttributes),
+    append([attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_microenterprise, false), attribute(dora_entity_type, credit_institution), attribute(financial_entity_uses_ict_services_of_ict_third_party_service_providers, true)], DutyAttributes, Profile).
+
+replaced_attributes([], _, _, []).
+replaced_attributes([attribute(Name, _)|Rest], Key, Value, [attribute(Name, Value)|Changed]) :-
+    Name == Key,
+    replaced_attributes(Rest, Key, Value, Changed).
+replaced_attributes([attribute(Name, Old)|Rest], Key, Value, [attribute(Name, Old)|Changed]) :-
+    Name \== Key,
+    replaced_attributes(Rest, Key, Value, Changed).
+
+removed_attribute([], _, []).
+removed_attribute([attribute(Name, _)|Rest], Key, Changed) :-
+    Name == Key,
+    removed_attribute(Rest, Key, Changed).
+removed_attribute([attribute(Name, Value)|Rest], Key, [attribute(Name, Value)|Changed]) :-
+    Name \== Key,
+    removed_attribute(Rest, Key, Changed).
+
+% ---- tests ------------------------------------------------------------
+
+test(all_performed_is_complete) :-
+    performed_profile(Profile),
+    findall(Result-Citations, rts_continuity_testing_and_recovery_duties_complete(Profile, Result, Citations), Answers),
+    fixed_citations(Fixed),
+    Answers == [complete-Fixed].
+
+test(all_performed_is_not_incomplete, fail) :-
+    performed_profile(Profile),
+    rts_continuity_testing_and_recovery_duties_complete(Profile, incomplete, _).
+
+test(required_lists_twenty_one_duties_for_a_non_micro_user_of_providers) :-
+    performed_profile(Profile),
+    findall(Result-Citations, rts_continuity_testing_and_recovery_duties_required(Profile, Result, Citations), [required(Duties)-Citations]),
+    length(Duties, 21),
+    length(Citations, 7).
+
+test(central_counterparty_has_its_involvement_duty) :-
+    performed_profile(Base),
+    replaced_attributes(Base, dora_entity_type, central_counterparty, Profile),
+    rts_continuity_testing_and_recovery_duties_required(Profile, required(Duties), _),
+    member(involvement_of_central_counterparty_parties_in_testing, Duties).
+
+test(gate_true_is_simplified_framework_entity) :-
+    rts_continuity_testing_and_recovery_duties_outstanding([attribute(financial_entity_is_article_16_1_entity, true)], simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+
+test(empty_profile_asks_the_gate) :-
+    rts_continuity_testing_and_recovery_duties_complete([], indeterminate([financial_entity_is_article_16_1_entity]), []).
+
+test(gate_false_alone_asks_the_first_duty_key) :-
+    rts_continuity_testing_and_recovery_duties_complete([attribute(financial_entity_is_article_16_1_entity, false)], indeterminate([continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment]), []).
+
+test(required_asks_the_size_first) :-
+    rts_continuity_testing_and_recovery_duties_required([attribute(financial_entity_is_article_16_1_entity, false)], indeterminate([financial_entity_is_microenterprise]), []).
+
+test(one_false_duty_is_outstanding) :-
+    performed_profile(Base),
+    replaced_attributes(Base, continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment, false, Profile),
+    rts_continuity_testing_and_recovery_duties_outstanding(Profile, outstanding([testing_informed_by_business_impact_analysis_and_ict_risk_assessment]), [cite(eu_reg_2024_1774_art_25_1)]).
+
+test(a_false_duty_decides_incomplete_before_absent_keys) :-
+    rts_continuity_testing_and_recovery_duties_complete([attribute(financial_entity_is_article_16_1_entity, false), attribute(continuity_test_results_documented, false)], incomplete, _).
+
+test(unknown_key_is_an_input_problem) :-
+    rts_continuity_testing_and_recovery_duties_complete([attribute(foo, 1)], input_problems([unknown_key(foo)]), []).
+
+test(unsure_duty_is_referred_with_all_pairs) :-
+    performed_profile(Base),
+    replaced_attributes(Base, continuity_testing_assesses_continuity_of_critical_or_important_functions, unsure, Profile),
+    rts_continuity_testing_and_recovery_duties_complete(Profile, needs_legal_review(open_textured(continuity_testing_assesses_continuity_of_critical_or_important_functions, cite(eu_reg_2024_1774_art_25_2)), [inputs_relied_on(Pairs)]), []),
+    length(Pairs, 27).
+
+test(false_provider_duty_asks_the_trigger) :-
+    performed_profile(Base),
+    removed_attribute(Base, financial_entity_uses_ict_services_of_ict_third_party_service_providers, Without),
+    replaced_attributes(Without, continuity_measures_for_ict_third_party_service_provider_failures_considered_and_implemented, false, Profile),
+    rts_continuity_testing_and_recovery_duties_complete(Profile, indeterminate([financial_entity_uses_ict_services_of_ict_third_party_service_providers]), []).
+
+test(microenterprise_has_no_switchover_duty) :-
+    performed_profile(Base),
+    replaced_attributes(Base, financial_entity_is_microenterprise, true, Micro),
+    replaced_attributes(Micro, continuity_testing_contains_switchover_scenarios, false, Profile),
+    rts_continuity_testing_and_recovery_duties_outstanding(Profile, none_outstanding, _).
+
+test(each_query_answers_once) :-
+    performed_profile(Profile),
+    findall(Result, rts_continuity_testing_and_recovery_duties_outstanding(Profile, Result, _), Results),
+    Results == [none_outstanding].
+
+:- end_module(dora_rts_continuity_testing_and_recovery).

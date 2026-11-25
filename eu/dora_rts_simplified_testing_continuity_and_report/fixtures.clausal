@@ -1,0 +1,173 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dora_rts_simplified_testing_continuity_and_report.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls -- that is the whole import list. Profile keys and
+% subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's typed
+% input contract). This order has no numeric threshold, so each route is paired
+% with a ONE-UNIT near-miss control instead: one key changed (or dropped, or
+% added) gives the opposite verdict of the complete query.
+%
+%   positive subject                                  near-miss control
+%   all_performed_without_request (complete)          one_testing_duty_not_performed_without_request (incomplete)
+%   all_performed_with_request_for_both_reasons       incident_list_missing_with_request_for_both_reasons (incomplete)
+%   conclusions_missing_without_request (complete)    conclusions_missing_with_request (incomplete: the request defeater lifted)
+%                                                     conclusions_missing_request_unanswered (indeterminate: the request named)
+%   evidence_missing_without_supervisory_instructions evidence_missing_with_supervisory_instructions (incomplete)
+%   backup_procedures_unsure_without_request          backup_procedures_unsure_with_testing_plan_not_performed
+%     (needs_legal_review)                              (incomplete: a false duty decides before an unsure one)
+%   all_performed_without_request (complete)          not_an_article_16_1_entity, gate_unanswered,
+%                                                     microenterprise_key_given, request_given_as_unsure,
+%                                                     gate_given_twice
+%
+% todo_baseline_subject is the scaffold's baseline profile name, read by the
+% scaffold's own test files; it is the profile of all_performed_without_request
+% and is not a registered subject.
+% =====================================================================
+
+:- module(fixtures, [
+    dora_rts_simplified_testing_continuity_and_report_subject/1,
+    dora_rts_simplified_testing_continuity_and_report_profile_for/2,
+    dora_rts_simplified_testing_continuity_and_report_assess/2
+]).
+
+:- use_module(eu/dora_rts_simplified_testing_continuity_and_report/dora_rts_simplified_testing_continuity_and_report, [decide_dora_rts_simplified_testing_continuity_and_report/2]).
+
+% ---- Subject registry ------------------------------------------------
+dora_rts_simplified_testing_continuity_and_report_subject(all_performed_without_request).
+dora_rts_simplified_testing_continuity_and_report_subject(one_testing_duty_not_performed_without_request).
+dora_rts_simplified_testing_continuity_and_report_subject(all_performed_with_request_for_both_reasons).
+dora_rts_simplified_testing_continuity_and_report_subject(incident_list_missing_with_request_for_both_reasons).
+dora_rts_simplified_testing_continuity_and_report_subject(conclusions_missing_without_request).
+dora_rts_simplified_testing_continuity_and_report_subject(conclusions_missing_with_request).
+dora_rts_simplified_testing_continuity_and_report_subject(conclusions_missing_request_unanswered).
+dora_rts_simplified_testing_continuity_and_report_subject(evidence_missing_without_supervisory_instructions).
+dora_rts_simplified_testing_continuity_and_report_subject(evidence_missing_with_supervisory_instructions).
+dora_rts_simplified_testing_continuity_and_report_subject(backup_procedures_unsure_without_request).
+dora_rts_simplified_testing_continuity_and_report_subject(backup_procedures_unsure_with_testing_plan_not_performed).
+dora_rts_simplified_testing_continuity_and_report_subject(not_an_article_16_1_entity).
+dora_rts_simplified_testing_continuity_and_report_subject(gate_unanswered).
+dora_rts_simplified_testing_continuity_and_report_subject(microenterprise_key_given).
+dora_rts_simplified_testing_continuity_and_report_subject(request_given_as_unsure).
+dora_rts_simplified_testing_continuity_and_report_subject(gate_given_twice).
+
+% ---- Building blocks (profile plumbing) ------------------------------
+article_36_to_40_keys([
+    ict_security_testing_plan_established_and_implemented,
+    ict_security_measures_reviewed_assessed_and_tested,
+    security_test_results_evaluated_and_measures_updated,
+    ict_systems_acquisition_and_development_procedure_in_place,
+    requirements_specified_and_approved_before_acquisition,
+    ict_systems_tested_and_approved_before_use_and_changes,
+    alteration_and_manipulation_risk_measures_identified,
+    ict_project_management_procedure_in_place,
+    ict_change_management_procedure_in_place,
+    continuity_plans_developed_on_disruption_and_scenario_analysis,
+    continuity_plans_approved_by_management_body,
+    continuity_plans_documented_and_readily_accessible,
+    continuity_plans_allocate_sufficient_resources,
+    continuity_plans_establish_recovery_levels_and_timeframes,
+    continuity_plans_identify_activation_conditions_and_actions,
+    continuity_plans_identify_restoration_and_recovery_measures,
+    continuity_plans_identify_backup_procedures_scope_and_frequency,
+    continuity_plans_consider_alternative_options,
+    continuity_plans_specify_communication_and_escalation,
+    continuity_plans_updated_with_lessons_learned,
+    continuity_plans_tested_yearly_and_on_major_change,
+    continuity_plan_testing_demonstrates_viability_and_finds_deficiencies,
+    continuity_test_results_documented_and_deficiencies_reported
+]).
+
+article_41_keys([
+    review_report_submitted_in_searchable_electronic_format,
+    review_report_describes_context,
+    review_report_has_executive_summary,
+    review_report_informs_on_reported_area,
+    review_report_summarises_major_framework_changes,
+    review_report_describes_impact_of_major_changes,
+    review_report_states_approval_date_where_applicable,
+    review_report_describes_reasons_for_review,
+    review_report_gives_evidence_of_supervisory_instructions,
+    review_report_lists_incidents_with_root_cause_analysis,
+    review_report_states_review_period,
+    review_report_names_person_responsible,
+    review_report_summarises_findings_and_self_assessment,
+    review_report_states_remedying_measures,
+    review_report_states_overall_conclusions
+]).
+
+true_attribute(ProfileKey, attribute(ProfileKey, true)).
+
+articles_36_to_40_performed(Attributes) :-
+    article_36_to_40_keys(ProfileKeys),
+    maplist(true_attribute, ProfileKeys, Attributes).
+
+all_duties_performed(Attributes) :-
+    article_36_to_40_keys(EarlierKeys),
+    article_41_keys(ReportKeys),
+    append(EarlierKeys, ReportKeys, ProfileKeys),
+    maplist(true_attribute, ProfileKeys, Attributes).
+
+% with_value(Attributes, Key, Value, Updated): the attribute of Key set to Value.
+with_value(Attributes, ProfileKey, NewValue, Updated) :-
+    maplist(set_if_key(ProfileKey, NewValue), Attributes, Updated).
+
+set_if_key(ProfileKey, NewValue, attribute(ElementKey, _), attribute(ElementKey, NewValue)) :-
+    ElementKey == ProfileKey.
+set_if_key(ProfileKey, _, attribute(ElementKey, OldValue), attribute(ElementKey, OldValue)) :-
+    ElementKey \== ProfileKey.
+
+% ---- Profiles --------------------------------------------------------
+dora_rts_simplified_testing_continuity_and_report_profile_for(all_performed_without_request, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, false)|Performed]) :-
+    articles_36_to_40_performed(Performed).
+dora_rts_simplified_testing_continuity_and_report_profile_for(one_testing_duty_not_performed_without_request, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, false)|Attributes]) :-
+    articles_36_to_40_performed(Performed),
+    with_value(Performed, ict_security_testing_plan_established_and_implemented, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(all_performed_with_request_for_both_reasons, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, true), attribute(framework_review_initiated_following_supervisory_instructions, true), attribute(framework_review_initiated_following_ict_related_incidents, true)|Performed]) :-
+    all_duties_performed(Performed).
+dora_rts_simplified_testing_continuity_and_report_profile_for(incident_list_missing_with_request_for_both_reasons, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, true), attribute(framework_review_initiated_following_supervisory_instructions, true), attribute(framework_review_initiated_following_ict_related_incidents, true)|Attributes]) :-
+    all_duties_performed(Performed),
+    with_value(Performed, review_report_lists_incidents_with_root_cause_analysis, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(conclusions_missing_without_request, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, false), attribute(framework_review_initiated_following_supervisory_instructions, false), attribute(framework_review_initiated_following_ict_related_incidents, false)|Attributes]) :-
+    all_duties_performed(Performed),
+    with_value(Performed, review_report_states_overall_conclusions, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(conclusions_missing_with_request, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, true), attribute(framework_review_initiated_following_supervisory_instructions, false), attribute(framework_review_initiated_following_ict_related_incidents, false)|Attributes]) :-
+    all_duties_performed(Performed),
+    with_value(Performed, review_report_states_overall_conclusions, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(conclusions_missing_request_unanswered, [attribute(financial_entity_is_article_16_1_entity, true), attribute(framework_review_initiated_following_supervisory_instructions, false), attribute(framework_review_initiated_following_ict_related_incidents, false)|Attributes]) :-
+    all_duties_performed(Performed),
+    with_value(Performed, review_report_states_overall_conclusions, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(evidence_missing_without_supervisory_instructions, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, true), attribute(framework_review_initiated_following_supervisory_instructions, false), attribute(framework_review_initiated_following_ict_related_incidents, false)|Attributes]) :-
+    all_duties_performed(Performed),
+    with_value(Performed, review_report_gives_evidence_of_supervisory_instructions, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(evidence_missing_with_supervisory_instructions, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, true), attribute(framework_review_initiated_following_supervisory_instructions, true), attribute(framework_review_initiated_following_ict_related_incidents, false)|Attributes]) :-
+    all_duties_performed(Performed),
+    with_value(Performed, review_report_gives_evidence_of_supervisory_instructions, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(backup_procedures_unsure_without_request, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, false)|Attributes]) :-
+    articles_36_to_40_performed(Performed),
+    with_value(Performed, continuity_plans_identify_backup_procedures_scope_and_frequency, unsure, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(backup_procedures_unsure_with_testing_plan_not_performed, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, false)|Attributes]) :-
+    articles_36_to_40_performed(Performed),
+    with_value(Performed, continuity_plans_identify_backup_procedures_scope_and_frequency, unsure, Unsure),
+    with_value(Unsure, ict_security_testing_plan_established_and_implemented, false, Attributes).
+dora_rts_simplified_testing_continuity_and_report_profile_for(not_an_article_16_1_entity, [attribute(financial_entity_is_article_16_1_entity, false), attribute(authority_requested_framework_review_report, false)|Performed]) :-
+    articles_36_to_40_performed(Performed).
+dora_rts_simplified_testing_continuity_and_report_profile_for(gate_unanswered, [attribute(authority_requested_framework_review_report, false)|Performed]) :-
+    articles_36_to_40_performed(Performed).
+dora_rts_simplified_testing_continuity_and_report_profile_for(microenterprise_key_given, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, false), attribute(financial_entity_is_microenterprise, true)|Performed]) :-
+    articles_36_to_40_performed(Performed).
+dora_rts_simplified_testing_continuity_and_report_profile_for(request_given_as_unsure, [attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, unsure)|Performed]) :-
+    articles_36_to_40_performed(Performed).
+dora_rts_simplified_testing_continuity_and_report_profile_for(gate_given_twice, [attribute(financial_entity_is_article_16_1_entity, true), attribute(financial_entity_is_article_16_1_entity, true), attribute(authority_requested_framework_review_report, false)|Performed]) :-
+    articles_36_to_40_performed(Performed).
+dora_rts_simplified_testing_continuity_and_report_profile_for(todo_baseline_subject, Profile) :-
+    dora_rts_simplified_testing_continuity_and_report_profile_for(all_performed_without_request, Profile).
+
+% ---- Convenience wrapper ---------------------------------------------
+dora_rts_simplified_testing_continuity_and_report_assess(Subject, Result) :-
+    dora_rts_simplified_testing_continuity_and_report_profile_for(Subject, Profile),
+    decide_dora_rts_simplified_testing_continuity_and_report(Profile, Result).
+
+:- end_module(fixtures).

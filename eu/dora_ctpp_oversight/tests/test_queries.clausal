@@ -1,0 +1,106 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer: one test per
+% query type registered in manifest.yaml query_interface (#2 eligibility,
+% #7 justification, #15 deadline, #16 what-if), the profile key schema,
+% the re-exported input check and the served result constructors.
+% Run: python -m clausal.testing eu/dora_ctpp_oversight/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_ctpp_oversight/queries, [
+    dora_ctpp_oversight_profile_keys/1,
+    dora_ctpp_oversight_input_problems/2,
+    dora_ctpp_oversight_what_if/4,
+    not_designated_as_critical/0,
+    penalty_decision_required/0,
+    lead_overseer_agreement_required/0
+]).
+:- use_module(eu/dora_ctpp_oversight/dora_ctpp_oversight, [
+    dora_ctpp_oversight_status/2,
+    dora_ctpp_oversight_checklist/2,
+    ctpp_response_window_status/3
+]).
+:- use_module(eu/dora_ctpp_oversight/fixtures, [dora_ctpp_oversight_profile_for/2]).
+
+% A contract key gives wrong_type for an odd value, never unknown_key.
+contract_key(Key) :-
+    dora_ctpp_oversight_input_problems([attribute(Key, odd_value_marker)], [wrong_type(Key)]).
+
+cited_item(item(_, _, [_|_])).
+
+item_identifier(item(Identifier, _, _), Identifier).
+
+% (b) THE TEST WAS WRONG: maplist(=(item(_, not_designated_as_critical, _)), Items)
+% shares one template, so its anonymous variables bound to the first item and the
+% second item could not unify. Each item is now checked with a fresh template.
+not_designated_item(item(_, not_designated_as_critical, _)).
+
+% ---- profile key schema ----
+test(profile_keys_are_the_contract_keys) :-
+    dora_ctpp_oversight_profile_keys(ProfileKeys),
+    ProfileKeys == [provider_designated_as_critical, response_window, draft_oversight_plan_received_on, annual_oversight_plan_adopted_and_notified, oversight_activities_completed, provider_plans_further_subcontracting_arrangement, envisaged_subcontractor_is_ict_provider_or_subcontractor_in_third_country, subcontracting_concerns_critical_or_important_functions, lead_overseer_deems_clear_and_serious_risk, recommendation_information_opportunity_given_on, measure_power, measure_compliance, measure_notification_received_on, penalty_decision_notified_on, preceding_business_year_worldwide_turnover, preceding_business_year_length_in_days, assessment_date].
+test(every_schema_key_is_checked_by_the_input_check) :-
+    dora_ctpp_oversight_profile_keys(ProfileKeys),
+    maplist(contract_key, ProfileKeys).
+
+% ---- the re-exported input check ----
+test(the_re_exported_input_check_names_an_unknown_key) :-
+    dora_ctpp_oversight_input_problems([attribute(colour, blue)], Problems),
+    Problems == [unknown_key(colour)].
+
+% ---- #2 eligibility ----
+test(eligibility_full_profile_is_under_oversight) :-
+    dora_ctpp_oversight_profile_for(designated_provider_full_profile, Profile),
+    findall(Status, dora_ctpp_oversight_status(Profile, Status), Statuses),
+    Statuses == [subject_to_lead_overseer_oversight].
+
+% ---- #7 justification ----
+test(justification_every_checklist_item_is_cited) :-
+    dora_ctpp_oversight_profile_for(designated_provider_full_profile, Profile),
+    dora_ctpp_oversight_checklist(Profile, Items),
+    maplist(cited_item, Items),
+    maplist(item_identifier, Items, Identifiers),
+    Identifiers == [oversight_duties_required,
+                    lead_overseer_powers,
+                    response_window_status,
+                    periodic_penalty_payment_status,
+                    periodic_penalty_payment_limits,
+                    competent_authority_measure_condition].
+test(justification_not_designated_items_all_say_so) :-
+    dora_ctpp_oversight_profile_for(not_designated_provider, Profile),
+    dora_ctpp_oversight_checklist(Profile, Items),
+    length(Items, 6),
+    maplist(not_designated_item, Items).  % (b) test fixed: fresh template per item
+
+% ---- #15 deadline ----
+test(deadline_statement_window_gives_its_last_day) :-
+    dora_ctpp_oversight_profile_for(statement_window_last_day, Profile),
+    findall(Result, ctpp_response_window_status(Profile, Result, _), Results),
+    Results == [window_open(date(2026, 3, 17))].
+
+% ---- #16 what-if ----
+test(what_if_designation_flips_the_status) :-
+    dora_ctpp_oversight_profile_for(not_designated_provider, Profile),
+    findall(Status,
+            dora_ctpp_oversight_what_if(Profile, provider_designated_as_critical, true, Status),
+            Statuses),
+    Statuses == [subject_to_lead_overseer_oversight].
+test(what_if_a_float_year_length_gives_input_problems) :-
+    FloatDays is float(365),
+    dora_ctpp_oversight_what_if([attribute(provider_designated_as_critical, true)],
+                                preceding_business_year_length_in_days,
+                                FloatDays,
+                                oversight_input_problems).
+test(what_if_an_integer_year_length_keeps_oversight) :-
+    dora_ctpp_oversight_what_if([attribute(provider_designated_as_critical, true)],
+                                preceding_business_year_length_in_days,
+                                365,
+                                subject_to_lead_overseer_oversight).
+
+% ---- served result constructors ----
+test(final_answer_atoms_are_served) :-
+    not_designated_as_critical,
+    penalty_decision_required,
+    lead_overseer_agreement_required.
+
+:- end_module(test_queries).

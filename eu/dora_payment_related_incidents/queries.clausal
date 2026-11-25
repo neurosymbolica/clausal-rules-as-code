@@ -1,0 +1,121 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_payment_related_incidents.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types served (manifest query_interface):
+%   #2 eligibility    decide_dora_payment_related_incidents/2 (slice): the verdict
+%                     of payment_related_incident_status/3 with its citations;
+%   #7 justification  dora_payment_related_incidents_checklist/2 (slice): one
+%                     item per requirement, each carrying cite(...);
+%   #16 what-if       dora_payment_related_incidents_what_if/4 (here): set one
+%                     key, re-evaluate payment_related_incident_status/3.
+% dora_payment_related_incidents_profile_keys/1: top-level profile key schema
+% dora_payment_related_incidents_input_problems/2: the problems a profile has ([] = none),
+%     re-exported as the kernel wrote it (THE INPUT CHECK).
+%
+% The profile is an ATTRIBUTE LIST, not a dictionary, so the what-if does not
+% call query_combinators' override_key/4 (which rewrites a dictionary world):
+% it drops every attribute of the overridden key (term identity, ==) and adds
+% attribute(Key, Value) once. That is list plumbing and decides nothing
+% statutory, so it carries no provenance marker. A profile with input problems
+% is answered input_problems(Problems), as every query of the order answers it.
+% =====================================================================
+
+:- module(queries, [
+    dora_payment_related_incidents_profile_keys/1,
+    dora_payment_related_incidents_input_problems/2,
+    dora_payment_related_incidents_what_if/4
+]).
+
+:- use_module(eu/dora_payment_related_incidents/kernel, [dora_payment_related_incidents_input_problems/2]).
+:- use_module(eu/dora_payment_related_incidents/dora_payment_related_incidents, [dora_payment_related_incidents_status/2]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_payment_related_incidents_profile_keys([dora_entity_type, incident_is_operational_or_security_payment_related, payment_related_incident_is_major, credit_institution_classified_as_significant, member_state_requires_reports_to_directive_2022_2555_authorities]).
+
+% #16 what-if: re-evaluate payment_related_incident_status with one key set
+% hypothetically. Exactly one solution for every term Profile.
+dora_payment_related_incidents_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    dora_payment_related_incidents_input_problems(Profile, Problems),
+    what_if_after_check(Problems, Profile, OverriddenKey, NewValue, NewStatus).
+
+what_if_after_check([Problem|Problems], _Profile, _OverriddenKey, _NewValue, input_problems([Problem|Problems])).
+what_if_after_check([], Profile, OverriddenKey, NewValue, NewStatus) :-
+    profile_without_key(Profile, OverriddenKey, RemainingAttributes),
+    append(RemainingAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis),
+    dora_payment_related_incidents_status(Hypothesis, NewStatus).
+
+% profile_without_key(Attributes, OverriddenKey, Remaining): Attributes less every
+% attribute whose key is identical (==) to OverriddenKey. Complementary clauses.
+profile_without_key([], _OverriddenKey, []).
+profile_without_key([attribute(ElementKey, _ElementValue)|Attributes], OverriddenKey, Remaining) :-
+    ElementKey == OverriddenKey,
+    profile_without_key(Attributes, OverriddenKey, Remaining).
+profile_without_key([attribute(ElementKey, ElementValue)|Attributes], OverriddenKey,
+                    [attribute(ElementKey, ElementValue)|Remaining]) :-
+    ElementKey \== OverriddenKey,
+    profile_without_key(Attributes, OverriddenKey, Remaining).
+
+% ---- tests ------------------------------------------------------------
+test(the_profile_keys_are_the_five_contract_keys) :-
+    dora_payment_related_incidents_profile_keys(Keys),
+    length(Keys, 5).
+
+test(what_if_major_turns_the_chapter_into_reporting) :-
+    findall(Status,
+            dora_payment_related_incidents_what_if(
+                [attribute(dora_entity_type, payment_institution),
+                 attribute(incident_is_operational_or_security_payment_related, true),
+                 attribute(payment_related_incident_is_major, false)],
+                payment_related_incident_is_major,
+                true,
+                Status),
+            Statuses),
+    Statuses == [chapter_requirements_and_article_19_reporting_apply].
+
+test(what_if_not_major_gives_only_the_chapter) :-
+    findall(Status,
+            dora_payment_related_incidents_what_if(
+                [attribute(dora_entity_type, payment_institution),
+                 attribute(incident_is_operational_or_security_payment_related, true),
+                 attribute(payment_related_incident_is_major, true)],
+                payment_related_incident_is_major,
+                false,
+                Status),
+            Statuses),
+    Statuses == [chapter_requirements_apply].
+
+test(what_if_adds_an_absent_key) :-
+    findall(Status,
+            dora_payment_related_incidents_what_if(
+                [attribute(incident_is_operational_or_security_payment_related, true),
+                 attribute(payment_related_incident_is_major, true)],
+                dora_entity_type,
+                investment_firm,
+                Status),
+            Statuses),
+    Statuses == [not_an_article_23_entity].
+
+test(what_if_on_a_bad_profile_gives_its_problems) :-
+    findall(Status,
+            dora_payment_related_incidents_what_if(
+                [attribute(dora_entity_type, bank)],
+                payment_related_incident_is_major,
+                true,
+                Status),
+            Statuses),
+    Statuses == [input_problems([wrong_type(dora_entity_type)])].
+
+test(what_if_with_a_bad_value_gives_its_problem) :-
+    findall(Status,
+            dora_payment_related_incidents_what_if(
+                [attribute(dora_entity_type, credit_institution)],
+                payment_related_incident_is_major,
+                maybe,
+                Status),
+            Statuses),
+    Statuses == [input_problems([wrong_type(payment_related_incident_is_major)])].
+
+:- end_module(queries).

@@ -1,0 +1,85 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_register_of_information_tests_test_input_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_dora_register_of_information_dora_register_of_information, [register_of_information_duties_required/3, register_of_information_duties_complete/3, register_of_information_duties_outstanding/3, dora_register_of_information_status/2, dora_register_of_information_status_values/1]).
+:- use_module(m__eu_dora_register_of_information_fixtures, [dora_register_of_information_profile_for/2]).
+:- use_module(m__eu_dora_register_of_information_citations, [fixed_citations/1]).
+
+test(status_complete_bound) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    dora_register_of_information_status(Profile, complete).
+test(status_incomplete_bound) :-
+    dora_register_of_information_profile_for(solo_entity_yearly_report_missed, Profile),
+    dora_register_of_information_status(Profile, incomplete).
+test(status_indeterminate_bound) :-
+    dora_register_of_information_profile_for(branches_template_unanswered, Profile),
+    dora_register_of_information_status(Profile, indeterminate).
+test(status_needs_legal_review_bound) :-
+    dora_register_of_information_profile_for(data_quality_unsure, Profile),
+    dora_register_of_information_status(Profile, needs_legal_review).
+test(status_input_problems_bound) :-
+    dora_register_of_information_profile_for(unsure_trigger, Profile),
+    dora_register_of_information_status(Profile, input_problems).
+test(complete_bound_with_the_fixed_citations) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    fixed_citations(Fixed),
+    register_of_information_duties_complete(Profile, complete, Fixed).
+test(incomplete_bound_with_the_fixed_citations) :-
+    dora_register_of_information_profile_for(group_parent_consolidated_consistency_missed, Profile),
+    fixed_citations(Fixed),
+    register_of_information_duties_complete(Profile, incomplete, Fixed).
+test(indeterminate_bound) :-
+    dora_register_of_information_profile_for(branches_template_unanswered, Profile),
+    register_of_information_duties_complete(Profile, indeterminate([register_includes_identification_of_branches_outside_home_country]), []).
+test(input_problems_bound_unsure_trigger) :-
+    dora_register_of_information_profile_for(unsure_trigger, Profile),
+    register_of_information_duties_complete(Profile, input_problems([wrong_type(competent_authority_requested_register)]), []).
+test(input_problems_bound_duplicate) :-
+    dora_register_of_information_profile_for(duplicate_judgement, Profile),
+    register_of_information_duties_complete(Profile, input_problems([duplicate_key(template_information_meets_data_quality_principles)]), []).
+test(input_problems_bound_unknown_key) :-
+    dora_register_of_information_profile_for(microenterprise_key_given, Profile),
+    register_of_information_duties_outstanding(Profile, input_problems([unknown_key(financial_entity_is_microenterprise)]), []).
+test(input_problems_bound_not_an_attribute_list) :-
+    register_of_information_duties_required(not_an_attribute_list, input_problems([wrong_type(profile)]), []).
+test(required_bound_for_a_solo_entity) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    register_of_information_duties_required(Profile, required([register_at_entity_level, documentation_distinguishing_critical_or_important_functions, yearly_report_to_competent_authorities, ranking_of_providers, information_on_ict_services_of_direct_providers, data_quality, regular_review_and_correction, identifiers_of_providers, single_value_per_data_element, all_data_elements_completed, general_information_on_maintaining_entity, general_information_on_entities_in_consolidation, general_information_on_contractual_arrangements, specific_information_on_contractual_arrangements, entities_signing_arrangements_for_receiving_ict_services, providers_signing_arrangements_for_providing_ict_services, entities_providing_ict_services_within_consolidation, entities_making_use_of_ict_services, direct_providers_and_subcontractors, ict_service_supply_chain, identification_of_functions, terminology_and_closed_lists]), Citations),
+    clausal_msort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2022_2554_art_28_3), cite(eu_reg_2024_2956_art_2), cite(eu_reg_2024_2956_art_3_1), cite(eu_reg_2024_2956_art_3_2), cite(eu_reg_2024_2956_art_3_3), cite(eu_reg_2024_2956_art_3_4), cite(eu_reg_2024_2956_art_3_5), cite(eu_reg_2024_2956_art_4_1), cite(eu_reg_2024_2956_art_4_2), cite(eu_reg_2024_2956_art_4_3), cite(eu_reg_2024_2956_art_5_1)].
+test(required_indeterminate_bound) :-
+    dora_register_of_information_profile_for(triggers_unanswered, Profile),
+    register_of_information_duties_required(Profile, indeterminate([financial_entity_responsible_for_sub_consolidated_register]), []).
+test(outstanding_bound) :-
+    dora_register_of_information_profile_for(solo_entity_yearly_report_missed, Profile),
+    register_of_information_duties_outstanding(Profile, outstanding([yearly_report_to_competent_authorities]), [cite(eu_reg_2022_2554_art_28_3)]).
+test(none_outstanding_bound) :-
+    dora_register_of_information_profile_for(critical_function_entity_all_performed, Profile),
+    fixed_citations(Fixed),
+    register_of_information_duties_outstanding(Profile, none_outstanding, Fixed).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    dora_register_of_information_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, complete),
+    dora_register_of_information_status(Profile, Other).
+test(complete_is_rejected_for_a_missed_duty, fail) :-
+    dora_register_of_information_profile_for(group_parent_consolidated_consistency_missed, Profile),
+    register_of_information_duties_complete(Profile, complete, _).
+test(none_outstanding_is_rejected_for_a_missed_duty, fail) :-
+    dora_register_of_information_profile_for(solo_entity_yearly_report_missed, Profile),
+    register_of_information_duties_outstanding(Profile, none_outstanding, _).
+
+cp_test_names([status_complete_bound, status_incomplete_bound, status_indeterminate_bound, status_needs_legal_review_bound, status_input_problems_bound, complete_bound_with_the_fixed_citations, incomplete_bound_with_the_fixed_citations, indeterminate_bound, input_problems_bound_unsure_trigger, input_problems_bound_duplicate, input_problems_bound_unknown_key, input_problems_bound_not_an_attribute_list, required_bound_for_a_solo_entity, required_indeterminate_bound, outstanding_bound, none_outstanding_bound]).
+cp_test_fail_names([every_other_bound_status_is_rejected, complete_is_rejected_for_a_missed_duty, none_outstanding_is_rejected_for_a_missed_duty]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,127 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_incident_classification_thresholds_queries, [dora_incident_classification_thresholds_profile_keys/1, dora_incident_classification_thresholds_what_if/4, met/0, not_met/0, on_time/0, month_limit/0, unsure/0, critical_services_affected/0, data_losses_malicious_access_threshold_met/0, clients_financial_counterparts_and_transactions_threshold_met/0, reputational_impact_threshold_met/0, duration_and_service_downtime_threshold_met/0, geographical_spread_threshold_met/0, data_losses_impact_threshold_met/0, economic_impact_threshold_met/0, affects_ict_services_supporting_critical_or_important_functions/0, affects_authorised_registered_or_supervised_financial_services/0, successful_malicious_unauthorised_access/0, access_may_result_in_data_losses/0, affected_clients/0, clients_using_affected_service/0, affected_financial_counterparts/0, financial_counterparts_of_affected_service/0, affected_transactions_number/0, affected_transactions_amount/0, reference_period_transactions_number/0, reference_period_transactions_amount/0, reference_period_days/0, relevant_clients_or_financial_counterparts_affected/0, incident_reflected_in_media/0, repetitive_complaints_from_different_clients_or_counterparts/0, regulatory_requirements_likely_not_met/0, material_loss_of_clients_or_counterparts_likely/0, incident_duration_seconds/0, critical_or_important_function_service_downtime_seconds/0, member_states_with_impact/0, data_impact_adverse_to_business_objectives_or_regulatory_requirements/0, data_availability_impact/0, data_authenticity_impact/0, data_integrity_impact/0, data_confidentiality_impact/0, expropriated_funds_and_assets_cents/0, replacement_and_relocation_costs_cents/0, staff_costs_cents/0, contractual_non_compliance_fees_cents/0, redress_and_compensation_costs_cents/0, forgone_revenue_losses_cents/0, communication_costs_cents/0, advisory_costs_cents/0, costs_and_losses_likely_to_exceed_threshold/0, final_report_weekend_extension/0, late/1, indeterminate/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_hof, [exclude/3]).
+:- use_module(m__eu_dora_incident_classification_thresholds_kernel, [dora_incident_classification_thresholds_input_problems/2]).
+:- use_module(m__eu_dora_incident_classification_thresholds_dora_incident_classification_thresholds, [dora_incident_classification_thresholds_status/2]).
+
+dora_incident_classification_thresholds_profile_keys([affects_ict_services_supporting_critical_or_important_functions, affects_authorised_registered_or_supervised_financial_services, successful_malicious_unauthorised_access, access_may_result_in_data_losses, affected_clients, clients_using_affected_service, affected_financial_counterparts, financial_counterparts_of_affected_service, affected_transactions_number, affected_transactions_amount, reference_period_transactions_number, reference_period_transactions_amount, reference_period_days, relevant_clients_or_financial_counterparts_affected, incident_reflected_in_media, repetitive_complaints_from_different_clients_or_counterparts, regulatory_requirements_likely_not_met, material_loss_of_clients_or_counterparts_likely, incident_duration_seconds, critical_or_important_function_service_downtime_seconds, member_states_with_impact, data_impact_adverse_to_business_objectives_or_regulatory_requirements, data_availability_impact, data_authenticity_impact, data_integrity_impact, data_confidentiality_impact, expropriated_funds_and_assets_cents, replacement_and_relocation_costs_cents, staff_costs_cents, contractual_non_compliance_fees_cents, redress_and_compensation_costs_cents, forgone_revenue_losses_cents, communication_costs_cents, advisory_costs_cents, costs_and_losses_likely_to_exceed_threshold, final_report_weekend_extension]).
+
+dora_incident_classification_thresholds_what_if(threshold_query(Profile, Threshold), OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_incident_classification_thresholds_status(threshold_query(Hypothesis, Threshold), NewStatus).
+dora_incident_classification_thresholds_what_if(final_report_query(Profile, LatestIntermediateDate, FinalDate), OverriddenKey, NewValue, NewStatus) :-
+    attribute_override(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_incident_classification_thresholds_status(final_report_query(Hypothesis, LatestIntermediateDate, FinalDate), NewStatus).
+
+attribute_override(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(attribute_key_is(OverriddenKey), Profile, KeptAttributes),
+    append(KeptAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attribute_key_is(OverriddenKey, attribute(ElementKey, _)) :-
+    ElementKey == OverriddenKey.
+
+met.
+
+not_met.
+
+on_time.
+
+month_limit.
+
+unsure.
+
+critical_services_affected.
+
+data_losses_malicious_access_threshold_met.
+
+clients_financial_counterparts_and_transactions_threshold_met.
+
+reputational_impact_threshold_met.
+
+duration_and_service_downtime_threshold_met.
+
+geographical_spread_threshold_met.
+
+data_losses_impact_threshold_met.
+
+economic_impact_threshold_met.
+
+affects_ict_services_supporting_critical_or_important_functions.
+
+affects_authorised_registered_or_supervised_financial_services.
+
+successful_malicious_unauthorised_access.
+
+access_may_result_in_data_losses.
+
+affected_clients.
+
+clients_using_affected_service.
+
+affected_financial_counterparts.
+
+financial_counterparts_of_affected_service.
+
+affected_transactions_number.
+
+affected_transactions_amount.
+
+reference_period_transactions_number.
+
+reference_period_transactions_amount.
+
+reference_period_days.
+
+relevant_clients_or_financial_counterparts_affected.
+
+incident_reflected_in_media.
+
+repetitive_complaints_from_different_clients_or_counterparts.
+
+regulatory_requirements_likely_not_met.
+
+material_loss_of_clients_or_counterparts_likely.
+
+incident_duration_seconds.
+
+critical_or_important_function_service_downtime_seconds.
+
+member_states_with_impact.
+
+data_impact_adverse_to_business_objectives_or_regulatory_requirements.
+
+data_availability_impact.
+
+data_authenticity_impact.
+
+data_integrity_impact.
+
+data_confidentiality_impact.
+
+expropriated_funds_and_assets_cents.
+
+replacement_and_relocation_costs_cents.
+
+staff_costs_cents.
+
+contractual_non_compliance_fees_cents.
+
+redress_and_compensation_costs_cents.
+
+forgone_revenue_losses_cents.
+
+communication_costs_cents.
+
+advisory_costs_cents.
+
+costs_and_losses_likely_to_exceed_threshold.
+
+final_report_weekend_extension.
+
+late(month_limit).
+
+indeterminate([_MissingKey]).

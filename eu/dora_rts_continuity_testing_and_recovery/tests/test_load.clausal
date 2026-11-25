@@ -1,0 +1,103 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/dora_rts_continuity_testing_and_recovery loads, its result terms build
+% and destructure, the verdict atoms the order pins are distinct, the
+% citation records resolve, and the kernel's input check gives exactly one
+% answer for a handful of profiles.
+% Self-contained: it imports from the kernel and the citations module only,
+% since the determination slice is authored after this phase.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/dora_rts_continuity_testing_and_recovery/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/dora_rts_continuity_testing_and_recovery/kernel, [dora_rts_continuity_testing_and_recovery_input_problems/2]).
+:- use_module(eu/dora_rts_continuity_testing_and_recovery/citations, [citation/2, implements/1]).
+
+% ---- the result terms build and destructure -------------------------
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = dora_rts_continuity_testing_and_recovery_verdict(complete, [cite(eu_reg_2024_1774_art_25_1)]),
+    Verdict = dora_rts_continuity_testing_and_recovery_verdict(Status, Citations),
+    Status == complete,
+    Citations == [cite(eu_reg_2024_1774_art_25_1)].
+
+test(the_required_result_destructures) :-
+    Result = required([testing_informed_by_business_impact_analysis_and_ict_risk_assessment, alternative_recovery_options]),
+    Result = required(Duties),
+    Duties == [testing_informed_by_business_impact_analysis_and_ict_risk_assessment, alternative_recovery_options].
+
+test(the_outstanding_result_destructures) :-
+    Result = outstanding([handling_of_test_deficiencies]),
+    Result = outstanding(Duties),
+    Duties == [handling_of_test_deficiencies].
+
+test(the_indeterminate_status_names_one_key) :-
+    Status = indeterminate([financial_entity_is_article_16_1_entity]),
+    Status = indeterminate([MissingKey]),
+    MissingKey == financial_entity_is_article_16_1_entity.
+
+test(the_referral_status_destructures) :-
+    Status = needs_legal_review(open_textured(continuity_test_results_documented, cite(eu_reg_2024_1774_art_25_5)), [inputs_relied_on([financial_entity_is_article_16_1_entity-false, continuity_test_results_documented-unsure])]),
+    Status = needs_legal_review(open_textured(Key, Citation), [inputs_relied_on(Pairs)]),
+    Key == continuity_test_results_documented,
+    Citation == cite(eu_reg_2024_1774_art_25_5),
+    Pairs == [financial_entity_is_article_16_1_entity-false, continuity_test_results_documented-unsure].
+
+% ---- the verdict atoms are distinct ---------------------------------
+
+test(the_verdict_atoms_are_distinct) :-
+    dif(complete, incomplete),
+    dif(complete, simplified_framework_entity),
+    dif(incomplete, simplified_framework_entity),
+    dif(none_outstanding, simplified_framework_entity),
+    dif(none_outstanding, complete).
+
+test(the_entity_type_atoms_are_distinct) :-
+    dif(central_counterparty, central_securities_depository).
+
+% ---- the citation records resolve -----------------------------------
+
+test(the_gate_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_16_1, _GateRecord).
+
+test(the_first_paragraph_citation_is_recorded) :-
+    citation(eu_reg_2024_1774_art_25_1, Record),
+    Record = [label-_, ref-_, verbatim-_].
+
+test(the_last_paragraph_citation_is_recorded) :-
+    citation(eu_reg_2024_1774_art_26_4, _LastRecord).
+
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2024_1774_art_26_2_i).
+
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_reg_2024_1774_art_26_5).
+
+% ---- the kernel's input check: one answer per profile ---------------
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, dora_rts_continuity_testing_and_recovery_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_has_no_problem) :-
+    findall(Problems, dora_rts_continuity_testing_and_recovery_input_problems([attribute(financial_entity_is_article_16_1_entity, false), attribute(dora_entity_type, central_counterparty), attribute(continuity_test_results_documented, unsure)], Problems), Answers),
+    Answers == [[]].
+
+test(a_term_that_is_not_a_list_is_wrong_type_profile) :-
+    findall(Problems, dora_rts_continuity_testing_and_recovery_input_problems(profile_atom, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(an_unsure_gate_is_wrong_type) :-
+    findall(Problems, dora_rts_continuity_testing_and_recovery_input_problems([attribute(financial_entity_is_article_16_1_entity, unsure)], Problems), Answers),
+    Answers == [[wrong_type(financial_entity_is_article_16_1_entity)]].
+
+test(a_key_outside_the_contract_is_unknown) :-
+    findall(Problems, dora_rts_continuity_testing_and_recovery_input_problems([attribute(outside_key, 1)], Problems), Answers),
+    Answers == [[unknown_key(outside_key)]].
+
+test(a_repeated_key_is_a_duplicate) :-
+    findall(Problems, dora_rts_continuity_testing_and_recovery_input_problems([attribute(financial_entity_is_microenterprise, true), attribute(financial_entity_is_microenterprise, true)], Problems), Answers),
+    Answers == [[duplicate_key(financial_entity_is_microenterprise)]].
+
+:- end_module(test_load).

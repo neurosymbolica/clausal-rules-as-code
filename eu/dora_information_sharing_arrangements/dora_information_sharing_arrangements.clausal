@@ -1,0 +1,389 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% dora_information_sharing_arrangements.clausal -- the "dora_information_sharing_arrangements" DETERMINATION for eu/dora_information_sharing_arrangements,
+% self-contained top to bottom: its statutory VALUE facts (the condition
+% table and the referral rows, each row carrying a ready-made cite(Key)),
+% its helpers, its per-rule tests, its checklist and its verdict assembly.
+%
+% Source: Regulation (EU) 2022/2554 (Digital Operational Resilience Act,
+% DORA), Article 45(1), lead words and points (a) to (c), Article 45(2) and
+% Article 45(3) (32022R2554, original OJ text, OJ L 333, 27.12.2022, p. 1).
+%
+% Two contract queries:
+%   information_sharing_within_article_45(Profile, Result, Citations)
+%     limbs A0 to A4 (readings (2) to (5));
+%   membership_notification_duty(Profile, Result, Citations)
+%     limbs B0 to B4 (readings (6) and (7)).
+% Both call the kernel's input check first. Exactly one clause answers each
+% profile: the guards are disjoint and cover every well-formed profile.
+% Every reading is the drafter's reading, not a lawyer's.
+% =====================================================================
+
+:- module(dora_information_sharing_arrangements, [
+    decide_dora_information_sharing_arrangements/2,
+    dora_information_sharing_arrangements_status/2,
+    dora_information_sharing_arrangements_checklist/2,
+    dora_information_sharing_arrangements_decision_resolvable/1,
+    dora_information_sharing_arrangements_status_values/1,
+    information_sharing_within_article_45/3,
+    membership_notification_duty/3,
+    sharing_within_article_45/0,
+    sharing_outside_article_45/0,
+    notify_participation_upon_validation/0,
+    notify_cessation_once_effective/0,
+    no_notification_duty/0,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/dora_information_sharing_arrangements/kernel, [dora_information_sharing_arrangements_input_problems/2]).
+:- use_module(eu/dora_information_sharing_arrangements/citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- result constructors (data, never called as queries; no clauses) ---
+:- constructors([
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% ---- result atoms (never called as queries) ---------------------------
+sharing_within_article_45.
+sharing_outside_article_45.
+notify_participation_upon_validation.
+notify_cessation_once_effective.
+no_notification_duty.
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The final answers of information_sharing_within_article_45/3.
+dora_information_sharing_arrangements_status_values([sharing_within_article_45, sharing_outside_article_45]).
+
+% The five conditions of Art 45(1), read with Art 45(2), in root_exports
+% order (reading (3), reading (4)).
+condition_identifiers([
+    information_is_cyber_threat_information_and_intelligence,
+    sharing_aims_to_enhance_digital_operational_resilience,
+    sharing_takes_place_within_trusted_community_of_financial_entities,
+    arrangement_protects_sensitive_information_and_has_rules_of_conduct,
+    arrangement_defines_participation_conditions_and_appropriate_details
+]).
+
+% The referral rows of the order, exactly as stated:
+% referral(Situation, Query, InputKey, cite(CitationKey), Inputs).
+referral(information_is_cyber_threat_information_unclear,
+    information_sharing_within_article_45/3,
+    information_is_cyber_threat_information_and_intelligence,
+    cite(eu_reg_2022_2554_art_45_1),
+    [information_is_cyber_threat_information_and_intelligence, sharing_aims_to_enhance_digital_operational_resilience, sharing_takes_place_within_trusted_community_of_financial_entities, arrangement_protects_sensitive_information_and_has_rules_of_conduct, arrangement_defines_participation_conditions_and_appropriate_details]).
+referral(aim_of_resilience_unclear,
+    information_sharing_within_article_45/3,
+    sharing_aims_to_enhance_digital_operational_resilience,
+    cite(eu_reg_2022_2554_art_45_1_a),
+    [information_is_cyber_threat_information_and_intelligence, sharing_aims_to_enhance_digital_operational_resilience, sharing_takes_place_within_trusted_community_of_financial_entities, arrangement_protects_sensitive_information_and_has_rules_of_conduct, arrangement_defines_participation_conditions_and_appropriate_details]).
+referral(trusted_community_unclear,
+    information_sharing_within_article_45/3,
+    sharing_takes_place_within_trusted_community_of_financial_entities,
+    cite(eu_reg_2022_2554_art_45_1_b),
+    [information_is_cyber_threat_information_and_intelligence, sharing_aims_to_enhance_digital_operational_resilience, sharing_takes_place_within_trusted_community_of_financial_entities, arrangement_protects_sensitive_information_and_has_rules_of_conduct, arrangement_defines_participation_conditions_and_appropriate_details]).
+referral(arrangement_protection_and_rules_of_conduct_unclear,
+    information_sharing_within_article_45/3,
+    arrangement_protects_sensitive_information_and_has_rules_of_conduct,
+    cite(eu_reg_2022_2554_art_45_1_c),
+    [information_is_cyber_threat_information_and_intelligence, sharing_aims_to_enhance_digital_operational_resilience, sharing_takes_place_within_trusted_community_of_financial_entities, arrangement_protects_sensitive_information_and_has_rules_of_conduct, arrangement_defines_participation_conditions_and_appropriate_details]).
+referral(arrangement_participation_conditions_and_details_unclear,
+    information_sharing_within_article_45/3,
+    arrangement_defines_participation_conditions_and_appropriate_details,
+    cite(eu_reg_2022_2554_art_45_2),
+    [information_is_cyber_threat_information_and_intelligence, sharing_aims_to_enhance_digital_operational_resilience, sharing_takes_place_within_trusted_community_of_financial_entities, arrangement_protects_sensitive_information_and_has_rules_of_conduct, arrangement_defines_participation_conditions_and_appropriate_details]).
+referral(arrangement_referred_to_in_paragraph_1_unclear,
+    membership_notification_duty/3,
+    arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1,
+    cite(eu_reg_2022_2554_art_45_3),
+    [membership_event, arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1]).
+
+% ---- profile plumbing ---------------------------------------------------
+% key_state(Profile, ProfileKey, State): the value as given, or absent.
+% Called only after the input check, so each key occurs at most once.
+key_state(Profile, ProfileKey, Value) :-
+    profile_get(Profile, ProfileKey, Value).
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+
+% relied_pairs(Profile, InputKeys, Pairs): KEY-VALUE for each present key,
+% in the order of InputKeys (root_exports order), values as given.
+relied_pairs(_Profile, [], []).
+relied_pairs(Profile, [InputKey|InputKeys], Pairs) :-
+    key_state(Profile, InputKey, State),
+    relied_pairs(Profile, InputKeys, LaterPairs),
+    add_relied_pair(State, InputKey, LaterPairs, Pairs).
+
+add_relied_pair(absent, _InputKey, Pairs, Pairs).
+add_relied_pair(State, InputKey, LaterPairs, [InputKey-State|LaterPairs]) :-
+    dif(State, absent).
+
+% ---- the conditions of Art 45(1) and (2): one requirement each --------
+% judgement_status(State, ConditionKey, Status): a tri-state judgement or
+% an absent key, as a checklist status.
+judgement_status(true, _ConditionKey, met).
+judgement_status(false, _ConditionKey, unmet(judged_false)).
+judgement_status(unsure, ConditionKey, open_textured(ConditionKey)).
+judgement_status(absent, ConditionKey, unknown([ConditionKey])).
+
+% Art 45(1), lead words: cyber threat information and intelligence.
+condition_requirement(information_is_cyber_threat_information_and_intelligence, Profile, Status, cite(eu_reg_2022_2554_art_45_1)) :-
+    implements(eu_reg_2022_2554_art_45_1),
+    key_state(Profile, information_is_cyber_threat_information_and_intelligence, State),
+    judgement_status(State, information_is_cyber_threat_information_and_intelligence, Status).
+% Art 45(1)(a): aims to enhance digital operational resilience.
+condition_requirement(sharing_aims_to_enhance_digital_operational_resilience, Profile, Status, cite(eu_reg_2022_2554_art_45_1_a)) :-
+    implements(eu_reg_2022_2554_art_45_1_a),
+    key_state(Profile, sharing_aims_to_enhance_digital_operational_resilience, State),
+    judgement_status(State, sharing_aims_to_enhance_digital_operational_resilience, Status).
+% Art 45(1)(b): within trusted communities of financial entities.
+condition_requirement(sharing_takes_place_within_trusted_community_of_financial_entities, Profile, Status, cite(eu_reg_2022_2554_art_45_1_b)) :-
+    implements(eu_reg_2022_2554_art_45_1_b),
+    key_state(Profile, sharing_takes_place_within_trusted_community_of_financial_entities, State),
+    judgement_status(State, sharing_takes_place_within_trusted_community_of_financial_entities, Status).
+% Art 45(1)(c): protective arrangements governed by rules of conduct.
+condition_requirement(arrangement_protects_sensitive_information_and_has_rules_of_conduct, Profile, Status, cite(eu_reg_2022_2554_art_45_1_c)) :-
+    implements(eu_reg_2022_2554_art_45_1_c),
+    key_state(Profile, arrangement_protects_sensitive_information_and_has_rules_of_conduct, State),
+    judgement_status(State, arrangement_protects_sensitive_information_and_has_rules_of_conduct, Status).
+% Art 45(2), read as part of point (c): participation conditions and details.
+condition_requirement(arrangement_defines_participation_conditions_and_appropriate_details, Profile, Status, cite(eu_reg_2022_2554_art_45_2)) :-
+    implements(eu_reg_2022_2554_art_45_2),
+    key_state(Profile, arrangement_defines_participation_conditions_and_appropriate_details, State),
+    judgement_status(State, arrangement_defines_participation_conditions_and_appropriate_details, Status).
+
+condition_item(Profile, Identifier, item(Identifier, Status, Citation)) :-
+    condition_requirement(Identifier, Profile, Status, Citation).
+
+sharing_items(Profile, Items) :-
+    condition_identifiers(Identifiers),
+    maplist(condition_item(Profile), Identifiers, Items).
+
+status_kind(met, met).
+status_kind(unmet(_Reason), unmet).
+status_kind(unknown(_MissingKeys), absent).
+status_kind(open_textured(_Judgement), unsure).
+
+item_kind(item(_Identifier, Status, _Citation), Kind) :-
+    status_kind(Status, Kind).
+
+item_kinds(Items, Kinds) :-
+    maplist(item_kind, Items, Kinds).
+
+% first_item_of_kind(Items, Kind, Identifier): the first item, in
+% root_exports order, whose status is of Kind.
+first_item_of_kind([item(Identifier, Status, _Citation)|_Items], Kind, Identifier) :-
+    status_kind(Status, Kind).
+first_item_of_kind([item(_Identifier, Status, _Citation)|Items], Kind, Identifier) :-
+    status_kind(Status, OtherKind),
+    dif(OtherKind, Kind),
+    first_item_of_kind(Items, Kind, Identifier).
+
+% ---- query A: information_sharing_within_article_45/3 -----------------
+% A0: input problems first.
+information_sharing_within_article_45(Profile, input_problems(Problems), []) :-
+    dora_information_sharing_arrangements_input_problems(Profile, Problems),
+    Problems = [_|_].
+information_sharing_within_article_45(Profile, Result, Citations) :-
+    dora_information_sharing_arrangements_input_problems(Profile, []),
+    sharing_answer(Profile, Result, Citations).
+
+% A1: any condition false decides alone (reading (3), Q1).
+sharing_answer(Profile, sharing_outside_article_45, [cite(eu_reg_2022_2554_art_45_1), cite(eu_reg_2022_2554_art_45_1_a), cite(eu_reg_2022_2554_art_45_1_b), cite(eu_reg_2022_2554_art_45_1_c), cite(eu_reg_2022_2554_art_45_2)]) :-
+    implements(eu_reg_2022_2554_art_45_1),
+    sharing_items(Profile, Items),
+    item_kinds(Items, Kinds),
+    memberd_t(unmet, Kinds, true).
+% A2: none false; the first absent condition is named.
+sharing_answer(Profile, indeterminate([MissingKey]), []) :-
+    implements(eu_reg_2022_2554_art_45_1),
+    sharing_items(Profile, Items),
+    item_kinds(Items, Kinds),
+    memberd_t(unmet, Kinds, false),
+    memberd_t(absent, Kinds, true),
+    first_item_of_kind(Items, absent, MissingKey).
+% A3: none false or absent; the first unsure condition is referred.
+sharing_answer(Profile, needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on(Pairs)]), []) :-
+    implements(eu_reg_2022_2554_art_45_1),
+    sharing_items(Profile, Items),
+    item_kinds(Items, Kinds),
+    memberd_t(unmet, Kinds, false),
+    memberd_t(absent, Kinds, false),
+    memberd_t(unsure, Kinds, true),
+    first_item_of_kind(Items, unsure, UnsureKey),
+    referral(_Situation, information_sharing_within_article_45/3, UnsureKey, Citation, Inputs),
+    relied_pairs(Profile, Inputs, Pairs).
+% A4: all five conditions true: the exchange is covered (reading (2)).
+sharing_answer(Profile, sharing_within_article_45, [cite(eu_reg_2022_2554_art_45_1), cite(eu_reg_2022_2554_art_45_1_a), cite(eu_reg_2022_2554_art_45_1_b), cite(eu_reg_2022_2554_art_45_1_c), cite(eu_reg_2022_2554_art_45_2)]) :-
+    implements(eu_reg_2022_2554_art_45_1),
+    sharing_items(Profile, Items),
+    item_kinds(Items, Kinds),
+    memberd_t(unmet, Kinds, false),
+    memberd_t(absent, Kinds, false),
+    memberd_t(unsure, Kinds, false).
+
+% ---- query B: membership_notification_duty/3 (Art 45(3)) --------------
+% B0: input problems first.
+membership_notification_duty(Profile, input_problems(Problems), []) :-
+    dora_information_sharing_arrangements_input_problems(Profile, Problems),
+    Problems = [_|_].
+membership_notification_duty(Profile, Result, Citations) :-
+    dora_information_sharing_arrangements_input_problems(Profile, []),
+    key_state(Profile, membership_event, EventState),
+    key_state(Profile, arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, ArrangementState),
+    notification_answer(EventState, ArrangementState, Profile, Result, Citations).
+
+% The two membership events that give rise to a duty (reading (6)).
+membership_event_occurred(membership_validated).
+membership_event_occurred(membership_cessation_took_effect).
+
+% B1: no membership event decides alone.
+notification_answer(no_membership_event, _ArrangementState, _Profile, no_notification_duty, [cite(eu_reg_2022_2554_art_45_3)]) :-
+    implements(eu_reg_2022_2554_art_45_3).
+% B1: an arrangement not referred to in paragraph 1 decides alone.
+notification_answer(EventState, false, _Profile, no_notification_duty, [cite(eu_reg_2022_2554_art_45_3)]) :-
+    implements(eu_reg_2022_2554_art_45_3),
+    dif(EventState, no_membership_event).
+% B2: membership_event absent, named first (Q4).
+notification_answer(absent, ArrangementState, _Profile, indeterminate([membership_event]), []) :-
+    implements(eu_reg_2022_2554_art_45_3),
+    dif(ArrangementState, false).
+% B2: an event occurred, the arrangement judgement absent.
+notification_answer(EventState, absent, _Profile, indeterminate([arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1]), []) :-
+    implements(eu_reg_2022_2554_art_45_3),
+    membership_event_occurred(EventState).
+% B3: an event occurred, the arrangement judgement unsure: refer.
+notification_answer(EventState, unsure, Profile, needs_legal_review(open_textured(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, Citation), [inputs_relied_on(Pairs)]), []) :-
+    implements(eu_reg_2022_2554_art_45_3),
+    membership_event_occurred(EventState),
+    referral(_Situation, membership_notification_duty/3, arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, Citation, Inputs),
+    relied_pairs(Profile, Inputs, Pairs).
+% B4: validation gives the duty to notify participation.
+notification_answer(membership_validated, true, _Profile, notify_participation_upon_validation, [cite(eu_reg_2022_2554_art_45_3)]) :-
+    implements(eu_reg_2022_2554_art_45_3).
+% B4: a cessation that has taken effect gives the duty to notify it.
+notification_answer(membership_cessation_took_effect, true, _Profile, notify_cessation_once_effective, [cite(eu_reg_2022_2554_art_45_3)]) :-
+    implements(eu_reg_2022_2554_art_45_3).
+
+% ---- facade: verdict, projection, checklist ----------------------------
+decide_dora_information_sharing_arrangements(Profile, dora_information_sharing_arrangements_verdict(Status, Citations)) :-
+    information_sharing_within_article_45(Profile, Status, Citations).
+
+dora_information_sharing_arrangements_status(Profile, Status) :-
+    decide_dora_information_sharing_arrangements(Profile, dora_information_sharing_arrangements_verdict(Status, _Citations)).
+
+% One row per condition of Art 45(1) and (2), each with its cite(...).
+dora_information_sharing_arrangements_checklist(Profile, Items) :-
+    dora_information_sharing_arrangements_input_problems(Profile, []),
+    sharing_items(Profile, Items).
+
+dora_information_sharing_arrangements_decision_resolvable(Profile) :-
+    decide_dora_information_sharing_arrangements(Profile, _Verdict).
+
+% ---- tests -------------------------------------------------------------
+all_true_profile([
+    attribute(information_is_cyber_threat_information_and_intelligence, true),
+    attribute(sharing_aims_to_enhance_digital_operational_resilience, true),
+    attribute(sharing_takes_place_within_trusted_community_of_financial_entities, true),
+    attribute(arrangement_protects_sensitive_information_and_has_rules_of_conduct, true),
+    attribute(arrangement_defines_participation_conditions_and_appropriate_details, true)
+]).
+
+test(all_five_true_is_within_once) :-
+    all_true_profile(Profile),
+    findall(Result-Citations, information_sharing_within_article_45(Profile, Result, Citations), Answers),
+    Answers == [sharing_within_article_45-[cite(eu_reg_2022_2554_art_45_1), cite(eu_reg_2022_2554_art_45_1_a), cite(eu_reg_2022_2554_art_45_1_b), cite(eu_reg_2022_2554_art_45_1_c), cite(eu_reg_2022_2554_art_45_2)]].
+
+test(all_five_true_is_not_outside, fail) :-
+    all_true_profile(Profile),
+    information_sharing_within_article_45(Profile, sharing_outside_article_45, _Citations).
+
+test(one_false_decides_alone_once) :-
+    Profile = [attribute(arrangement_defines_participation_conditions_and_appropriate_details, false), attribute(sharing_aims_to_enhance_digital_operational_resilience, unsure)],
+    findall(Result, information_sharing_within_article_45(Profile, Result, _Citations), Results),
+    Results == [sharing_outside_article_45].
+
+test(absent_named_before_unsure) :-
+    Profile = [attribute(information_is_cyber_threat_information_and_intelligence, unsure), attribute(sharing_aims_to_enhance_digital_operational_resilience, true)],
+    findall(Result-Citations, information_sharing_within_article_45(Profile, Result, Citations), Answers),
+    Answers == [indeterminate([sharing_takes_place_within_trusted_community_of_financial_entities])-[]].
+
+test(first_unsure_is_referred_with_pairs) :-
+    Profile = [
+        attribute(arrangement_defines_participation_conditions_and_appropriate_details, unsure),
+        attribute(information_is_cyber_threat_information_and_intelligence, true),
+        attribute(sharing_aims_to_enhance_digital_operational_resilience, unsure),
+        attribute(sharing_takes_place_within_trusted_community_of_financial_entities, true),
+        attribute(arrangement_protects_sensitive_information_and_has_rules_of_conduct, true),
+        attribute(membership_event, membership_validated)
+    ],
+    findall(Result-Citations, information_sharing_within_article_45(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(sharing_aims_to_enhance_digital_operational_resilience, cite(eu_reg_2022_2554_art_45_1_a)), [inputs_relied_on([information_is_cyber_threat_information_and_intelligence-true, sharing_aims_to_enhance_digital_operational_resilience-unsure, sharing_takes_place_within_trusted_community_of_financial_entities-true, arrangement_protects_sensitive_information_and_has_rules_of_conduct-true, arrangement_defines_participation_conditions_and_appropriate_details-unsure])])-[]].
+
+test(unknown_key_is_an_input_problem) :-
+    findall(Result-Citations, information_sharing_within_article_45([attribute(entity_size, large)], Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(entity_size)])-[]].
+
+test(duplicate_key_is_an_input_problem) :-
+    Profile = [attribute(membership_event, membership_validated), attribute(membership_event, no_membership_event)],
+    findall(Result, membership_notification_duty(Profile, Result, _Citations), Results),
+    Results == [input_problems([duplicate_key(membership_event)])].
+
+test(validation_gives_participation_notice_once) :-
+    Profile = [attribute(membership_event, membership_validated), attribute(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, true)],
+    findall(Result-Citations, membership_notification_duty(Profile, Result, Citations), Answers),
+    Answers == [notify_participation_upon_validation-[cite(eu_reg_2022_2554_art_45_3)]].
+
+test(validation_is_not_cessation_notice, fail) :-
+    Profile = [attribute(membership_event, membership_validated), attribute(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, true)],
+    membership_notification_duty(Profile, notify_cessation_once_effective, _Citations).
+
+test(cessation_gives_cessation_notice) :-
+    Profile = [attribute(membership_event, membership_cessation_took_effect), attribute(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, true)],
+    membership_notification_duty(Profile, notify_cessation_once_effective, [cite(eu_reg_2022_2554_art_45_3)]).
+
+test(no_event_decides_alone) :-
+    findall(Result, membership_notification_duty([attribute(membership_event, no_membership_event)], Result, _Citations), Results),
+    Results == [no_notification_duty].
+
+test(false_arrangement_decides_alone) :-
+    findall(Result, membership_notification_duty([attribute(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, false)], Result, _Citations), Results),
+    Results == [no_notification_duty].
+
+test(absent_event_named_before_unsure_arrangement) :-
+    findall(Result, membership_notification_duty([attribute(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, unsure)], Result, _Citations), Results),
+    Results == [indeterminate([membership_event])].
+
+test(absent_arrangement_after_event) :-
+    findall(Result, membership_notification_duty([attribute(membership_event, membership_validated)], Result, _Citations), Results),
+    Results == [indeterminate([arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1])].
+
+test(unsure_arrangement_is_referred) :-
+    Profile = [attribute(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, unsure), attribute(membership_event, membership_cessation_took_effect)],
+    findall(Result-Citations, membership_notification_duty(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1, cite(eu_reg_2022_2554_art_45_3)), [inputs_relied_on([membership_event-membership_cessation_took_effect, arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1-unsure])])-[]].
+
+test(checklist_cites_every_condition) :-
+    all_true_profile(Profile),
+    dora_information_sharing_arrangements_checklist(Profile, Items),
+    length(Items, 5),
+    member(item(arrangement_defines_participation_conditions_and_appropriate_details, met, cite(eu_reg_2022_2554_art_45_2)), Items).
+
+:- end_module(dora_information_sharing_arrangements).

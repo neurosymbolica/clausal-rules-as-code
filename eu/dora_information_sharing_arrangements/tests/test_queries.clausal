@@ -1,0 +1,57 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- PROPERTY tests for the query layer: one test per
+% predicate registered in manifest.yaml query_interface, plus the
+% combinators and re-exports queries.clausal adds.
+% Run: python -m clausal.testing eu/dora_information_sharing_arrangements/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_information_sharing_arrangements/queries, [
+    dora_information_sharing_arrangements_profile_keys/1,
+    dora_information_sharing_arrangements_input_problems/2,
+    dora_information_sharing_arrangements_what_if/4
+]).
+:- use_module(eu/dora_information_sharing_arrangements/dora_information_sharing_arrangements, [
+    dora_information_sharing_arrangements_status/2,
+    dora_information_sharing_arrangements_checklist/2
+]).
+:- use_module(eu/dora_information_sharing_arrangements/fixtures, [dora_information_sharing_arrangements_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_information_sharing_arrangements_profile_keys(ProfileKeys),
+    ProfileKeys == [information_is_cyber_threat_information_and_intelligence, sharing_aims_to_enhance_digital_operational_resilience, sharing_takes_place_within_trusted_community_of_financial_entities, arrangement_protects_sensitive_information_and_has_rules_of_conduct, arrangement_defines_participation_conditions_and_appropriate_details, membership_event, arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1].
+
+% #2 eligibility
+test(eligibility_status_is_one_atom) :-
+    dora_information_sharing_arrangements_profile_for(all_conditions_met, Profile),
+    findall(Status, dora_information_sharing_arrangements_status(Profile, Status), Statuses),
+    Statuses == [sharing_within_article_45].
+
+% #7 justification
+test(justification_checklist_cites_each_item) :-
+    dora_information_sharing_arrangements_profile_for(paragraph_2_false, Profile),
+    dora_information_sharing_arrangements_checklist(Profile, Items),
+    length(Items, 5),
+    member(item(arrangement_defines_participation_conditions_and_appropriate_details, unmet(judged_false), cite(eu_reg_2022_2554_art_45_2)), Items).
+
+% #16 what-if
+test(what_if_one_condition_false_flips_to_outside) :-
+    dora_information_sharing_arrangements_profile_for(all_conditions_met, Profile),
+    dora_information_sharing_arrangements_what_if(Profile, sharing_takes_place_within_trusted_community_of_financial_entities, false, NewStatus),
+    NewStatus == sharing_outside_article_45.
+
+test(what_if_restoring_the_condition_flips_back_to_within) :-
+    dora_information_sharing_arrangements_profile_for(paragraph_2_false, Profile),
+    dora_information_sharing_arrangements_what_if(Profile, arrangement_defines_participation_conditions_and_appropriate_details, true, NewStatus),
+    NewStatus == sharing_within_article_45.
+
+test(what_if_unsure_is_referred_not_decided) :-
+    dora_information_sharing_arrangements_profile_for(all_conditions_met, Profile),
+    dora_information_sharing_arrangements_what_if(Profile, information_is_cyber_threat_information_and_intelligence, unsure, NewStatus),
+    NewStatus = needs_legal_review(open_textured(information_is_cyber_threat_information_and_intelligence, cite(eu_reg_2022_2554_art_45_1)), _Context).
+
+test(input_problems_reexport_matches_the_kernel_check) :-
+    dora_information_sharing_arrangements_input_problems([attribute(entity_size, large)], [unknown_key(entity_size)]),
+    dora_information_sharing_arrangements_input_problems([], []).
+
+:- end_module(test_queries).

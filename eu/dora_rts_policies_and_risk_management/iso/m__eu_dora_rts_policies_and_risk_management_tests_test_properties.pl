@@ -1,0 +1,138 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_policies_and_risk_management_tests_test_properties, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [(=)/3]).
+:- use_module(m__eu_dora_rts_policies_and_risk_management_dora_rts_policies_and_risk_management, [decide_dora_rts_policies_and_risk_management/2, rts_policies_and_risk_management_duties_required/3, rts_policies_and_risk_management_duties_complete/3, rts_policies_and_risk_management_duties_outstanding/3]).
+:- use_module(m__eu_dora_rts_policies_and_risk_management_fixtures, [dora_rts_policies_and_risk_management_subject/1, dora_rts_policies_and_risk_management_profile_for/2]).
+:- use_module(library(reif), [if_/3]).
+
+subject_classifies(Subject) :-
+    dora_rts_policies_and_risk_management_subject(Subject),
+    dora_rts_policies_and_risk_management_profile_for(Subject, Profile),
+    decide_dora_rts_policies_and_risk_management(Profile, _Verdict).
+
+answer_count(Query, Subject, Count) :-
+    dora_rts_policies_and_risk_management_profile_for(Subject, Profile),
+    findall(Result - Citations, call(Query, Profile, Result, Citations), Answers),
+    length(Answers, Count).
+
+subject_answer(Query, Subject, Result - Citations) :-
+    dora_rts_policies_and_risk_management_subject(Subject),
+    dora_rts_policies_and_risk_management_profile_for(Subject, Profile),
+    call(Query, Profile, Result, Citations).
+
+citation_shape(complete, non_empty).
+citation_shape(incomplete, non_empty).
+citation_shape(none_outstanding, non_empty).
+citation_shape(simplified_framework_entity, non_empty).
+citation_shape(required(_), non_empty).
+citation_shape(outstanding(_), non_empty).
+citation_shape(indeterminate(_), empty).
+citation_shape(needs_legal_review(_, _), empty).
+citation_shape(input_problems(_), empty).
+
+list_shape([], empty).
+list_shape([_|_], non_empty).
+
+answer_has_its_citation_shape(Result - Citations) :-
+    citation_shape(Result, Shape),
+    list_shape(Citations, Shape).
+
+consistent(complete, none_outstanding).
+consistent(incomplete, outstanding(_)).
+consistent(incomplete, indeterminate(_)).
+consistent(simplified_framework_entity, simplified_framework_entity).
+consistent(indeterminate(MissingKeys), indeterminate(MissingKeys)).
+consistent(needs_legal_review(Reason, Context), needs_legal_review(Reason, Context)).
+consistent(input_problems(Problems), input_problems(Problems)).
+
+subject_results(Subject, CompleteResult - OutstandingResult) :-
+    dora_rts_policies_and_risk_management_subject(Subject),
+    dora_rts_policies_and_risk_management_profile_for(Subject, Profile),
+    rts_policies_and_risk_management_duties_complete(Profile, CompleteResult, _CompleteCitations),
+    rts_policies_and_risk_management_duties_outstanding(Profile, OutstandingResult, _OutstandingCitations).
+
+consistent_pair(CompleteResult - OutstandingResult) :-
+    consistent(CompleteResult, OutstandingResult).
+
+reversed_agrees(Subject, Answer - ReversedAnswer) :-
+    dora_rts_policies_and_risk_management_subject(Subject),
+    dora_rts_policies_and_risk_management_profile_for(Subject, Profile),
+    reverse(Profile, ReversedProfile),
+    rts_policies_and_risk_management_duties_complete(Profile, Result, Citations),
+    rts_policies_and_risk_management_duties_complete(ReversedProfile, ReversedResult, ReversedCitations),
+    Answer = Result - Citations,
+    ReversedAnswer = ReversedResult - ReversedCitations.
+
+identical_pair(Left - Right) :-
+    Left == Right.
+
+ordered_subset([], _).
+ordered_subset([Element|Elements], [Element|Later]) :-
+    ordered_subset(Elements, Later).
+ordered_subset([Element|Elements], [Other|Later]) :-
+    dif(Element, Other),
+    ordered_subset([Element|Elements], Later).
+
+with_value(Profile, ProfileKey, Value, NewProfile) :-
+    maplist(replaced_attribute(ProfileKey, Value), Profile, NewProfile).
+
+replaced_attribute(ProfileKey, Value, attribute(OtherKey, OldValue), attribute(OtherKey, NewValue)) :-
+    if_(OtherKey = ProfileKey, NewValue = Value, NewValue = OldValue).
+
+test(totality_every_subject_classifies) :-
+    findall(Subject, dora_rts_policies_and_risk_management_subject(Subject), Subjects),
+    sort(Subjects, SubjectSet),
+    findall(Subject, subject_classifies(Subject), ClassifiedSubjects),
+    sort(ClassifiedSubjects, SubjectSet).
+test(determinism_required) :-
+    findall(Count, (dora_rts_policies_and_risk_management_subject(Subject), answer_count(rts_policies_and_risk_management_duties_required, Subject, Count)), Counts),
+    sort(Counts, CountSet),
+    CountSet == [1].
+test(determinism_complete) :-
+    findall(Count, (dora_rts_policies_and_risk_management_subject(Subject), answer_count(rts_policies_and_risk_management_duties_complete, Subject, Count)), Counts),
+    sort(Counts, CountSet),
+    CountSet == [1].
+test(determinism_outstanding) :-
+    findall(Count, (dora_rts_policies_and_risk_management_subject(Subject), answer_count(rts_policies_and_risk_management_duties_outstanding, Subject, Count)), Counts),
+    sort(Counts, CountSet),
+    CountSet == [1].
+test(citation_shape_of_every_answer) :-
+    findall(Answer, (member(Query, [rts_policies_and_risk_management_duties_required, rts_policies_and_risk_management_duties_complete, rts_policies_and_risk_management_duties_outstanding]), subject_answer(Query, _Subject, Answer)), Answers),
+    length(Answers, 27),
+    maplist(answer_has_its_citation_shape, Answers).
+test(complete_agrees_with_outstanding) :-
+    findall(Pair, subject_results(_Subject, Pair), Pairs),
+    length(Pairs, 9),
+    maplist(consistent_pair, Pairs).
+test(attribute_order_never_changes_an_answer) :-
+    findall(Pair, reversed_agrees(_Subject, Pair), Pairs),
+    length(Pairs, 9),
+    maplist(identical_pair, Pairs).
+test(required_duties_are_distinct) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_required(Profile, required(Duties), _Citations),
+    sort(Duties, DutySet),
+    length(DutySet, 27).
+test(outstanding_keeps_duty_order_whatever_the_profile_order) :-
+    dora_rts_policies_and_risk_management_profile_for(all_duties_performed, Profile),
+    rts_policies_and_risk_management_duties_required(Profile, required(Duties), _RequiredCitations),
+    with_value(Profile, risk_treatment_procedure_ensures_assessment_of_corrective_actions, false, FirstProfile),
+    with_value(FirstProfile, risk_management_policies_contain_risk_treatment_procedure, false, SecondProfile),
+    with_value(SecondProfile, security_policies_ensure_security_of_networks, false, ThirdProfile),
+    reverse(ThirdProfile, ReversedProfile),
+    findall(Result - Citations, rts_policies_and_risk_management_duties_outstanding(ReversedProfile, Result, Citations), Answers),
+    Answers == [outstanding([network_security, risk_treatment_procedure, assessment_of_corrective_actions]) - [cite(eu_reg_2024_1774_art_2_1_a), cite(eu_reg_2024_1774_art_3_c), cite(eu_reg_2024_1774_art_3_c_run2)]],
+    ordered_subset([network_security, risk_treatment_procedure, assessment_of_corrective_actions], Duties).
+
+cp_test_names([totality_every_subject_classifies, determinism_required, determinism_complete, determinism_outstanding, citation_shape_of_every_answer, complete_agrees_with_outstanding, attribute_order_never_changes_an_answer, required_duties_are_distinct, outstanding_keeps_duty_order_whatever_the_profile_order]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

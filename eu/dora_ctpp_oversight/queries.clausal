@@ -1,0 +1,188 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_ctpp_oversight.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% The declared query types are served as follows:
+%   #2 eligibility   decide_dora_ctpp_oversight/2 and
+%                    dora_ctpp_oversight_status/2 (the slice): is THE
+%                    PROVIDER under the Lead Overseer's oversight of
+%                    Art 35(1) and 35(5)?
+%   #7 justification dora_ctpp_oversight_checklist/2 (the slice): one
+%                    item per order query, each with its cite(...) list.
+%   #15 deadline     ctpp_response_window_status/3 (Art 33(4), 35(3)),
+%                    ctpp_periodic_penalty_payment_status/3 (Art 35(6))
+%                    and ctpp_periodic_penalty_payment_limits/3
+%                    (Art 35(7), (8)) (the slice).
+% This layer adds:
+%   dora_ctpp_oversight_what_if/4      (#16 what-if): override one key of
+%                                      the attribute list, re-evaluate
+%   dora_ctpp_oversight_profile_keys/1: top-level profile key schema
+%   dora_ctpp_oversight_input_problems/2: the problems a profile has
+%                                      ([] = none), re-exported from the
+%                                      kernel as the scaffold wrote it
+%   the RESULT CONSTRUCTORS of the order's interface (exported, never
+%   called as queries): the six final answer atoms as 0-arity facts and
+%   required/1, powers/1, window_open/1, window_closed/1,
+%   window_not_yet_open/1, penalty_waiting_period_running/1,
+%   penalty_limits/2, amount/2, date/3, indeterminate/1,
+%   input_problems/1, unknown_key/1, wrong_type/1, duplicate_key/1.
+%   The compound constructors are data and have no clauses; they decide
+%   nothing statutory and carry no provenance marker.
+%
+% The what-if override is attribute-list plumbing: every attribute of the
+% overridden key (==) is dropped and attribute(Key, Value) is added at the
+% end. A term that is not an attribute list is passed on as it is, so the
+% input check still answers for it. It decides nothing statutory and
+% carries no provenance marker.
+% =====================================================================
+
+:- module(queries, [
+    dora_ctpp_oversight_profile_keys/1,
+    dora_ctpp_oversight_input_problems/2,
+    dora_ctpp_oversight_what_if/4,
+    not_designated_as_critical/0,
+    no_penalty_ground_recommendation/0,
+    no_penalty_ground_full_compliance/0,
+    penalty_decision_required/0,
+    lead_overseer_agreement_required/0,
+    no_article_33_5_condition/0,
+    required/1,
+    powers/1,
+    window_open/1,
+    window_closed/1,
+    window_not_yet_open/1,
+    penalty_waiting_period_running/1,
+    penalty_limits/2,
+    amount/2,
+    date/3,
+    indeterminate/1,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/dora_ctpp_oversight/kernel, [dora_ctpp_oversight_input_problems/2]).
+:- use_module(eu/dora_ctpp_oversight/dora_ctpp_oversight, [dora_ctpp_oversight_status/2]).
+
+:- constructors([required(duties),
+                 powers(powers),
+                 window_open(last_day),
+                 window_closed(last_day),
+                 window_not_yet_open(last_day),
+                 penalty_waiting_period_running(first_day),
+                 penalty_limits(maximum, last_day),
+                 amount(numerator, denominator),
+                 date(year, month, day),
+                 indeterminate(missing_keys),
+                 input_problems(problems),
+                 unknown_key(key),
+                 wrong_type(key),
+                 duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_ctpp_oversight_profile_keys([provider_designated_as_critical, response_window, draft_oversight_plan_received_on, annual_oversight_plan_adopted_and_notified, oversight_activities_completed, provider_plans_further_subcontracting_arrangement, envisaged_subcontractor_is_ict_provider_or_subcontractor_in_third_country, subcontracting_concerns_critical_or_important_functions, lead_overseer_deems_clear_and_serious_risk, recommendation_information_opportunity_given_on, measure_power, measure_compliance, measure_notification_received_on, penalty_decision_notified_on, preceding_business_year_worldwide_turnover, preceding_business_year_length_in_days, assessment_date]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden
+dora_ctpp_oversight_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attributes(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_ctpp_oversight_status(Hypothesis, NewStatus).
+
+% override_attributes(Profile, Key, Value, Hypothesis): complementary
+% clauses on the shape of Profile; exactly one holds.
+override_attributes(Profile, _, _, Profile) :-
+    var(Profile).
+override_attributes(Profile, Key, Value, [attribute(Key, Value)]) :-
+    Profile == [].
+override_attributes(Profile, Key, Value, Hypothesis) :-
+    nonvar(Profile),
+    Profile = [Element|Elements],
+    element_role(Element, Key, ElementRole),
+    override_element(ElementRole, Element, Elements, Key, Value, Hypothesis).
+override_attributes(Profile, _, _, Profile) :-
+    nonvar(Profile),
+    Profile \== [],
+    Profile \= [_|_].
+
+% element_role(Element, Key, Role): overridden (an attribute of Key),
+% kept (an attribute of another key) or other (not an attribute).
+element_role(Element, _, other) :-
+    var(Element).
+element_role(Element, Key, overridden) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == Key.
+element_role(Element, Key, kept) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== Key.
+element_role(Element, _, other) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+override_element(overridden, _, Elements, Key, Value, Hypothesis) :-
+    override_attributes(Elements, Key, Value, Hypothesis).
+override_element(kept, Element, Elements, Key, Value, [Element|Hypothesis]) :-
+    override_attributes(Elements, Key, Value, Hypothesis).
+override_element(other, Element, Elements, Key, Value, [Element|Hypothesis]) :-
+    override_attributes(Elements, Key, Value, Hypothesis).
+
+% ---- RESULT CONSTRUCTORS (exported, never called as queries) -----------
+% The final answer atoms of the order's interface.
+not_designated_as_critical.
+no_penalty_ground_recommendation.
+no_penalty_ground_full_compliance.
+penalty_decision_required.
+lead_overseer_agreement_required.
+no_article_33_5_condition.
+
+% The result compounds, the date and amount terms and the problem terms
+% are constructors (declared above): data, with no clauses.
+
+% ---- tests of the query layer ------------------------------------------
+test(what_if_designation_true_puts_provider_under_oversight) :-
+    findall(Status,
+            dora_ctpp_oversight_what_if([attribute(provider_designated_as_critical, false)],
+                                        provider_designated_as_critical,
+                                        true,
+                                        Status),
+            Statuses),
+    Statuses == [subject_to_lead_overseer_oversight].
+test(what_if_designation_false_is_not_designated) :-
+    dora_ctpp_oversight_what_if([attribute(provider_designated_as_critical, true)],
+                                provider_designated_as_critical,
+                                false,
+                                not_designated_as_critical).
+test(what_if_adds_an_absent_key) :-
+    dora_ctpp_oversight_what_if([],
+                                provider_designated_as_critical,
+                                true,
+                                subject_to_lead_overseer_oversight).
+test(what_if_keeps_the_absent_designation_indeterminate) :-
+    dora_ctpp_oversight_what_if([],
+                                assessment_date,
+                                date(2026, 1, 1),
+                                oversight_indeterminate).
+test(what_if_on_a_non_list_reports_input_problems) :-
+    dora_ctpp_oversight_what_if(profile,
+                                provider_designated_as_critical,
+                                true,
+                                oversight_input_problems).
+test(what_if_removes_a_duplicate) :-
+    dora_ctpp_oversight_what_if([attribute(provider_designated_as_critical, true),
+                                 attribute(provider_designated_as_critical, false)],
+                                provider_designated_as_critical,
+                                true,
+                                subject_to_lead_overseer_oversight).
+test(profile_keys_are_seventeen) :-
+    dora_ctpp_oversight_profile_keys(Keys),
+    length(Keys, 17).
+test(final_answer_atoms_are_served) :-
+    not_designated_as_critical,
+    penalty_decision_required,
+    lead_overseer_agreement_required,
+    no_article_33_5_condition.
+
+:- end_module(queries).

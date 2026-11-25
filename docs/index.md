@@ -15,8 +15,8 @@ written in [Clausal Prolog](https://clausal.pl), a restricted subset of ISO Prol
 engines.</p>
 
 <div class="facts" markdown>
-<div><strong>125</strong><span>domains: 99 EU, 5 Swiss, 5 UK, 2 Chinese, 5 Indian, 3 US, 6 Singapore</span></div>
-<div><strong>24,922</strong><span>domain tests, all passing</span></div>
+<div><strong>149</strong><span>domains: 123 EU, 5 Swiss, 5 UK, 2 Chinese, 5 Indian, 3 US, 6 Singapore</span></div>
+<div><strong>29,574</strong><span>domain tests, all passing</span></div>
 <div><strong>121</strong><span>statute units tracked in the first eight domains: 65 formalized, 56 left out with a stated reason</span></div>
 <div><strong>EUPL-1.2</strong><span>open source, the EU's own licence</span></div>
 </div>

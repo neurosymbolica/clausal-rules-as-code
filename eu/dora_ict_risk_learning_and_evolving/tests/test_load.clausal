@@ -1,0 +1,114 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of
+% eu/dora_ict_risk_learning_and_evolving loads (kernel and citations),
+% the result terms the order pins build and destructure, the verdict
+% atoms are distinct, the real citation records resolve, and the
+% kernel's input check gives exactly one answer for the shapes the order
+% names.
+% Self-contained: the determination slice is not referenced here.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/dora_ict_risk_learning_and_evolving/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/dora_ict_risk_learning_and_evolving/kernel, [dora_ict_risk_learning_and_evolving_input_problems/2]).
+:- use_module(eu/dora_ict_risk_learning_and_evolving/citations, [citation/2, implements/1]).
+
+% ---- result terms build and destructure ---------------------------
+
+test(the_required_result_carries_its_duties) :-
+    Result = required([threat_and_incident_information_capability, lessons_incorporated_into_ict_risk_assessment]),
+    Result = required(Duties),
+    Duties == [threat_and_incident_information_capability, lessons_incorporated_into_ict_risk_assessment].
+
+test(the_outstanding_result_carries_its_duties) :-
+    Result = outstanding([post_incident_reviews]),
+    Result = outstanding(Duties),
+    Duties == [post_incident_reviews].
+
+test(the_indeterminate_status_names_one_key) :-
+    Result = indeterminate([financial_entity_is_article_16_1_entity]),
+    Result = indeterminate([Key]),
+    Key == financial_entity_is_article_16_1_entity.
+
+test(the_referral_status_carries_reason_and_context) :-
+    Result = needs_legal_review(open_textured(evolution_of_ict_risk_mapped_over_time, cite(eu_reg_2022_2554_art_13_4)), [inputs_relied_on([financial_entity_is_article_16_1_entity-false, evolution_of_ict_risk_mapped_over_time-unsure])]),
+    Result = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == evolution_of_ict_risk_mapped_over_time,
+    CitationKey == eu_reg_2022_2554_art_13_4,
+    Pairs == [financial_entity_is_article_16_1_entity-false, evolution_of_ict_risk_mapped_over_time-unsure].
+
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = dora_ict_risk_learning_and_evolving_verdict(complete, [cite(eu_reg_2022_2554_art_13_1)]),
+    Verdict = dora_ict_risk_learning_and_evolving_verdict(Status, Citations),
+    Status == complete,
+    Citations == [cite(eu_reg_2022_2554_art_13_1)].
+
+% ---- the verdict atoms are distinct --------------------------------
+
+test(the_completeness_atoms_are_distinct) :-
+    dif(complete, incomplete),
+    dif(complete, simplified_framework_entity),
+    dif(incomplete, simplified_framework_entity).
+
+test(the_outstanding_atoms_are_distinct) :-
+    dif(none_outstanding, simplified_framework_entity),
+    dif(none_outstanding, complete).
+
+test(the_judgement_value_is_distinct_from_the_booleans) :-
+    dif(unsure, true),
+    dif(unsure, false).
+
+% ---- real citation records resolve ---------------------------------
+
+test(the_gate_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_16_1, _Record).
+
+test(the_first_paragraph_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_13_1, Record),
+    Record = [label-_, ref-_, verbatim-_].
+
+test(the_point_citation_implements) :-
+    implements(eu_reg_2022_2554_art_13_2_d).
+
+test(an_unrecorded_citation_does_not_resolve, fail) :-
+    citation(eu_reg_2022_2554_art_13_8, _).
+
+% ---- the kernel input check ----------------------------------------
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_has_no_problem) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems([attribute(financial_entity_is_article_16_1_entity, false), attribute(evolution_of_ict_risk_mapped_over_time, unsure)], Problems), Answers),
+    Answers == [[]].
+
+test(an_unsure_fact_is_wrong_type) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems([attribute(financial_entity_is_microenterprise, unsure)], Problems), Answers),
+    Answers == [[wrong_type(financial_entity_is_microenterprise)]].
+
+test(an_unknown_key_is_named) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems([attribute(entity_type, bank)], Problems), Answers),
+    Answers == [[unknown_key(entity_type)]].
+
+test(a_repeated_key_is_duplicate_only) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems([attribute(financial_entity_is_microenterprise, true), attribute(financial_entity_is_microenterprise, sometimes)], Problems), Answers),
+    Answers == [[duplicate_key(financial_entity_is_microenterprise)]].
+
+test(key_problems_come_before_unknown_keys) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems([attribute(entity_type, bank), attribute(cyber_maturity_and_preparedness_enhanced, 1)], Problems), Answers),
+    Answers == [[wrong_type(cyber_maturity_and_preparedness_enhanced), unknown_key(entity_type)]].
+
+test(a_non_list_profile_is_wrong_type) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems(profile_atom, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_list_with_a_foreign_element_is_wrong_type) :-
+    findall(Problems, dora_ict_risk_learning_and_evolving_input_problems([attribute(financial_entity_is_microenterprise, true), pair(a, b)], Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+
+test(a_well_formed_profile_is_not_refused, fail) :-
+    dora_ict_risk_learning_and_evolving_input_problems([attribute(financial_entity_is_article_16_1_entity, true)], [_|_]).
+
+:- end_module(test_load).

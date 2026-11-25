@@ -4,126 +4,156 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(m__eu_ai_act_serious_incident_reporting_queries, [serious_incident_report_duty/4, serious_incident_report_timeliness/5]).
+:- use_module(clausal_hof, [exclude/3]).
+:- use_module(m__eu_ai_act_serious_incident_reporting_serious_incident_reporting, [decide_serious_incident_reporting/2]).
 
-base_profile(annex_iii_death, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, death_of_a_person), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
-base_profile(annex_iii_serious_harm, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, serious_harm_to_health_without_death), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
-base_profile(annex_iii_no_harm, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, no_death_or_serious_harm_to_health), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
-base_profile(annex_iii_infrastructure, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, no_death_or_serious_harm_to_health), attribute(critical_infrastructure_disruption, true), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
-base_profile(annex_i_infrastructure, [attribute(high_risk_classification, annex_i_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(harm_to_health, no_death_or_serious_harm_to_health), attribute(critical_infrastructure_disruption, true), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
+serious_incident_reporting_subject(awareness_before_first_application_date).
+serious_incident_reporting_subject(awareness_on_first_application_date).
+serious_incident_reporting_subject(annex_i_awareness_before_application_date).
+serious_incident_reporting_subject(annex_i_awareness_on_application_date).
+serious_incident_reporting_subject(system_not_high_risk).
+serious_incident_reporting_subject(classification_absent).
+serious_incident_reporting_subject(placed_early_without_significant_change).
+serious_incident_reporting_subject(placed_early_with_significant_change).
+serious_incident_reporting_subject(public_authority_system_on_compliance_date).
+serious_incident_reporting_subject(public_authority_system_before_compliance_date).
+serious_incident_reporting_subject(public_authority_use_unsure).
+serious_incident_reporting_subject(public_authority_use_confirmed).
+serious_incident_reporting_subject(placement_absent).
+serious_incident_reporting_subject(device_status_absent).
+serious_incident_reporting_subject(equivalent_obligations_absent_without_fundamental_rights).
+serious_incident_reporting_subject(equivalent_obligations_absent_with_fundamental_rights).
+serious_incident_reporting_subject(equivalent_obligations_without_fundamental_rights).
+serious_incident_reporting_subject(equivalent_obligations_with_fundamental_rights).
+serious_incident_reporting_subject(device_without_fundamental_rights).
+serious_incident_reporting_subject(device_with_fundamental_rights).
+serious_incident_reporting_subject(device_under_ai_office).
+serious_incident_reporting_subject(device_not_under_ai_office).
+serious_incident_reporting_subject(no_listed_harm).
+serious_incident_reporting_subject(property_harm_only).
+serious_incident_reporting_subject(critical_infrastructure_absent_without_other_harm).
+serious_incident_reporting_subject(critical_infrastructure_disrupted_in_leap_year).
+serious_incident_reporting_subject(death_in_leap_year).
+serious_incident_reporting_subject(widespread_infringement_with_health_harm).
+serious_incident_reporting_subject(health_harm_without_widespread_infringement).
+serious_incident_reporting_subject(widespread_infringement_unsure).
+serious_incident_reporting_subject(widespread_infringement_absent).
+serious_incident_reporting_subject(report_on_last_day_made_immediately).
+serious_incident_reporting_subject(report_day_after_last_day).
+serious_incident_reporting_subject(report_in_time_not_immediate).
+serious_incident_reporting_subject(report_immediacy_absent).
+serious_incident_reporting_subject(report_before_first_application_date).
+serious_incident_reporting_subject(report_immediacy_unsure).
+serious_incident_reporting_subject(late_report_immediacy_unsure).
+serious_incident_reporting_subject(awareness_date_not_a_calendar_day).
+serious_incident_reporting_subject(awareness_on_leap_day).
+serious_incident_reporting_subject(duplicate_harm_key).
+serious_incident_reporting_subject(profile_not_a_list).
+serious_incident_reporting_subject(unknown_profile_key).
+serious_incident_reporting_subject(report_date_not_a_calendar_day).
 
-with_value(BaseProfile, ProfileKey, NewValue, Profile) :-
-    without_attribute(BaseProfile, ProfileKey, Remaining),
-    append(Remaining, [attribute(ProfileKey, NewValue)], Profile).
+base_profile([attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, death_of_a_person), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
 
-without_attribute([], _, []).
-without_attribute([attribute(ElementKey, ElementValue)|Elements], ProfileKey, [attribute(ElementKey, ElementValue)|Remaining]) :-
-    ElementKey \== ProfileKey,
-    without_attribute(Elements, ProfileKey, Remaining).
-without_attribute([attribute(ElementKey, _)|Elements], ProfileKey, Remaining) :-
-    ElementKey == ProfileKey,
-    without_attribute(Elements, ProfileKey, Remaining).
+edited_profile(Edits, Profile) :-
+    base_profile(Base),
+    foldl(apply_edit, Edits, Base, Profile).
 
-fixture_case(before_annex_iii_application_date, Profile, duty(date(2027, 12, 1))) :-
-    base_profile(annex_iii_death, Profile).
-fixture_case(on_annex_iii_application_date, Profile, duty(date(2027, 12, 2))) :-
-    base_profile(annex_iii_death, Profile).
-fixture_case(annex_i_before_application_date, Profile, duty(date(2028, 8, 1))) :-
-    base_profile(annex_i_infrastructure, Profile).
-fixture_case(annex_i_on_application_date, Profile, duty(date(2028, 8, 2))) :-
-    base_profile(annex_i_infrastructure, Profile).
-fixture_case(not_high_risk_system, [attribute(high_risk_classification, not_high_risk)], duty(date(2028, 1, 10))).
-fixture_case(classification_missing, [], duty(date(2028, 1, 10))).
-fixture_case(early_unchanged_public_day_before_2030, Profile, duty(date(2030, 8, 1))) :-
-    early_unchanged_public_profile(Profile).
-fixture_case(early_unchanged_public_on_2030, Profile, duty(date(2030, 8, 2))) :-
-    early_unchanged_public_profile(Profile).
-fixture_case(early_significantly_changed, Profile, duty(date(2029, 3, 1))) :-
-    base_profile(annex_iii_death, BaseProfile),
-    with_value(BaseProfile, placed_before_chapter_iii_application_date, true, PlacedProfile),
-    with_value(PlacedProfile, significant_change_in_design_since_that_date, true, Profile).
-fixture_case(placement_missing, [attribute(high_risk_classification, annex_iii_high_risk)], duty(date(2028, 1, 10))).
-fixture_case(leap_day_critical_infrastructure, Profile, duty(date(2028, 2, 27))) :-
-    base_profile(annex_iii_infrastructure, Profile).
-fixture_case(year_crossing_general_limit, Profile, duty(date(2027, 12, 20))) :-
-    base_profile(annex_iii_serious_harm, Profile).
-fixture_case(no_qualifying_harm, Profile, duty(date(2028, 1, 10))) :-
-    base_profile(annex_iii_no_harm, Profile).
-fixture_case(harm_to_property, Profile, duty(date(2028, 1, 10))) :-
-    base_profile(annex_iii_no_harm, BaseProfile),
-    with_value(BaseProfile, serious_harm_to_property_or_environment, true, Profile).
-fixture_case(device_without_point_c, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, true), attribute(harm_to_health, death_of_a_person), attribute(fundamental_rights_obligations_infringed, false)], duty(date(2028, 1, 10))).
-fixture_case(device_with_point_c, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, true), attribute(harm_to_health, no_death_or_serious_harm_to_health), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, true), attribute(widespread_infringement, false)], duty(date(2028, 1, 10))).
-fixture_case(equivalent_obligations_without_point_c, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, true), attribute(harm_to_health, death_of_a_person), attribute(fundamental_rights_obligations_infringed, false)], duty(date(2028, 1, 10))).
-fixture_case(equivalent_obligations_with_point_c, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, true), attribute(harm_to_health, death_of_a_person), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, true), attribute(widespread_infringement, false)], duty(date(2028, 1, 10))).
-fixture_case(report_on_last_day_made_immediately, Profile, timeliness(date(2028, 1, 1), date(2028, 1, 11))) :-
-    immediacy_profile(true, Profile).
-fixture_case(report_day_after_last_day, Profile, timeliness(date(2028, 1, 1), date(2028, 1, 12))) :-
-    immediacy_profile(true, Profile).
-fixture_case(report_on_last_day_not_immediate, Profile, timeliness(date(2028, 1, 1), date(2028, 1, 11))) :-
-    immediacy_profile(false, Profile).
-fixture_case(report_immediacy_missing, Profile, timeliness(date(2028, 1, 1), date(2028, 1, 11))) :-
-    base_profile(annex_iii_death, Profile).
-fixture_case(report_immediacy_unsure, Profile, timeliness(date(2028, 1, 1), date(2028, 1, 11))) :-
-    immediacy_profile(unsure, Profile).
-fixture_case(late_report_immediacy_unsure, Profile, timeliness(date(2028, 1, 1), date(2028, 1, 12))) :-
-    immediacy_profile(unsure, Profile).
-fixture_case(report_before_awareness, Profile, timeliness(date(2028, 1, 1), date(2027, 12, 30))) :-
-    immediacy_profile(true, Profile).
-fixture_case(timeliness_not_high_risk, [attribute(high_risk_classification, not_high_risk), attribute(report_made_immediately, true)], timeliness(date(2028, 1, 10), date(2028, 1, 11))).
-fixture_case(widespread_unsure_with_critical_infrastructure, Profile, duty(date(2028, 1, 10))) :-
-    base_profile(annex_iii_infrastructure, BaseProfile),
-    with_value(BaseProfile, widespread_infringement, unsure, Profile).
-fixture_case(widespread_unsure_health_missing, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, true), attribute(widespread_infringement, unsure)], duty(date(2028, 1, 10))).
-fixture_case(widespread_unsure_turns_the_limit, [attribute(high_risk_classification, annex_i_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(harm_to_health, serious_harm_to_health_without_death), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, unsure)], duty(date(2028, 9, 1))).
-fixture_case(significant_change_unsure_placed_early, Profile, duty(date(2029, 3, 1))) :-
-    base_profile(annex_iii_death, BaseProfile),
-    with_value(BaseProfile, placed_before_chapter_iii_application_date, true, PlacedProfile),
-    with_value(PlacedProfile, significant_change_in_design_since_that_date, unsure, Profile).
-fixture_case(significant_change_unsure_placed_late, Profile, duty(date(2029, 3, 1))) :-
-    base_profile(annex_iii_death, BaseProfile),
-    with_value(BaseProfile, significant_change_in_design_since_that_date, unsure, Profile).
-fixture_case(equivalence_unsure_without_point_c, Profile, duty(date(2028, 1, 10))) :-
-    equivalence_unsure_profile(Profile).
-fixture_case(equivalence_unsure_with_point_c, Profile, duty(date(2028, 1, 10))) :-
-    equivalence_unsure_profile(BaseProfile),
-    with_value(BaseProfile, fundamental_rights_obligations_infringed, true, Profile).
-fixture_case(duplicate_classification, [attribute(high_risk_classification, annex_iii_high_risk), attribute(high_risk_classification, annex_iii_high_risk)], duty(date(2028, 1, 10))).
-fixture_case(unknown_key_present, [attribute(high_risk_classification, not_high_risk), attribute(colour, red)], duty(date(2028, 1, 10))).
-fixture_case(crisp_key_given_unsure, [attribute(critical_infrastructure_disruption, unsure)], duty(date(2028, 1, 10))).
-fixture_case(awareness_date_not_a_date, Profile, duty(the_tenth_of_january)) :-
-    base_profile(annex_iii_death, Profile).
-fixture_case(awareness_on_leap_day, Profile, duty(date(2028, 2, 29))) :-
-    base_profile(annex_iii_death, Profile).
-fixture_case(profile_and_date_problems, [attribute(critical_infrastructure_disruption, unsure)], duty(the_tenth_of_january)).
-fixture_case(report_date_not_a_date, Profile, timeliness(date(2028, 1, 1), the_eleventh_of_january)) :-
-    immediacy_profile(true, Profile).
+apply_edit(set(Key, Value), ProfileIn, ProfileOut) :-
+    exclude(has_key(Key), ProfileIn, Others),
+    append(Others, [attribute(Key, Value)], ProfileOut).
+apply_edit(drop(Key), ProfileIn, ProfileOut) :-
+    exclude(has_key(Key), ProfileIn, ProfileOut).
 
-early_unchanged_public_profile(Profile) :-
-    base_profile(annex_iii_death, BaseProfile),
-    with_value(BaseProfile, placed_before_chapter_iii_application_date, true, PlacedProfile),
-    with_value(PlacedProfile, significant_change_in_design_since_that_date, false, UnchangedProfile),
-    with_value(UnchangedProfile, intended_to_be_used_by_public_authorities, true, Profile).
+has_key(Key, attribute(ElementKey, _)) :-
+    ElementKey == Key.
 
-immediacy_profile(MadeImmediately, Profile) :-
-    base_profile(annex_iii_death, BaseProfile),
-    with_value(BaseProfile, report_made_immediately, MadeImmediately, Profile).
+serious_incident_reporting_profile_for(awareness_before_first_application_date, duty(Profile, date(2027, 12, 1))) :-
+    edited_profile([], Profile).
+serious_incident_reporting_profile_for(awareness_on_first_application_date, duty(Profile, date(2027, 12, 2))) :-
+    edited_profile([], Profile).
+serious_incident_reporting_profile_for(annex_i_awareness_before_application_date, duty(Profile, date(2028, 8, 1))) :-
+    edited_profile([set(high_risk_classification, annex_i_high_risk)], Profile).
+serious_incident_reporting_profile_for(annex_i_awareness_on_application_date, duty(Profile, date(2028, 8, 2))) :-
+    edited_profile([set(high_risk_classification, annex_i_high_risk)], Profile).
+serious_incident_reporting_profile_for(system_not_high_risk, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(high_risk_classification, not_high_risk)], Profile).
+serious_incident_reporting_profile_for(classification_absent, duty([], date(2028, 1, 10))).
+serious_incident_reporting_profile_for(placed_early_without_significant_change, duty(Profile, date(2029, 1, 1))) :-
+    edited_profile([set(placed_before_chapter_iii_application_date, true), set(significant_change_in_design_since_that_date, false)], Profile).
+serious_incident_reporting_profile_for(placed_early_with_significant_change, duty(Profile, date(2029, 1, 1))) :-
+    edited_profile([set(placed_before_chapter_iii_application_date, true), set(significant_change_in_design_since_that_date, true)], Profile).
+serious_incident_reporting_profile_for(public_authority_system_on_compliance_date, duty(Profile, date(2030, 8, 2))) :-
+    edited_profile([set(placed_before_chapter_iii_application_date, true), set(significant_change_in_design_since_that_date, false), set(intended_to_be_used_by_public_authorities, true)], Profile).
+serious_incident_reporting_profile_for(public_authority_system_before_compliance_date, duty(Profile, date(2030, 8, 1))) :-
+    edited_profile([set(placed_before_chapter_iii_application_date, true), set(significant_change_in_design_since_that_date, false), set(intended_to_be_used_by_public_authorities, true)], Profile).
+serious_incident_reporting_profile_for(public_authority_use_unsure, duty(Profile, date(2031, 1, 1))) :-
+    edited_profile([set(placed_before_chapter_iii_application_date, true), set(significant_change_in_design_since_that_date, false), set(intended_to_be_used_by_public_authorities, unsure)], Profile).
+serious_incident_reporting_profile_for(public_authority_use_confirmed, duty(Profile, date(2031, 1, 1))) :-
+    edited_profile([set(placed_before_chapter_iii_application_date, true), set(significant_change_in_design_since_that_date, false), set(intended_to_be_used_by_public_authorities, true)], Profile).
+serious_incident_reporting_profile_for(placement_absent, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([drop(placed_before_chapter_iii_application_date)], Profile).
+serious_incident_reporting_profile_for(device_status_absent, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([drop(medical_device_or_safety_component_of_one)], Profile).
+serious_incident_reporting_profile_for(equivalent_obligations_absent_without_fundamental_rights, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([drop(provider_subject_to_equivalent_union_reporting_obligations)], Profile).
+serious_incident_reporting_profile_for(equivalent_obligations_absent_with_fundamental_rights, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([drop(provider_subject_to_equivalent_union_reporting_obligations), set(fundamental_rights_obligations_infringed, true)], Profile).
+serious_incident_reporting_profile_for(equivalent_obligations_without_fundamental_rights, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(provider_subject_to_equivalent_union_reporting_obligations, true)], Profile).
+serious_incident_reporting_profile_for(equivalent_obligations_with_fundamental_rights, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(provider_subject_to_equivalent_union_reporting_obligations, true), set(fundamental_rights_obligations_infringed, true)], Profile).
+serious_incident_reporting_profile_for(device_without_fundamental_rights, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(medical_device_or_safety_component_of_one, true)], Profile).
+serious_incident_reporting_profile_for(device_with_fundamental_rights, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(medical_device_or_safety_component_of_one, true), set(fundamental_rights_obligations_infringed, true)], Profile).
+serious_incident_reporting_profile_for(device_under_ai_office, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(medical_device_or_safety_component_of_one, true), set(fundamental_rights_obligations_infringed, true), set(system_under_the_exclusive_competence_of_the_ai_office, attested(true, attestation(host, recorded_at, attested_by_caller, none)))], Profile).
+serious_incident_reporting_profile_for(device_not_under_ai_office, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(medical_device_or_safety_component_of_one, true), set(fundamental_rights_obligations_infringed, true), set(system_under_the_exclusive_competence_of_the_ai_office, attested(false, attestation(host, recorded_at, attested_by_caller, none)))], Profile).
+serious_incident_reporting_profile_for(no_listed_harm, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(harm_to_health, no_death_or_serious_harm_to_health)], Profile).
+serious_incident_reporting_profile_for(property_harm_only, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(harm_to_health, no_death_or_serious_harm_to_health), set(serious_harm_to_property_or_environment, true)], Profile).
+serious_incident_reporting_profile_for(critical_infrastructure_absent_without_other_harm, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(harm_to_health, no_death_or_serious_harm_to_health), drop(critical_infrastructure_disruption)], Profile).
+serious_incident_reporting_profile_for(critical_infrastructure_disrupted_in_leap_year, duty(Profile, date(2028, 2, 28))) :-
+    edited_profile([set(critical_infrastructure_disruption, true)], Profile).
+serious_incident_reporting_profile_for(death_in_leap_year, duty(Profile, date(2028, 2, 28))) :-
+    edited_profile([], Profile).
+serious_incident_reporting_profile_for(widespread_infringement_with_health_harm, duty(Profile, date(2027, 12, 20))) :-
+    edited_profile([set(harm_to_health, serious_harm_to_health_without_death), set(widespread_infringement, true)], Profile).
+serious_incident_reporting_profile_for(health_harm_without_widespread_infringement, duty(Profile, date(2027, 12, 20))) :-
+    edited_profile([set(harm_to_health, serious_harm_to_health_without_death)], Profile).
+serious_incident_reporting_profile_for(widespread_infringement_unsure, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([set(harm_to_health, serious_harm_to_health_without_death), set(widespread_infringement, unsure)], Profile).
+serious_incident_reporting_profile_for(widespread_infringement_absent, duty(Profile, date(2028, 1, 10))) :-
+    edited_profile([drop(widespread_infringement)], Profile).
+serious_incident_reporting_profile_for(report_on_last_day_made_immediately, timeliness(Profile, date(2028, 1, 10), date(2028, 1, 20))) :-
+    edited_profile([set(report_made_immediately, true)], Profile).
+serious_incident_reporting_profile_for(report_day_after_last_day, timeliness(Profile, date(2028, 1, 10), date(2028, 1, 21))) :-
+    edited_profile([set(report_made_immediately, true)], Profile).
+serious_incident_reporting_profile_for(report_in_time_not_immediate, timeliness(Profile, date(2028, 1, 10), date(2028, 1, 15))) :-
+    edited_profile([set(report_made_immediately, false)], Profile).
+serious_incident_reporting_profile_for(report_immediacy_absent, timeliness(Profile, date(2028, 1, 10), date(2028, 1, 15))) :-
+    edited_profile([], Profile).
+serious_incident_reporting_profile_for(report_before_first_application_date, timeliness(Profile, date(2027, 12, 1), date(2027, 12, 3))) :-
+    edited_profile([set(report_made_immediately, true)], Profile).
+serious_incident_reporting_profile_for(report_immediacy_unsure, timeliness(Profile, date(2028, 1, 10), date(2028, 1, 15))) :-
+    edited_profile([set(report_made_immediately, unsure)], Profile).
+serious_incident_reporting_profile_for(late_report_immediacy_unsure, timeliness(Profile, date(2028, 1, 10), date(2028, 1, 21))) :-
+    edited_profile([set(report_made_immediately, unsure)], Profile).
+serious_incident_reporting_profile_for(awareness_date_not_a_calendar_day, duty(Profile, date(2027, 2, 29))) :-
+    edited_profile([], Profile).
+serious_incident_reporting_profile_for(awareness_on_leap_day, duty(Profile, date(2028, 2, 29))) :-
+    edited_profile([], Profile).
+serious_incident_reporting_profile_for(duplicate_harm_key, duty(Profile, date(2028, 1, 10))) :-
+    base_profile(Base),
+    append(Base, [attribute(harm_to_health, death_of_a_person)], Profile).
+serious_incident_reporting_profile_for(profile_not_a_list, duty(foo, date(2028, 1, 10))).
+serious_incident_reporting_profile_for(unknown_profile_key, duty([attribute(colour, blue)], date(2028, 1, 10))).
+serious_incident_reporting_profile_for(report_date_not_a_calendar_day, timeliness(Profile, date(2028, 1, 10), date(2028, 13, 1))) :-
+    edited_profile([set(report_made_immediately, true)], Profile).
 
-equivalence_unsure_profile(Profile) :-
-    base_profile(annex_iii_death, BaseProfile),
-    with_value(BaseProfile, provider_subject_to_equivalent_union_reporting_obligations, unsure, Profile).
-
-serious_incident_reporting_subject(Subject) :-
-    fixture_case(Subject, _, _).
-
-serious_incident_reporting_profile_for(Subject, Profile) :-
-    fixture_case(Subject, Profile, _).
-
-serious_incident_reporting_assess(Subject, serious_incident_reporting_verdict(Status, Citations)) :-
-    fixture_case(Subject, Profile, FixtureQuery),
-    fixture_answer(FixtureQuery, Profile, Status, Citations).
-
-fixture_answer(duty(AwarenessDate), Profile, Status, Citations) :-
-    serious_incident_report_duty(Profile, AwarenessDate, Status, Citations).
-fixture_answer(timeliness(AwarenessDate, ReportDate), Profile, Status, Citations) :-
-    serious_incident_report_timeliness(Profile, AwarenessDate, ReportDate, Status, Citations).
+serious_incident_reporting_assess(Subject, Result) :-
+    serious_incident_reporting_profile_for(Subject, Case),
+    decide_serious_incident_reporting(Case, Result).

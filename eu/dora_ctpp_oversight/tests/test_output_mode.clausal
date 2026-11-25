@@ -1,0 +1,177 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: the result read out, exactly
+% one answer per call, at every route boundary (the day before, on and
+% after each limit; the end-of-month rule; turnover 0 against 1).
+% Run: python -m clausal.testing eu/dora_ctpp_oversight/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(eu/dora_ctpp_oversight/dora_ctpp_oversight, [
+    ctpp_oversight_duties_required/3,
+    ctpp_lead_overseer_powers/3,
+    ctpp_response_window_status/3,
+    ctpp_periodic_penalty_payment_status/3,
+    ctpp_periodic_penalty_payment_limits/3,
+    ctpp_competent_authority_measure_condition/3,
+    decide_dora_ctpp_oversight/2,
+    dora_ctpp_oversight_status/2
+]).
+:- use_module(eu/dora_ctpp_oversight/fixtures, [dora_ctpp_oversight_profile_for/2]).
+
+query_name(duties).
+query_name(powers).
+query_name(window).
+query_name(penalty_status).
+query_name(penalty_limits).
+query_name(measure).
+
+query_answer(duties, Profile, Result, Citations) :-
+    ctpp_oversight_duties_required(Profile, Result, Citations).
+query_answer(powers, Profile, Result, Citations) :-
+    ctpp_lead_overseer_powers(Profile, Result, Citations).
+query_answer(window, Profile, Result, Citations) :-
+    ctpp_response_window_status(Profile, Result, Citations).
+query_answer(penalty_status, Profile, Result, Citations) :-
+    ctpp_periodic_penalty_payment_status(Profile, Result, Citations).
+query_answer(penalty_limits, Profile, Result, Citations) :-
+    ctpp_periodic_penalty_payment_limits(Profile, Result, Citations).
+query_answer(measure, Profile, Result, Citations) :-
+    ctpp_competent_authority_measure_condition(Profile, Result, Citations).
+
+% the_answer(Query, Subject, Result, SortedCitations): the ONE answer of
+% Query for the fixture Subject, its citations sorted (order not scored).
+the_answer(Query, Subject, Result, SortedCitations) :-
+    dora_ctpp_oversight_profile_for(Subject, Profile),
+    findall(Found-Citations, query_answer(Query, Profile, Found, Citations), Answers),
+    Answers = [Result-OnlyCitations],
+    msort(OnlyCitations, SortedCitations).
+
+% ---- facade ----
+test(the_full_profile_yields_exactly_one_status) :-
+    dora_ctpp_oversight_profile_for(designated_provider_full_profile, Profile),
+    findall(Status, dora_ctpp_oversight_status(Profile, Status), Statuses),
+    Statuses == [subject_to_lead_overseer_oversight].
+test(the_verdict_carries_a_citation) :-
+    dora_ctpp_oversight_profile_for(designated_provider_full_profile, Profile),
+    decide_dora_ctpp_oversight(Profile, dora_ctpp_oversight_verdict(subject_to_lead_overseer_oversight, [_FirstCitation|_OtherCitations])).
+test(the_unstated_designation_yields_indeterminate) :-
+    dora_ctpp_oversight_profile_for(designation_unstated, Profile),
+    findall(Verdict, decide_dora_ctpp_oversight(Profile, Verdict), Verdicts),
+    Verdicts == [dora_ctpp_oversight_verdict(oversight_indeterminate, [])].
+
+% ---- the full profile answers every query ----
+test(the_full_profile_answers_every_query) :-
+    findall(Query-Result-Citations,
+            (query_name(Query),
+             the_answer(Query, designated_provider_full_profile, Result, Citations)),
+            Rows),
+    Rows == [duties-required([transmit_subcontracting_information_to_lead_overseer,
+                              cooperate_in_good_faith_with_lead_overseer])-[cite(eu_reg_2022_2554_art_35_1_d), cite(eu_reg_2022_2554_art_35_5)],
+             powers-powers([request_information_and_documentation,
+                            conduct_general_investigations_and_inspections,
+                            request_remediation_reports,
+                            issue_recommendations,
+                            recommend_refraining_from_further_subcontracting])-[cite(eu_reg_2022_2554_art_35_1), cite(eu_reg_2022_2554_art_35_1_a), cite(eu_reg_2022_2554_art_35_1_b), cite(eu_reg_2022_2554_art_35_1_c), cite(eu_reg_2022_2554_art_35_1_d), cite(eu_reg_2022_2554_art_35_1_d_iv)],
+             window-window_open(date(2026, 3, 17))-[cite(eu_reg_2022_2554_art_33_4)],
+             penalty_status-penalty_decision_required-[cite(eu_reg_2022_2554_art_35_6)],
+             penalty_limits-penalty_limits(amount(1000, 1), date(2027, 2, 28))-[cite(eu_reg_2022_2554_art_35_7), cite(eu_reg_2022_2554_art_35_8)],
+             measure-lead_overseer_agreement_required-[cite(eu_reg_2022_2554_art_33_5)]].
+
+% ---- not designated: each query cites its own provision ----
+test(not_designated_cites_the_provision_of_each_query) :-
+    findall(Query-Result-Citations,
+            (query_name(Query),
+             the_answer(Query, not_designated_provider, Result, Citations)),
+            Rows),
+    Rows == [duties-not_designated_as_critical-[cite(eu_reg_2022_2554_art_35_5)],
+             powers-not_designated_as_critical-[cite(eu_reg_2022_2554_art_35_1)],
+             window-not_designated_as_critical-[cite(eu_reg_2022_2554_art_33_4), cite(eu_reg_2022_2554_art_35_3)],
+             penalty_status-not_designated_as_critical-[cite(eu_reg_2022_2554_art_35_6)],
+             penalty_limits-not_designated_as_critical-[cite(eu_reg_2022_2554_art_35_7), cite(eu_reg_2022_2554_art_35_8)],
+             measure-not_designated_as_critical-[cite(eu_reg_2022_2554_art_33_5)]].
+
+% ---- input problems: every query refuses the same profile ----
+test(a_float_year_length_is_refused_by_every_query) :-
+    findall(Result-Citations,
+            (query_name(Query),
+             the_answer(Query, profile_with_float_year_length, Result, Citations)),
+            Rows),
+    length(Rows, 6),
+    maplist(=(input_problems([wrong_type(preceding_business_year_length_in_days)])-[]), Rows).
+
+% ---- Art 33(4): the statement window, start + 15 ----
+test(statement_window_day_before_start) :-
+    the_answer(window, statement_window_day_before_start, Result, Citations),
+    Result == window_not_yet_open(date(2026, 3, 17)),
+    Citations == [cite(eu_reg_2022_2554_art_33_4)].
+test(statement_window_last_day) :-
+    the_answer(window, statement_window_last_day, Result, Citations),
+    Result == window_open(date(2026, 3, 17)),
+    Citations == [cite(eu_reg_2022_2554_art_33_4)].
+test(statement_window_day_after_last_day) :-
+    the_answer(window, statement_window_day_after_last_day, Result, _),
+    Result == window_closed(date(2026, 3, 17)).
+
+% ---- Art 35(3): the information window, start + 30 ----
+test(information_window_last_day) :-
+    the_answer(window, information_window_last_day, Result, Citations),
+    Result == window_open(date(2026, 1, 31)),
+    Citations == [cite(eu_reg_2022_2554_art_35_3)].
+test(information_window_day_after_last_day) :-
+    the_answer(window, information_window_day_after_last_day, Result, Citations),
+    Result == window_closed(date(2026, 1, 31)),
+    Citations == [cite(eu_reg_2022_2554_art_35_3)].
+
+% ---- Art 35(6): receipt + 31 ----
+test(penalty_thirtieth_day_after_receipt) :-
+    the_answer(penalty_status, penalty_thirtieth_day_after_receipt, Result, Citations),
+    Result == penalty_waiting_period_running(date(2026, 2, 1)),
+    Citations == [cite(eu_reg_2022_2554_art_35_6)].
+test(penalty_thirty_first_day_after_receipt) :-
+    the_answer(penalty_status, penalty_thirty_first_day_after_receipt, Result, Citations),
+    Result == penalty_decision_required,
+    Citations == [cite(eu_reg_2022_2554_art_35_6)].
+test(penalty_recommendation_measure) :-
+    the_answer(penalty_status, penalty_recommendation_measure, Result, _),
+    Result == no_penalty_ground_recommendation.
+test(penalty_full_compliance) :-
+    the_answer(penalty_status, penalty_full_compliance, Result, _),
+    Result == no_penalty_ground_full_compliance.
+
+% ---- Art 35(7), (8): six months and the daily ceiling ----
+test(limits_end_of_august_ends_on_last_day_of_february) :-
+    the_answer(penalty_limits, limits_notified_end_of_august, Result, Citations),
+    Result == penalty_limits(amount(1000, 1), date(2027, 2, 28)),
+    Citations == [cite(eu_reg_2022_2554_art_35_7), cite(eu_reg_2022_2554_art_35_8)].
+test(limits_end_of_august_before_leap_year_ends_on_twenty_ninth_february) :-
+    the_answer(penalty_limits, limits_notified_end_of_august_before_leap_year, Result, _),
+    Result == penalty_limits(amount(1, 36600), date(2028, 2, 29)).
+test(limits_zero_turnover) :-
+    the_answer(penalty_limits, limits_zero_turnover, Result, _),
+    Result == penalty_limits(amount(0, 1), date(2026, 7, 10)).
+test(limits_one_euro_turnover_names_the_year_length) :-
+    the_answer(penalty_limits, limits_one_euro_turnover, Result, Citations),
+    Result == indeterminate([preceding_business_year_length_in_days]),
+    Citations == [].
+
+% ---- Art 35(1), 35(5), 33(5) ----
+test(powers_oversight_activities_not_completed) :-
+    the_answer(powers, powers_oversight_activities_not_completed, Result, Citations),
+    Result == powers([request_information_and_documentation,
+                      conduct_general_investigations_and_inspections,
+                      issue_recommendations]),
+    Citations == [cite(eu_reg_2022_2554_art_35_1), cite(eu_reg_2022_2554_art_35_1_a), cite(eu_reg_2022_2554_art_35_1_b), cite(eu_reg_2022_2554_art_35_1_d)].
+test(duties_without_planned_subcontracting) :-
+    the_answer(duties, duties_without_planned_subcontracting, Result, Citations),
+    Result == required([cooperate_in_good_faith_with_lead_overseer]),
+    Citations == [cite(eu_reg_2022_2554_art_35_5)].
+test(duties_planning_unstated_names_the_planning_key) :-
+    the_answer(duties, profile_with_integer_year_length, Result, Citations),
+    Result == indeterminate([provider_plans_further_subcontracting_arrangement]),
+    Citations == [].
+test(measure_plan_not_adopted) :-
+    the_answer(measure, measure_plan_not_adopted, Result, Citations),
+    Result == no_article_33_5_condition,
+    Citations == [cite(eu_reg_2022_2554_art_33_5)].
+
+:- end_module(test_output_mode).

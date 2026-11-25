@@ -1,0 +1,120 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), one case per route,
+% each paired with a rejected bound answer.
+% Run: python -m clausal.testing eu/nis2_lex_specialis_and_definitions/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/nis2_lex_specialis_and_definitions/nis2_lex_specialis_and_definitions, [
+    nis2_risk_management_provisions_status/3,
+    nis2_incident_notification_provisions_status/3,
+    nis2_lex_specialis_and_definitions_status/2,
+    nis2_lex_specialis_and_definitions_status_values/1
+]).
+:- use_module(eu/nis2_lex_specialis_and_definitions/kernel, [nis2_lex_specialis_and_definitions_input_problems/2]).
+:- use_module(eu/nis2_lex_specialis_and_definitions/fixtures, [nis2_lex_specialis_and_definitions_profile_for/2]).
+
+risk_citations([cite(eu_dir_2022_2555_art_4_1), cite(eu_dir_2022_2555_art_4_2), cite(eu_dir_2022_2555_art_4_2_a), cite(eu_reg_2022_2554_art_1_2)]).
+notification_citations([cite(eu_dir_2022_2555_art_4_1), cite(eu_dir_2022_2555_art_4_2), cite(eu_dir_2022_2555_art_4_2_b), cite(eu_reg_2022_2554_art_1_2)]).
+
+test(the_status_table_is_the_three_final_atoms) :-
+    nis2_lex_specialis_and_definitions_status_values(Values),
+    Values == [nis2_provisions_disapplied, nis2_provisions_apply, out_of_scope].
+
+% ---- risk-management group --------------------------------------------
+test(risk_disapplied_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_all_equivalent, Profile),
+    risk_citations(Citations),
+    nis2_risk_management_provisions_status(Profile, nis2_provisions_disapplied, Citations).
+
+test(every_other_risk_atom_is_rejected, fail) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_all_equivalent, Profile),
+    nis2_lex_specialis_and_definitions_status_values(Values),
+    member(Other, Values),
+    dif(Other, nis2_provisions_disapplied),
+    nis2_risk_management_provisions_status(Profile, Other, _).
+
+test(risk_apply_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_risk_not_equivalent, Profile),
+    risk_citations(Citations),
+    nis2_risk_management_provisions_status(Profile, nis2_provisions_apply, Citations).
+
+test(risk_out_of_scope_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(out_of_scope_entity, Profile),
+    risk_citations(Citations),
+    nis2_risk_management_provisions_status(Profile, out_of_scope, Citations).
+
+test(risk_class_missing_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(class_missing, Profile),
+    nis2_risk_management_provisions_status(Profile, indeterminate([entity_class]), []).
+
+test(risk_judgement_missing_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_judgements_missing, Profile),
+    nis2_risk_management_provisions_status(Profile, indeterminate([dora_risk_management_measures_at_least_equivalent_in_effect]), []).
+
+test(risk_referral_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(class_given_all_unsure, Profile),
+    nis2_risk_management_provisions_status(Profile, needs_legal_review(open_textured(dora_risk_management_measures_at_least_equivalent_in_effect, cite(eu_dir_2022_2555_art_4_2_a)), [inputs_relied_on([entity_class-essential_entity, dora_risk_management_measures_at_least_equivalent_in_effect-unsure])]), []).
+
+test(a_final_answer_is_rejected_with_empty_citations, fail) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_all_equivalent, Profile),
+    nis2_risk_management_provisions_status(Profile, nis2_provisions_disapplied, []).
+
+test(a_status_is_rejected_with_citations, fail) :-
+    nis2_lex_specialis_and_definitions_profile_for(class_missing, Profile),
+    nis2_risk_management_provisions_status(Profile, indeterminate([entity_class]), [_|_]).
+
+% ---- incident-notification group --------------------------------------
+test(notification_disapplied_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_all_equivalent, Profile),
+    notification_citations(Citations),
+    nis2_incident_notification_provisions_status(Profile, nis2_provisions_disapplied, Citations).
+
+test(notification_apply_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(important_only_point_a_met, Profile),
+    notification_citations(Citations),
+    nis2_incident_notification_provisions_status(Profile, nis2_provisions_apply, Citations).
+
+test(every_other_notification_atom_is_rejected, fail) :-
+    nis2_lex_specialis_and_definitions_profile_for(important_only_point_a_met, Profile),
+    nis2_lex_specialis_and_definitions_status_values(Values),
+    member(Other, Values),
+    dif(Other, nis2_provisions_apply),
+    nis2_incident_notification_provisions_status(Profile, Other, _).
+
+test(notification_equivalence_missing_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(access_unsure_requirements_missing, Profile),
+    nis2_incident_notification_provisions_status(Profile, indeterminate([dora_incident_notification_requirements_at_least_equivalent_in_effect]), []).
+
+test(notification_referral_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(access_true_requirements_unsure, Profile),
+    nis2_incident_notification_provisions_status(Profile, needs_legal_review(open_textured(dora_incident_notification_requirements_at_least_equivalent_in_effect, cite(eu_dir_2022_2555_art_4_2_b)), [inputs_relied_on([entity_class-essential_entity, dora_gives_immediate_access_to_incident_notifications-true, dora_incident_notification_requirements_at_least_equivalent_in_effect-unsure])]), []).
+
+% ---- input problems -----------------------------------------------------
+test(input_problems_hold_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(malformed_duplicate_and_unknown, Profile),
+    nis2_incident_notification_provisions_status(Profile, input_problems([duplicate_key(entity_class), unknown_key(sector)]), []).
+
+test(input_check_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(malformed_wrong_type, Profile),
+    nis2_lex_specialis_and_definitions_input_problems(Profile, [wrong_type(entity_class)]).
+
+test(well_formed_profile_has_no_problem_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_all_equivalent, Profile),
+    nis2_lex_specialis_and_definitions_input_problems(Profile, []).
+
+test(well_formed_profile_rejects_a_problem_list, fail) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_all_equivalent, Profile),
+    nis2_lex_specialis_and_definitions_input_problems(Profile, [_|_]).
+
+% ---- facade status ------------------------------------------------------
+test(facade_status_holds_bound) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_risk_not_equivalent, Profile),
+    nis2_lex_specialis_and_definitions_status(Profile, nis2_groups(nis2_provisions_apply, nis2_provisions_disapplied)).
+
+test(facade_status_rejects_swapped_groups, fail) :-
+    nis2_lex_specialis_and_definitions_profile_for(essential_risk_not_equivalent, Profile),
+    nis2_lex_specialis_and_definitions_status(Profile, nis2_groups(nis2_provisions_disapplied, nis2_provisions_apply)).
+
+:- end_module(test_input_mode).

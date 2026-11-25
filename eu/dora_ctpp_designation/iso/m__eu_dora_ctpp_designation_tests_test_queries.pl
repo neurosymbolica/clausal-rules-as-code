@@ -1,0 +1,84 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ctpp_designation_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ctpp_designation_queries, [dora_ctpp_designation_profile_keys/1, dora_ctpp_designation_what_if/4]).
+:- use_module(m__eu_dora_ctpp_designation_kernel, [dora_ctpp_designation_input_problems/2]).
+:- use_module(m__eu_dora_ctpp_designation_dora_ctpp_designation, [ctpp_designation_criteria_status/3, dora_ctpp_designation_checklist/2]).
+:- use_module(m__eu_dora_ctpp_designation_fixtures, [dora_ctpp_designation_profile_for/2, dora_ctpp_designation_assess/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_ctpp_designation_profile_keys(ProfileKeys),
+    ProfileKeys == [dora_entity_type, provider_subject_to_article_127_2_tfeu_oversight_framework, provider_is_ict_intra_group_service_provider, provider_provides_ict_services_solely_in_one_member_state, financial_entities_served_are_active_only_in_that_member_state, systemic_impact_figures, g_sii_served_count, o_sii_scores_of_o_siis_served, systemic_infrastructure_entities_served_count, systemic_other_entities_served_count, substitutability_figures, total_assets_of_users_within_eba_responsibility, total_assets_of_users_within_eiopa_responsibility, total_assets_of_users_within_esma_responsibility, provider_designated_as_critical, provider_is_part_of_a_group, provider_established_in_third_country].
+test(what_if_a_failing_g_sii_count_breaks_step_1) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    findall(Status, dora_ctpp_designation_what_if(Profile, g_sii_served_count, 0, Status), Statuses),
+    Statuses == [step_1_sub_criteria_not_fulfilled].
+test(what_if_an_intra_group_provider_is_excluded) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    dora_ctpp_designation_what_if(Profile, provider_is_ict_intra_group_service_provider, true, Status),
+    Status == designation_not_applicable(ict_intra_group_service_provider).
+test(what_if_an_o_sii_score_above_3000_restores_step_1) :-
+    dora_ctpp_designation_profile_for(fixture_o_sii_score_exactly_3000, Profile),
+    dora_ctpp_designation_what_if(Profile, o_sii_scores_of_o_siis_served, [3001], Status),
+    Status == step_1_sub_criteria_fulfilled.
+test(what_if_a_float_is_an_input_problem) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    dora_ctpp_designation_what_if(Profile, g_sii_served_count, 1.0, Status),
+    Status == input_problems([wrong_type(g_sii_served_count)]).
+test(what_if_adds_an_absent_key_without_a_duplicate) :-
+    dora_ctpp_designation_profile_for(fixture_missing_substitutability, Profile),
+    dora_ctpp_designation_what_if(Profile, substitutability_figures, [category_substitutability_figures(credit_institution, 2, 0, 20)], Status),
+    Status == step_1_sub_criteria_fulfilled.
+test(the_reexported_input_check_names_problems_in_contract_order) :-
+    dora_ctpp_designation_profile_for(fixture_input_problems_float_and_duplicate, Profile),
+    dora_ctpp_designation_input_problems(Profile, Problems),
+    Problems == [wrong_type(g_sii_served_count), duplicate_key(provider_is_part_of_a_group)].
+test(the_reexported_input_check_accepts_a_good_profile) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    dora_ctpp_designation_input_problems(Profile, Problems),
+    Problems == [].
+test(the_eligibility_query_gives_one_cited_answer) :-
+    dora_ctpp_designation_profile_for(fixture_three_o_siis, Profile),
+    findall(Result - Citations, ctpp_designation_criteria_status(Profile, Result, Citations), Answers),
+    Answers = [step_1_sub_criteria_fulfilled - [_|_]].
+test(the_assess_wrapper_gives_the_verdict_term) :-
+    dora_ctpp_designation_assess(fixture_not_a_provider, Verdict),
+    Verdict == dora_ctpp_designation_verdict(not_an_ict_third_party_service_provider, [cite(eu_reg_2022_2554_art_31_1_a)]).
+test(the_checklist_cites_every_item) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    dora_ctpp_designation_checklist(Profile, Items),
+    length(Items, 7),
+    findall(CitationKey, member(item(_, met, cite(CitationKey)), Items), CitationKeys),
+    length(CitationKeys, 7).
+test(the_checklist_names_the_intra_group_ground) :-
+    dora_ctpp_designation_profile_for(fixture_intra_group_excluded, Profile),
+    dora_ctpp_designation_checklist(Profile, Items),
+    member(item(not_ict_intra_group_service_provider, unmet(ict_intra_group_service_provider), cite(eu_reg_2022_2554_art_31_8_iii)), Items).
+test(the_checklist_names_the_single_member_state_ground) :-
+    dora_ctpp_designation_profile_for(fixture_single_member_state_excluded, Profile),
+    dora_ctpp_designation_checklist(Profile, Items),
+    member(item(not_single_member_state_provider, unmet(single_member_state_provider), cite(eu_reg_2022_2554_art_31_8_iv)), Items).
+test(the_checklist_names_the_failing_importance_criterion) :-
+    dora_ctpp_designation_profile_for(fixture_two_o_siis, Profile),
+    dora_ctpp_designation_checklist(Profile, Items),
+    member(item(systemic_importance, unmet(sub_criteria_2_1_and_2_2_not_both_fulfilled), cite(eu_reg_2024_1502_art_3_1)), Items).
+
+test(what_if_an_o_sii_score_of_3000_stays_short, fail) :-
+    dora_ctpp_designation_profile_for(fixture_o_sii_score_exactly_3000, Profile),
+    dora_ctpp_designation_what_if(Profile, o_sii_scores_of_o_siis_served, [3000], step_1_sub_criteria_fulfilled).
+test(the_fulfilled_checklist_has_no_unmet_item, fail) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    dora_ctpp_designation_checklist(Profile, Items),
+    member(item(_, unmet(_), _), Items).
+
+cp_test_names([profile_keys_are_the_contract_keys, what_if_a_failing_g_sii_count_breaks_step_1, what_if_an_intra_group_provider_is_excluded, what_if_an_o_sii_score_above_3000_restores_step_1, what_if_a_float_is_an_input_problem, what_if_adds_an_absent_key_without_a_duplicate, the_reexported_input_check_names_problems_in_contract_order, the_reexported_input_check_accepts_a_good_profile, the_eligibility_query_gives_one_cited_answer, the_assess_wrapper_gives_the_verdict_term, the_checklist_cites_every_item, the_checklist_names_the_intra_group_ground, the_checklist_names_the_single_member_state_ground, the_checklist_names_the_failing_importance_criterion]).
+cp_test_fail_names([what_if_an_o_sii_score_of_3000_stays_short, the_fulfilled_checklist_has_no_unmet_item]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

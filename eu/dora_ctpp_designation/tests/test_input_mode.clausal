@@ -1,0 +1,133 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_input_mode.clausal -- INPUT MODE: public predicates called with the
+% result argument BOUND (verdict given, not read out), and input tolerance:
+% malformed, partial and unbound profiles are refused by THE INPUT CHECK
+% with exactly one input_problems(PROBLEMS) answer, never a failure.
+% Run: python -m clausal.testing eu/dora_ctpp_designation/tests/test_input_mode.clausal
+% =====================================================================
+:- module(test_input_mode, []).
+:- use_module(eu/dora_ctpp_designation/dora_ctpp_designation, [
+    ctpp_designation_criteria_status/3,
+    ctpp_step_1_indicators/3,
+    ctpp_lead_overseer/3,
+    ctpp_designated_provider_duties/3,
+    dora_ctpp_designation_status/2,
+    dora_ctpp_designation_status_values/1
+]).
+:- use_module(eu/dora_ctpp_designation/kernel, [dora_ctpp_designation_input_problems/2]).
+:- use_module(eu/dora_ctpp_designation/fixtures, [dora_ctpp_designation_profile_for/2]).
+
+% ---- bound results, one per route ------------------------------------
+test(status_holds_with_the_verdict_bound) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    findall(Status, dora_ctpp_designation_status(Profile, Status), [BaselineStatus]),
+    dora_ctpp_designation_status(Profile, BaselineStatus).
+
+test(every_other_bound_status_is_rejected, fail) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    findall(Status, dora_ctpp_designation_status(Profile, Status), [BaselineStatus]),
+    dora_ctpp_designation_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_ctpp_designation_status(Profile, Other).
+
+test(the_fulfilled_result_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    ctpp_designation_criteria_status(Profile, step_1_sub_criteria_fulfilled, Citations),
+    length(Citations, 12).
+test(the_fulfilled_profile_rejects_not_fulfilled_bound, fail) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    ctpp_designation_criteria_status(Profile, step_1_sub_criteria_not_fulfilled, _).
+test(the_not_fulfilled_result_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_impact_just_below_ten_percent, Profile),
+    ctpp_designation_criteria_status(Profile, step_1_sub_criteria_not_fulfilled, _).
+test(the_financial_entity_ground_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_financial_entity_provider, Profile),
+    ctpp_designation_criteria_status(Profile, designation_not_applicable(financial_entity), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_i)]).
+test(the_financial_entity_profile_rejects_another_ground, fail) :-
+    dora_ctpp_designation_profile_for(fixture_financial_entity_provider, Profile),
+    ctpp_designation_criteria_status(Profile, designation_not_applicable(article_127_2_tfeu_oversight_framework), _).
+test(the_not_a_provider_result_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_not_a_provider, Profile),
+    ctpp_designation_criteria_status(Profile, not_an_ict_third_party_service_provider, [cite(eu_reg_2022_2554_art_31_1_a)]).
+test(the_point_ii_ground_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_tfeu_oversight_excluded, Profile),
+    ctpp_designation_criteria_status(Profile, designation_not_applicable(article_127_2_tfeu_oversight_framework), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_ii)]).
+test(the_point_iii_ground_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_intra_group_excluded, Profile),
+    ctpp_designation_criteria_status(Profile, designation_not_applicable(ict_intra_group_service_provider), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_iii)]).
+test(the_point_iv_ground_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_single_member_state_excluded, Profile),
+    ctpp_designation_criteria_status(Profile, designation_not_applicable(single_member_state_provider), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_iv)]).
+test(the_missing_key_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_missing_type, Profile),
+    ctpp_designation_criteria_status(Profile, indeterminate([dora_entity_type]), []).
+test(the_lead_overseer_holds_bound) :-
+    dora_ctpp_designation_profile_for(fixture_lead_overseer_eiopa, Profile),
+    ctpp_lead_overseer(Profile, lead_overseer(eiopa), [cite(eu_reg_2022_2554_art_31_1_b)]).
+test(the_lead_overseer_rejects_another_authority_bound, fail) :-
+    dora_ctpp_designation_profile_for(fixture_lead_overseer_eiopa, Profile),
+    ctpp_lead_overseer(Profile, lead_overseer(eba), _).
+test(the_duties_hold_bound) :-
+    dora_ctpp_designation_profile_for(fixture_duties_notification_only, Profile),
+    ctpp_designated_provider_duties(Profile, required([notify_financial_entities_of_designation]), [cite(eu_reg_2022_2554_art_31_5)]).
+test(the_indicators_hold_bound) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    ctpp_step_1_indicators(Profile, step_1_indicators([sub_criteria_1_1_and_1_2([credit_institution]), sub_criterion_2_1, sub_criterion_2_2, sub_criterion_4_1([credit_institution])]), _).
+
+% ---- input tolerance ---------------------------------------------------
+test(an_unbound_profile_is_wrong_type) :-
+    findall(Result-Citations, ctpp_designation_criteria_status(_, Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(profile)])-[]].
+test(a_partial_list_is_wrong_type) :-
+    findall(Result, ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 1)|_], Result, _), Results),
+    Results == [input_problems([wrong_type(profile)])].
+test(a_non_attribute_element_is_wrong_type) :-
+    findall(Result, ctpp_designated_provider_duties([attribute(provider_designated_as_critical, true), surplus], Result, _), Results),
+    Results == [input_problems([wrong_type(profile)])].
+test(an_atom_profile_is_wrong_type) :-
+    dora_ctpp_designation_input_problems(surplus, Problems),
+    Problems == [wrong_type(profile)].
+test(an_unbound_value_is_wrong_type) :-
+    dora_ctpp_designation_input_problems([attribute(g_sii_served_count, _)], Problems),
+    Problems == [wrong_type(g_sii_served_count)].
+test(an_unsure_crisp_value_is_wrong_type) :-
+    ctpp_designated_provider_duties([attribute(provider_designated_as_critical, unsure)], Result, Citations),
+    Result == input_problems([wrong_type(provider_designated_as_critical)]),
+    Citations == [].
+test(a_negative_amount_is_wrong_type) :-
+    dora_ctpp_designation_input_problems([attribute(total_assets_of_users_within_esma_responsibility, -1)], Problems),
+    Problems == [wrong_type(total_assets_of_users_within_esma_responsibility)].
+test(a_float_score_is_wrong_type) :-
+    dora_ctpp_designation_input_problems([attribute(o_sii_scores_of_o_siis_served, [3001.0])], Problems),
+    Problems == [wrong_type(o_sii_scores_of_o_siis_served)].
+test(an_unknown_key_is_named) :-
+    dora_ctpp_designation_input_problems([attribute(surplus, 1), attribute(surplus, 2)], Problems),
+    Problems == [unknown_key(surplus)].
+test(an_unbound_key_is_named_as_that_variable) :-
+    dora_ctpp_designation_profile_for(fixture_unbound_key, Profile),
+    ctpp_lead_overseer(Profile, input_problems([unknown_key(UnknownKey)]), []),
+    var(UnknownKey).
+test(two_distinct_unbound_keys_are_two_keys) :-
+    dora_ctpp_designation_input_problems([attribute(FirstKey, 1), attribute(SecondKey, 2)], Problems),
+    Problems = [unknown_key(NamedFirst), unknown_key(NamedSecond)],
+    NamedFirst == FirstKey,
+    NamedSecond == SecondKey.
+test(the_same_unbound_key_twice_is_one_key) :-
+    dora_ctpp_designation_input_problems([attribute(RepeatedKey, 1), attribute(RepeatedKey, 2)], Problems),
+    Problems = [unknown_key(NamedKey)],
+    NamedKey == RepeatedKey.
+test(a_duplicate_key_with_equal_values_is_a_duplicate) :-
+    dora_ctpp_designation_input_problems([attribute(provider_is_part_of_a_group, true), attribute(provider_is_part_of_a_group, true)], Problems),
+    Problems == [duplicate_key(provider_is_part_of_a_group)].
+test(a_key_no_query_reads_is_still_checked) :-
+    ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 1), attribute(total_assets_of_users_within_eiopa_responsibility, 1), attribute(total_assets_of_users_within_esma_responsibility, 1), attribute(provider_is_part_of_a_group, unsure)], Result, []),
+    Result == input_problems([wrong_type(provider_is_part_of_a_group)]).
+test(an_absent_key_is_not_a_problem) :-
+    ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 10)], Result, []),
+    Result == indeterminate([total_assets_of_users_within_eiopa_responsibility]).
+test(an_absent_key_is_never_an_input_problem, fail) :-
+    ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 10)], input_problems(_), _).
+
+:- end_module(test_input_mode).

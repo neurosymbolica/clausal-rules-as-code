@@ -1,0 +1,317 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_rts_policies_and_risk_management.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls (and the profile readers), and nothing else.
+%
+% dora_rts_policies_and_risk_management_profile_keys/1: the profile key schema, in
+%     root_exports / input_contract order.
+% dora_rts_policies_and_risk_management_input_problems/2: the problems a profile has
+%     ([] = none), re-exported from the kernel as the scaffold wrote it.
+% dora_rts_policies_and_risk_management_what_if/4 (#16 what-if): override one key,
+%     then re-evaluate the verdict status. The profile is an ATTRIBUTE LIST, not a
+%     dict, so the override is written here for attribute lists (kit override_key/4
+%     takes a dict and raises type_error(dict, ...) on an attribute list): a present
+%     key has its value replaced, an absent key is added.
+% dora_rts_policies_and_risk_management_compliance_check/4 (#13 compliance_check):
+%     may the entity certify a duty (certify_duty(DutyAtom)) or all the
+%     duties of RTS Articles 1 to 3 (certify_all_duties) in the current
+%     state? permitted when the duty is judged performed (or every duty is,
+%     the complete answer), prohibited when it is judged not performed (or
+%     the duties are incomplete, or the entity is one of DORA Art 16(1), to
+%     which Title II does not apply). Otherwise the status compound the
+%     limbs give: indeterminate([Key]), needs_legal_review(...) or
+%     input_problems(...), each with Citations [].
+%
+% #2 eligibility and #7 justification are served by the slice's facade
+% (decide_*/2, *_status/2 and the cited *_checklist/2).
+%
+% ROOT EXPORTS: the result atoms, the judgement value unsure, the
+% twenty-seven duty atoms and the twenty-eight profile key atoms are served
+% here as 0-arity facts, so the package root carries each of them. The
+% result constructors are DATA: they stay in the export list, have no
+% clauses, and their fields are named by the constructors/1 declaration.
+%
+% Every predicate here decides nothing statutory of its own: it re-reads
+% the answers the slice decided (with their implements/1 markers there).
+% =====================================================================
+
+:- module(queries, [
+    dora_rts_policies_and_risk_management_profile_keys/1,
+    dora_rts_policies_and_risk_management_input_problems/2,
+    dora_rts_policies_and_risk_management_what_if/4,
+    dora_rts_policies_and_risk_management_compliance_check/4,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0,
+    unsure/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    risk_profile_and_complexity_consideration/0,
+    embedding_of_security_policies/0,
+    network_security/0,
+    intrusion_and_data_misuse_safeguards/0,
+    data_availability_authenticity_integrity_and_confidentiality/0,
+    accurate_and_prompt_data_transmission/0,
+    alignment_to_information_security_objectives/0,
+    indication_of_approval_date/0,
+    implementation_and_exception_indicators/0,
+    staff_security_responsibilities/0,
+    consequences_of_non_compliance/0,
+    documentation_list/0,
+    segregation_of_duties/0,
+    leading_practices_and_standards/0,
+    roles_for_security_policies/0,
+    review_of_security_policies/0,
+    material_changes/0,
+    ict_risk_management_policies_and_procedures/0,
+    risk_tolerance_approval/0,
+    risk_assessment_procedure_and_methodology/0,
+    risk_treatment_procedure/0,
+    residual_risk_provisions/0,
+    risk_monitoring_provisions/0,
+    strategy_change_process/0,
+    monitoring_of_treatment_effectiveness/0,
+    assessment_of_risk_tolerance_attainment/0,
+    assessment_of_corrective_actions/0,
+    financial_entity_is_article_16_1_entity/0,
+    size_risk_profile_and_complexity_taken_into_account/0,
+    ict_security_policies_embedded_in_ict_risk_management_framework/0,
+    security_policies_ensure_security_of_networks/0,
+    security_policies_contain_safeguards_against_intrusions_and_data_misuse/0,
+    security_policies_preserve_availability_authenticity_integrity_and_confidentiality_of_data/0,
+    security_policies_guarantee_accurate_and_prompt_data_transmission/0,
+    security_policies_aligned_to_information_security_objectives/0,
+    security_policies_indicate_date_of_management_body_approval/0,
+    security_policies_contain_indicators_and_measures_for_implementation_and_exceptions/0,
+    security_policies_specify_staff_responsibilities_for_ict_security/0,
+    security_policies_specify_consequences_of_staff_non_compliance/0,
+    security_policies_list_documentation_to_be_maintained/0,
+    security_policies_specify_segregation_of_duties_arrangements/0,
+    security_policies_consider_leading_practices_and_standards/0,
+    security_policies_identify_roles_for_development_implementation_and_maintenance/0,
+    security_policies_reviewed_in_accordance_with_article_6_5/0,
+    security_policies_take_material_changes_into_account/0,
+    ict_risk_management_policies_and_procedures_developed_documented_and_implemented/0,
+    risk_management_policies_indicate_approval_of_risk_tolerance_level/0,
+    risk_management_policies_contain_risk_assessment_procedure_and_methodology/0,
+    risk_management_policies_contain_risk_treatment_procedure/0,
+    risk_management_policies_contain_residual_risk_provisions/0,
+    risk_management_policies_contain_risk_monitoring_provisions/0,
+    risk_management_policies_contain_process_for_strategy_changes/0,
+    risk_treatment_procedure_ensures_monitoring_of_treatment_effectiveness/0,
+    risk_treatment_procedure_ensures_assessment_of_risk_tolerance_attainment/0,
+    risk_treatment_procedure_ensures_assessment_of_corrective_actions/0
+]).
+
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(library(reif), [if_/3]).
+:- use_module(eu/dora_rts_policies_and_risk_management/kernel, [dora_rts_policies_and_risk_management_input_problems/2]).
+:- use_module(eu/dora_rts_policies_and_risk_management/dora_rts_policies_and_risk_management, [
+    dora_rts_policies_and_risk_management_status/2,
+    dora_rts_policies_and_risk_management_checklist/2,
+    rts_policies_and_risk_management_duties_required/3,
+    rts_policies_and_risk_management_duties_complete/3
+]).
+
+% ---- root exports: result constructors (data: no clauses) ------------
+:- constructors([
+    required(duties),
+    outstanding(duties),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% ---- root exports: result atoms and the judgement value --------------
+complete.
+incomplete.
+none_outstanding.
+simplified_framework_entity.
+unsure.
+
+% ---- root exports: the twenty-seven duty atoms, in duty order ---------
+risk_profile_and_complexity_consideration.
+embedding_of_security_policies.
+network_security.
+intrusion_and_data_misuse_safeguards.
+data_availability_authenticity_integrity_and_confidentiality.
+accurate_and_prompt_data_transmission.
+alignment_to_information_security_objectives.
+indication_of_approval_date.
+implementation_and_exception_indicators.
+staff_security_responsibilities.
+consequences_of_non_compliance.
+documentation_list.
+segregation_of_duties.
+leading_practices_and_standards.
+roles_for_security_policies.
+review_of_security_policies.
+material_changes.
+ict_risk_management_policies_and_procedures.
+risk_tolerance_approval.
+risk_assessment_procedure_and_methodology.
+risk_treatment_procedure.
+residual_risk_provisions.
+risk_monitoring_provisions.
+strategy_change_process.
+monitoring_of_treatment_effectiveness.
+assessment_of_risk_tolerance_attainment.
+assessment_of_corrective_actions.
+
+% ---- root exports: the twenty-eight profile key atoms, in key order ---
+financial_entity_is_article_16_1_entity.
+size_risk_profile_and_complexity_taken_into_account.
+ict_security_policies_embedded_in_ict_risk_management_framework.
+security_policies_ensure_security_of_networks.
+security_policies_contain_safeguards_against_intrusions_and_data_misuse.
+security_policies_preserve_availability_authenticity_integrity_and_confidentiality_of_data.
+security_policies_guarantee_accurate_and_prompt_data_transmission.
+security_policies_aligned_to_information_security_objectives.
+security_policies_indicate_date_of_management_body_approval.
+security_policies_contain_indicators_and_measures_for_implementation_and_exceptions.
+security_policies_specify_staff_responsibilities_for_ict_security.
+security_policies_specify_consequences_of_staff_non_compliance.
+security_policies_list_documentation_to_be_maintained.
+security_policies_specify_segregation_of_duties_arrangements.
+security_policies_consider_leading_practices_and_standards.
+security_policies_identify_roles_for_development_implementation_and_maintenance.
+security_policies_reviewed_in_accordance_with_article_6_5.
+security_policies_take_material_changes_into_account.
+ict_risk_management_policies_and_procedures_developed_documented_and_implemented.
+risk_management_policies_indicate_approval_of_risk_tolerance_level.
+risk_management_policies_contain_risk_assessment_procedure_and_methodology.
+risk_management_policies_contain_risk_treatment_procedure.
+risk_management_policies_contain_residual_risk_provisions.
+risk_management_policies_contain_risk_monitoring_provisions.
+risk_management_policies_contain_process_for_strategy_changes.
+risk_treatment_procedure_ensures_monitoring_of_treatment_effectiveness.
+risk_treatment_procedure_ensures_assessment_of_risk_tolerance_attainment.
+risk_treatment_procedure_ensures_assessment_of_corrective_actions.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_rts_policies_and_risk_management_profile_keys([financial_entity_is_article_16_1_entity, size_risk_profile_and_complexity_taken_into_account, ict_security_policies_embedded_in_ict_risk_management_framework, security_policies_ensure_security_of_networks, security_policies_contain_safeguards_against_intrusions_and_data_misuse, security_policies_preserve_availability_authenticity_integrity_and_confidentiality_of_data, security_policies_guarantee_accurate_and_prompt_data_transmission, security_policies_aligned_to_information_security_objectives, security_policies_indicate_date_of_management_body_approval, security_policies_contain_indicators_and_measures_for_implementation_and_exceptions, security_policies_specify_staff_responsibilities_for_ict_security, security_policies_specify_consequences_of_staff_non_compliance, security_policies_list_documentation_to_be_maintained, security_policies_specify_segregation_of_duties_arrangements, security_policies_consider_leading_practices_and_standards, security_policies_identify_roles_for_development_implementation_and_maintenance, security_policies_reviewed_in_accordance_with_article_6_5, security_policies_take_material_changes_into_account, ict_risk_management_policies_and_procedures_developed_documented_and_implemented, risk_management_policies_indicate_approval_of_risk_tolerance_level, risk_management_policies_contain_risk_assessment_procedure_and_methodology, risk_management_policies_contain_risk_treatment_procedure, risk_management_policies_contain_residual_risk_provisions, risk_management_policies_contain_risk_monitoring_provisions, risk_management_policies_contain_process_for_strategy_changes, risk_treatment_procedure_ensures_monitoring_of_treatment_effectiveness, risk_treatment_procedure_ensures_assessment_of_risk_tolerance_attainment, risk_treatment_procedure_ensures_assessment_of_corrective_actions]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% Chose (a) THE LOGIC IS WRONG: kit override_key/4 takes a dict and raised
+% type_error(dict, ...) on the order's attribute-list profile; the tests state
+% the right answers (an absent duty key set true gives complete, set false
+% gives incomplete; the gate set true gives simplified_framework_entity).
+dora_rts_policies_and_risk_management_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_rts_policies_and_risk_management_status(Hypothesis, NewStatus).
+
+% overridden_profile(Profile, Key, Value, Hypothesis): an absent key is added,
+% a present key has its value replaced (complementary clauses; plumbing).
+overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    profile_lacks(Profile, OverriddenKey),
+    append(Profile, [attribute(OverriddenKey, NewValue)], Hypothesis).
+overridden_profile(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    profile_get(Profile, OverriddenKey, _OldValue),
+    maplist(replaced_attribute(OverriddenKey, NewValue), Profile, Hypothesis).
+
+replaced_attribute(ProfileKey, Value, attribute(OtherKey, OldValue), attribute(OtherKey, NewValue)) :-
+    if_(OtherKey = ProfileKey, NewValue = Value, NewValue = OldValue).
+
+% =====================================================================
+% #13 compliance_check
+% =====================================================================
+% certify_all_duties: the answer of the complete query, read as a modality.
+dora_rts_policies_and_risk_management_compliance_check(Profile, certify_all_duties, Verdict, Citations) :-
+    rts_policies_and_risk_management_duties_complete(Profile, Result, ResultCitations),
+    all_duties_verdict(Result, ResultCitations, Verdict, Citations).
+% certify_duty(DutyAtom): the gate and the input check first (through the
+% required query), then the duty's own cited checklist row.
+dora_rts_policies_and_risk_management_compliance_check(Profile, certify_duty(DutyAtom), Verdict, Citations) :-
+    rts_policies_and_risk_management_duties_required(Profile, Result, ResultCitations),
+    duty_verdict(Result, ResultCitations, Profile, DutyAtom, Verdict, Citations).
+
+all_duties_verdict(complete, Citations, permitted, Citations).
+all_duties_verdict(incomplete, Citations, prohibited, Citations).
+all_duties_verdict(simplified_framework_entity, Citations, prohibited, Citations).
+all_duties_verdict(indeterminate(MissingKeys), Citations, indeterminate(MissingKeys), Citations).
+all_duties_verdict(needs_legal_review(Reason, Context), Citations, needs_legal_review(Reason, Context), Citations).
+all_duties_verdict(input_problems(Problems), Citations, input_problems(Problems), Citations).
+
+duty_verdict(required(_), _, Profile, DutyAtom, Verdict, Citations) :-
+    dora_rts_policies_and_risk_management_checklist(Profile, Items),
+    member(item(DutyAtom, Status, Citation), Items),
+    duty_item_verdict(Status, Citation, Profile, Verdict, Citations).
+duty_verdict(simplified_framework_entity, Citations, _, _, prohibited, Citations).
+duty_verdict(indeterminate(MissingKeys), Citations, _, _, indeterminate(MissingKeys), Citations).
+duty_verdict(input_problems(Problems), Citations, _, _, input_problems(Problems), Citations).
+
+duty_item_verdict(met, Citation, _, permitted, [Citation]).
+duty_item_verdict(unmet(_), Citation, _, prohibited, [Citation]).
+duty_item_verdict(unknown([ProfileKey]), _, Profile, indeterminate([ProfileKey]), []) :-
+    profile_lacks(Profile, ProfileKey).
+duty_item_verdict(unknown([ProfileKey]), Citation, Profile, needs_legal_review(open_textured(ProfileKey, Citation), [inputs_relied_on(Pairs)]), []) :-
+    profile_get(Profile, ProfileKey, unsure),
+    dora_rts_policies_and_risk_management_profile_keys(ContractKeys),
+    present_pairs(ContractKeys, Profile, Pairs).
+
+% present_pairs(ContractKeys, Profile, Pairs): every Key-Value present in
+% Profile, in root_exports order, the value as given (PAIRS).
+present_pairs([], _, []).
+present_pairs([ProfileKey|ContractKeys], Profile, Pairs) :-
+    profile_lacks(Profile, ProfileKey),
+    present_pairs(ContractKeys, Profile, Pairs).
+present_pairs([ProfileKey|ContractKeys], Profile, [ProfileKey-Value|LaterPairs]) :-
+    profile_get(Profile, ProfileKey, Value),
+    present_pairs(ContractKeys, Profile, LaterPairs).
+
+% ---- test plumbing (decides nothing statutory) ------------------------
+performed_profile([attribute(financial_entity_is_article_16_1_entity, false)|DutyAttributes]) :-
+    dora_rts_policies_and_risk_management_profile_keys([_|DutyKeys]),
+    maplist(true_attribute, DutyKeys, DutyAttributes).
+
+true_attribute(ProfileKey, attribute(ProfileKey, true)).
+
+test(every_duty_performed_permits_certifying_all) :-
+    performed_profile(Profile),
+    findall(Verdict-Citations, dora_rts_policies_and_risk_management_compliance_check(Profile, certify_all_duties, Verdict, Citations), Answers),
+    Answers == [permitted-[cite(eu_reg_2024_1774_art_1), cite(eu_reg_2024_1774_art_2_1), cite(eu_reg_2024_1774_art_2_2), cite(eu_reg_2024_1774_art_3)]].
+
+test(a_performed_duty_may_be_certified) :-
+    performed_profile(Profile),
+    findall(Verdict-Citations, dora_rts_policies_and_risk_management_compliance_check(Profile, certify_duty(network_security), Verdict, Citations), Answers),
+    Answers == [permitted-[cite(eu_reg_2024_1774_art_2_1_a)]].
+
+test(a_duty_not_performed_may_not_be_certified) :-
+    findall(Verdict-Citations, dora_rts_policies_and_risk_management_compliance_check([attribute(financial_entity_is_article_16_1_entity, false), attribute(security_policies_ensure_security_of_networks, false)], certify_duty(network_security), Verdict, Citations), Answers),
+    Answers == [prohibited-[cite(eu_reg_2024_1774_art_2_1_a)]].
+
+test(an_unanswered_duty_is_asked) :-
+    dora_rts_policies_and_risk_management_compliance_check([attribute(financial_entity_is_article_16_1_entity, false)], certify_duty(network_security), indeterminate([security_policies_ensure_security_of_networks]), []).
+
+test(an_article_16_1_entity_may_not_certify_title_ii_duties) :-
+    dora_rts_policies_and_risk_management_compliance_check([attribute(financial_entity_is_article_16_1_entity, true)], certify_all_duties, prohibited, [cite(eu_reg_2022_2554_art_16_1)]).
+
+test(an_article_16_1_entity_is_not_permitted, fail) :-
+    dora_rts_policies_and_risk_management_compliance_check([attribute(financial_entity_is_article_16_1_entity, true)], certify_all_duties, permitted, _).
+
+test(what_if_adds_an_absent_key_once) :-
+    findall(Hypothesis, overridden_profile([attribute(financial_entity_is_article_16_1_entity, false)], security_policies_ensure_security_of_networks, true, Hypothesis), Answers),
+    Answers == [[attribute(financial_entity_is_article_16_1_entity, false), attribute(security_policies_ensure_security_of_networks, true)]].
+
+test(what_if_replaces_a_present_key_once) :-
+    findall(Hypothesis, overridden_profile([attribute(financial_entity_is_article_16_1_entity, false)], financial_entity_is_article_16_1_entity, true, Hypothesis), Answers),
+    Answers == [[attribute(financial_entity_is_article_16_1_entity, true)]].
+
+:- end_module(queries).

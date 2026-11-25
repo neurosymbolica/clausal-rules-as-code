@@ -1,0 +1,31 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_incident_management_process_citations, [citation/2, implements/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+implements(Key) :-
+    citation(Key, _).
+
+citation(eu_reg_2022_2554_art_17_1, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(1) ICT-related incident management process', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'Financial entities shall define, establish and implement an ICT-related incident management process to detect, manage and notify ICT-related incidents.']).
+citation(eu_reg_2022_2554_art_17_2, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(2) recording of incidents and significant cyber threats; monitoring, handling and follow-up procedures', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'Financial entities shall record all ICT-related incidents and significant cyber threats. Financial entities shall establish appropriate procedures and processes to ensure a consistent and integrated monitoring, handling and follow-up of ICT-related incidents, to ensure that root causes are identified, documented and addressed in order to prevent the occurrence of such incidents.']).
+citation(eu_reg_2022_2554_art_17_3, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(3) lead words (what the process shall do)', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'The ICT-related incident management process referred to in paragraph 1 shall:']).
+citation(eu_reg_2022_2554_art_17_3_a, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(3)(a) early warning indicators', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'put in place early warning indicators']).
+citation(eu_reg_2022_2554_art_17_3_b, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(3)(b) procedures to identify, track, log, categorise and classify ICT-related incidents', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'establish procedures to identify, track, log, categorise and classify ICT-related incidents according to their priority and severity and according to the criticality of the services impacted, in accordance with the criteria set out in Article 18(1)']).
+citation(eu_reg_2022_2554_art_17_3_c, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(3)(c) roles and responsibilities for incident types and scenarios', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'assign roles and responsibilities that need to be activated for different ICT-related incident types and scenarios']).
+citation(eu_reg_2022_2554_art_17_3_d, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(3)(d) communication, notification, escalation and counterpart information plans', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'set out plans for communication to staff, external stakeholders and media in accordance with Article 14 and for notification to clients, for internal escalation procedures, including ICT-related customer complaints, as well as for the provision of information to financial entities that act as counterparts, as appropriate']).
+citation(eu_reg_2022_2554_art_17_3_e, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(3)(e) reporting of major incidents to senior management and the management body', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'ensure that at least major ICT-related incidents are reported to relevant senior management and inform the management body of at least major ICT-related incidents, explaining the impact, response and additional controls to be established as a result of such ICT-related incidents']).
+citation(eu_reg_2022_2554_art_17_3_f, [label - 'Regulation (EU) 2022/2554 (DORA) Art 17(3)(f) ICT-related incident response procedures', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'establish ICT-related incident response procedures to mitigate impacts and ensure that services become operational and secure in a timely manner']).
+citation(eu_reg_2022_2554_art_18_2, [label - 'Regulation (EU) 2022/2554 (DORA) Art 18(2) classification of cyber threats as significant', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'Financial entities shall classify cyber threats as significant based on the criticality of the services at risk']).
+citation(eu_reg_2022_2554_art_18_1, [label - 'Regulation (EU) 2022/2554 (DORA) Art 18(1) lead words, criteria for classifying ICT-related incidents (read only as referred to by Art 17(3)(b); not returned)', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'Financial entities shall classify ICT-related incidents and shall determine their impact based on the following criteria:']).
+citation(eu_reg_2022_2554_art_16_1, [label - 'Regulation (EU) 2022/2554 (DORA) Art 16(1), first subparagraph, entities to which Articles 5 to 15 do not apply (read to reject a defeater; not returned)', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'Articles 5 to 15 of this Regulation shall not apply to small and non-interconnected investment firms']).
+citation(eu_reg_2022_2554_art_4_2, [label - 'Regulation (EU) 2022/2554 (DORA) Art 4(2) proportionality principle (read to reject a defeater; not returned)', ref - 'https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2554', verbatim - 'In addition, the application by financial entities of Chapters III, IV and V, Section I, shall be proportionate to their size and overall risk profile, and to the nature, scale and complexity of their services, activities and operations, as specifically provided for in the relevant rules of those Chapters.']).
+
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2022_2554_art_17_3_d).
+test(the_article_18_2_key_is_implemented) :-
+    implements(eu_reg_2022_2554_art_18_2).
+
+test(a_shortened_key_is_not_implemented, fail) :-
+    implements(dora_art_17_3_d).

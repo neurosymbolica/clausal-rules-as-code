@@ -1,0 +1,206 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_rts_asset_management_and_cryptography.
+% A TOP-LAYER consumer: it imports the determination slice PUBLIC
+% predicates it calls, and nothing else.
+%
+% The declared query types are served by the public predicates of the
+% determination slice (dora_rts_asset_management_and_cryptography.clausal):
+%   #13 compliance_check: rts_asset_management_and_cryptography_duties_complete/3
+%       (are the duties of RTS Articles 4 to 7 all performed), wrapped by the
+%       facade verdict decide_dora_rts_asset_management_and_cryptography/2;
+%   #2  eligibility: the facade verdict and its status projection
+%       dora_rts_asset_management_and_cryptography_status/2, with the cited
+%       checklist dora_rts_asset_management_and_cryptography_checklist/2;
+%   #7  justification: every checklist item carries its cite(...) term.
+% This layer adds:
+%   dora_rts_asset_management_and_cryptography_what_if/4 (#16 what-if): override one key, re-evaluate
+%   dora_rts_asset_management_and_cryptography_profile_keys/1: top-level profile key schema
+%   dora_rts_asset_management_and_cryptography_input_problems/2: the problems a profile has ([] = none),
+%     re-exported from the kernel as the scaffold wrote it.
+%
+% ROOT EXPORTS. The scorer reads the twenty-six profile key atoms, the
+% result atoms, the twenty-four duty atoms and the judgement value unsure
+% as package-root attributes. Each atom is served here as a predicate of
+% its own name (a fact), so the generated facade exposes it. The result
+% constructors are part of the called contract: they are data, exported
+% and declared with constructors/1, and have no clauses. None of them
+% decides anything statutory: no marker.
+%
+% The profile is an ATTRIBUTE LIST, so the what-if override replaces every
+% attribute(Key, _) item of the overridden key by one new item (list
+% plumbing, no statutory content, no marker).
+% =====================================================================
+
+:- module(queries, [
+    dora_rts_asset_management_and_cryptography_profile_keys/1,
+    dora_rts_asset_management_and_cryptography_input_problems/2,
+    dora_rts_asset_management_and_cryptography_what_if/4,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0,
+    unsure/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    financial_entity_is_article_16_1_entity/0,
+    financial_entity_is_microenterprise/0,
+    ict_asset_management_policy_developed_documented_and_implemented/0,
+    asset_policy_prescribes_monitoring_and_management_of_asset_lifecycle/0,
+    asset_policy_prescribes_records_of_ict_assets/0,
+    asset_policy_prescribes_records_for_legacy_system_risk_assessment/0,
+    ict_asset_management_procedure_developed_documented_and_implemented/0,
+    asset_procedure_specifies_criticality_assessment_criteria/0,
+    encryption_policy_developed_documented_and_implemented/0,
+    encryption_policy_designed_on_data_classification_and_ict_risk_assessment/0,
+    encryption_policy_has_rules_for_data_at_rest_and_in_transit/0,
+    encryption_policy_has_rules_for_data_in_use_where_necessary/0,
+    encryption_policy_has_rules_for_network_connections_and_external_traffic/0,
+    encryption_policy_has_rules_for_cryptographic_key_management/0,
+    data_in_use_protected_where_its_encryption_is_not_possible/0,
+    encryption_policy_has_criteria_for_selecting_cryptographic_techniques/0,
+    mitigation_and_monitoring_where_leading_practices_or_standards_not_followed/0,
+    encryption_policy_has_provisions_for_updating_cryptographic_technology/0,
+    mitigation_and_monitoring_where_cryptographic_technology_not_updated/0,
+    encryption_policy_requires_recording_of_mitigation_measures_with_reasons/0,
+    key_management_policy_has_requirements_for_whole_key_lifecycle/0,
+    key_protection_controls_identified_and_implemented/0,
+    key_protection_controls_designed_on_data_classification_and_ict_risk_assessment/0,
+    key_replacement_methods_developed_and_implemented/0,
+    certificate_register_created_maintained_and_kept_up_to_date/0,
+    certificates_renewed_promptly_before_expiration/0,
+    ict_asset_management_policy/0,
+    ict_asset_lifecycle_monitoring_and_management/0,
+    ict_asset_records/0,
+    legacy_ict_system_risk_assessment_records/0,
+    ict_asset_management_procedure/0,
+    criticality_assessment_criteria/0,
+    encryption_and_cryptographic_controls_policy/0,
+    encryption_policy_design_basis/0,
+    rules_for_encryption_of_data_at_rest_and_in_transit/0,
+    rules_for_encryption_of_data_in_use/0,
+    rules_for_encryption_of_network_connections_and_external_traffic/0,
+    rules_for_cryptographic_key_management/0,
+    protection_of_data_in_use_where_encryption_not_possible/0,
+    cryptographic_technique_selection_criteria/0,
+    mitigation_where_leading_practices_not_followed/0,
+    cryptographic_technology_update_provisions/0,
+    mitigation_where_cryptographic_technology_not_updated/0,
+    recording_of_mitigation_and_monitoring_measures/0,
+    cryptographic_key_lifecycle_requirements/0,
+    cryptographic_key_protection_controls/0,
+    key_protection_controls_design_basis/0,
+    cryptographic_key_replacement_methods/0,
+    certificate_register/0,
+    prompt_certificate_renewal/0
+]).
+
+:- use_module(eu/dora_rts_asset_management_and_cryptography/kernel, [dora_rts_asset_management_and_cryptography_input_problems/2]).
+:- use_module(eu/dora_rts_asset_management_and_cryptography/dora_rts_asset_management_and_cryptography, [dora_rts_asset_management_and_cryptography_status/2]).
+
+% ---- result constructors (exported data, no clauses) ----------------
+:- constructors([
+    required(duties),
+    outstanding(duties),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_rts_asset_management_and_cryptography_profile_keys([financial_entity_is_article_16_1_entity, financial_entity_is_microenterprise, ict_asset_management_policy_developed_documented_and_implemented, asset_policy_prescribes_monitoring_and_management_of_asset_lifecycle, asset_policy_prescribes_records_of_ict_assets, asset_policy_prescribes_records_for_legacy_system_risk_assessment, ict_asset_management_procedure_developed_documented_and_implemented, asset_procedure_specifies_criticality_assessment_criteria, encryption_policy_developed_documented_and_implemented, encryption_policy_designed_on_data_classification_and_ict_risk_assessment, encryption_policy_has_rules_for_data_at_rest_and_in_transit, encryption_policy_has_rules_for_data_in_use_where_necessary, encryption_policy_has_rules_for_network_connections_and_external_traffic, encryption_policy_has_rules_for_cryptographic_key_management, data_in_use_protected_where_its_encryption_is_not_possible, encryption_policy_has_criteria_for_selecting_cryptographic_techniques, mitigation_and_monitoring_where_leading_practices_or_standards_not_followed, encryption_policy_has_provisions_for_updating_cryptographic_technology, mitigation_and_monitoring_where_cryptographic_technology_not_updated, encryption_policy_requires_recording_of_mitigation_measures_with_reasons, key_management_policy_has_requirements_for_whole_key_lifecycle, key_protection_controls_identified_and_implemented, key_protection_controls_designed_on_data_classification_and_ict_risk_assessment, key_replacement_methods_developed_and_implemented, certificate_register_created_maintained_and_kept_up_to_date, certificates_renewed_promptly_before_expiration]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% NewStatus is the facade status (the completeness RESULT).
+dora_rts_asset_management_and_cryptography_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attributes_without(Profile, OverriddenKey, KeptAttributes),
+    append(KeptAttributes, [attribute(OverriddenKey, NewValue)], Hypothesis),
+    dora_rts_asset_management_and_cryptography_status(Hypothesis, NewStatus).
+
+% attributes_without(Attributes, OverriddenKey, KeptAttributes): every item
+% whose key is not identical to OverriddenKey, in profile order.
+attributes_without([], _, []).
+attributes_without([attribute(ElementKey, _)|RemainingElements], OverriddenKey, KeptAttributes) :-
+    ElementKey == OverriddenKey,
+    attributes_without(RemainingElements, OverriddenKey, KeptAttributes).
+attributes_without([attribute(ElementKey, ElementValue)|RemainingElements], OverriddenKey, [attribute(ElementKey, ElementValue)|KeptAttributes]) :-
+    ElementKey \== OverriddenKey,
+    attributes_without(RemainingElements, OverriddenKey, KeptAttributes).
+
+% ---- root exports: result atoms and the judgement value -------------
+complete.
+incomplete.
+none_outstanding.
+simplified_framework_entity.
+unsure.
+
+% ---- root exports: the twenty-six profile key atoms ------------------
+financial_entity_is_article_16_1_entity.
+financial_entity_is_microenterprise.
+ict_asset_management_policy_developed_documented_and_implemented.
+asset_policy_prescribes_monitoring_and_management_of_asset_lifecycle.
+asset_policy_prescribes_records_of_ict_assets.
+asset_policy_prescribes_records_for_legacy_system_risk_assessment.
+ict_asset_management_procedure_developed_documented_and_implemented.
+asset_procedure_specifies_criticality_assessment_criteria.
+encryption_policy_developed_documented_and_implemented.
+encryption_policy_designed_on_data_classification_and_ict_risk_assessment.
+encryption_policy_has_rules_for_data_at_rest_and_in_transit.
+encryption_policy_has_rules_for_data_in_use_where_necessary.
+encryption_policy_has_rules_for_network_connections_and_external_traffic.
+encryption_policy_has_rules_for_cryptographic_key_management.
+data_in_use_protected_where_its_encryption_is_not_possible.
+encryption_policy_has_criteria_for_selecting_cryptographic_techniques.
+mitigation_and_monitoring_where_leading_practices_or_standards_not_followed.
+encryption_policy_has_provisions_for_updating_cryptographic_technology.
+mitigation_and_monitoring_where_cryptographic_technology_not_updated.
+encryption_policy_requires_recording_of_mitigation_measures_with_reasons.
+key_management_policy_has_requirements_for_whole_key_lifecycle.
+key_protection_controls_identified_and_implemented.
+key_protection_controls_designed_on_data_classification_and_ict_risk_assessment.
+key_replacement_methods_developed_and_implemented.
+certificate_register_created_maintained_and_kept_up_to_date.
+certificates_renewed_promptly_before_expiration.
+
+% ---- root exports: the twenty-four duty atoms, in duty order ---------
+ict_asset_management_policy.
+ict_asset_lifecycle_monitoring_and_management.
+ict_asset_records.
+legacy_ict_system_risk_assessment_records.
+ict_asset_management_procedure.
+criticality_assessment_criteria.
+encryption_and_cryptographic_controls_policy.
+encryption_policy_design_basis.
+rules_for_encryption_of_data_at_rest_and_in_transit.
+rules_for_encryption_of_data_in_use.
+rules_for_encryption_of_network_connections_and_external_traffic.
+rules_for_cryptographic_key_management.
+protection_of_data_in_use_where_encryption_not_possible.
+cryptographic_technique_selection_criteria.
+mitigation_where_leading_practices_not_followed.
+cryptographic_technology_update_provisions.
+mitigation_where_cryptographic_technology_not_updated.
+recording_of_mitigation_and_monitoring_measures.
+cryptographic_key_lifecycle_requirements.
+cryptographic_key_protection_controls.
+key_protection_controls_design_basis.
+cryptographic_key_replacement_methods.
+certificate_register.
+prompt_certificate_renewal.
+
+:- end_module(queries).

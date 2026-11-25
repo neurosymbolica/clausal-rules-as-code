@@ -1,0 +1,207 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dora_register_of_information.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). There is no numeric threshold in this order, so each
+% route is paired with a ONE-KEY near-miss control: the same profile with one
+% value changed (true to false, a trigger switched, a key dropped, made
+% unsure or given twice), which gets the opposite or another verdict.
+%
+% Routes of register_of_information_duties_complete/3 and their pairs:
+%   complete            solo_entity_all_performed
+%     near-miss         solo_entity_yearly_report_missed (incomplete)
+%   group levels        group_parent_all_performed (complete)
+%     near-miss         group_parent_consolidated_consistency_missed (incomplete)
+%   critical functions  critical_function_entity_all_performed (complete)
+%     near-miss         critical_function_subcontractor_identifiers_missed (incomplete)
+%     control           false_trigger_with_unread_duty_key (complete: the false key
+%                       sits under a false trigger and is never read)
+%   planned arrangement planned_arrangement_informed (complete)
+%     near-miss         planned_arrangement_not_informed (incomplete)
+%   branches and links  branches_and_intra_group_all_performed (complete)
+%     near-miss         branches_template_unanswered (indeterminate)
+%   missing triggers    triggers_unanswered (indeterminate)
+%   referral            data_quality_unsure (needs_legal_review)
+%     near-miss         data_quality_unsure_with_missed_report (incomplete: a false
+%                       duty decides before the unsure one is referred)
+%   input problems      microenterprise_key_given, unsure_trigger,
+%                       duplicate_judgement, not_an_attribute_list
+% =====================================================================
+
+:- module(fixtures, [
+    dora_register_of_information_subject/1,
+    dora_register_of_information_profile_for/2,
+    dora_register_of_information_assess/2
+]).
+
+:- use_module(eu/dora_register_of_information/dora_register_of_information, [decide_dora_register_of_information/2]).
+
+% ---- Subject registry ------------------------------------------------
+dora_register_of_information_subject(solo_entity_all_performed).
+dora_register_of_information_subject(solo_entity_yearly_report_missed).
+dora_register_of_information_subject(group_parent_all_performed).
+dora_register_of_information_subject(group_parent_consolidated_consistency_missed).
+dora_register_of_information_subject(critical_function_entity_all_performed).
+dora_register_of_information_subject(critical_function_subcontractor_identifiers_missed).
+dora_register_of_information_subject(false_trigger_with_unread_duty_key).
+dora_register_of_information_subject(planned_arrangement_informed).
+dora_register_of_information_subject(planned_arrangement_not_informed).
+dora_register_of_information_subject(branches_and_intra_group_all_performed).
+dora_register_of_information_subject(branches_template_unanswered).
+dora_register_of_information_subject(triggers_unanswered).
+dora_register_of_information_subject(data_quality_unsure).
+dora_register_of_information_subject(data_quality_unsure_with_missed_report).
+dora_register_of_information_subject(microenterprise_key_given).
+dora_register_of_information_subject(unsure_trigger).
+dora_register_of_information_subject(duplicate_judgement).
+dora_register_of_information_subject(not_an_attribute_list).
+
+% ---- Building blocks (plumbing) ---------------------------------------
+triggers_false([
+    attribute(financial_entity_responsible_for_sub_consolidated_register, false),
+    attribute(financial_entity_responsible_for_consolidated_register, false),
+    attribute(competent_authority_requested_register, false),
+    attribute(entity_plans_arrangement_supporting_critical_or_important_function, false),
+    attribute(function_has_become_critical_or_important, false),
+    attribute(entity_uses_ict_services_supporting_critical_or_important_functions, false),
+    attribute(entity_has_branches_outside_home_country, false),
+    attribute(ict_service_supply_chain_partly_intra_group, false)
+]).
+
+% The keys of the twenty-two duties that apply always, each performed.
+always_duties_performed([
+    attribute(register_maintained_and_updated_at_entity_level, true),
+    attribute(arrangements_documented_distinguishing_critical_or_important_functions, true),
+    attribute(reported_to_competent_authorities_at_least_yearly, true),
+    attribute(rank_assigned_to_each_ict_third_party_service_provider, true),
+    attribute(templates_include_information_on_all_ict_services_of_direct_providers, true),
+    attribute(template_information_meets_data_quality_principles, true),
+    attribute(template_information_reviewed_regularly_and_errors_corrected, true),
+    attribute(providers_identified_by_legal_entity_identifier_or_european_unique_identifier, true),
+    attribute(data_elements_completed_with_single_values, true),
+    attribute(all_data_elements_completed_at_each_applicable_level, true),
+    attribute(register_includes_general_information_on_maintaining_entity, true),
+    attribute(register_includes_general_information_on_entities_in_consolidation, true),
+    attribute(register_includes_general_information_on_contractual_arrangements, true),
+    attribute(register_includes_specific_information_on_contractual_arrangements, true),
+    attribute(register_includes_entities_signing_arrangements_for_receiving_ict_services, true),
+    attribute(register_includes_providers_signing_arrangements_for_providing_ict_services, true),
+    attribute(register_includes_entities_providing_ict_services_within_consolidation, true),
+    attribute(register_includes_entities_making_use_of_ict_services, true),
+    attribute(register_includes_information_on_direct_providers_and_subcontractors, true),
+    attribute(register_includes_information_on_ict_service_supply_chain, true),
+    attribute(register_includes_identification_of_functions, true),
+    attribute(register_includes_terminology_and_closed_lists, true)
+]).
+
+solo_profile(Profile) :-
+    triggers_false(Triggers),
+    always_duties_performed(Duties),
+    append(Triggers, Duties, Profile).
+
+group_profile(Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [
+        financial_entity_responsible_for_sub_consolidated_register-true,
+        financial_entity_responsible_for_consolidated_register-true,
+        register_maintained_and_updated_at_sub_consolidated_level-true,
+        register_maintained_and_updated_at_consolidated_level-true,
+        entity_level_information_consistent_with_sub_consolidated_level-true,
+        entity_level_information_consistent_with_consolidated_level-true
+    ], Profile).
+
+critical_function_profile(Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [
+        entity_uses_ict_services_supporting_critical_or_important_functions-true,
+        templates_include_information_on_subcontractors_underpinning_critical_or_important_functions-true,
+        subcontractors_identified_by_legal_entity_identifier_or_european_unique_identifier-true,
+        register_includes_assessment_of_ict_services_supporting_critical_or_important_functions-true
+    ], Profile).
+
+planned_arrangement_profile(Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [
+        entity_plans_arrangement_supporting_critical_or_important_function-true,
+        competent_authority_informed_of_planned_arrangement-true
+    ], Profile).
+
+% with_values(Profile, Pairs, Result): each Key-Value set in turn (an existing
+% entry replaced in place, a new key added at the end).
+with_values(Profile, [], Profile).
+with_values(Profile, [Key-Value|Pairs], Result) :-
+    set_value(Profile, Key, Value, Next),
+    with_values(Next, Pairs, Result).
+
+set_value([], Key, Value, [attribute(Key, Value)]).
+set_value([attribute(ElementKey, _)|Elements], Key, Value, [attribute(Key, Value)|Elements]) :-
+    ElementKey == Key.
+set_value([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Rest]) :-
+    ElementKey \== Key,
+    set_value(Elements, Key, Value, Rest).
+
+% ---- Profiles --------------------------------------------------------
+dora_register_of_information_profile_for(solo_entity_all_performed, Profile) :-
+    solo_profile(Profile).
+dora_register_of_information_profile_for(solo_entity_yearly_report_missed, Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [reported_to_competent_authorities_at_least_yearly-false], Profile).
+dora_register_of_information_profile_for(group_parent_all_performed, Profile) :-
+    group_profile(Profile).
+dora_register_of_information_profile_for(group_parent_consolidated_consistency_missed, Profile) :-
+    group_profile(Group),
+    with_values(Group, [entity_level_information_consistent_with_consolidated_level-false], Profile).
+dora_register_of_information_profile_for(critical_function_entity_all_performed, Profile) :-
+    critical_function_profile(Profile).
+dora_register_of_information_profile_for(critical_function_subcontractor_identifiers_missed, Profile) :-
+    critical_function_profile(Critical),
+    with_values(Critical, [subcontractors_identified_by_legal_entity_identifier_or_european_unique_identifier-false], Profile).
+dora_register_of_information_profile_for(false_trigger_with_unread_duty_key, Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [subcontractors_identified_by_legal_entity_identifier_or_european_unique_identifier-false], Profile).
+dora_register_of_information_profile_for(planned_arrangement_informed, Profile) :-
+    planned_arrangement_profile(Profile).
+dora_register_of_information_profile_for(planned_arrangement_not_informed, Profile) :-
+    planned_arrangement_profile(Planned),
+    with_values(Planned, [competent_authority_informed_of_planned_arrangement-false], Profile).
+dora_register_of_information_profile_for(branches_and_intra_group_all_performed, Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [
+        entity_has_branches_outside_home_country-true,
+        ict_service_supply_chain_partly_intra_group-true,
+        register_includes_identification_of_branches_outside_home_country-true,
+        register_includes_links_between_intra_group_and_other_arrangements-true
+    ], Profile).
+dora_register_of_information_profile_for(branches_template_unanswered, Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [entity_has_branches_outside_home_country-true], Profile).
+dora_register_of_information_profile_for(triggers_unanswered, Profile) :-
+    always_duties_performed(Profile).
+dora_register_of_information_profile_for(data_quality_unsure, Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [template_information_meets_data_quality_principles-unsure], Profile).
+dora_register_of_information_profile_for(data_quality_unsure_with_missed_report, Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [
+        template_information_meets_data_quality_principles-unsure,
+        reported_to_competent_authorities_at_least_yearly-false
+    ], Profile).
+dora_register_of_information_profile_for(microenterprise_key_given, Profile) :-
+    solo_profile(Solo),
+    append(Solo, [attribute(financial_entity_is_microenterprise, true)], Profile).
+dora_register_of_information_profile_for(unsure_trigger, Profile) :-
+    solo_profile(Solo),
+    with_values(Solo, [competent_authority_requested_register-unsure], Profile).
+dora_register_of_information_profile_for(duplicate_judgement, Profile) :-
+    solo_profile(Solo),
+    append(Solo, [attribute(template_information_meets_data_quality_principles, false)], Profile).
+dora_register_of_information_profile_for(not_an_attribute_list, not_an_attribute_list).
+
+% ---- Convenience wrapper ---------------------------------------------
+dora_register_of_information_assess(Subject, Result) :-
+    dora_register_of_information_profile_for(Subject, Profile),
+    decide_dora_register_of_information(Profile, Result).
+
+:- end_module(fixtures).

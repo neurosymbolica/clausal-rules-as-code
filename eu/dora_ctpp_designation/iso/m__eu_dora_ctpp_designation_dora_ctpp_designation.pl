@@ -1,0 +1,720 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ctpp_designation_dora_ctpp_designation, [decide_dora_ctpp_designation/2, dora_ctpp_designation_status/2, dora_ctpp_designation_checklist/2, dora_ctpp_designation_decision_resolvable/1, dora_ctpp_designation_status_values/1, ctpp_designation_criteria_status/3, ctpp_step_1_indicators/3, ctpp_lead_overseer/3, ctpp_designated_provider_duties/3, not_an_ict_third_party_service_provider/0, step_1_sub_criteria_not_fulfilled/0, step_1_sub_criteria_fulfilled/0, sub_criterion_2_1/0, sub_criterion_2_2/0, not_designated_as_critical/0, designation_not_applicable/1, step_1_indicators/1, sub_criteria_1_1_and_1_2/1, sub_criterion_4_1/1, sub_criterion_4_2/1, lead_overseer/1, lead_overseer_tied/1, required/1, indeterminate/1, input_problems/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(pairs), [pairs_keys_values/3, pairs_keys/2, pairs_values/2]).
+:- use_module(clausal_lists_extra, [clausal_is_list/1, clausal_msort/2, max_list/2]).
+:- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(m__eu_dora_ctpp_designation_kernel, [dora_ctpp_designation_input_problems/2, dora_ctpp_designation_shared_type/3, dora_ctpp_designation_financial_entity_type/2, dora_ctpp_designation_category_synonym/3]).
+:- use_module(m__eu_dora_ctpp_designation_citations, [implements/1]).
+
+statutory_figure(ten_per_cent_multiplier, cite(eu_reg_2024_1502_art_2_4)).
+statutory_figure(ten_per_cent_multiplier, cite(eu_reg_2024_1502_art_5_4)).
+statutory_figure(g_sii_minimum_count, cite(eu_reg_2024_1502_art_3_2)).
+statutory_figure(o_sii_minimum_count, cite(eu_reg_2024_1502_art_3_2)).
+statutory_figure(o_sii_score_threshold, cite(eu_reg_2024_1502_art_3_2)).
+statutory_figure(systemic_infrastructure_minimum_count, cite(eu_reg_2024_1502_art_3_3)).
+statutory_figure(systemic_other_minimum_count, cite(eu_reg_2024_1502_art_3_3)).
+
+dora_ctpp_designation_status_values([designation_not_applicable, not_an_ict_third_party_service_provider, step_1_sub_criteria_not_fulfilled, step_1_sub_criteria_fulfilled]).
+
+not_an_ict_third_party_service_provider.
+
+step_1_sub_criteria_not_fulfilled.
+
+step_1_sub_criteria_fulfilled.
+
+sub_criterion_2_1.
+
+sub_criterion_2_2.
+
+not_designated_as_critical.
+
+designation_not_applicable(financial_entity).
+designation_not_applicable(article_127_2_tfeu_oversight_framework).
+designation_not_applicable(ict_intra_group_service_provider).
+designation_not_applicable(single_member_state_provider).
+
+step_1_indicators(MetItems) :-
+    clausal_is_list(MetItems).
+
+sub_criteria_1_1_and_1_2([_|_]).
+
+sub_criterion_4_1([_|_]).
+
+sub_criterion_4_2([_|_]).
+
+lead_overseer(eba).
+lead_overseer(eiopa).
+lead_overseer(esma).
+
+lead_overseer_tied([_, _|_]).
+
+required([_|_]).
+
+indeterminate([_]).
+
+input_problems([_|_]).
+
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, value(Value)) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value).
+
+key_slot(Profile, ProfileKey, Slot) :-
+    key_state(Profile, ProfileKey, State),
+    state_slot(State, ProfileKey, Slot).
+
+state_slot(absent, ProfileKey, open(ProfileKey)).
+state_slot(value(Value), ProfileKey, known(Truth)) :-
+    key_truth(ProfileKey, Value, Truth).
+
+truth_conjunction(true, Truth, Truth).
+truth_conjunction(false, _, false).
+
+truth_disjunction(true, _, true).
+truth_disjunction(false, Truth, Truth).
+
+non_empty_truth([], false).
+non_empty_truth([_|_], true).
+
+provider_type_class(EntityType, financial_entity) :-
+    implements(eu_reg_2022_2554_art_2_2),
+    implements(eu_reg_2022_2554_art_2_4),
+    implements(eu_reg_2022_2554_art_3_32),
+    dora_ctpp_designation_financial_entity_type(EntityType, _).
+provider_type_class(ict_third_party_service_provider, ict_provider) :-
+    implements(eu_reg_2022_2554_art_3_19).
+provider_type_class(none_of_the_listed_types, not_an_ict_provider) :-
+    implements(eu_reg_2022_2554_art_3_19).
+
+category_main(Category, MainAtom) :-
+    implements(eu_reg_2022_2554_art_2_1),
+    findall(Synonym - SynonymMain, dora_ctpp_designation_category_synonym(Synonym, SynonymMain, _), SynonymPairs),
+    pairs_keys(SynonymPairs, Synonyms),
+    memberd_t(Category, Synonyms, IsSynonym),
+    synonym_main(IsSynonym, Category, SynonymPairs, MainAtom).
+
+synonym_main(false, Category, _, Category).
+synonym_main(true, Category, SynonymPairs, MainAtom) :-
+    member(Category - MainAtom, SynonymPairs).
+
+record_entry(category_share_figures(Category, EntitiesServed, EntitiesTotal, AssetsServed, AssetsTotal), entry(Category, [EntitiesServed, EntitiesTotal, AssetsServed, AssetsTotal])).
+record_entry(category_substitutability_figures(Category, WithoutAlternative, HighlyDifficult, EntitiesTotal), entry(Category, [WithoutAlternative, HighlyDifficult, EntitiesTotal])).
+
+entry_main(entry(Category, Figures), main_entry(MainAtom, Category, Figures)) :-
+    category_main(Category, MainAtom).
+
+pooled_categories(Records, Pooled) :-
+    implements(eu_reg_2022_2554_art_2_1),
+    maplist(record_entry, Records, Entries),
+    maplist(entry_main, Entries, MainEntries),
+    findall(MainAtom, member(main_entry(MainAtom, _, _), MainEntries), MainAtoms),
+    sort(MainAtoms, DistinctMainAtoms),
+    maplist(pool_main(MainEntries), DistinctMainAtoms, UnorderedPooled),
+    maplist(pooled_position_pair, UnorderedPooled, PositionPairs),
+    keysort(PositionPairs, SortedPairs),
+    pairs_values(SortedPairs, Pooled).
+
+pool_main(MainEntries, MainAtom, pooled(CategoryName, FigureSums)) :-
+    implements(eu_reg_2022_2554_art_2_1),
+    findall(Category - Figures, member(main_entry(MainAtom, Category, Figures), MainEntries), GroupPairs),
+    pairs_keys_values(GroupPairs, Categories, FigureLists),
+    memberd_t(MainAtom, Categories, HasMainAtom),
+    group_name(HasMainAtom, MainAtom, Categories, CategoryName),
+    pool_figure_lists(FigureLists, FigureSums).
+
+group_name(true, MainAtom, _, MainAtom).
+group_name(false, _, [Synonym], Synonym).
+
+pool_figure_lists([Figures], Figures).
+pool_figure_lists([FirstFigures, SecondFigures], FigureSums) :-
+    maplist(add_figures, FirstFigures, SecondFigures, FigureSums).
+
+add_figures(FirstFigure, SecondFigure, FigureSum) :-
+    FigureSum #= FirstFigure + SecondFigure.
+
+pooled_position_pair(pooled(CategoryName, FigureSums), Position - pooled(CategoryName, FigureSums)) :-
+    dora_ctpp_designation_shared_type(CategoryName, Position, _).
+
+share_truth(Numerator, Denominator, true) :-
+    implements(eu_reg_2024_1502_art_2_4),
+    implements(eu_reg_2024_1502_art_5_4),
+    Numerator * 10 #>= Denominator.
+share_truth(Numerator, Denominator, false) :-
+    implements(eu_reg_2024_1502_art_2_4),
+    implements(eu_reg_2024_1502_art_5_4),
+    Numerator * 10 #< Denominator.
+
+systemic_impact_categories(Records, ImpactCategories) :-
+    implements(eu_reg_2024_1502_art_2_4),
+    pooled_categories(Records, Pooled),
+    findall(CategoryName, impact_category(Pooled, CategoryName), ImpactCategories).
+
+impact_category(Pooled, CategoryName) :-
+    implements(eu_reg_2024_1502_art_2_2),
+    implements(eu_reg_2024_1502_art_2_3),
+    member(pooled(CategoryName, [EntitiesServed, EntitiesTotal, AssetsServed, AssetsTotal]), Pooled),
+    share_truth(EntitiesServed, EntitiesTotal, true),
+    share_truth(AssetsServed, AssetsTotal, true).
+
+substitutability_categories(Records, WithoutAlternativeCategories, HighlyDifficultCategories) :-
+    implements(eu_reg_2024_1502_art_5_4),
+    pooled_categories(Records, Pooled),
+    findall(CategoryName, without_alternative_category(Pooled, CategoryName), WithoutAlternativeCategories),
+    findall(CategoryName, highly_difficult_category(Pooled, CategoryName), HighlyDifficultCategories).
+
+without_alternative_category(Pooled, CategoryName) :-
+    implements(eu_reg_2024_1502_art_5_2),
+    member(pooled(CategoryName, [WithoutAlternative, _, EntitiesTotal]), Pooled),
+    share_truth(WithoutAlternative, EntitiesTotal, true).
+
+highly_difficult_category(Pooled, CategoryName) :-
+    implements(eu_reg_2024_1502_art_5_3),
+    member(pooled(CategoryName, [_, HighlyDifficult, EntitiesTotal]), Pooled),
+    share_truth(HighlyDifficult, EntitiesTotal, true).
+
+g_sii_truth(Count, true) :-
+    implements(eu_reg_2024_1502_art_3_2),
+    Count #>= 1.
+g_sii_truth(Count, false) :-
+    implements(eu_reg_2024_1502_art_3_2),
+    Count #< 1.
+
+o_sii_truth(Scores, Truth) :-
+    implements(eu_reg_2024_1502_art_3_2),
+    length(Scores, InstitutionCount),
+    o_sii_count_truth(InstitutionCount, CountTruth),
+    findall(Score, high_o_sii_score(Scores, Score), HighScores),
+    non_empty_truth(HighScores, ScoreTruth),
+    truth_disjunction(CountTruth, ScoreTruth, Truth).
+
+o_sii_count_truth(InstitutionCount, true) :-
+    implements(eu_reg_2024_1502_art_3_2),
+    InstitutionCount #>= 3.
+o_sii_count_truth(InstitutionCount, false) :-
+    implements(eu_reg_2024_1502_art_3_2),
+    InstitutionCount #< 3.
+
+high_o_sii_score(Scores, Score) :-
+    implements(eu_reg_2024_1502_art_3_2),
+    member(Score, Scores),
+    Score #> 3000.
+
+infrastructure_truth(Count, true) :-
+    implements(eu_reg_2024_1502_art_3_3),
+    Count #>= 1.
+infrastructure_truth(Count, false) :-
+    implements(eu_reg_2024_1502_art_3_3),
+    Count #< 1.
+
+other_systemic_truth(Count, true) :-
+    implements(eu_reg_2024_1502_art_3_3),
+    Count #>= 3.
+other_systemic_truth(Count, false) :-
+    implements(eu_reg_2024_1502_art_3_3),
+    Count #< 3.
+
+sub_criterion_2_1_truth(GlobalInstitutions, OtherInstitutions, Truth) :-
+    implements(eu_reg_2024_1502_art_3_2),
+    truth_disjunction(GlobalInstitutions, OtherInstitutions, Truth).
+
+sub_criterion_2_2_truth(InfrastructureEntities, OtherSystemicEntities, Truth) :-
+    implements(eu_reg_2024_1502_art_3_3),
+    truth_disjunction(InfrastructureEntities, OtherSystemicEntities, Truth).
+
+importance_outcome([GlobalInstitutions, OtherInstitutions, InfrastructureEntities, OtherSystemicEntities], Truth) :-
+    implements(eu_reg_2024_1502_art_3_1),
+    sub_criterion_2_1_truth(GlobalInstitutions, OtherInstitutions, SubCriterion21),
+    sub_criterion_2_2_truth(InfrastructureEntities, OtherSystemicEntities, SubCriterion22),
+    truth_conjunction(SubCriterion21, SubCriterion22, Truth).
+
+key_truth(provider_provides_ict_services_solely_in_one_member_state, Value, Value).
+key_truth(financial_entities_served_are_active_only_in_that_member_state, Value, Value).
+key_truth(systemic_impact_figures, Records, Truth) :-
+    systemic_impact_categories(Records, ImpactCategories),
+    non_empty_truth(ImpactCategories, Truth).
+key_truth(g_sii_served_count, Count, Truth) :-
+    g_sii_truth(Count, Truth).
+key_truth(o_sii_scores_of_o_siis_served, Scores, Truth) :-
+    o_sii_truth(Scores, Truth).
+key_truth(systemic_infrastructure_entities_served_count, Count, Truth) :-
+    infrastructure_truth(Count, Truth).
+key_truth(systemic_other_entities_served_count, Count, Truth) :-
+    other_systemic_truth(Count, Truth).
+key_truth(substitutability_figures, Records, Truth) :-
+    substitutability_categories(Records, WithoutAlternativeCategories, HighlyDifficultCategories),
+    append(WithoutAlternativeCategories, HighlyDifficultCategories, MeetingCategories),
+    non_empty_truth(MeetingCategories, Truth).
+
+criteria_last_step_outcome([SolelyOneMemberState, ActiveOnlyThere, Impact, GlobalInstitutions, OtherInstitutions, InfrastructureEntities, OtherSystemicEntities, Substitutability], Outcome) :-
+    implements(eu_reg_2024_1502_art_1_1),
+    implements(eu_reg_2022_2554_art_31_6),
+    implements(eu_reg_2022_2554_art_31_7),
+    truth_conjunction(SolelyOneMemberState, ActiveOnlyThere, SingleMemberState),
+    importance_outcome([GlobalInstitutions, OtherInstitutions, InfrastructureEntities, OtherSystemicEntities], Importance),
+    truth_conjunction(Impact, Importance, ImpactAndImportance),
+    truth_conjunction(ImpactAndImportance, Substitutability, StepOne),
+    last_step_outcome(SingleMemberState, StepOne, Outcome).
+
+last_step_outcome(true, _, single_member_state_provider) :-
+    implements(eu_reg_2022_2554_art_31_8_iv).
+last_step_outcome(false, true, fulfilled) :-
+    implements(eu_reg_2024_1502_art_1_2).
+last_step_outcome(false, false, not_fulfilled) :-
+    implements(eu_reg_2024_1502_art_1_2).
+
+indicator_outcome_pattern([Impact, GlobalInstitutions, OtherInstitutions, InfrastructureEntities, OtherSystemicEntities, Substitutability], indicator_pattern(Impact, SubCriterion21, SubCriterion22, Substitutability)) :-
+    implements(eu_reg_2024_1502_art_3_1),
+    sub_criterion_2_1_truth(GlobalInstitutions, OtherInstitutions, SubCriterion21),
+    sub_criterion_2_2_truth(InfrastructureEntities, OtherSystemicEntities, SubCriterion22).
+
+slot_truth(known(Truth), Truth).
+slot_truth(open(_), true).
+slot_truth(open(_), false).
+
+completion_outcome(OutcomeRule, Slots, Outcome) :-
+    maplist(slot_truth, Slots, Truths),
+    call(OutcomeRule, Truths, Outcome).
+
+completion_outcomes(OutcomeRule, Slots, Outcomes) :-
+    findall(Outcome, completion_outcome(OutcomeRule, Slots, Outcome), AllOutcomes),
+    sort(AllOutcomes, Outcomes).
+
+step_resolution(OutcomeRule, Slots, Resolution) :-
+    completion_outcomes(OutcomeRule, Slots, Outcomes),
+    outcomes_resolution(Outcomes, OutcomeRule, Slots, Resolution).
+
+outcomes_resolution([Outcome], _, _, settled(Outcome)).
+outcomes_resolution([_, _|_], OutcomeRule, Slots, missing(ProfileKey)) :-
+    changing_keys(Slots, OutcomeRule, Slots, Candidates),
+    first_deciding_candidate(Candidates, Deciding),
+    chosen_key(Deciding, Candidates, ProfileKey).
+
+changing_keys([], _, _, []).
+changing_keys([known(_)|Remaining], OutcomeRule, Slots, Candidates) :-
+    changing_keys(Remaining, OutcomeRule, Slots, Candidates).
+changing_keys([open(ProfileKey)|Remaining], OutcomeRule, Slots, Candidates) :-
+    can_change_truth(OutcomeRule, Slots, ProfileKey, CanChange),
+    decides_alone_truth(OutcomeRule, Slots, ProfileKey, DecidesAlone),
+    changing_keys(Remaining, OutcomeRule, Slots, LaterCandidates),
+    add_candidate(CanChange, ProfileKey, DecidesAlone, LaterCandidates, Candidates).
+
+add_candidate(false, _, _, LaterCandidates, LaterCandidates).
+add_candidate(true, ProfileKey, DecidesAlone, LaterCandidates, [candidate(ProfileKey, DecidesAlone)|LaterCandidates]).
+
+fixed_slots([], _, _, []).
+fixed_slots([known(Truth)|Slots], ProfileKey, Value, [known(Truth)|FixedSlots]) :-
+    fixed_slots(Slots, ProfileKey, Value, FixedSlots).
+fixed_slots([open(OtherKey)|Slots], ProfileKey, Value, [open(OtherKey)|FixedSlots]) :-
+    dif(OtherKey, ProfileKey),
+    fixed_slots(Slots, ProfileKey, Value, FixedSlots).
+fixed_slots([open(OtherKey)|Slots], ProfileKey, Value, [known(Value)|FixedSlots]) :-
+    OtherKey == ProfileKey,
+    fixed_slots(Slots, ProfileKey, Value, FixedSlots).
+
+completed_except([], _, []).
+completed_except([known(Truth)|Slots], ProfileKey, [known(Truth)|Partial]) :-
+    completed_except(Slots, ProfileKey, Partial).
+completed_except([open(OtherKey)|Slots], ProfileKey, [open(OtherKey)|Partial]) :-
+    OtherKey == ProfileKey,
+    completed_except(Slots, ProfileKey, Partial).
+completed_except([open(OtherKey)|Slots], ProfileKey, [known(Truth)|Partial]) :-
+    dif(OtherKey, ProfileKey),
+    member(Truth, [true, false]),
+    completed_except(Slots, ProfileKey, Partial).
+
+can_change_truth(OutcomeRule, Slots, ProfileKey, CanChange) :-
+    findall(Changed, flip_changes(OutcomeRule, Slots, ProfileKey, Changed), Flags),
+    memberd_t(true, Flags, CanChange).
+
+flip_changes(OutcomeRule, Slots, ProfileKey, Changed) :-
+    completed_except(Slots, ProfileKey, Partial),
+    fixed_slots(Partial, ProfileKey, true, WithTrue),
+    fixed_slots(Partial, ProfileKey, false, WithFalse),
+    completion_outcome(OutcomeRule, WithTrue, OutcomeWithTrue),
+    completion_outcome(OutcomeRule, WithFalse, OutcomeWithFalse),
+    outcome_difference(OutcomeWithTrue, OutcomeWithFalse, Changed).
+
+outcome_difference(FirstOutcome, SecondOutcome, false) :-
+    FirstOutcome == SecondOutcome.
+outcome_difference(FirstOutcome, SecondOutcome, true) :-
+    dif(FirstOutcome, SecondOutcome).
+
+decides_alone_truth(OutcomeRule, Slots, ProfileKey, DecidesAlone) :-
+    fixed_slots(Slots, ProfileKey, true, WithTrue),
+    completion_outcomes(OutcomeRule, WithTrue, OutcomesWithTrue),
+    single_outcome_truth(OutcomesWithTrue, SettledWithTrue),
+    fixed_slots(Slots, ProfileKey, false, WithFalse),
+    completion_outcomes(OutcomeRule, WithFalse, OutcomesWithFalse),
+    single_outcome_truth(OutcomesWithFalse, SettledWithFalse),
+    truth_disjunction(SettledWithTrue, SettledWithFalse, DecidesAlone).
+
+single_outcome_truth([_], true).
+single_outcome_truth([_, _|_], false).
+
+first_deciding_candidate([], none).
+first_deciding_candidate([candidate(ProfileKey, true)|_], deciding(ProfileKey)).
+first_deciding_candidate([candidate(_, false)|Candidates], Deciding) :-
+    first_deciding_candidate(Candidates, Deciding).
+
+chosen_key(deciding(ProfileKey), _, ProfileKey).
+chosen_key(none, [candidate(ProfileKey, _)|_], ProfileKey).
+
+ctpp_designation_criteria_status(Profile, input_problems([Problem|Problems]), []) :-
+    dora_ctpp_designation_input_problems(Profile, [Problem|Problems]).
+ctpp_designation_criteria_status(Profile, Result, Citations) :-
+    dora_ctpp_designation_input_problems(Profile, []),
+    key_state(Profile, dora_entity_type, TypeState),
+    entity_type_route(TypeState, Profile, Result, Citations).
+
+entity_type_route(absent, _, indeterminate([dora_entity_type]), []).
+entity_type_route(value(EntityType), Profile, Result, Citations) :-
+    provider_type_class(EntityType, TypeClass),
+    type_class_route(TypeClass, Profile, Result, Citations).
+
+type_class_route(financial_entity, _, designation_not_applicable(financial_entity), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_i)]) :-
+    implements(eu_reg_2022_2554_art_31_8_i).
+type_class_route(not_an_ict_provider, _, not_an_ict_third_party_service_provider, [cite(eu_reg_2022_2554_art_31_1_a)]) :-
+    implements(eu_reg_2022_2554_art_31_1_a).
+type_class_route(ict_provider, Profile, Result, Citations) :-
+    key_state(Profile, provider_subject_to_article_127_2_tfeu_oversight_framework, OversightState),
+    oversight_route(OversightState, Profile, Result, Citations).
+
+oversight_route(value(true), _, designation_not_applicable(article_127_2_tfeu_oversight_framework), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_ii)]) :-
+    implements(eu_reg_2022_2554_art_31_8_ii).
+oversight_route(absent, _, indeterminate([provider_subject_to_article_127_2_tfeu_oversight_framework]), []).
+oversight_route(value(false), Profile, Result, Citations) :-
+    key_state(Profile, provider_is_ict_intra_group_service_provider, IntraGroupState),
+    intra_group_route(IntraGroupState, Profile, Result, Citations).
+
+intra_group_route(value(true), _, designation_not_applicable(ict_intra_group_service_provider), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_iii)]) :-
+    implements(eu_reg_2022_2554_art_31_8_iii),
+    implements(eu_reg_2022_2554_art_3_20).
+intra_group_route(absent, _, indeterminate([provider_is_ict_intra_group_service_provider]), []).
+intra_group_route(value(false), Profile, Result, Citations) :-
+    maplist(key_slot(Profile), [provider_provides_ict_services_solely_in_one_member_state, financial_entities_served_are_active_only_in_that_member_state, systemic_impact_figures, g_sii_served_count, o_sii_scores_of_o_siis_served, systemic_infrastructure_entities_served_count, systemic_other_entities_served_count, substitutability_figures], Slots),
+    step_resolution(criteria_last_step_outcome, Slots, Resolution),
+    last_step_route(Resolution, Result, Citations).
+
+last_step_route(missing(ProfileKey), indeterminate([ProfileKey]), []).
+last_step_route(settled(single_member_state_provider), designation_not_applicable(single_member_state_provider), [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_iv)]) :-
+    implements(eu_reg_2022_2554_art_31_8_iv).
+last_step_route(settled(fulfilled), step_1_sub_criteria_fulfilled, [cite(eu_reg_2022_2554_art_31_1_a), cite(eu_reg_2022_2554_art_31_2), cite(eu_reg_2022_2554_art_31_3), cite(eu_reg_2024_1502_art_1_1), cite(eu_reg_2024_1502_art_1_2), cite(eu_reg_2024_1502_art_2_1), cite(eu_reg_2024_1502_art_2_4), cite(eu_reg_2024_1502_art_3_1), cite(eu_reg_2024_1502_art_3_2), cite(eu_reg_2024_1502_art_3_3), cite(eu_reg_2024_1502_art_5_1), cite(eu_reg_2024_1502_art_5_4)]) :-
+    implements(eu_reg_2024_1502_art_1_1).
+last_step_route(settled(not_fulfilled), step_1_sub_criteria_not_fulfilled, [cite(eu_reg_2022_2554_art_31_1_a), cite(eu_reg_2022_2554_art_31_2), cite(eu_reg_2022_2554_art_31_3), cite(eu_reg_2024_1502_art_1_1), cite(eu_reg_2024_1502_art_1_2), cite(eu_reg_2024_1502_art_2_1), cite(eu_reg_2024_1502_art_2_4), cite(eu_reg_2024_1502_art_3_1), cite(eu_reg_2024_1502_art_3_2), cite(eu_reg_2024_1502_art_3_3), cite(eu_reg_2024_1502_art_5_1), cite(eu_reg_2024_1502_art_5_4)]) :-
+    implements(eu_reg_2024_1502_art_1_2).
+
+ctpp_step_1_indicators(Profile, input_problems([Problem|Problems]), []) :-
+    dora_ctpp_designation_input_problems(Profile, [Problem|Problems]).
+ctpp_step_1_indicators(Profile, Result, Citations) :-
+    dora_ctpp_designation_input_problems(Profile, []),
+    maplist(key_slot(Profile), [systemic_impact_figures, g_sii_served_count, o_sii_scores_of_o_siis_served, systemic_infrastructure_entities_served_count, systemic_other_entities_served_count, substitutability_figures], Slots),
+    step_resolution(indicator_outcome_pattern, Slots, Resolution),
+    indicator_route(Resolution, Profile, Result, Citations).
+
+indicator_route(missing(ProfileKey), _, indeterminate([ProfileKey]), []).
+indicator_route(settled(indicator_pattern(_, SubCriterion21, SubCriterion22, _)), Profile, step_1_indicators(MetItems), [cite(eu_reg_2022_2554_art_31_2), cite(eu_reg_2022_2554_art_31_3), cite(eu_reg_2024_1502_art_1_1), cite(eu_reg_2024_1502_art_2_1), cite(eu_reg_2024_1502_art_2_2), cite(eu_reg_2024_1502_art_2_3), cite(eu_reg_2024_1502_art_2_4), cite(eu_reg_2024_1502_art_3_1), cite(eu_reg_2024_1502_art_3_2), cite(eu_reg_2024_1502_art_3_3), cite(eu_reg_2024_1502_art_5_1), cite(eu_reg_2024_1502_art_5_2), cite(eu_reg_2024_1502_art_5_3), cite(eu_reg_2024_1502_art_5_4)]) :-
+    implements(eu_reg_2024_1502_art_1_1),
+    indicator_met_items(Profile, SubCriterion21, SubCriterion22, MetItems).
+
+indicator_met_items(Profile, SubCriterion21, SubCriterion22, MetItems) :-
+    implements(eu_reg_2024_1502_art_1_1),
+    profile_get(Profile, systemic_impact_figures, ImpactRecords),
+    profile_get(Profile, substitutability_figures, SubstitutabilityRecords),
+    systemic_impact_categories(ImpactRecords, ImpactCategories),
+    substitutability_categories(SubstitutabilityRecords, WithoutAlternativeCategories, HighlyDifficultCategories),
+    category_item(sub_criteria_1_1_and_1_2, ImpactCategories, ImpactItems),
+    flag_item(sub_criterion_2_1, SubCriterion21, SubCriterion21Items),
+    flag_item(sub_criterion_2_2, SubCriterion22, SubCriterion22Items),
+    category_item(sub_criterion_4_1, WithoutAlternativeCategories, SubCriterion41Items),
+    category_item(sub_criterion_4_2, HighlyDifficultCategories, SubCriterion42Items),
+    append([ImpactItems, SubCriterion21Items, SubCriterion22Items, SubCriterion41Items, SubCriterion42Items], MetItems).
+
+category_item(_, [], []).
+category_item(Functor, [FirstCategory|OtherCategories], [Indicator]) :-
+    Indicator =.. [Functor, [FirstCategory|OtherCategories]].
+
+flag_item(_, false, []).
+flag_item(Indicator, true, [Indicator]).
+
+ctpp_lead_overseer(Profile, input_problems([Problem|Problems]), []) :-
+    dora_ctpp_designation_input_problems(Profile, [Problem|Problems]).
+ctpp_lead_overseer(Profile, Result, Citations) :-
+    dora_ctpp_designation_input_problems(Profile, []),
+    maplist(key_state(Profile), [total_assets_of_users_within_eba_responsibility, total_assets_of_users_within_eiopa_responsibility, total_assets_of_users_within_esma_responsibility], States),
+    lead_overseer_route(States, Result, Citations).
+
+lead_overseer_route([absent, _, _], indeterminate([total_assets_of_users_within_eba_responsibility]), []).
+lead_overseer_route([value(_), absent, _], indeterminate([total_assets_of_users_within_eiopa_responsibility]), []).
+lead_overseer_route([value(_), value(_), absent], indeterminate([total_assets_of_users_within_esma_responsibility]), []).
+lead_overseer_route([value(EbaSum), value(EiopaSum), value(EsmaSum)], Result, [cite(eu_reg_2022_2554_art_31_1_b)]) :-
+    implements(eu_reg_2022_2554_art_31_1_b),
+    largest_authorities(EbaSum, EiopaSum, EsmaSum, Authorities),
+    lead_overseer_result(Authorities, Result).
+
+largest_authorities(EbaSum, EiopaSum, EsmaSum, Authorities) :-
+    implements(eu_reg_2022_2554_art_31_1_b),
+    max_list([EbaSum, EiopaSum, EsmaSum], LargestSum),
+    findall(Authority, largest_authority([eba - EbaSum, eiopa - EiopaSum, esma - EsmaSum], LargestSum, Authority), Authorities).
+
+largest_authority(AuthoritySums, LargestSum, Authority) :-
+    implements(eu_reg_2022_2554_art_31_1_b),
+    member(Authority - AssetSum, AuthoritySums),
+    AssetSum #= LargestSum.
+
+lead_overseer_result([Authority], lead_overseer(Authority)) :-
+    implements(eu_reg_2022_2554_art_31_1_b).
+lead_overseer_result([FirstAuthority, SecondAuthority|OtherAuthorities], lead_overseer_tied([FirstAuthority, SecondAuthority|OtherAuthorities])) :-
+    implements(eu_reg_2022_2554_art_31_1_b).
+
+ctpp_designated_provider_duties(Profile, input_problems([Problem|Problems]), []) :-
+    dora_ctpp_designation_input_problems(Profile, [Problem|Problems]).
+ctpp_designated_provider_duties(Profile, Result, Citations) :-
+    dora_ctpp_designation_input_problems(Profile, []),
+    maplist(key_state(Profile), [provider_designated_as_critical, provider_is_part_of_a_group, provider_established_in_third_country], States),
+    duties_route(States, Result, Citations).
+
+duties_route([value(false), _, _], not_designated_as_critical, [cite(eu_reg_2022_2554_art_31_1_a)]) :-
+    implements(eu_reg_2022_2554_art_31_1_a).
+duties_route([absent, _, _], indeterminate([provider_designated_as_critical]), []).
+duties_route([value(true), absent, _], indeterminate([provider_is_part_of_a_group]), []).
+duties_route([value(true), value(_), absent], indeterminate([provider_established_in_third_country]), []).
+duties_route([value(true), value(PartOfGroup), value(ThirdCountry)], required(Duties), Citations) :-
+    implements(eu_reg_2022_2554_art_31_5),
+    group_duty(PartOfGroup, GroupDuties, GroupCitations),
+    third_country_duty(ThirdCountry, ThirdCountryDuties, ThirdCountryCitations),
+    append([GroupDuties, [notify_financial_entities_of_designation], ThirdCountryDuties], Duties),
+    append([GroupCitations, [cite(eu_reg_2022_2554_art_31_5)], ThirdCountryCitations], Citations).
+
+group_duty(true, [designate_coordination_point], [cite(eu_reg_2022_2554_art_31_4)]) :-
+    implements(eu_reg_2022_2554_art_31_4).
+group_duty(false, [], []) :-
+    implements(eu_reg_2022_2554_art_31_4).
+
+third_country_duty(true, [notify_lead_overseer_of_subsidiary_management_changes], [cite(eu_reg_2022_2554_art_31_13)]) :-
+    implements(eu_reg_2022_2554_art_31_13),
+    implements(eu_reg_2022_2554_art_31_12).
+third_country_duty(false, [], []) :-
+    implements(eu_reg_2022_2554_art_31_13).
+
+decide_dora_ctpp_designation(Profile, dora_ctpp_designation_verdict(Status, Citations)) :-
+    ctpp_designation_criteria_status(Profile, Status, Citations).
+
+dora_ctpp_designation_status(Profile, Status) :-
+    decide_dora_ctpp_designation(Profile, dora_ctpp_designation_verdict(Status, _Citations)).
+
+dora_ctpp_designation_decision_resolvable(Profile) :-
+    decide_dora_ctpp_designation(Profile, _Verdict).
+
+dora_ctpp_designation_checklist(Profile, [item(input_check, unmet(input_problems([Problem|Problems])), cite(eu_reg_2022_2554_art_31_1_a))]) :-
+    dora_ctpp_designation_input_problems(Profile, [Problem|Problems]).
+dora_ctpp_designation_checklist(Profile, Items) :-
+    dora_ctpp_designation_input_problems(Profile, []),
+    maplist(checklist_row(Profile), [provider_type, no_article_127_2_oversight_framework, not_ict_intra_group_service_provider, not_single_member_state_provider, systemic_impact, systemic_importance, substitutability], Items).
+
+checklist_row(Profile, RowName, item(RowName, Status, Citation)) :-
+    row_status(RowName, Profile, Status, Citation).
+
+row_status(provider_type, Profile, Status, cite(eu_reg_2022_2554_art_31_8_i)) :-
+    implements(eu_reg_2022_2554_art_31_8_i),
+    key_state(Profile, dora_entity_type, State),
+    type_row_status(State, Status).
+row_status(no_article_127_2_oversight_framework, Profile, Status, cite(eu_reg_2022_2554_art_31_8_ii)) :-
+    implements(eu_reg_2022_2554_art_31_8_ii),
+    key_state(Profile, provider_subject_to_article_127_2_tfeu_oversight_framework, State),
+    exclusion_row_status(State, provider_subject_to_article_127_2_tfeu_oversight_framework, article_127_2_tfeu_oversight_framework, Status).
+row_status(not_ict_intra_group_service_provider, Profile, Status, cite(eu_reg_2022_2554_art_31_8_iii)) :-
+    implements(eu_reg_2022_2554_art_31_8_iii),
+    key_state(Profile, provider_is_ict_intra_group_service_provider, State),
+    exclusion_row_status(State, provider_is_ict_intra_group_service_provider, ict_intra_group_service_provider, Status).
+row_status(not_single_member_state_provider, Profile, Status, cite(eu_reg_2022_2554_art_31_8_iv)) :-
+    implements(eu_reg_2022_2554_art_31_8_iv),
+    maplist(key_state(Profile), [provider_provides_ict_services_solely_in_one_member_state, financial_entities_served_are_active_only_in_that_member_state], States),
+    single_member_state_row_status(States, Status).
+row_status(systemic_impact, Profile, Status, cite(eu_reg_2024_1502_art_2_4)) :-
+    implements(eu_reg_2024_1502_art_2_4),
+    key_slot(Profile, systemic_impact_figures, Slot),
+    slot_row_status(Slot, no_category_with_both_shares_of_at_least_ten_per_cent, Status).
+row_status(systemic_importance, Profile, Status, cite(eu_reg_2024_1502_art_3_1)) :-
+    implements(eu_reg_2024_1502_art_3_1),
+    maplist(key_slot(Profile), [g_sii_served_count, o_sii_scores_of_o_siis_served, systemic_infrastructure_entities_served_count, systemic_other_entities_served_count], Slots),
+    step_resolution(importance_outcome, Slots, Resolution),
+    resolution_row_status(Resolution, sub_criteria_2_1_and_2_2_not_both_fulfilled, Status).
+row_status(substitutability, Profile, Status, cite(eu_reg_2024_1502_art_5_4)) :-
+    implements(eu_reg_2024_1502_art_5_4),
+    key_slot(Profile, substitutability_figures, Slot),
+    slot_row_status(Slot, no_category_with_a_substitutability_share_of_at_least_ten_per_cent, Status).
+
+type_row_status(absent, unknown([dora_entity_type])).
+type_row_status(value(EntityType), Status) :-
+    provider_type_class(EntityType, TypeClass),
+    class_row_status(TypeClass, Status).
+
+class_row_status(ict_provider, met).
+class_row_status(financial_entity, unmet(financial_entity)).
+class_row_status(not_an_ict_provider, unmet(not_an_ict_third_party_service_provider)).
+
+exclusion_row_status(absent, ProfileKey, _, unknown([ProfileKey])).
+exclusion_row_status(value(false), _, _, met).
+exclusion_row_status(value(true), _, Ground, unmet(Ground)).
+
+single_member_state_row_status([value(false), _], met).
+single_member_state_row_status([value(true), value(false)], met).
+single_member_state_row_status([absent, value(false)], met).
+single_member_state_row_status([value(true), value(true)], unmet(single_member_state_provider)).
+single_member_state_row_status([absent, absent], unknown([provider_provides_ict_services_solely_in_one_member_state])).
+single_member_state_row_status([absent, value(true)], unknown([provider_provides_ict_services_solely_in_one_member_state])).
+single_member_state_row_status([value(true), absent], unknown([financial_entities_served_are_active_only_in_that_member_state])).
+
+slot_row_status(open(ProfileKey), _, unknown([ProfileKey])).
+slot_row_status(known(true), _, met).
+slot_row_status(known(false), Reason, unmet(Reason)).
+
+resolution_row_status(settled(true), _, met).
+resolution_row_status(settled(false), Reason, unmet(Reason)).
+resolution_row_status(missing(ProfileKey), _, unknown([ProfileKey])).
+
+cleared_exclusions([attribute(dora_entity_type, ict_third_party_service_provider), attribute(provider_subject_to_article_127_2_tfeu_oversight_framework, false), attribute(provider_is_ict_intra_group_service_provider, false), attribute(provider_provides_ict_services_solely_in_one_member_state, false), attribute(financial_entities_served_are_active_only_in_that_member_state, false)]).
+
+fulfilling_figures([attribute(systemic_impact_figures, [category_share_figures(credit_institution, 2, 20, 3000, 30000)]), attribute(g_sii_served_count, 1), attribute(o_sii_scores_of_o_siis_served, []), attribute(systemic_infrastructure_entities_served_count, 1), attribute(systemic_other_entities_served_count, 0), attribute(substitutability_figures, [category_substitutability_figures(credit_institution, 2, 0, 20)])]).
+
+fulfilling_profile(Profile) :-
+    cleared_exclusions(Exclusions),
+    fulfilling_figures(Figures),
+    append(Exclusions, Figures, Profile).
+
+indicator_profile(ImpactRecords, [attribute(systemic_impact_figures, ImpactRecords), attribute(g_sii_served_count, 0), attribute(o_sii_scores_of_o_siis_served, [3001]), attribute(systemic_infrastructure_entities_served_count, 0), attribute(systemic_other_entities_served_count, 2), attribute(substitutability_figures, [category_substitutability_figures(central_counterparty, 0, 1, 10)])]).
+
+test(a_provider_meeting_every_step_1_sub_criterion_has_them_fulfilled) :-
+    fulfilling_profile(Profile),
+    findall(Result - Citations, ctpp_designation_criteria_status(Profile, Result, Citations), Answers),
+    Answers = [Answer - AnswerCitations],
+    Answer == step_1_sub_criteria_fulfilled,
+    length(AnswerCitations, 12).
+test(an_empty_profile_asks_for_the_type) :-
+    findall(Result - Citations, ctpp_designation_criteria_status([], Result, Citations), Answers),
+    Answers == [indeterminate([dora_entity_type]) - []].
+test(a_financial_entity_is_excluded_by_point_i) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, credit_institution)], Result, Citations),
+    Result == designation_not_applicable(financial_entity),
+    clausal_msort(Citations, [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_i)]).
+test(an_exempted_payment_institution_is_a_financial_entity) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, exempted_payment_institution)], designation_not_applicable(financial_entity), _).
+test(an_undertaking_of_none_of_the_types_is_no_provider) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, none_of_the_listed_types)], Result, Citations),
+    Result == not_an_ict_third_party_service_provider,
+    Citations == [cite(eu_reg_2022_2554_art_31_1_a)].
+test(a_provider_alone_asks_for_point_ii) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, ict_third_party_service_provider)], Result, []),
+    Result == indeterminate([provider_subject_to_article_127_2_tfeu_oversight_framework]).
+test(a_provider_under_an_article_127_2_framework_is_excluded) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, ict_third_party_service_provider), attribute(provider_subject_to_article_127_2_tfeu_oversight_framework, true)], Result, _),
+    Result == designation_not_applicable(article_127_2_tfeu_oversight_framework).
+test(an_intra_group_provider_is_excluded) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, ict_third_party_service_provider), attribute(provider_subject_to_article_127_2_tfeu_oversight_framework, false), attribute(provider_is_ict_intra_group_service_provider, true)], Result, _),
+    Result == designation_not_applicable(ict_intra_group_service_provider).
+test(with_every_last_step_key_absent_point_iv_is_asked_first) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, ict_third_party_service_provider), attribute(provider_subject_to_article_127_2_tfeu_oversight_framework, false), attribute(provider_is_ict_intra_group_service_provider, false)], Result, []),
+    Result == indeterminate([provider_provides_ict_services_solely_in_one_member_state]).
+test(once_point_iv_fails_the_impact_figures_are_asked) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, ict_third_party_service_provider), attribute(provider_subject_to_article_127_2_tfeu_oversight_framework, false), attribute(provider_is_ict_intra_group_service_provider, false), attribute(provider_provides_ict_services_solely_in_one_member_state, false)], Result, []),
+    Result == indeterminate([systemic_impact_figures]).
+test(an_empty_impact_list_settles_not_fulfilled_with_the_rest_absent) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, ict_third_party_service_provider), attribute(provider_subject_to_article_127_2_tfeu_oversight_framework, false), attribute(provider_is_ict_intra_group_service_provider, false), attribute(provider_provides_ict_services_solely_in_one_member_state, false), attribute(systemic_impact_figures, [])], Result, _),
+    Result == step_1_sub_criteria_not_fulfilled.
+test(a_single_member_state_provider_is_excluded) :-
+    ctpp_designation_criteria_status([attribute(dora_entity_type, ict_third_party_service_provider), attribute(provider_subject_to_article_127_2_tfeu_oversight_framework, false), attribute(provider_is_ict_intra_group_service_provider, false), attribute(provider_provides_ict_services_solely_in_one_member_state, true), attribute(financial_entities_served_are_active_only_in_that_member_state, true)], Result, Citations),
+    Result == designation_not_applicable(single_member_state_provider),
+    clausal_msort(Citations, [cite(eu_reg_2022_2554_art_31_8), cite(eu_reg_2022_2554_art_31_8_iv)]).
+test(a_failing_g_sii_count_asks_for_the_o_sii_scores) :-
+    cleared_exclusions(Exclusions),
+    append(Exclusions, [attribute(systemic_impact_figures, [category_share_figures(credit_institution, 2, 20, 3000, 30000)]), attribute(g_sii_served_count, 0), attribute(systemic_infrastructure_entities_served_count, 1), attribute(systemic_other_entities_served_count, 0), attribute(substitutability_figures, [category_substitutability_figures(credit_institution, 2, 0, 20)])], Profile),
+    ctpp_designation_criteria_status(Profile, Result, []),
+    Result == indeterminate([o_sii_scores_of_o_siis_served]).
+test(an_o_sii_score_of_exactly_3000_does_not_count) :-
+    cleared_exclusions(Exclusions),
+    append(Exclusions, [attribute(systemic_impact_figures, [category_share_figures(credit_institution, 2, 20, 3000, 30000)]), attribute(g_sii_served_count, 0), attribute(o_sii_scores_of_o_siis_served, [3000]), attribute(systemic_infrastructure_entities_served_count, 1), attribute(systemic_other_entities_served_count, 0), attribute(substitutability_figures, [category_substitutability_figures(credit_institution, 2, 0, 20)])], Profile),
+    ctpp_designation_criteria_status(Profile, step_1_sub_criteria_not_fulfilled, _).
+test(an_o_sii_score_above_3000_counts) :-
+    cleared_exclusions(Exclusions),
+    append(Exclusions, [attribute(systemic_impact_figures, [category_share_figures(credit_institution, 2, 20, 3000, 30000)]), attribute(g_sii_served_count, 0), attribute(o_sii_scores_of_o_siis_served, [3001]), attribute(systemic_infrastructure_entities_served_count, 1), attribute(systemic_other_entities_served_count, 0), attribute(substitutability_figures, [category_substitutability_figures(credit_institution, 2, 0, 20)])], Profile),
+    ctpp_designation_criteria_status(Profile, step_1_sub_criteria_fulfilled, _).
+test(an_input_problem_is_answered_first) :-
+    FloatCount is float(1),
+    findall(Result - Citations, ctpp_designation_criteria_status([attribute(g_sii_served_count, FloatCount)], Result, Citations), Answers),
+    Answers == [input_problems([wrong_type(g_sii_served_count)]) - []].
+test(an_empty_profile_asks_for_the_impact_figures) :-
+    ctpp_step_1_indicators([], Result, []),
+    Result == indeterminate([systemic_impact_figures]).
+test(a_main_atom_and_its_synonym_are_pooled) :-
+    indicator_profile([category_share_figures(payment_institution, 1, 10, 1, 10), category_share_figures(exempted_payment_institution, 1, 10, 1, 10)], Profile),
+    findall(Result, ctpp_step_1_indicators(Profile, Result, _), Results),
+    Results == [step_1_indicators([sub_criteria_1_1_and_1_2([payment_institution]), sub_criterion_2_1, sub_criterion_4_2([central_counterparty])])].
+test(pooling_can_bring_a_synonym_below_ten_per_cent) :-
+    indicator_profile([category_share_figures(payment_institution, 0, 10, 0, 10), category_share_figures(exempted_payment_institution, 1, 2, 1, 2)], Profile),
+    ctpp_step_1_indicators(Profile, Result, _),
+    Result == step_1_indicators([sub_criterion_2_1, sub_criterion_4_2([central_counterparty])]).
+test(a_synonym_given_alone_is_named_by_the_synonym) :-
+    indicator_profile([category_share_figures(exempted_payment_institution, 1, 2, 1, 2)], Profile),
+    ctpp_step_1_indicators(Profile, step_1_indicators([sub_criteria_1_1_and_1_2([exempted_payment_institution])|_]), _).
+test(categories_follow_the_shared_type_set) :-
+    indicator_profile([category_share_figures(trading_venue, 1, 1, 1, 1), category_share_figures(credit_institution, 5, 10, 5, 10)], Profile),
+    ctpp_step_1_indicators(Profile, step_1_indicators([sub_criteria_1_1_and_1_2(Categories)|_]), Citations),
+    Categories == [credit_institution, trading_venue],
+    length(Citations, 14).
+test(a_fulfilling_g_sii_count_settles_without_the_o_sii_scores) :-
+    ctpp_step_1_indicators([attribute(systemic_impact_figures, []), attribute(g_sii_served_count, 1), attribute(systemic_infrastructure_entities_served_count, 0), attribute(systemic_other_entities_served_count, 0), attribute(substitutability_figures, [])], Result, _),
+    Result == step_1_indicators([sub_criterion_2_1]).
+test(the_largest_sum_appoints_the_lead_overseer) :-
+    findall(Result - Citations, ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 10), attribute(total_assets_of_users_within_eiopa_responsibility, 5), attribute(total_assets_of_users_within_esma_responsibility, 3)], Result, Citations), Answers),
+    Answers == [lead_overseer(eba) - [cite(eu_reg_2022_2554_art_31_1_b)]].
+test(equal_largest_sums_are_tied) :-
+    ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 10), attribute(total_assets_of_users_within_eiopa_responsibility, 5), attribute(total_assets_of_users_within_esma_responsibility, 10)], Result, _),
+    Result == lead_overseer_tied([eba, esma]).
+test(the_first_absent_sum_is_asked) :-
+    ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 10)], Result, []),
+    Result == indeterminate([total_assets_of_users_within_eiopa_responsibility]).
+test(a_designated_provider_in_a_group_has_two_duties) :-
+    ctpp_designated_provider_duties([attribute(provider_designated_as_critical, true), attribute(provider_is_part_of_a_group, true), attribute(provider_established_in_third_country, false)], Result, Citations),
+    Result == required([designate_coordination_point, notify_financial_entities_of_designation]),
+    clausal_msort(Citations, [cite(eu_reg_2022_2554_art_31_4), cite(eu_reg_2022_2554_art_31_5)]).
+test(a_designated_third_country_provider_notifies_subsidiary_changes) :-
+    ctpp_designated_provider_duties([attribute(provider_designated_as_critical, true), attribute(provider_is_part_of_a_group, false), attribute(provider_established_in_third_country, true)], Result, _),
+    Result == required([notify_financial_entities_of_designation, notify_lead_overseer_of_subsidiary_management_changes]).
+test(a_provider_not_designated_has_no_duties) :-
+    findall(Result, ctpp_designated_provider_duties([attribute(provider_designated_as_critical, false)], Result, _), Results),
+    Results == [not_designated_as_critical].
+test(a_designated_provider_is_asked_about_its_group) :-
+    ctpp_designated_provider_duties([attribute(provider_designated_as_critical, true)], Result, []),
+    Result == indeterminate([provider_is_part_of_a_group]).
+test(the_checklist_of_a_fulfilling_provider_is_all_met) :-
+    fulfilling_profile(Profile),
+    dora_ctpp_designation_checklist(Profile, Items),
+    length(Items, 7),
+    findall(Status, member(item(_, Status, _), Items), Statuses),
+    sort(Statuses, [met]).
+test(the_facade_verdict_is_the_criteria_status) :-
+    fulfilling_profile(Profile),
+    decide_dora_ctpp_designation(Profile, dora_ctpp_designation_verdict(step_1_sub_criteria_fulfilled, _)).
+test(exactly_ten_per_cent_counts) :-
+    share_truth(2, 20, true).
+test(every_statutory_figure_is_cited) :-
+    findall(FigureName, statutory_figure(FigureName, cite(_)), FigureNames),
+    sort(FigureNames, DistinctFigureNames),
+    length(DistinctFigureNames, 6).
+
+test(a_fulfilling_provider_is_not_refused, fail) :-
+    fulfilling_profile(Profile),
+    ctpp_designation_criteria_status(Profile, step_1_sub_criteria_not_fulfilled, _).
+test(a_tie_names_no_single_overseer, fail) :-
+    ctpp_lead_overseer([attribute(total_assets_of_users_within_eba_responsibility, 10), attribute(total_assets_of_users_within_eiopa_responsibility, 5), attribute(total_assets_of_users_within_esma_responsibility, 10)], lead_overseer(_), _).
+test(a_provider_not_designated_is_not_required, fail) :-
+    ctpp_designated_provider_duties([attribute(provider_designated_as_critical, false)], required(_), _).
+test(below_ten_per_cent_does_not_count, fail) :-
+    share_truth(1, 11, true).

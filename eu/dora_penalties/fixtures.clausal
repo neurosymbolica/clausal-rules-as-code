@@ -1,0 +1,171 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dora_penalties.
+% A TOP-LAYER consumer: it imports the slice's PUBLIC predicate it calls.
+% Profile keys and subject ids are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). The order has no numeric threshold, so each
+% route is paired with a ONE-KEY near-miss control instead of an
+% at-boundary / just-below pair:
+%   option_used (A4)                   vs option_not_used (A5): the choice
+%                                         key flipped true -> false;
+%   option_used (A4)                   vs breach_not_criminally_penalised
+%                                         (A2): the breach key flipped;
+%   option_used (A4)                   vs breach_criminal_choice_absent
+%                                         (A3): the choice key removed;
+%   option_used (A4)                   vs breach_key_absent (A1): the
+%                                         breach key removed;
+%   option_used (A4)                   vs fact_key_unsure (A0): the breach
+%                                         key given unsure;
+%   option_used (A4)                   vs duplicate_breach_key and
+%                                         unknown_key_given (A0);
+%   option_not_used (C3)               vs judgement_unsure (C2): one
+%                                         judgement flipped to unsure;
+%   option_not_used (D3, L3, full P4)  vs no_criminal_penalties_laid_down
+%                                         (D2, L2, P4 without point (d)
+%                                         and without the extension).
+% Fixtures carry no provenance markers.
+% =====================================================================
+
+:- module(fixtures, [
+    dora_penalties_subject/1,
+    dora_penalties_profile_for/2,
+    dora_penalties_assess/2
+]).
+
+:- use_module(eu/dora_penalties/dora_penalties, [decide_dora_penalties/2]).
+
+% ---- Subject registry ------------------------------------------------
+dora_penalties_subject(option_used).
+dora_penalties_subject(option_not_used).
+dora_penalties_subject(breach_not_criminally_penalised).
+dora_penalties_subject(breach_criminal_choice_absent).
+dora_penalties_subject(breach_key_absent).
+dora_penalties_subject(fact_key_unsure).
+dora_penalties_subject(duplicate_breach_key).
+dora_penalties_subject(unknown_key_given).
+dora_penalties_subject(judgement_unsure).
+dora_penalties_subject(no_criminal_penalties_laid_down).
+
+% ---- Shared parts of the profiles -------------------------------------
+% The four other facts, all true.
+other_facts([
+    attribute(member_state_laid_down_criminal_penalties_for_breaches, true),
+    attribute(national_law_permits_requiring_data_traffic_records, true),
+    attribute(measures_applied_to_legal_person, true),
+    attribute(decision_imposes_art_50_2_c_measure, true)
+]).
+
+% The seven Article 51(2) judgements, all settled.
+settled_judgements([
+    attribute(breach_materiality_gravity_duration_relevant, true),
+    attribute(degree_of_responsibility_relevant, false),
+    attribute(financial_strength_relevant, true),
+    attribute(profits_gained_or_losses_avoided_relevant, false),
+    attribute(third_party_losses_relevant, false),
+    attribute(cooperation_with_authority_relevant, true),
+    attribute(previous_breaches_relevant, true)
+]).
+
+% The same judgements with point (b) unsure.
+unsure_judgements([
+    attribute(breach_materiality_gravity_duration_relevant, true),
+    attribute(degree_of_responsibility_relevant, unsure),
+    attribute(financial_strength_relevant, true),
+    attribute(profits_gained_or_losses_avoided_relevant, false),
+    attribute(third_party_losses_relevant, false),
+    attribute(cooperation_with_authority_relevant, true),
+    attribute(previous_breaches_relevant, true)
+]).
+
+with_settled_rest(OptionFacts, Profile) :-
+    other_facts(OtherFacts),
+    settled_judgements(Judgements),
+    append([OptionFacts, OtherFacts, Judgements], Profile).
+
+% ---- Profiles --------------------------------------------------------
+% A4: the option of Art 52(1) applies.
+dora_penalties_profile_for(option_used, Profile) :-
+    with_settled_rest([
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true)
+    ], Profile).
+
+% A5: criminally penalised, the option not used.
+dora_penalties_profile_for(option_not_used, Profile) :-
+    with_settled_rest([
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, false)
+    ], Profile).
+
+% A2: not criminally penalised; the choice is present but not read.
+dora_penalties_profile_for(breach_not_criminally_penalised, Profile) :-
+    with_settled_rest([
+        attribute(breach_subject_to_criminal_penalties_under_national_law, false),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true)
+    ], Profile).
+
+% A3: criminally penalised, the choice absent.
+dora_penalties_profile_for(breach_criminal_choice_absent, Profile) :-
+    with_settled_rest([
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true)
+    ], Profile).
+
+% A1: the breach key absent.
+dora_penalties_profile_for(breach_key_absent, Profile) :-
+    with_settled_rest([
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true)
+    ], Profile).
+
+% A0: unsure on a crisp fact key is wrong_type.
+dora_penalties_profile_for(fact_key_unsure, Profile) :-
+    with_settled_rest([
+        attribute(breach_subject_to_criminal_penalties_under_national_law, unsure),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true)
+    ], Profile).
+
+% A0: the breach key given twice.
+dora_penalties_profile_for(duplicate_breach_key, Profile) :-
+    with_settled_rest([
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true),
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true)
+    ], Profile).
+
+% A0: a key outside the contract.
+dora_penalties_profile_for(unknown_key_given, Profile) :-
+    with_settled_rest([
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, true),
+        attribute(colour, blue)
+    ], Profile).
+
+% C2: option not used, the Art 51(2)(b) appraisal unsure.
+dora_penalties_profile_for(judgement_unsure, Profile) :-
+    other_facts(OtherFacts),
+    unsure_judgements(Judgements),
+    append([[
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, false)
+    ], OtherFacts, Judgements], Profile).
+
+% D2, L2, P4 short: no criminal penalties laid down, no data traffic
+% records, no legal person, no point (c) decision.
+dora_penalties_profile_for(no_criminal_penalties_laid_down, Profile) :-
+    settled_judgements(Judgements),
+    append([[
+        attribute(breach_subject_to_criminal_penalties_under_national_law, true),
+        attribute(member_state_chose_no_administrative_rules_for_criminally_penalised_breaches, false),
+        attribute(member_state_laid_down_criminal_penalties_for_breaches, false),
+        attribute(national_law_permits_requiring_data_traffic_records, false),
+        attribute(measures_applied_to_legal_person, false),
+        attribute(decision_imposes_art_50_2_c_measure, false)
+    ], Judgements], Profile).
+
+% ---- Convenience wrapper ---------------------------------------------
+dora_penalties_assess(Subject, Result) :-
+    dora_penalties_profile_for(Subject, Profile),
+    decide_dora_penalties(Profile, Result).
+
+:- end_module(fixtures).

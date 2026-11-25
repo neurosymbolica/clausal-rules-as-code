@@ -1,287 +1,475 @@
 % SPDX-License-Identifier: EUPL-1.2
-:- module(m__eu_ai_act_serious_incident_reporting_serious_incident_reporting, [decide_serious_incident_reporting/2, serious_incident_reporting_status/2, serious_incident_reporting_checklist/2, serious_incident_reporting_decision_resolvable/1, serious_incident_reporting_status_values/1, serious_incident_reporting_duty_ladder/4, serious_incident_reporting_timeliness_ladder/5]).
+:- module(m__eu_ai_act_serious_incident_reporting_serious_incident_reporting, [serious_incident_report_duty/4, serious_incident_report_timeliness/5, decide_serious_incident_reporting/2, serious_incident_reporting_status/2, serious_incident_reporting_checklist/2, serious_incident_reporting_decision_resolvable/1, serious_incident_reporting_status_values/1]).
 :- use_module(library(lists)).
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_lists_extra, [last/2]).
-:- use_module(clausal_lists, [msort/2]).
+:- use_module(library(error), [must_be/2]).
+:- use_module(clausal_lists_extra, [subtract/3]).
 :- use_module(library(clpz)).
+:- use_module(library(reif), [memberd_t/3]).
 :- use_module(clausal_datetime, [timedelta/3, date_add/3]).
-:- use_module(clausal_dates, [days_between/3]).
 :- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
-:- use_module(m__eu_ai_act_serious_incident_reporting_kernel, [serious_incident_reporting_input_problems/2, calendar_date_t/2]).
+:- use_module(m__eu_ai_act_serious_incident_reporting_kernel, [serious_incident_reporting_input_problems/2]).
 :- use_module(m__eu_ai_act_serious_incident_reporting_citations, [implements/1]).
 
 chapter_iii_application_date(annex_iii_high_risk, date(2027, 12, 2), cite(eu_reg_2024_1689_art_113_c_i)).
 chapter_iii_application_date(annex_i_high_risk, date(2028, 8, 2), cite(eu_reg_2024_1689_art_113_c_ii)).
 
-public_authority_compliance_date(date(2030, 8, 2), cite(eu_reg_2024_1689_art_111_2)).
+public_authorities_compliance_date(date(2030, 8, 2), cite(eu_reg_2024_1689_art_111_2)).
 
-reporting_period(widespread_or_critical_infrastructure, 2, cite(eu_reg_2024_1689_art_73_3)).
+reporting_period(critical_infrastructure_or_widespread_infringement, 2, cite(eu_reg_2024_1689_art_73_3)).
 reporting_period(death_of_a_person, 10, cite(eu_reg_2024_1689_art_73_4)).
-reporting_period(general_limit, 15, cite(eu_reg_2024_1689_art_73_2)).
-
-report_recipient(false, market_surveillance_authority_of_member_state_where_incident_occurred, [], cite(eu_reg_2024_1689_art_73_1)).
-report_recipient(true, national_competent_authority_chosen_by_member_state_where_incident_occurred, [cite(eu_reg_2024_1689_art_73_10)], cite(eu_reg_2024_1689_art_73_10)).
+reporting_period(other_serious_incident, 15, cite(eu_reg_2024_1689_art_73_2)).
 
 follow_up_duties([perform_necessary_investigations_without_delay, risk_assessment_of_the_incident, corrective_action, cooperate_with_competent_authorities, inform_authorities_before_altering_the_system], cite(eu_reg_2024_1689_art_73_6)).
 
-serious_incident_reporting_status_values([report_due, not_applicable_on_date, not_a_high_risk_ai_system, not_covered_placed_before_application_date, not_a_serious_incident, not_a_reportable_incident, report_in_time, report_after_time_limit, report_not_immediate, indeterminate]).
+referral_row(significant_change_in_design_since_that_date, cite(eu_reg_2024_1689_art_111_2)).
+referral_row(intended_to_be_used_by_public_authorities, cite(eu_reg_2024_1689_art_111_2)).
+referral_row(provider_subject_to_equivalent_union_reporting_obligations, cite(eu_reg_2024_1689_art_73_9)).
+referral_row(widespread_infringement, cite(eu_reg_2024_1689_art_3_61)).
+referral_row(report_made_immediately, cite(eu_reg_2024_1689_art_73_2)).
 
-key_value(Profile, ProfileKey, absent) :-
-    profile_lacks(Profile, ProfileKey).
-key_value(Profile, ProfileKey, StateValue) :-
-    profile_has(Profile, ProfileKey),
-    profile_get(Profile, ProfileKey, StateValue).
+root_key_order([high_risk_classification, placed_before_chapter_iii_application_date, significant_change_in_design_since_that_date, intended_to_be_used_by_public_authorities, medical_device_or_safety_component_of_one, provider_subject_to_equivalent_union_reporting_obligations, harm_to_health, critical_infrastructure_disruption, fundamental_rights_obligations_infringed, serious_harm_to_property_or_environment, widespread_infringement, report_made_immediately, system_under_the_exclusive_competence_of_the_ai_office]).
 
-first_absent_key([MissingKey - absent|_], MissingKey).
-first_absent_key([_ - StateValue|RemainingStates], MissingKey) :-
-    dif(StateValue, absent),
-    first_absent_key(RemainingStates, MissingKey).
+query_judgement_keys(duty(_), [significant_change_in_design_since_that_date, intended_to_be_used_by_public_authorities, provider_subject_to_equivalent_union_reporting_obligations, widespread_infringement]).
+query_judgement_keys(timeliness(_, _), [significant_change_in_design_since_that_date, intended_to_be_used_by_public_authorities, provider_subject_to_equivalent_union_reporting_obligations, widespread_infringement, report_made_immediately]).
 
-tri_or([], false).
-tri_or([StateValue|RemainingStates], Result) :-
-    tri_or(RemainingStates, RemainingResult),
-    tri_or_step(StateValue, RemainingResult, Result).
+no_duty_answer(not_applicable_on_date).
+no_duty_answer(not_a_high_risk_ai_system).
+no_duty_answer(not_covered_placed_before_application_date).
+no_duty_answer(not_a_serious_incident).
+no_duty_answer(not_a_reportable_incident).
 
-tri_or_step(true, _, true).
-tri_or_step(false, RemainingResult, RemainingResult).
-tri_or_step(absent, true, true).
-tri_or_step(absent, false, absent).
-tri_or_step(absent, absent, absent).
+serious_incident_reporting_status_values([not_applicable_on_date, not_a_high_risk_ai_system, not_covered_placed_before_application_date, not_a_serious_incident, not_a_reportable_incident, report_in_time, report_after_time_limit, report_not_immediate]).
 
-date_order(GivenDate, BoundaryDate, before) :-
-    implements(eu_reg_2024_1689_art_113),
-    days_between(BoundaryDate, GivenDate, ElapsedDays),
-    ElapsedDays #> 0.
-date_order(GivenDate, BoundaryDate, on_or_after) :-
-    implements(eu_reg_2024_1689_art_113),
-    days_between(BoundaryDate, GivenDate, ElapsedDays),
-    ElapsedDays #< 1.
+serious_incident_report_duty(Profile, AwarenessDate, Duty, Citations) :-
+    serious_incident_reporting_input_problems(Profile, ProfileProblems),
+    date_valid_t(AwarenessDate, AwarenessValid),
+    date_problems(AwarenessValid, awareness_date, AwarenessProblems),
+    append(ProfileProblems, AwarenessProblems, Problems),
+    answer_after_check(Problems, duty(AwarenessDate), Profile, Duty, Citations).
 
-last_reporting_day(AwarenessDate, PeriodDays, LastDay) :-
+serious_incident_report_timeliness(Profile, AwarenessDate, ReportDate, Verdict, Citations) :-
+    serious_incident_reporting_input_problems(Profile, ProfileProblems),
+    date_valid_t(AwarenessDate, AwarenessValid),
+    date_problems(AwarenessValid, awareness_date, AwarenessProblems),
+    date_valid_t(ReportDate, ReportValid),
+    date_problems(ReportValid, report_date, ReportProblems),
+    append([ProfileProblems, AwarenessProblems, ReportProblems], Problems),
+    answer_after_check(Problems, timeliness(AwarenessDate, ReportDate), Profile, Verdict, Citations).
+
+answer_after_check([Problem|Problems], _, _, input_problems([Problem|Problems]), []).
+answer_after_check([], Query, Profile, Answer, Citations) :-
+    unsure_rule(Query, Profile, Answer, Citations).
+
+date_problems(true, _, []).
+date_problems(false, Name, [wrong_type(Name)]).
+
+date_valid_t(Term, false) :-
+    var(Term).
+date_valid_t(Term, false) :-
+    nonvar(Term),
+    Term \= date(_, _, _).
+date_valid_t(Term, Truth) :-
+    nonvar(Term),
+    Term = date(Year, Month, Day),
+    integer_t(Year, YearInteger),
+    integer_t(Month, MonthInteger),
+    integer_t(Day, DayInteger),
+    truth_and(YearInteger, MonthInteger, YearMonthInteger),
+    truth_and(YearMonthInteger, DayInteger, AllIntegers),
+    calendar_day_t(AllIntegers, Year, Month, Day, Truth).
+
+integer_t(Value, Truth) :-
+    catch(integer_truth(Value, Truth), _, Truth = false).
+
+integer_truth(Value, true) :-
+    must_be(integer, Value).
+
+calendar_day_t(false, _, _, _, false).
+calendar_day_t(true, Year, Month, Day, Truth) :-
+    in_range_t(Year, 1, 9999, YearInRange),
+    in_range_t(Month, 1, 12, MonthInRange),
+    truth_and(YearInRange, MonthInRange, YearMonthInRange),
+    day_in_month_t(YearMonthInRange, Year, Month, Day, Truth).
+
+day_in_month_t(false, _, _, _, false).
+day_in_month_t(true, Year, Month, Day, Truth) :-
+    leap_year_t(Year, Leap),
+    month_length(Month, Leap, MonthDays),
+    in_range_t(Day, 1, MonthDays, Truth).
+
+in_range_t(Value, Low, High, true) :-
+    Value #>= Low,
+    Value #=< High.
+in_range_t(Value, Low, _, false) :-
+    Value #< Low.
+in_range_t(Value, _, High, false) :-
+    Value #> High.
+
+leap_year_t(Year, true) :-
+    Year mod 400 #= 0.
+leap_year_t(Year, true) :-
+    Year mod 4 #= 0,
+    Year mod 100 #\= 0.
+leap_year_t(Year, false) :-
+    Year mod 4 #\= 0.
+leap_year_t(Year, false) :-
+    Year mod 100 #= 0,
+    Year mod 400 #\= 0.
+
+month_length(1, _, 31).
+month_length(2, true, 29).
+month_length(2, false, 28).
+month_length(3, _, 31).
+month_length(4, _, 30).
+month_length(5, _, 31).
+month_length(6, _, 30).
+month_length(7, _, 31).
+month_length(8, _, 31).
+month_length(9, _, 30).
+month_length(10, _, 31).
+month_length(11, _, 30).
+month_length(12, _, 31).
+
+date_key(date(Year, Month, Day), Key) :-
+    Key #= Year * 10000 + Month * 100 + Day.
+
+date_reached_t(Date, Threshold, Truth) :-
+    date_key(Date, DateKey),
+    date_key(Threshold, ThresholdKey),
+    key_reached_t(DateKey, ThresholdKey, Truth).
+
+key_reached_t(DateKey, ThresholdKey, true) :-
+    DateKey #>= ThresholdKey.
+key_reached_t(DateKey, ThresholdKey, false) :-
+    DateKey #< ThresholdKey.
+
+date_later_t(Date, Threshold, Truth) :-
+    date_key(Date, DateKey),
+    date_key(Threshold, ThresholdKey),
+    key_later_t(DateKey, ThresholdKey, Truth).
+
+key_later_t(DateKey, ThresholdKey, true) :-
+    DateKey #> ThresholdKey.
+key_later_t(DateKey, ThresholdKey, false) :-
+    DateKey #=< ThresholdKey.
+
+last_day(AwarenessDate, Days, LastDay) :-
     implements(eu_reg_2024_1689_art_73_2),
-    timedelta(PeriodDays, 0, ReportingPeriod),
+    timedelta(Days, 0, ReportingPeriod),
     date_add(AwarenessDate, ReportingPeriod, LastDay).
 
-report_order(ReportDate, LastDay, after) :-
-    implements(eu_reg_2024_1689_art_73_2),
-    days_between(ReportDate, LastDay, ElapsedDays),
-    ElapsedDays #> 0.
-report_order(ReportDate, LastDay, on_or_before) :-
-    implements(eu_reg_2024_1689_art_73_2),
-    days_between(ReportDate, LastDay, ElapsedDays),
-    ElapsedDays #< 1.
+key_value(Profile, Key, Value) :-
+    profile_has(Profile, Key),
+    profile_get(Profile, Key, Value).
+key_value(Profile, Key, absent) :-
+    profile_lacks(Profile, Key).
 
-serious_incident_reporting_duty_ladder(Profile, AwarenessDate, DutyAnswer, Citations) :-
+key_pairs(Profile, Keys, Pairs) :-
+    maplist(key_pair(Profile), Keys, Pairs).
+
+key_pair(Profile, Key, Key - Value) :-
+    key_value(Profile, Key, Value).
+
+same_value_t(Left, Right, true) :-
+    Left == Right.
+same_value_t(Left, Right, false) :-
+    Left \== Right.
+
+truth_and(true, Truth, Truth).
+truth_and(false, _, false).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+first_absent([Key - absent|_], Key).
+first_absent([_ - Value|Pairs], Key) :-
+    dif(Value, absent),
+    first_absent(Pairs, Key).
+
+absent_among_t([], false).
+absent_among_t([_ - Value|Pairs], Truth) :-
+    same_value_t(Value, absent, Here),
+    absent_among_t(Pairs, Later),
+    truth_or(Here, Later, Truth).
+
+first_in_order([Candidate|Candidates], Keys, Key) :-
+    memberd_t(Candidate, Keys, Found),
+    first_pick(Found, Candidate, Candidates, Keys, Key).
+
+first_pick(true, Candidate, _, _, Candidate).
+first_pick(false, _, Candidates, Keys, Key) :-
+    first_in_order(Candidates, Keys, Key).
+
+ladder(Profile, AwarenessDate, Duty, Citations) :-
     implements(eu_reg_2024_1689_art_113_c),
-    chapter_iii_application_date(annex_iii_high_risk, FirstDate, _),
-    date_order(AwarenessDate, FirstDate, DateOrder),
-    general_date_route(DateOrder, Profile, AwarenessDate, DutyAnswer, Citations).
+    implements(eu_reg_2024_1689_art_113),
+    chapter_iii_application_date(annex_iii_high_risk, EarliestDate, EarliestCite),
+    date_reached_t(AwarenessDate, EarliestDate, Reached),
+    ladder_from_date(Reached, EarliestCite, Profile, AwarenessDate, Duty, Citations).
 
-general_date_route(before, _, _, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i)]) :-
+ladder_from_date(false, EarliestCite, _, _, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), EarliestCite]) :-
     implements(eu_reg_2024_1689_art_113_c_i).
-general_date_route(on_or_after, Profile, AwarenessDate, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_1),
+ladder_from_date(true, _, Profile, AwarenessDate, Duty, Citations) :-
     key_value(Profile, high_risk_classification, Classification),
-    classification_route(Classification, Profile, AwarenessDate, DutyAnswer, Citations).
+    classification_step(Classification, Profile, AwarenessDate, Duty, Citations).
 
-classification_route(absent, _, _, indeterminate([high_risk_classification]), []).
-classification_route(not_high_risk, _, _, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_73_1)]) :-
+classification_step(absent, _, _, indeterminate([high_risk_classification]), []).
+classification_step(not_high_risk, _, _, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_73_1)]) :-
     implements(eu_reg_2024_1689_art_73_1).
-classification_route(annex_iii_high_risk, Profile, AwarenessDate, DutyAnswer, Citations) :-
+classification_step(annex_i_high_risk, Profile, AwarenessDate, Duty, Citations) :-
+    implements(eu_reg_2024_1689_art_113_c_ii),
+    chapter_iii_application_date(annex_i_high_risk, ApplicationDate, ApplicationCite),
+    date_reached_t(AwarenessDate, ApplicationDate, Reached),
+    annex_i_step(Reached, ApplicationCite, Profile, AwarenessDate, Duty, Citations).
+classification_step(annex_iii_high_risk, Profile, AwarenessDate, Duty, Citations) :-
     implements(eu_reg_2024_1689_art_113_c_i),
-    coverage_step(annex_iii_high_risk, Profile, AwarenessDate, DutyAnswer, Citations).
-classification_route(annex_i_high_risk, Profile, AwarenessDate, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_113_c_ii),
-    chapter_iii_application_date(annex_i_high_risk, ClassDate, _),
-    date_order(AwarenessDate, ClassDate, DateOrder),
-    annex_i_date_route(DateOrder, Profile, AwarenessDate, DutyAnswer, Citations).
+    coverage_step(annex_iii_high_risk, Profile, AwarenessDate, Duty, Citations).
 
-annex_i_date_route(before, _, _, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]) :-
+annex_i_step(false, ApplicationCite, _, _, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), ApplicationCite]) :-
     implements(eu_reg_2024_1689_art_113_c_ii).
-annex_i_date_route(on_or_after, Profile, AwarenessDate, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_113_c_ii),
-    coverage_step(annex_i_high_risk, Profile, AwarenessDate, DutyAnswer, Citations).
+annex_i_step(true, _, Profile, AwarenessDate, Duty, Citations) :-
+    coverage_step(annex_i_high_risk, Profile, AwarenessDate, Duty, Citations).
 
-coverage_step(Classification, Profile, AwarenessDate, DutyAnswer, Citations) :-
+coverage_step(Classification, Profile, AwarenessDate, Duty, Citations) :-
     implements(eu_reg_2024_1689_art_111_2),
-    key_value(Profile, placed_before_chapter_iii_application_date, PlacedEarly),
-    key_value(Profile, significant_change_in_design_since_that_date, SignificantChange),
-    public_authority_value(AwarenessDate, Profile, PublicAuthority),
-    coverage_outcome(PlacedEarly, SignificantChange, PublicAuthority, Outcome),
-    coverage_route(Outcome, Classification, Profile, AwarenessDate, [placed_before_chapter_iii_application_date - PlacedEarly, significant_change_in_design_since_that_date - SignificantChange, intended_to_be_used_by_public_authorities - PublicAuthority], DutyAnswer, Citations).
+    key_value(Profile, placed_before_chapter_iii_application_date, Placed),
+    key_value(Profile, significant_change_in_design_since_that_date, Changed),
+    key_value(Profile, intended_to_be_used_by_public_authorities, Intended),
+    public_authorities_compliance_date(ComplianceDate, _),
+    date_reached_t(AwarenessDate, ComplianceDate, ComplianceReached),
+    coverage(Placed, Changed, ComplianceReached, Intended, Coverage),
+    coverage_route(Coverage, Classification, Profile, AwarenessDate, Duty, Citations).
 
-public_authority_value(AwarenessDate, _, false) :-
+coverage(Placed, Changed, ComplianceReached, Intended, Coverage) :-
     implements(eu_reg_2024_1689_art_111_2),
-    public_authority_compliance_date(ComplianceDate, _),
-    date_order(AwarenessDate, ComplianceDate, before).
-public_authority_value(AwarenessDate, Profile, PublicAuthority) :-
+    covered_t(Placed, Changed, ComplianceReached, Intended, Covered),
+    not_covered_t(Placed, Changed, ComplianceReached, Intended, NotCovered),
+    coverage_from(Covered, NotCovered, Placed, Changed, ComplianceReached, Intended, Coverage).
+
+covered_t(Placed, Changed, ComplianceReached, Intended, Truth) :-
     implements(eu_reg_2024_1689_art_111_2),
-    public_authority_compliance_date(ComplianceDate, _),
-    date_order(AwarenessDate, ComplianceDate, on_or_after),
-    key_value(Profile, intended_to_be_used_by_public_authorities, PublicAuthority).
+    same_value_t(Placed, false, PlacedLater),
+    same_value_t(Changed, true, ChangedSignificantly),
+    same_value_t(ComplianceReached, true, AfterCompliance),
+    same_value_t(Intended, true, ForPublicAuthorities),
+    truth_and(AfterCompliance, ForPublicAuthorities, PublicAuthorityRoute),
+    truth_or(PlacedLater, ChangedSignificantly, EarlyRoutes),
+    truth_or(EarlyRoutes, PublicAuthorityRoute, Truth).
 
-coverage_outcome(false, _, _, covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(true, true, _, covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(true, false, true, covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(true, false, false, not_covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(true, false, absent, missing).
-coverage_outcome(true, absent, true, covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(true, absent, false, missing).
-coverage_outcome(true, absent, absent, missing).
-coverage_outcome(absent, true, _, covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(absent, false, true, covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(absent, false, false, missing).
-coverage_outcome(absent, false, absent, missing).
-coverage_outcome(absent, absent, true, covered) :-
-    implements(eu_reg_2024_1689_art_111_2).
-coverage_outcome(absent, absent, false, missing).
-coverage_outcome(absent, absent, absent, missing).
+not_covered_t(Placed, Changed, ComplianceReached, Intended, Truth) :-
+    implements(eu_reg_2024_1689_art_111_2),
+    same_value_t(Placed, true, PlacedEarly),
+    same_value_t(Changed, false, Unchanged),
+    same_value_t(ComplianceReached, false, BeforeCompliance),
+    same_value_t(Intended, false, NotForPublicAuthorities),
+    truth_or(BeforeCompliance, NotForPublicAuthorities, NoPublicAuthorityRoute),
+    truth_and(PlacedEarly, Unchanged, EarlyUnchanged),
+    truth_and(EarlyUnchanged, NoPublicAuthorityRoute, Truth).
 
-coverage_route(not_covered, _, _, _, _, not_covered_placed_before_application_date, [cite(eu_reg_2024_1689_art_111_2)]) :-
+coverage_from(true, false, _, _, _, _, covered).
+coverage_from(false, true, _, _, _, _, not_covered).
+coverage_from(false, false, Placed, Changed, ComplianceReached, Intended, missing(Key)) :-
+    coverage_candidates(ComplianceReached, Placed, Changed, Intended, Candidates),
+    first_absent(Candidates, Key).
+
+coverage_candidates(true, Placed, Changed, Intended, [placed_before_chapter_iii_application_date - Placed, significant_change_in_design_since_that_date - Changed, intended_to_be_used_by_public_authorities - Intended]).
+coverage_candidates(false, Placed, Changed, _, [placed_before_chapter_iii_application_date - Placed, significant_change_in_design_since_that_date - Changed]).
+
+coverage_route(missing(Key), _, _, _, indeterminate([Key]), []).
+coverage_route(not_covered, _, _, _, not_covered_placed_before_application_date, [cite(eu_reg_2024_1689_art_111_2)]) :-
     implements(eu_reg_2024_1689_art_111_2).
-coverage_route(missing, _, _, _, KeyStates, indeterminate([MissingKey]), []) :-
-    first_absent_key(KeyStates, MissingKey).
-coverage_route(covered, Classification, Profile, AwarenessDate, _, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_10),
-    key_value(Profile, medical_device_or_safety_component_of_one, DeviceCase),
-    device_route(DeviceCase, Classification, Profile, AwarenessDate, DutyAnswer, Citations).
+coverage_route(covered, Classification, Profile, AwarenessDate, Duty, Citations) :-
+    key_value(Profile, medical_device_or_safety_component_of_one, Device),
+    device_route(Device, Classification, Profile, AwarenessDate, Duty, Citations).
 
 device_route(absent, _, _, _, indeterminate([medical_device_or_safety_component_of_one]), []).
-device_route(true, _, Profile, AwarenessDate, DutyAnswer, Citations) :-
+device_route(true, _, Profile, AwarenessDate, Duty, Citations) :-
     implements(eu_reg_2024_1689_art_73_10),
-    key_value(Profile, fundamental_rights_obligations_infringed, RightsInfringed),
-    device_regime_route(RightsInfringed, Profile, AwarenessDate, DutyAnswer, Citations).
-device_route(false, annex_i_high_risk, Profile, AwarenessDate, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_9),
-    general_regime_step(Profile, AwarenessDate, DutyAnswer, Citations).
-device_route(false, annex_iii_high_risk, Profile, AwarenessDate, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_9),
-    key_value(Profile, fundamental_rights_obligations_infringed, RightsInfringed),
-    key_value(Profile, provider_subject_to_equivalent_union_reporting_obligations, EquivalentObligations),
-    annex_iii_regime_route(RightsInfringed, EquivalentObligations, Profile, AwarenessDate, DutyAnswer, Citations).
+    limited_regime_step(true, Profile, AwarenessDate, Duty, Citations).
+device_route(false, Classification, Profile, AwarenessDate, Duty, Citations) :-
+    equivalent_regime(Classification, Profile, Regime),
+    regime_route(Regime, Profile, AwarenessDate, Duty, Citations).
 
-device_regime_route(absent, _, _, indeterminate([fundamental_rights_obligations_infringed]), []).
-device_regime_route(false, _, _, not_a_reportable_incident, [cite(eu_reg_2024_1689_art_73_10), cite(eu_reg_2024_1689_art_3_49_c)]) :-
-    implements(eu_reg_2024_1689_art_73_10),
-    implements(eu_reg_2024_1689_art_3_49_c).
-device_regime_route(true, Profile, AwarenessDate, DutyAnswer, Citations) :-
+equivalent_regime(annex_i_high_risk, _, ordinary) :-
+    implements(eu_reg_2024_1689_art_73_9).
+equivalent_regime(annex_iii_high_risk, Profile, Regime) :-
+    implements(eu_reg_2024_1689_art_73_9),
+    key_value(Profile, provider_subject_to_equivalent_union_reporting_obligations, Equivalent),
+    key_value(Profile, fundamental_rights_obligations_infringed, FundamentalRights),
+    other_harm_serious_t(Profile, OtherSerious),
+    annex_iii_regime(Equivalent, FundamentalRights, OtherSerious, Regime).
+
+annex_iii_regime(true, _, _, limited).
+annex_iii_regime(false, _, _, ordinary).
+annex_iii_regime(absent, false, _, missing(provider_subject_to_equivalent_union_reporting_obligations)).
+annex_iii_regime(absent, absent, true, missing(provider_subject_to_equivalent_union_reporting_obligations)).
+annex_iii_regime(absent, absent, false, ordinary).
+annex_iii_regime(absent, true, _, ordinary).
+
+regime_route(missing(Key), _, _, indeterminate([Key]), []).
+regime_route(limited, Profile, AwarenessDate, Duty, Citations) :-
+    limited_regime_step(false, Profile, AwarenessDate, Duty, Citations).
+regime_route(ordinary, Profile, AwarenessDate, Duty, Citations) :-
+    ordinary_step(Profile, AwarenessDate, Duty, Citations).
+
+limited_regime_step(Device, Profile, AwarenessDate, Duty, Citations) :-
     implements(eu_reg_2024_1689_art_3_49_c),
-    limit_step(Profile, AwarenessDate, true, DutyAnswer, Citations).
+    key_value(Profile, fundamental_rights_obligations_infringed, FundamentalRights),
+    limited_route(FundamentalRights, Device, Profile, AwarenessDate, Duty, Citations).
 
-annex_iii_regime_route(true, _, Profile, AwarenessDate, DutyAnswer, Citations) :-
+limited_route(absent, _, _, _, indeterminate([fundamental_rights_obligations_infringed]), []).
+limited_route(false, true, _, _, not_a_reportable_incident, [cite(eu_reg_2024_1689_art_73_10), cite(eu_reg_2024_1689_art_3_49_c)]) :-
+    implements(eu_reg_2024_1689_art_73_10).
+limited_route(false, false, _, _, not_a_reportable_incident, [cite(eu_reg_2024_1689_art_73_9), cite(eu_reg_2024_1689_art_3_49_c)]) :-
+    implements(eu_reg_2024_1689_art_73_9).
+limited_route(true, Device, Profile, AwarenessDate, Duty, Citations) :-
     implements(eu_reg_2024_1689_art_3_49_c),
-    limit_step(Profile, AwarenessDate, false, DutyAnswer, Citations).
-annex_iii_regime_route(false, absent, _, _, indeterminate([provider_subject_to_equivalent_union_reporting_obligations]), []).
-annex_iii_regime_route(absent, absent, _, _, indeterminate([provider_subject_to_equivalent_union_reporting_obligations]), []).
-annex_iii_regime_route(false, true, _, _, not_a_reportable_incident, [cite(eu_reg_2024_1689_art_73_9), cite(eu_reg_2024_1689_art_3_49_c)]) :-
-    implements(eu_reg_2024_1689_art_73_9),
-    implements(eu_reg_2024_1689_art_3_49_c).
-annex_iii_regime_route(absent, true, _, _, indeterminate([fundamental_rights_obligations_infringed]), []).
-annex_iii_regime_route(false, false, Profile, AwarenessDate, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_9),
-    general_regime_step(Profile, AwarenessDate, DutyAnswer, Citations).
-annex_iii_regime_route(absent, false, Profile, AwarenessDate, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_9),
-    general_regime_step(Profile, AwarenessDate, DutyAnswer, Citations).
+    limit_step(Device, Profile, AwarenessDate, Duty, Citations).
 
-general_regime_step(Profile, AwarenessDate, DutyAnswer, Citations) :-
+health_harm_serious_t(death_of_a_person, true) :-
+    implements(eu_reg_2024_1689_art_3_49_a).
+health_harm_serious_t(serious_harm_to_health_without_death, true) :-
+    implements(eu_reg_2024_1689_art_3_49_a).
+health_harm_serious_t(no_death_or_serious_harm_to_health, false) :-
+    implements(eu_reg_2024_1689_art_3_49_a).
+health_harm_serious_t(absent, false).
+
+other_harm_serious_t(Profile, Truth) :-
     implements(eu_reg_2024_1689_art_3_49),
     implements(eu_reg_2024_1689_art_3_49_b),
-    implements(eu_reg_2024_1689_art_3_49_c),
     implements(eu_reg_2024_1689_art_3_49_d),
-    key_value(Profile, harm_to_health, HarmToHealth),
-    health_point_value(HarmToHealth, HealthPoint),
-    key_value(Profile, critical_infrastructure_disruption, InfrastructureDisruption),
-    key_value(Profile, fundamental_rights_obligations_infringed, RightsInfringed),
-    key_value(Profile, serious_harm_to_property_or_environment, PropertyHarm),
-    tri_or([HealthPoint, InfrastructureDisruption, RightsInfringed, PropertyHarm], SeriousIncident),
-    serious_incident_route(SeriousIncident, [harm_to_health - HealthPoint, critical_infrastructure_disruption - InfrastructureDisruption, fundamental_rights_obligations_infringed - RightsInfringed, serious_harm_to_property_or_environment - PropertyHarm], Profile, AwarenessDate, DutyAnswer, Citations).
+    key_value(Profile, harm_to_health, Health),
+    key_value(Profile, critical_infrastructure_disruption, Infrastructure),
+    key_value(Profile, serious_harm_to_property_or_environment, Property),
+    health_harm_serious_t(Health, HealthSerious),
+    same_value_t(Infrastructure, true, InfrastructureSerious),
+    same_value_t(Property, true, PropertySerious),
+    truth_or(HealthSerious, InfrastructureSerious, HealthOrInfrastructure),
+    truth_or(HealthOrInfrastructure, PropertySerious, Truth).
 
-health_point_value(absent, absent).
-health_point_value(death_of_a_person, true) :-
-    implements(eu_reg_2024_1689_art_3_49_a).
-health_point_value(serious_harm_to_health_without_death, true) :-
-    implements(eu_reg_2024_1689_art_3_49_a).
-health_point_value(no_death_or_serious_harm_to_health, false) :-
-    implements(eu_reg_2024_1689_art_3_49_a).
-
-serious_incident_route(true, _, Profile, AwarenessDate, DutyAnswer, Citations) :-
+serious_incident_t(Profile, Truth) :-
     implements(eu_reg_2024_1689_art_3_49),
-    limit_step(Profile, AwarenessDate, false, DutyAnswer, Citations).
-serious_incident_route(absent, KeyStates, _, _, indeterminate([MissingKey]), []) :-
-    first_absent_key(KeyStates, MissingKey).
-serious_incident_route(false, _, _, _, not_a_serious_incident, [cite(eu_reg_2024_1689_art_3_49)]) :-
+    other_harm_serious_t(Profile, OtherSerious),
+    key_value(Profile, fundamental_rights_obligations_infringed, FundamentalRights),
+    same_value_t(FundamentalRights, true, FundamentalRightsSerious),
+    truth_or(OtherSerious, FundamentalRightsSerious, Truth).
+
+ordinary_step(Profile, AwarenessDate, Duty, Citations) :-
+    implements(eu_reg_2024_1689_art_3_49),
+    serious_incident_t(Profile, Serious),
+    ordinary_route(Serious, Profile, AwarenessDate, Duty, Citations).
+
+ordinary_route(true, Profile, AwarenessDate, Duty, Citations) :-
+    limit_step(false, Profile, AwarenessDate, Duty, Citations).
+ordinary_route(false, Profile, _, Duty, Citations) :-
+    implements(eu_reg_2024_1689_art_3_49),
+    harm_key_order_for(Profile, Keys),
+    key_pairs(Profile, Keys, Pairs),
+    absent_among_t(Pairs, AnyAbsent),
+    not_serious_route(AnyAbsent, Pairs, Duty, Citations).
+
+not_serious_route(true, Pairs, indeterminate([Key]), []) :-
+    first_absent(Pairs, Key).
+not_serious_route(false, _, not_a_serious_incident, [cite(eu_reg_2024_1689_art_3_49)]) :-
     implements(eu_reg_2024_1689_art_3_49).
 
-limit_step(Profile, AwarenessDate, DeviceCase, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_3),
-    key_value(Profile, harm_to_health, HarmToHealth),
-    key_value(Profile, critical_infrastructure_disruption, InfrastructureDisruption),
+harm_key_order_for(Profile, Keys) :-
     key_value(Profile, widespread_infringement, Widespread),
-    tri_or([InfrastructureDisruption, Widespread], TwoDayLimit),
-    limit_route(TwoDayLimit, [harm_to_health - HarmToHealth, critical_infrastructure_disruption - InfrastructureDisruption, widespread_infringement - Widespread], HarmToHealth, AwarenessDate, DeviceCase, DutyAnswer, Citations).
+    key_value(Profile, high_risk_classification, Classification),
+    key_value(Profile, provider_subject_to_equivalent_union_reporting_obligations, Equivalent),
+    same_value_t(Widespread, true, WidespreadTrue),
+    same_value_t(Classification, annex_iii_high_risk, AnnexThree),
+    same_value_t(Equivalent, absent, EquivalentAbsent),
+    truth_and(AnnexThree, EquivalentAbsent, FundamentalRightsFirst),
+    harm_key_order(WidespreadTrue, FundamentalRightsFirst, Keys).
 
-limit_route(true, _, _, AwarenessDate, DeviceCase, DutyAnswer, Citations) :-
+harm_key_order(true, true, [fundamental_rights_obligations_infringed, harm_to_health, critical_infrastructure_disruption, fundamental_rights_obligations_infringed, serious_harm_to_property_or_environment]).
+harm_key_order(true, false, [harm_to_health, critical_infrastructure_disruption, fundamental_rights_obligations_infringed, serious_harm_to_property_or_environment]).
+harm_key_order(false, _, [critical_infrastructure_disruption, harm_to_health, fundamental_rights_obligations_infringed, serious_harm_to_property_or_environment]).
+
+limit_step(Device, Profile, AwarenessDate, Duty, Citations) :-
     implements(eu_reg_2024_1689_art_73_3),
-    implements(eu_reg_2024_1689_art_3_61),
-    report_answer(widespread_or_critical_infrastructure, DeviceCase, AwarenessDate, DutyAnswer, Citations).
-limit_route(absent, KeyStates, _, _, _, indeterminate([MissingKey]), []) :-
-    first_absent_key(KeyStates, MissingKey).
-limit_route(false, _, HarmToHealth, AwarenessDate, DeviceCase, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_4),
-    harm_limit_route(HarmToHealth, AwarenessDate, DeviceCase, DutyAnswer, Citations).
+    key_value(Profile, critical_infrastructure_disruption, Infrastructure),
+    key_value(Profile, widespread_infringement, Widespread),
+    same_value_t(Infrastructure, true, InfrastructureTrue),
+    same_value_t(Widespread, true, WidespreadTrue),
+    truth_or(InfrastructureTrue, WidespreadTrue, TwoDays),
+    limit_route(TwoDays, Device, Profile, AwarenessDate, Duty, Citations).
 
-harm_limit_route(absent, _, _, indeterminate([harm_to_health]), []).
-harm_limit_route(death_of_a_person, AwarenessDate, DeviceCase, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_4),
-    report_answer(death_of_a_person, DeviceCase, AwarenessDate, DutyAnswer, Citations).
-harm_limit_route(serious_harm_to_health_without_death, AwarenessDate, DeviceCase, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_2),
-    report_answer(general_limit, DeviceCase, AwarenessDate, DutyAnswer, Citations).
-harm_limit_route(no_death_or_serious_harm_to_health, AwarenessDate, DeviceCase, DutyAnswer, Citations) :-
-    implements(eu_reg_2024_1689_art_73_2),
-    report_answer(general_limit, DeviceCase, AwarenessDate, DutyAnswer, Citations).
+limit_route(true, Device, Profile, AwarenessDate, Duty, Citations) :-
+    implements(eu_reg_2024_1689_art_73_3),
+    reporting_period(critical_infrastructure_or_widespread_infringement, Days, LimitCite),
+    report_step(Device, Profile, AwarenessDate, Days, LimitCite, Duty, Citations).
+limit_route(false, Device, Profile, AwarenessDate, Duty, Citations) :-
+    key_pairs(Profile, [critical_infrastructure_disruption, widespread_infringement, harm_to_health], Pairs),
+    absent_among_t(Pairs, AnyAbsent),
+    longer_limit_route(AnyAbsent, Pairs, Device, Profile, AwarenessDate, Duty, Citations).
 
-report_answer(LimitName, DeviceCase, AwarenessDate, report_due(RecipientAtom, PeriodDays, LastDay, FollowUpDuties), Citations) :-
-    implements(eu_reg_2024_1689_art_73_1),
-    implements(eu_reg_2024_1689_art_73_6),
-    reporting_period(LimitName, PeriodDays, LimitCitation),
-    last_reporting_day(AwarenessDate, PeriodDays, LastDay),
-    report_recipient(DeviceCase, RecipientAtom, RecipientCitations, _),
-    follow_up_duties(FollowUpDuties, _),
-    append([[cite(eu_reg_2024_1689_art_73_1)], [LimitCitation], [cite(eu_reg_2024_1689_art_73_6)], RecipientCitations], Citations).
+longer_limit_route(true, Pairs, _, _, _, indeterminate([Key]), []) :-
+    first_absent(Pairs, Key).
+longer_limit_route(false, _, Device, Profile, AwarenessDate, Duty, Citations) :-
+    key_value(Profile, harm_to_health, Health),
+    health_period(Health, Period),
+    reporting_period(Period, Days, LimitCite),
+    report_step(Device, Profile, AwarenessDate, Days, LimitCite, Duty, Citations).
 
-serious_incident_reporting_timeliness_ladder(Profile, AwarenessDate, ReportDate, Verdict, Citations) :-
-    serious_incident_reporting_duty_ladder(Profile, AwarenessDate, DutyAnswer, DutyCitations),
-    timeliness_route(DutyAnswer, DutyCitations, Profile, ReportDate, Verdict, Citations).
-
-timeliness_route(not_applicable_on_date, DutyCitations, _, _, not_applicable_on_date, DutyCitations).
-timeliness_route(not_a_high_risk_ai_system, DutyCitations, _, _, not_a_high_risk_ai_system, DutyCitations).
-timeliness_route(not_covered_placed_before_application_date, DutyCitations, _, _, not_covered_placed_before_application_date, DutyCitations).
-timeliness_route(not_a_serious_incident, DutyCitations, _, _, not_a_serious_incident, DutyCitations).
-timeliness_route(not_a_reportable_incident, DutyCitations, _, _, not_a_reportable_incident, DutyCitations).
-timeliness_route(indeterminate([MissingKey]), _, _, _, indeterminate([MissingKey]), []).
-timeliness_route(report_due(_, _, LastDay, _), DutyCitations, Profile, ReportDate, Verdict, Citations) :-
-    implements(eu_reg_2024_1689_art_73_5),
-    report_order(ReportDate, LastDay, ReportOrder),
-    report_order_route(ReportOrder, Profile, DutyCitations, Verdict, Citations).
-
-report_order_route(after, _, DutyCitations, report_after_time_limit, DutyCitations) :-
+health_period(death_of_a_person, death_of_a_person) :-
+    implements(eu_reg_2024_1689_art_73_4).
+health_period(serious_harm_to_health_without_death, other_serious_incident) :-
     implements(eu_reg_2024_1689_art_73_2).
-report_order_route(on_or_before, Profile, DutyCitations, Verdict, Citations) :-
+health_period(no_death_or_serious_harm_to_health, other_serious_incident) :-
+    implements(eu_reg_2024_1689_art_73_2).
+
+report_step(Device, Profile, AwarenessDate, Days, LimitCite, report_due(Recipient, Days, LastDay, FollowUp), Citations) :-
+    implements(eu_reg_2024_1689_art_73_1),
+    key_value(Profile, system_under_the_exclusive_competence_of_the_ai_office, OutsideFact),
+    ai_office_t(OutsideFact, AiOffice),
+    recipient(AiOffice, Device, Recipient, FirstCite),
+    last_day(AwarenessDate, Days, LastDay),
+    follow_up_duties(FollowUp, FollowUpCite),
+    device_citations(Device, DeviceCitations),
+    append([FirstCite, LimitCite, FollowUpCite], DeviceCitations, Citations).
+
+ai_office_t(attested(true, _), true) :-
+    implements(eu_reg_2024_1689_art_75_1).
+ai_office_t(attested(false, _), false) :-
+    implements(eu_reg_2024_1689_art_75_1).
+ai_office_t(absent, false).
+
+recipient(true, _, ai_office, cite(eu_reg_2024_1689_art_75_1a)) :-
+    implements(eu_reg_2024_1689_art_75_1a).
+recipient(false, true, national_competent_authority_chosen_by_member_state_where_incident_occurred, cite(eu_reg_2024_1689_art_73_1)) :-
+    implements(eu_reg_2024_1689_art_73_10).
+recipient(false, false, market_surveillance_authority_of_member_state_where_incident_occurred, cite(eu_reg_2024_1689_art_73_1)) :-
+    implements(eu_reg_2024_1689_art_73_1).
+
+device_citations(true, [cite(eu_reg_2024_1689_art_73_10)]).
+device_citations(false, []).
+
+duty_kind(report_due(_, _, _, _), report_due).
+duty_kind(indeterminate(_), pass_through).
+duty_kind(Duty, pass_through) :-
+    no_duty_answer(Duty).
+
+timeliness_from_duty(Duty, DutyCitations, Profile, ReportDate, Verdict, Citations) :-
+    duty_kind(Duty, Kind),
+    timeliness_route(Kind, Duty, DutyCitations, Profile, ReportDate, Verdict, Citations).
+
+timeliness_route(pass_through, Duty, DutyCitations, _, _, Duty, DutyCitations).
+timeliness_route(report_due, report_due(_, _, LastDay, _), DutyCitations, Profile, ReportDate, Verdict, Citations) :-
     implements(eu_reg_2024_1689_art_73_2),
-    key_value(Profile, report_made_immediately, MadeImmediately),
-    immediacy_route(MadeImmediately, DutyCitations, Verdict, Citations).
+    date_later_t(ReportDate, LastDay, Late),
+    lateness_route(Late, DutyCitations, Profile, Verdict, Citations).
+
+lateness_route(true, DutyCitations, _, report_after_time_limit, DutyCitations) :-
+    implements(eu_reg_2024_1689_art_73_2).
+lateness_route(false, DutyCitations, Profile, Verdict, Citations) :-
+    implements(eu_reg_2024_1689_art_73_5),
+    key_value(Profile, report_made_immediately, Immediately),
+    immediacy_route(Immediately, DutyCitations, Verdict, Citations).
 
 immediacy_route(absent, _, indeterminate([report_made_immediately]), []).
 immediacy_route(false, DutyCitations, report_not_immediate, DutyCitations) :-
@@ -289,143 +477,175 @@ immediacy_route(false, DutyCitations, report_not_immediate, DutyCitations) :-
 immediacy_route(true, DutyCitations, report_in_time, DutyCitations) :-
     implements(eu_reg_2024_1689_art_73_2).
 
-decide_serious_incident_reporting(duty_query(Profile, AwarenessDate), serious_incident_reporting_verdict(VerdictStatus, Citations)) :-
-    serious_incident_reporting_input_problems(Profile, []),
-    calendar_date_t(AwarenessDate, true),
-    serious_incident_reporting_duty_ladder(Profile, AwarenessDate, VerdictStatus, Citations).
-decide_serious_incident_reporting(timeliness_query(Profile, AwarenessDate, ReportDate), serious_incident_reporting_verdict(VerdictStatus, Citations)) :-
-    serious_incident_reporting_input_problems(Profile, []),
-    calendar_date_t(AwarenessDate, true),
-    calendar_date_t(ReportDate, true),
-    serious_incident_reporting_timeliness_ladder(Profile, AwarenessDate, ReportDate, VerdictStatus, Citations).
+query_ladder(duty(AwarenessDate), Profile, Answer, Citations) :-
+    ladder(Profile, AwarenessDate, Answer, Citations).
+query_ladder(timeliness(AwarenessDate, ReportDate), Profile, Answer, Citations) :-
+    ladder(Profile, AwarenessDate, Duty, DutyCitations),
+    timeliness_from_duty(Duty, DutyCitations, Profile, ReportDate, Answer, Citations).
 
-serious_incident_reporting_status(QueryTerm, VerdictStatus) :-
-    decide_serious_incident_reporting(QueryTerm, serious_incident_reporting_verdict(VerdictStatus, _)).
+unsure_rule(Query, Profile, Answer, Citations) :-
+    query_judgement_keys(Query, Readable),
+    findall(Key, (member(Key, Readable), key_value(Profile, Key, unsure)), Unsure),
+    findall(Assignment, assignment(Unsure, Assignment), Assignments),
+    maplist(run_for(Query, Profile), Assignments, Runs),
+    findall(RunAnswer - RunCitations, member(run(_, RunAnswer, RunCitations), Runs), Results),
+    sort(Results, Distinct),
+    unsure_decision(Distinct, Runs, Unsure, Readable, Profile, Answer, Citations).
 
-checklist_grounds([application_date, high_risk_system, coverage, serious_incident, report]).
+assignment([], []).
+assignment([Key|Keys], [Key - Value|Rest]) :-
+    member(Value, [true, false]),
+    assignment(Keys, Rest).
 
-status_ground(not_applicable_on_date, application_date).
-status_ground(not_a_high_risk_ai_system, high_risk_system).
-status_ground(not_covered_placed_before_application_date, coverage).
-status_ground(not_a_serious_incident, serious_incident).
-status_ground(not_a_reportable_incident, serious_incident).
-status_ground(report_after_time_limit, report).
-status_ground(report_not_immediate, report).
+run_for(Query, Profile, Assignment, run(Assignment, Answer, SortedCitations)) :-
+    maplist(substitute_attribute(Assignment), Profile, RunProfile),
+    query_ladder(Query, RunProfile, Answer, Citations),
+    sort(Citations, SortedCitations).
 
-serious_incident_reporting_checklist(QueryTerm, Items) :-
-    decide_serious_incident_reporting(QueryTerm, serious_incident_reporting_verdict(VerdictStatus, Citations)),
-    checklist_rows(VerdictStatus, Citations, Items).
+substitute_attribute(Assignment, attribute(Key, Value), attribute(Key, RunValue)) :-
+    assigned_value(Assignment, Key, Value, RunValue).
 
-checklist_rows(report_due(_, _, _, _), Citations, Items) :-
-    checklist_grounds(GroundIds),
-    rows_until(GroundIds, report, met, Citations, Items).
-checklist_rows(report_in_time, Citations, Items) :-
-    checklist_grounds(GroundIds),
-    rows_until(GroundIds, report, met, Citations, Items).
-checklist_rows(VerdictStatus, Citations, Items) :-
-    status_ground(VerdictStatus, DecidingGround),
-    checklist_grounds(GroundIds),
-    rows_until(GroundIds, DecidingGround, unmet(VerdictStatus), Citations, Items).
-checklist_rows(indeterminate([MissingKey]), _, [item(missing_fact, unknown([MissingKey]), [])]).
+assigned_value([], _, Value, Value).
+assigned_value([Assigned - RunValue|_], Key, _, RunValue) :-
+    Assigned == Key.
+assigned_value([Assigned - _|Rest], Key, Value, RunValue) :-
+    Assigned \== Key,
+    assigned_value(Rest, Key, Value, RunValue).
 
-rows_until([DecidingGround|_], DecidingGround, FinalStatus, Citations, [item(DecidingGround, FinalStatus, Citations)]).
-rows_until([GroundId|GroundIds], DecidingGround, FinalStatus, Citations, [item(GroundId, met, Citations)|Items]) :-
-    dif(GroundId, DecidingGround),
-    rows_until(GroundIds, DecidingGround, FinalStatus, Citations, Items).
+unsure_decision([Answer - Citations], _, _, _, _, Answer, Citations).
+unsure_decision([_, _|_], Runs, Unsure, Readable, Profile, Answer, Citations) :-
+    named_keys(Runs, NamedWithRepeats),
+    sort(NamedWithRepeats, NamedSorted),
+    adjust_named(Unsure, Profile, NamedSorted, Named),
+    missing_or_referral(Named, Runs, Readable, Profile, Answer, Citations).
 
-serious_incident_reporting_decision_resolvable(QueryTerm) :-
-    decide_serious_incident_reporting(QueryTerm, _).
+named_keys([], []).
+named_keys([run(_, Answer, _)|Runs], Keys) :-
+    duty_kind_or_verdict(Answer, Kind),
+    named_from(Kind, Answer, Runs, Keys).
 
-example_profile(death_case, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, death_of_a_person), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
-example_profile(infrastructure_case, [attribute(high_risk_classification, annex_i_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(critical_infrastructure_disruption, true)]).
-example_profile(no_harm_case, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, no_death_or_serious_harm_to_health), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false)]).
-example_profile(device_case, [attribute(high_risk_classification, annex_i_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, true), attribute(harm_to_health, death_of_a_person), attribute(fundamental_rights_obligations_infringed, false)]).
-example_profile(device_rights_case, [attribute(high_risk_classification, annex_i_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, true), attribute(harm_to_health, no_death_or_serious_harm_to_health), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, true), attribute(widespread_infringement, false)]).
-example_profile(early_unchanged_case, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, true), attribute(significant_change_in_design_since_that_date, false)]).
-example_profile(placed_unknown_changed_case, [attribute(high_risk_classification, annex_iii_high_risk), attribute(significant_change_in_design_since_that_date, true)]).
-example_profile(equivalence_missing_case, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(fundamental_rights_obligations_infringed, false)]).
-example_profile(equivalent_limited_case, [attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, true), attribute(harm_to_health, death_of_a_person), attribute(fundamental_rights_obligations_infringed, false)]).
-example_profile(not_high_risk_case, [attribute(high_risk_classification, not_high_risk)]).
+duty_kind_or_verdict(indeterminate(_), indeterminate).
+duty_kind_or_verdict(report_due(_, _, _, _), final).
+duty_kind_or_verdict(Answer, final) :-
+    no_duty_answer(Answer).
+duty_kind_or_verdict(report_in_time, final).
+duty_kind_or_verdict(report_after_time_limit, final).
+duty_kind_or_verdict(report_not_immediate, final).
 
-test(before_december_2027_is_not_applicable) :-
-    serious_incident_reporting_duty_ladder([], date(2027, 12, 1), not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i)]).
-test(on_december_2027_a_missing_classification_is_named) :-
-    serious_incident_reporting_duty_ladder([], date(2027, 12, 2), indeterminate([high_risk_classification]), []).
-test(not_high_risk_has_no_duty) :-
-    example_profile(not_high_risk_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_73_1)]).
-test(annex_i_before_august_2028_is_not_applicable) :-
-    example_profile(infrastructure_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 8, 1), not_applicable_on_date, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]).
-test(annex_i_critical_infrastructure_gives_two_days) :-
-    example_profile(infrastructure_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 8, 2), report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 2, date(2028, 8, 4), _), _).
-test(death_gives_ten_days) :-
-    example_profile(death_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, date(2028, 1, 11), [perform_necessary_investigations_without_delay, risk_assessment_of_the_incident, corrective_action, cooperate_with_competent_authorities, inform_authorities_before_altering_the_system]), Citations),
-    msort(Citations, Sorted),
-    msort([cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_4), cite(eu_reg_2024_1689_art_73_6)], Sorted).
-test(death_case_has_exactly_one_answer) :-
-    example_profile(death_case, Profile),
-    findall(DutyAnswer, serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), DutyAnswer, _), Answers),
-    length(Answers, 1).
-test(no_harm_is_not_a_serious_incident) :-
-    example_profile(no_harm_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), not_a_serious_incident, [cite(eu_reg_2024_1689_art_3_49)]).
-test(device_without_point_c_is_not_reportable) :-
-    example_profile(device_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 9, 1), not_a_reportable_incident, [cite(eu_reg_2024_1689_art_73_10), cite(eu_reg_2024_1689_art_3_49_c)]).
-test(device_with_point_c_goes_to_the_national_authority) :-
-    example_profile(device_rights_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 9, 1), report_due(national_competent_authority_chosen_by_member_state_where_incident_occurred, 15, date(2028, 9, 16), _), Citations),
+named_from(indeterminate, indeterminate([Key]), Runs, [Key|Keys]) :-
+    named_keys(Runs, Keys).
+named_from(final, _, Runs, Keys) :-
+    named_keys(Runs, Keys).
+
+adjust_named(Unsure, Profile, NamedSorted, Named) :-
+    memberd_t(widespread_infringement, Unsure, WidespreadUnsure),
+    memberd_t(critical_infrastructure_disruption, NamedSorted, InfrastructureNamed),
+    memberd_t(harm_to_health, NamedSorted, HealthNamed),
+    truth_and(WidespreadUnsure, InfrastructureNamed, FirstPart),
+    truth_and(FirstPart, HealthNamed, DropHealth),
+    drop_health(DropHealth, NamedSorted, NamedAfterFirst),
+    memberd_t(provider_subject_to_equivalent_union_reporting_obligations, Unsure, EquivalentUnsure),
+    key_value(Profile, widespread_infringement, Widespread),
+    same_value_t(Widespread, true, WidespreadTrue),
+    memberd_t(fundamental_rights_obligations_infringed, NamedAfterFirst, FundamentalNamed),
+    all_in_t(NamedAfterFirst, [fundamental_rights_obligations_infringed, harm_to_health, critical_infrastructure_disruption, serious_harm_to_property_or_environment], OnlyHarms),
+    truth_and(EquivalentUnsure, WidespreadTrue, SecondPart),
+    truth_and(SecondPart, FundamentalNamed, ThirdPart),
+    truth_and(ThirdPart, OnlyHarms, PickFundamental),
+    pick_fundamental(PickFundamental, NamedAfterFirst, Named).
+
+drop_health(true, NamedSorted, Named) :-
+    subtract(NamedSorted, [harm_to_health], Named).
+drop_health(false, Named, Named).
+
+pick_fundamental(true, _, [fundamental_rights_obligations_infringed]).
+pick_fundamental(false, Named, Named).
+
+all_in_t([], _, true).
+all_in_t([Element|Elements], Allowed, Truth) :-
+    memberd_t(Element, Allowed, Here),
+    all_in_t(Elements, Allowed, Later),
+    truth_and(Here, Later, Truth).
+
+missing_or_referral([Key|Keys], _, _, _, indeterminate([First]), []) :-
+    root_key_order(Order),
+    first_in_order(Order, [Key|Keys], First).
+missing_or_referral([], Runs, Readable, Profile, needs_legal_review(open_textured(Judgement, ReferralCite), [inputs_relied_on(Pairs)]), []) :-
+    findall(Turning, turning_key(Runs, Turning), TurningKeys),
+    root_key_order(Order),
+    first_in_order(Order, TurningKeys, Judgement),
+    referral_row(Judgement, ReferralCite),
+    findall(Key - Value, (member(Key, Readable), profile_has(Profile, Key), profile_get(Profile, Key, Value)), Pairs).
+
+turning_key(Runs, Key) :-
+    member(run(FirstAssignment, FirstAnswer, FirstCitations), Runs),
+    member(Key - true, FirstAssignment),
+    maplist(flip_entry(Key), FirstAssignment, SecondAssignment),
+    member(run(SecondAssignment, SecondAnswer, SecondCitations), Runs),
+    dif(FirstAnswer - FirstCitations, SecondAnswer - SecondCitations).
+
+flip_entry(Key, Entry - Value, Entry - Value) :-
+    Entry \== Key.
+flip_entry(Key, Entry - true, Entry - false) :-
+    Entry == Key.
+
+decide_serious_incident_reporting(duty(Profile, AwarenessDate), serious_incident_reporting_verdict(Duty, Citations)) :-
+    serious_incident_report_duty(Profile, AwarenessDate, Duty, Citations).
+decide_serious_incident_reporting(timeliness(Profile, AwarenessDate, ReportDate), serious_incident_reporting_verdict(Verdict, Citations)) :-
+    serious_incident_report_timeliness(Profile, AwarenessDate, ReportDate, Verdict, Citations).
+
+serious_incident_reporting_status(Case, Status) :-
+    decide_serious_incident_reporting(Case, serious_incident_reporting_verdict(Status, _Citations)).
+
+serious_incident_reporting_checklist(duty(Profile, AwarenessDate), [item(report_duty, Duty, Citations)]) :-
+    serious_incident_report_duty(Profile, AwarenessDate, Duty, Citations).
+serious_incident_reporting_checklist(timeliness(Profile, AwarenessDate, ReportDate), [item(report_duty, Duty, DutyCitations), item(report_timeliness, Verdict, Citations)]) :-
+    serious_incident_report_duty(Profile, AwarenessDate, Duty, DutyCitations),
+    serious_incident_report_timeliness(Profile, AwarenessDate, ReportDate, Verdict, Citations).
+
+serious_incident_reporting_decision_resolvable(Case) :-
+    decide_serious_incident_reporting(Case, _Verdict).
+
+base_profile([attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, death_of_a_person), attribute(critical_infrastructure_disruption, false), attribute(fundamental_rights_obligations_infringed, false), attribute(serious_harm_to_property_or_environment, false), attribute(widespread_infringement, false)]).
+
+test(before_the_earliest_date_is_not_applicable) :-
+    serious_incident_report_duty([], date(2027, 1, 1), not_applicable_on_date, Citations),
+    member(cite(eu_reg_2024_1689_art_113_c_i), Citations).
+test(a_death_gives_ten_days_once) :-
+    base_profile(Profile),
+    findall(Duty - Citations, serious_incident_report_duty(Profile, date(2028, 1, 10), Duty, Citations), [OnlyDuty - OnlyCitations]),
+    OnlyDuty = report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, date(2028, 1, 20), [perform_necessary_investigations_without_delay, risk_assessment_of_the_incident, corrective_action, cooperate_with_competent_authorities, inform_authorities_before_altering_the_system]),
+    member(cite(eu_reg_2024_1689_art_73_4), OnlyCitations).
+test(critical_infrastructure_gives_two_days) :-
+    serious_incident_report_duty([attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(critical_infrastructure_disruption, true)], date(2028, 1, 10), report_due(_, 2, date(2028, 1, 12), _), _).
+test(an_absent_classification_is_named) :-
+    serious_incident_report_duty([], date(2028, 1, 10), indeterminate([high_risk_classification]), []).
+test(a_device_without_point_c_is_not_reportable) :-
+    serious_incident_report_duty([attribute(high_risk_classification, annex_i_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, true), attribute(fundamental_rights_obligations_infringed, false)], date(2029, 1, 1), not_a_reportable_incident, Citations),
     member(cite(eu_reg_2024_1689_art_73_10), Citations).
-test(early_unchanged_system_is_not_covered) :-
-    example_profile(early_unchanged_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), not_covered_placed_before_application_date, [cite(eu_reg_2024_1689_art_111_2)]).
-test(early_unchanged_public_authority_after_2030_needs_the_key) :-
-    example_profile(early_unchanged_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2030, 8, 2), indeterminate([intended_to_be_used_by_public_authorities]), []).
-test(a_significant_change_covers_an_unknown_placement) :-
-    example_profile(placed_unknown_changed_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), indeterminate([medical_device_or_safety_component_of_one]), []).
-test(missing_equivalence_is_named) :-
-    example_profile(equivalence_missing_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), indeterminate([provider_subject_to_equivalent_union_reporting_obligations]), []).
-test(equivalent_obligations_limit_to_point_c) :-
-    example_profile(equivalent_limited_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), not_a_reportable_incident, [cite(eu_reg_2024_1689_art_73_9), cite(eu_reg_2024_1689_art_3_49_c)]).
-test(report_on_the_last_day_needs_immediacy) :-
-    example_profile(death_case, Profile),
-    serious_incident_reporting_timeliness_ladder(Profile, date(2028, 1, 1), date(2028, 1, 11), indeterminate([report_made_immediately]), []).
-test(report_on_the_last_day_made_immediately_is_in_time) :-
-    example_profile(death_case, BaseProfile),
-    append(BaseProfile, [attribute(report_made_immediately, true)], Profile),
-    serious_incident_reporting_timeliness_ladder(Profile, date(2028, 1, 1), date(2028, 1, 11), report_in_time, _).
-test(report_not_immediate) :-
-    example_profile(death_case, BaseProfile),
-    append(BaseProfile, [attribute(report_made_immediately, false)], Profile),
-    serious_incident_reporting_timeliness_ladder(Profile, date(2028, 1, 1), date(2028, 1, 5), report_not_immediate, _).
-test(report_after_the_last_day_is_late) :-
-    example_profile(death_case, BaseProfile),
-    append(BaseProfile, [attribute(report_made_immediately, true)], Profile),
-    serious_incident_reporting_timeliness_ladder(Profile, date(2028, 1, 1), date(2028, 1, 12), report_after_time_limit, _).
-test(timeliness_passes_a_no_duty_atom_through) :-
-    example_profile(no_harm_case, Profile),
-    serious_incident_reporting_timeliness_ladder(Profile, date(2028, 1, 1), date(2028, 1, 2), not_a_serious_incident, [cite(eu_reg_2024_1689_art_3_49)]).
-test(facade_decides_a_checked_profile) :-
-    example_profile(no_harm_case, Profile),
-    serious_incident_reporting_status(duty_query(Profile, date(2028, 1, 1)), not_a_serious_incident).
-test(checklist_names_the_deciding_ground) :-
-    example_profile(no_harm_case, Profile),
-    serious_incident_reporting_checklist(duty_query(Profile, date(2028, 1, 1)), Items),
-    last(Items, item(serious_incident, unmet(not_a_serious_incident), _)).
+test(the_ai_office_receives_the_report) :-
+    serious_incident_report_duty([attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(critical_infrastructure_disruption, true), attribute(system_under_the_exclusive_competence_of_the_ai_office, attested(true, attestation(host, stamp, reason, none)))], date(2028, 1, 10), report_due(ai_office, 2, _, _), Citations),
+    member(cite(eu_reg_2024_1689_art_75_1a), Citations).
+test(an_unsure_widespread_infringement_is_referred) :-
+    serious_incident_report_duty([attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, false), attribute(medical_device_or_safety_component_of_one, false), attribute(provider_subject_to_equivalent_union_reporting_obligations, false), attribute(harm_to_health, serious_harm_to_health_without_death), attribute(critical_infrastructure_disruption, false), attribute(widespread_infringement, unsure)], date(2028, 1, 10), needs_legal_review(open_textured(widespread_infringement, cite(eu_reg_2024_1689_art_3_61)), [inputs_relied_on([provider_subject_to_equivalent_union_reporting_obligations - false, widespread_infringement - unsure])]), []).
+test(a_missing_fact_comes_before_a_referral) :-
+    serious_incident_report_duty([attribute(high_risk_classification, annex_iii_high_risk), attribute(placed_before_chapter_iii_application_date, true), attribute(significant_change_in_design_since_that_date, unsure)], date(2028, 1, 10), indeterminate([medical_device_or_safety_component_of_one]), []).
+test(a_late_report_is_late) :-
+    base_profile(Profile),
+    serious_incident_report_timeliness(Profile, date(2028, 1, 10), date(2028, 1, 21), report_after_time_limit, _).
+test(a_report_on_the_last_day_made_immediately_is_in_time) :-
+    base_profile(Profile),
+    append(Profile, [attribute(report_made_immediately, true)], TimedProfile),
+    serious_incident_report_timeliness(TimedProfile, date(2028, 1, 10), date(2028, 1, 20), report_in_time, _).
+test(a_day_that_does_not_exist_is_wrong_type) :-
+    serious_incident_report_duty([], date(2027, 2, 30), input_problems([wrong_type(awareness_date)]), []).
+test(a_leap_day_is_a_real_day) :-
+    serious_incident_report_duty([], date(2028, 2, 29), indeterminate([high_risk_classification]), []).
+test(a_profile_that_is_not_a_list_is_wrong_type) :-
+    serious_incident_report_duty(foo, date(2028, 1, 1), input_problems([wrong_type(profile)]), []).
 
-test(death_is_not_fifteen_days, fail) :-
-    example_profile(death_case, Profile),
-    serious_incident_reporting_duty_ladder(Profile, date(2028, 1, 1), report_due(_, 15, _, _), _).
-test(report_after_the_last_day_is_not_in_time, fail) :-
-    example_profile(death_case, BaseProfile),
-    append(BaseProfile, [attribute(report_made_immediately, true)], Profile),
-    serious_incident_reporting_timeliness_ladder(Profile, date(2028, 1, 1), date(2028, 1, 12), report_in_time, _).
-test(facade_refuses_a_profile_with_a_problem, fail) :-
-    decide_serious_incident_reporting(duty_query([attribute(harm_to_health, maybe)], date(2028, 1, 1)), _).
+test(before_the_earliest_date_is_not_a_report, fail) :-
+    serious_incident_report_duty([], date(2027, 1, 1), report_due(_, _, _, _), _).
+test(a_report_on_the_last_day_is_not_late, fail) :-
+    base_profile(Profile),
+    serious_incident_report_timeliness(Profile, date(2028, 1, 10), date(2028, 1, 20), report_after_time_limit, _).

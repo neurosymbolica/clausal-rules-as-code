@@ -1,0 +1,151 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one key
+% changed -> a different verdict), proving the route is LOAD-BEARING. A
+% negative states "no solution" as `test(Name, fail) :- Goal.`, and every
+% near-miss atom is pinned as one of the slice's verdict atoms so a
+% misspelling cannot pass silently.
+% Run: python -m clausal.testing eu/dora_rts_change_management/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_rts_change_management/dora_rts_change_management, [
+    ict_change_management_duties_required/3,
+    ict_change_management_duties_outstanding/3,
+    dora_rts_change_management_status/2,
+    dora_rts_change_management_status_values/1
+]).
+:- use_module(eu/dora_rts_change_management/fixtures, [dora_rts_change_management_profile_for/2]).
+
+test(the_near_miss_atoms_are_verdict_atoms) :-
+    dora_rts_change_management_status_values(StatusValues),
+    StatusValues == [complete, incomplete, simplified_framework_entity].
+
+% ---- gate true (DORA Art 16(1)) ---------------------------------------
+test(gate_true_is_a_simplified_framework_entity) :-
+    dora_rts_change_management_profile_for(article_16_1_entity, Profile),
+    dora_rts_change_management_status(Profile, simplified_framework_entity).
+
+test(gate_false_near_miss_is_incomplete) :-
+    dora_rts_change_management_profile_for(article_16_1_entity, [_|OtherAttributes]),
+    dora_rts_change_management_status([attribute(financial_entity_is_article_16_1_entity, false)|OtherAttributes], incomplete).
+
+test(gate_false_near_miss_is_not_simplified, fail) :-
+    dora_rts_change_management_profile_for(article_16_1_entity, [_|OtherAttributes]),
+    dora_rts_change_management_status([attribute(financial_entity_is_article_16_1_entity, false)|OtherAttributes], simplified_framework_entity).
+
+% ---- gate absent ------------------------------------------------------
+test(gate_absent_is_indeterminate) :-
+    dora_rts_change_management_profile_for(article_16_1_status_unstated, Profile),
+    dora_rts_change_management_status(Profile, indeterminate([financial_entity_is_article_16_1_entity])).
+
+test(gate_stated_near_miss_is_complete) :-
+    dora_rts_change_management_profile_for(article_16_1_status_unstated, Profile),
+    dora_rts_change_management_status([attribute(financial_entity_is_article_16_1_entity, false)|Profile], complete).
+
+test(gate_absent_is_not_complete, fail) :-
+    dora_rts_change_management_profile_for(article_16_1_status_unstated, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+% ---- an Art 17(1) element not performed -------------------------------
+test(element_false_is_incomplete) :-
+    dora_rts_change_management_profile_for(credit_institution_verification_not_performed, Profile),
+    dora_rts_change_management_status(Profile, incomplete).
+
+test(element_false_is_not_complete, fail) :-
+    dora_rts_change_management_profile_for(credit_institution_verification_not_performed, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+test(element_true_near_miss_is_complete) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+test(element_true_near_miss_is_not_incomplete, fail) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    dora_rts_change_management_status(Profile, incomplete).
+
+% ---- Art 17(2): central counterparty involvement ----------------------
+test(central_counterparty_with_parties_is_complete) :-
+    dora_rts_change_management_profile_for(central_counterparty_tested_with_parties, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+test(central_counterparty_without_parties_is_incomplete) :-
+    dora_rts_change_management_profile_for(central_counterparty_parties_not_involved, Profile),
+    dora_rts_change_management_status(Profile, incomplete).
+
+test(central_counterparty_without_parties_is_not_complete, fail) :-
+    dora_rts_change_management_profile_for(central_counterparty_parties_not_involved, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+% ---- Art 17(2): the trigger -------------------------------------------
+test(depository_without_significant_changes_is_complete) :-
+    dora_rts_change_management_profile_for(central_securities_depository_without_significant_changes, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+test(depository_with_significant_changes_asks_for_involvement) :-
+    dora_rts_change_management_profile_for(central_securities_depository_involvement_unstated, Profile),
+    dora_rts_change_management_status(Profile, indeterminate([users_service_providers_and_other_parties_involved_in_testing])).
+
+test(depository_with_significant_changes_is_not_complete, fail) :-
+    dora_rts_change_management_profile_for(central_securities_depository_involvement_unstated, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+test(the_trigger_false_requires_no_testing) :-
+    dora_rts_change_management_profile_for(central_securities_depository_without_significant_changes, Profile),
+    ict_change_management_duties_required(Profile, required(Duties), _),
+    length(Duties, 13).
+
+test(the_trigger_false_never_requires_stringent_testing, fail) :-
+    dora_rts_change_management_profile_for(central_securities_depository_without_significant_changes, Profile),
+    ict_change_management_duties_required(Profile, required(Duties), _),
+    member(stringent_testing_after_significant_changes, Duties).
+
+% ---- referral of an unsure judgement ------------------------------------
+test(an_unsure_element_is_referred) :-
+    dora_rts_change_management_profile_for(credit_institution_verification_unsure, Profile),
+    dora_rts_change_management_status(Profile, needs_legal_review(open_textured(change_procedures_verify_whether_ict_security_requirements_met, cite(eu_reg_2024_1774_art_17_1)), _)).
+
+test(an_unsure_element_is_not_complete, fail) :-
+    dora_rts_change_management_profile_for(credit_institution_verification_unsure, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+% ---- entity type ------------------------------------------------------
+test(entity_type_unstated_is_indeterminate) :-
+    dora_rts_change_management_profile_for(entity_type_unstated, Profile),
+    dora_rts_change_management_status(Profile, indeterminate([dora_entity_type])).
+
+test(investment_firm_near_miss_is_complete) :-
+    dora_rts_change_management_profile_for(investment_firm_trigger_unstated, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+test(entity_type_unstated_is_not_complete, fail) :-
+    dora_rts_change_management_profile_for(entity_type_unstated, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+% ---- outstanding --------------------------------------------------------
+test(a_failing_element_is_outstanding) :-
+    dora_rts_change_management_profile_for(credit_institution_verification_not_performed, Profile),
+    ict_change_management_duties_outstanding(Profile, outstanding([verification_of_ict_security_requirements]), _).
+
+test(a_failing_element_is_not_none_outstanding, fail) :-
+    dora_rts_change_management_profile_for(credit_institution_verification_not_performed, Profile),
+    ict_change_management_duties_outstanding(Profile, none_outstanding, _).
+
+test(all_performed_is_none_outstanding) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    ict_change_management_duties_outstanding(Profile, none_outstanding, _).
+
+% ---- input problems -----------------------------------------------------
+test(an_unknown_key_is_an_input_problem) :-
+    dora_rts_change_management_profile_for(profile_with_unknown_key, Profile),
+    dora_rts_change_management_status(Profile, input_problems([unknown_key(colour)])).
+
+test(an_unknown_key_is_not_complete, fail) :-
+    dora_rts_change_management_profile_for(profile_with_unknown_key, Profile),
+    dora_rts_change_management_status(Profile, complete).
+
+test(the_unknown_key_removed_is_complete) :-
+    dora_rts_change_management_profile_for(profile_with_unknown_key, [_|OtherAttributes]),
+    dora_rts_change_management_status(OtherAttributes, complete).
+
+:- end_module(test_negative_controls).

@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_data_protection_gdpr_codes_and_certification_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_data_protection_gdpr_codes_and_certification_queries, [gdpr_codes_and_certification_profile_keys/1, gdpr_codes_and_certification_what_if/4, gdpr_codes_and_certification_provision/3, gdpr_codes_and_certification_ground_provision/3, gdpr_codes_and_certification_key_read/2, not_yet_issued/0, maximum_period_ended/0, not_issued_by_competent_issuer/0, criteria_not_approved/0, issued_without_informing_supervisory_authority/0, withdrawn/0, withdrawal_required/0, within_maximum_period/0, not_relied_on_for_transfers/0, transfer_conditions_not_met/0, transfer_conditions_met/0, article_41_not_applicable/0, not_a_code_under_article_40_2/0, code_not_approved/0, monitoring_mechanisms_missing/0, no_accredited_monitoring_body/0, not_yet_accredited/0, accreditation_revoked/0, not_accredited_by_entity_named_in_article_43_1/0, accreditation_conditions_not_met/0, revocation_required/0, accreditation_conditions_met/0, take_appropriate_action_on_infringement/0, inform_supervisory_authority_of_actions_and_reasons/0, certification_result/2, code_result/2, monitoring_by_accredited_body/1, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, input_problems/1, wrong_type/1, duplicate_key/1]).
+:- use_module(m__eu_data_protection_gdpr_codes_and_certification_kernel, [gdpr_codes_and_certification_input_problems/2]).
+:- use_module(m__eu_data_protection_gdpr_codes_and_certification_gdpr_codes_and_certification, [code_monitoring_status/3, gdpr_codes_and_certification_checklist/2]).
+:- use_module(m__eu_data_protection_gdpr_codes_and_certification_fixtures, [gdpr_codes_and_certification_profile_for/2]).
+
+cited_item(item(_, _, cite(Key))) :-
+    atom(Key).
+
+test(profile_keys_are_the_contract_keys) :-
+    gdpr_codes_and_certification_profile_keys(ProfileKeys),
+    ProfileKeys == [certification_issuer, certification_body_accredited, certification_criteria_approved, supervisory_authority_informed_before_issue_or_renewal, certification_withdrawn, certification_requirements_not_met, certification_holder_not_subject_to_regulation, certification_holder_binding_commitments_made, processing_by_public_authority_or_body, code_prepared_by_body_representing_controllers_or_processors, code_approved_by_competent_supervisory_authority, code_contains_monitoring_mechanisms, monitoring_body_accredited, code_adhered_to_by_party_not_subject_to_regulation, code_has_general_validity, code_adherent_binding_commitments_made, monitoring_body_accreditation_revoked, monitoring_body_independence_and_expertise_demonstrated, monitoring_body_eligibility_monitoring_and_review_procedures_established, monitoring_body_complaint_procedures_and_structures_established, monitoring_body_no_conflict_of_interests_demonstrated, monitoring_body_actions_infringe_regulation, certification_body_accreditation_revoked, certification_body_accrediting_entity, certification_body_independence_and_expertise_demonstrated, certification_body_undertook_to_respect_approved_criteria, certification_body_issuing_review_and_withdrawal_procedures_established, certification_body_complaint_procedures_and_structures_established, certification_body_no_conflict_of_interests_demonstrated, certification_body_actions_infringe_regulation].
+test(the_re_exported_input_check_answers_once) :-
+    findall(Problems, gdpr_codes_and_certification_input_problems([attribute(colour, blue)], Problems), [[unknown_key(colour)]]).
+test(what_if_unsure_preparer_goes_to_a_lawyer) :-
+    gdpr_codes_and_certification_profile_for(code_monitored_and_relied_on_for_transfers, Profile),
+    gdpr_codes_and_certification_what_if(Profile, code_prepared_by_body_representing_controllers_or_processors, unsure, needs_legal_review).
+test(what_if_a_crisp_key_unsure_is_an_input_problem) :-
+    gdpr_codes_and_certification_profile_for(code_monitored_and_relied_on_for_transfers, Profile),
+    gdpr_codes_and_certification_what_if(Profile, code_has_general_validity, unsure, input_problems).
+test(what_if_replaces_the_value_and_keeps_one_answer) :-
+    gdpr_codes_and_certification_profile_for(code_monitored_and_relied_on_for_transfers, Profile),
+    findall(Status, gdpr_codes_and_certification_what_if(Profile, monitoring_body_accredited, false, Status), [code_result]).
+test(provision_lookup_reads_the_pinned_words) :-
+    gdpr_codes_and_certification_provision(eu_reg_2016_679_art_41_6, _, 'This Article shall not apply to processing carried out by public authorities and bodies.').
+test(provision_lookup_enumerates_provisions) :-
+    findall(Key, gdpr_codes_and_certification_provision(Key, _, _), Keys),
+    Keys = [_|_].
+test(ground_lookup_names_the_entity_provision) :-
+    gdpr_codes_and_certification_ground_provision(certification_body, not_accredited_by_entity_named_in_article_43_1, cite(eu_reg_2016_679_art_43_1)).
+test(ground_lookup_certification_body_has_seven_answers) :-
+    findall(Ground, gdpr_codes_and_certification_ground_provision(certification_body, Ground, _), Grounds),
+    length(Grounds, 7).
+test(ground_lookup_certification_status_has_eleven_answers) :-
+    findall(Ground, gdpr_codes_and_certification_ground_provision(certification_status, Ground, _), Grounds),
+    length(Grounds, 11).
+test(certification_status_reads_eight_keys_in_order) :-
+    findall(Key, gdpr_codes_and_certification_key_read(certification_status, Key), Keys),
+    Keys == [certification_issuer, certification_body_accredited, certification_criteria_approved, supervisory_authority_informed_before_issue_or_renewal, certification_withdrawn, certification_requirements_not_met, certification_holder_not_subject_to_regulation, certification_holder_binding_commitments_made].
+test(monitoring_body_ladder_reads_six_keys) :-
+    findall(Key, gdpr_codes_and_certification_key_read(monitoring_body, Key), Keys),
+    length(Keys, 6).
+test(code_monitoring_status_reads_eight_keys) :-
+    findall(Key, gdpr_codes_and_certification_key_read(code_monitoring_status, Key), Keys),
+    length(Keys, 8).
+test(a_key_is_read_by_exactly_one_query) :-
+    findall(Query, gdpr_codes_and_certification_key_read(Query, certification_criteria_approved), [certification_status]).
+test(every_checklist_item_carries_a_citation) :-
+    gdpr_codes_and_certification_profile_for(code_not_approved, Profile),
+    gdpr_codes_and_certification_checklist(Profile, Items),
+    Items = [_|_],
+    maplist(cited_item, Items).
+test(the_checklist_names_the_deciding_step) :-
+    gdpr_codes_and_certification_profile_for(code_not_approved, Profile),
+    gdpr_codes_and_certification_checklist(Profile, Items),
+    member(item(code_approval, unmet(code_not_approved), cite(eu_reg_2016_679_art_40_5)), Items).
+test(every_answer_atom_is_served) :-
+    not_yet_issued,
+    maximum_period_ended,
+    not_issued_by_competent_issuer,
+    criteria_not_approved,
+    issued_without_informing_supervisory_authority,
+    withdrawn,
+    withdrawal_required,
+    within_maximum_period,
+    not_relied_on_for_transfers,
+    transfer_conditions_not_met,
+    transfer_conditions_met,
+    article_41_not_applicable,
+    not_a_code_under_article_40_2,
+    code_not_approved,
+    monitoring_mechanisms_missing,
+    no_accredited_monitoring_body,
+    not_yet_accredited,
+    accreditation_revoked,
+    not_accredited_by_entity_named_in_article_43_1,
+    accreditation_conditions_not_met,
+    revocation_required,
+    accreditation_conditions_met,
+    take_appropriate_action_on_infringement,
+    inform_supervisory_authority_of_actions_and_reasons.
+test(certification_result_takes_the_pinned_atoms) :-
+    certification_result(withdrawn, transfer_conditions_met).
+test(code_result_takes_the_duties_compound) :-
+    code_result(monitoring_by_accredited_body([take_appropriate_action_on_infringement, inform_supervisory_authority_of_actions_and_reasons]), not_relied_on_for_transfers).
+test(the_slice_answer_is_a_constructor_term) :-
+    gdpr_codes_and_certification_profile_for(code_monitored_and_relied_on_for_transfers, Profile),
+    code_monitoring_status(Profile, code_result(Monitoring, Transfer), _),
+    code_result(Monitoring, Transfer).
+test(indeterminate_names_one_contract_key) :-
+    indeterminate([certification_issuer]).
+test(a_referral_carries_its_fixed_citation) :-
+    needs_legal_review(open_textured(certification_requirements_not_met, cite(eu_reg_2016_679_art_42_7)), [inputs_relied_on([certification_requirements_not_met - unsure])]).
+test(inputs_relied_on_holds_a_list) :-
+    inputs_relied_on([]).
+test(input_problems_holds_the_three_problem_terms) :-
+    input_problems([duplicate_key(certification_withdrawn), wrong_type(check_date), unknown_key(colour)]).
+test(wrong_type_names_an_argument) :-
+    wrong_type(accredited_on).
+test(duplicate_key_names_a_contract_key) :-
+    duplicate_key(certification_body_accrediting_entity).
+test(unknown_key_takes_a_key_as_given) :-
+    input_problems([unknown_key(wrapped(colour))]).
+
+test(what_if_a_settled_key_never_goes_to_a_lawyer, fail) :-
+    gdpr_codes_and_certification_profile_for(code_monitored_and_relied_on_for_transfers, Profile),
+    gdpr_codes_and_certification_what_if(Profile, processing_by_public_authority_or_body, true, needs_legal_review).
+test(ground_lookup_monitoring_body_has_no_maximum_period, fail) :-
+    gdpr_codes_and_certification_ground_provision(monitoring_body, maximum_period_ended, _).
+test(certification_result_refuses_a_monitoring_atom, fail) :-
+    certification_result(code_not_approved, transfer_conditions_met).
+test(code_result_refuses_the_duties_out_of_order, fail) :-
+    code_result(monitoring_by_accredited_body([inform_supervisory_authority_of_actions_and_reasons, take_appropriate_action_on_infringement]), not_relied_on_for_transfers).
+test(indeterminate_never_names_two_keys, fail) :-
+    indeterminate([certification_issuer, certification_withdrawn]).
+test(a_referral_with_another_citation_is_refused, fail) :-
+    open_textured(certification_requirements_not_met, cite(eu_reg_2016_679_art_42_5)).
+test(a_crisp_key_is_never_open_textured, fail) :-
+    open_textured(certification_withdrawn, _).
+test(input_problems_is_never_empty, fail) :-
+    input_problems([]).
+test(duplicate_key_never_names_an_argument, fail) :-
+    duplicate_key(check_date).
+
+cp_test_names([profile_keys_are_the_contract_keys, the_re_exported_input_check_answers_once, what_if_unsure_preparer_goes_to_a_lawyer, what_if_a_crisp_key_unsure_is_an_input_problem, what_if_replaces_the_value_and_keeps_one_answer, provision_lookup_reads_the_pinned_words, provision_lookup_enumerates_provisions, ground_lookup_names_the_entity_provision, ground_lookup_certification_body_has_seven_answers, ground_lookup_certification_status_has_eleven_answers, certification_status_reads_eight_keys_in_order, monitoring_body_ladder_reads_six_keys, code_monitoring_status_reads_eight_keys, a_key_is_read_by_exactly_one_query, every_checklist_item_carries_a_citation, the_checklist_names_the_deciding_step, every_answer_atom_is_served, certification_result_takes_the_pinned_atoms, code_result_takes_the_duties_compound, the_slice_answer_is_a_constructor_term, indeterminate_names_one_contract_key, a_referral_carries_its_fixed_citation, inputs_relied_on_holds_a_list, input_problems_holds_the_three_problem_terms, wrong_type_names_an_argument, duplicate_key_names_a_contract_key, unknown_key_takes_a_key_as_given]).
+cp_test_fail_names([what_if_a_settled_key_never_goes_to_a_lawyer, ground_lookup_monitoring_body_has_no_maximum_period, certification_result_refuses_a_monitoring_atom, code_result_refuses_the_duties_out_of_order, indeterminate_never_names_two_keys, a_referral_with_another_citation_is_refused, a_crisp_key_is_never_open_textured, input_problems_is_never_empty, duplicate_key_never_names_an_argument]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

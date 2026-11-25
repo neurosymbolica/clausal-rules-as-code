@@ -1,0 +1,131 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: every predicate
+% registered in manifest query_interface (status #2, checklist #7,
+% compliance_check #13, what_if #16), the re-exported input check, and
+% the result atoms and constructors.
+% Run: python -m clausal.testing eu/dora_rts_review_report_format/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_rts_review_report_format/queries, [
+    dora_rts_review_report_format_profile_keys/1,
+    dora_rts_review_report_format_input_problems/2,
+    dora_rts_review_report_format_what_if/4,
+    dora_rts_review_report_format_compliance_check/3,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0,
+    framework_review_report_not_requested/0,
+    unsure/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    input_problems/1,
+    financial_entity_is_article_16_1_entity/0,
+    review_report_uses_external_sources/0,
+    report_in_searchable_electronic_format/0,
+    report_uses_external_sources/0
+]).
+:- use_module(eu/dora_rts_review_report_format/dora_rts_review_report_format, [
+    dora_rts_review_report_format_status/2,
+    dora_rts_review_report_format_checklist/2
+]).
+:- use_module(eu/dora_rts_review_report_format/fixtures, [dora_rts_review_report_format_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_rts_review_report_format_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_is_article_16_1_entity, authority_requested_framework_review_report, financial_entity_is_microenterprise, review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, review_initiated_following_ict_related_incidents, identified_weaknesses_not_subject_to_corrective_measures, past_corrective_measures_proved_ineffective_or_created_unexpected_challenges, review_report_in_searchable_electronic_format, review_report_identifies_entity_and_group_structure, review_report_describes_context, review_report_summarises_changes_since_previous_report, review_report_gives_executive_summary, review_report_states_approval_date, review_report_describes_reason_for_review, review_report_references_initiating_instructions_or_conclusions, review_report_lists_incidents_with_root_cause_analysis, review_report_states_review_period_dates, review_report_indicates_responsible_function, review_report_describes_major_changes_and_improvements, review_report_analyses_impact_of_changes, review_report_summarises_findings_and_severity, review_report_summarises_remediation_measures, review_report_gives_measure_dates_and_progress, review_report_gives_measure_tools_and_functions, review_report_describes_resource_impact, review_report_informs_on_authority_information_process, review_report_explains_residual_risk_acceptance, review_report_informs_on_planned_developments, review_report_states_conclusions, review_report_lists_past_reviews, review_report_states_corrective_measure_implementation, review_report_describes_corrective_measure_improvements, review_report_uses_internal_audit_results, review_report_uses_compliance_assessments, review_report_uses_resilience_testing_results, review_report_uses_external_sources].
+
+% ---- #2 status ----------------------------------------------------------
+test(status_of_the_baseline) :-
+    dora_rts_review_report_format_profile_for(scheduled_review_complete, Profile),
+    dora_rts_review_report_format_status(Profile, Status),
+    Status == complete.
+
+% ---- #7 checklist -------------------------------------------------------
+test(checklist_marks_the_missing_item_unmet) :-
+    dora_rts_review_report_format_profile_for(missing_executive_summary, Profile),
+    dora_rts_review_report_format_checklist(Profile, Items),
+    member(item(report_gives_executive_summary, Status, Citations), Items),
+    Status == unmet(review_report_gives_executive_summary),
+    Citations == [cite(eu_reg_2024_1774_art_27_2_a_iv)].
+test(checklist_marks_an_excluded_duty_inapplicable) :-
+    dora_rts_review_report_format_profile_for(microenterprise_without_internal_audit, Profile),
+    dora_rts_review_report_format_checklist(Profile, Items),
+    member(item(report_uses_internal_audit_results, Status, _), Items),
+    Status == inapplicable.
+
+% ---- #13 compliance check -----------------------------------------------
+test(a_complete_report_is_compliant) :-
+    dora_rts_review_report_format_profile_for(scheduled_review_complete, Profile),
+    dora_rts_review_report_format_compliance_check(Profile, submit_review_report, Verdict),
+    Verdict == compliant.
+test(an_incomplete_report_is_non_compliant) :-
+    dora_rts_review_report_format_profile_for(missing_executive_summary, Profile),
+    dora_rts_review_report_format_compliance_check(Profile, submit_review_report, Verdict),
+    Verdict == non_compliant.
+test(an_incomplete_report_is_not_compliant, fail) :-
+    dora_rts_review_report_format_profile_for(missing_executive_summary, Profile),
+    dora_rts_review_report_format_compliance_check(Profile, submit_review_report, compliant).
+test(the_gate_passes_through_the_compliance_check) :-
+    dora_rts_review_report_format_profile_for(article_16_1_entity, Profile),
+    dora_rts_review_report_format_compliance_check(Profile, submit_review_report, Verdict),
+    Verdict == simplified_framework_entity.
+test(a_referral_passes_through_the_compliance_check) :-
+    dora_rts_review_report_format_profile_for(unsure_format, Profile),
+    dora_rts_review_report_format_compliance_check(Profile, submit_review_report, Verdict),
+    Verdict = needs_legal_review(open_textured(review_report_in_searchable_electronic_format, _), _).
+test(the_compliance_check_answers_once) :-
+    dora_rts_review_report_format_profile_for(scheduled_review_complete, Profile),
+    findall(Verdict, dora_rts_review_report_format_compliance_check(Profile, submit_review_report, Verdict), Verdicts),
+    Verdicts == [compliant].
+
+% ---- #16 what-if --------------------------------------------------------
+test(what_if_an_item_were_missing) :-
+    dora_rts_review_report_format_profile_for(scheduled_review_complete, Profile),
+    dora_rts_review_report_format_what_if(Profile, review_report_gives_executive_summary, false, Status),
+    Status == incomplete.
+test(what_if_the_missing_item_were_supplied) :-
+    dora_rts_review_report_format_profile_for(missing_executive_summary, Profile),
+    dora_rts_review_report_format_what_if(Profile, review_report_gives_executive_summary, true, Status),
+    Status == complete.
+test(what_if_the_microenterprise_were_not_one) :-
+    dora_rts_review_report_format_profile_for(microenterprise_without_internal_audit, Profile),
+    dora_rts_review_report_format_what_if(Profile, financial_entity_is_microenterprise, false, Status),
+    Status == incomplete.
+test(what_if_removes_a_duplicate) :-
+    dora_rts_review_report_format_profile_for(input_duplicate_and_unknown, Profile),
+    dora_rts_review_report_format_what_if(Profile, financial_entity_is_article_16_1_entity, false, Status),
+    Status == input_problems([unknown_key(colour)]).
+test(what_if_answers_once) :-
+    dora_rts_review_report_format_profile_for(scheduled_review_complete, Profile),
+    findall(Status, dora_rts_review_report_format_what_if(Profile, review_report_describes_context, unsure, Status), Statuses),
+    Statuses = [needs_legal_review(open_textured(review_report_describes_context, cite(eu_reg_2024_1774_art_27_2_a_ii)), _)].
+
+% ---- input check re-export ----------------------------------------------
+test(the_re_exported_input_check) :-
+    dora_rts_review_report_format_input_problems([attribute(colour, red)], Problems),
+    Problems == [unknown_key(colour)].
+
+% ---- result atoms and constructors --------------------------------------
+test(the_root_atoms_are_defined) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    simplified_framework_entity,
+    framework_review_report_not_requested,
+    unsure,
+    financial_entity_is_article_16_1_entity,
+    review_report_uses_external_sources,
+    report_in_searchable_electronic_format,
+    report_uses_external_sources.
+test(the_constructors_accept_lists) :-
+    required([report_in_searchable_electronic_format]),
+    outstanding([report_uses_external_sources]),
+    indeterminate([financial_entity_is_article_16_1_entity]),
+    input_problems([wrong_type(profile)]).
+test(a_constructor_refuses_a_non_list, fail) :-
+    required(report_in_searchable_electronic_format).
+
+:- end_module(test_queries).

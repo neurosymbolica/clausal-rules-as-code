@@ -1,0 +1,412 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_ctpp_designation
+shape_family: eligibility
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_ctpp_designation"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only (atoms need no export), grouped
+# per submodule -- keep in sync with the :- module(...) export lists re-exported
+# via the package facade __init__.clausal (regenerate from _tools/gen_interface_catalog.py).
+public_interface:
+  # -- kernel.clausal --
+  # (dora_ctpp_designation_input_problems/2 is re-exported through queries.clausal)
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_ctpp_designation.clausal --
+  - "decide_dora_ctpp_designation/2"
+  - "dora_ctpp_designation_status/2"
+  - "dora_ctpp_designation_checklist/2"
+  - "dora_ctpp_designation_decision_resolvable/1"
+  - "dora_ctpp_designation_status_values/1"
+  - "ctpp_designation_criteria_status/3"
+  - "ctpp_step_1_indicators/3"
+  - "ctpp_lead_overseer/3"
+  - "ctpp_designated_provider_duties/3"
+  - "not_an_ict_third_party_service_provider/0"
+  - "step_1_sub_criteria_not_fulfilled/0"
+  - "step_1_sub_criteria_fulfilled/0"
+  - "sub_criterion_2_1/0"
+  - "sub_criterion_2_2/0"
+  - "not_designated_as_critical/0"
+  - "designation_not_applicable/1"
+  - "step_1_indicators/1"
+  - "sub_criteria_1_1_and_1_2/1"
+  - "sub_criterion_4_1/1"
+  - "sub_criterion_4_2/1"
+  - "lead_overseer/1"
+  - "lead_overseer_tied/1"
+  - "required/1"
+  - "indeterminate/1"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal --
+  - "dora_ctpp_designation_profile_keys/1"
+  - "dora_ctpp_designation_input_problems/2"
+  - "dora_ctpp_designation_what_if/4"
+  # -- fixtures.clausal --
+  - "dora_ctpp_designation_subject/1"
+  - "dora_ctpp_designation_profile_for/2"
+  - "dora_ctpp_designation_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only the kit (formalize_lib, library(reif),
+# library(clpz)), no shared backbone package.
+uses: []
+
+scope: "Article 31 of Regulation (EU) 2022/2554 (DORA), read with its Articles 2 and 3 for the categories of financial entities and the definitions the readings name, and Articles 1 to 3 and 5 of Commission Delegated Regulation (EU) 2024/1502 (THE CRITERIA REGULATION). For ONE undertaking providing ICT services (THE PROVIDER) it decides: whether Article 31(8) excludes THE PROVIDER from designation as a critical ICT third-party service provider and otherwise whether it fulfils every 'step 1' sub-criterion, so that the ESAs go on to the 'step 2' assessment (ctpp_designation_criteria_status/3); which 'step 1' sub-criteria the stated figures fulfil, and in which categories of financial entities (ctpp_step_1_indicators/3); which ESA Article 31(1), point (b), appoints as Lead Overseer, or that the largest sums are tied (ctpp_lead_overseer/3); and which duties Article 31(4), the last sentence of Article 31(5) and Article 31(13) place on a designated provider (ctpp_designated_provider_duties/3). Out of scope (see deferred_set and excluded_set): the 'step 2' assessment, the designation itself, the notifications, reasoned statement and periods of the authorities' procedure, the list of critical providers, the oversight, the financial entities' condition on use of Art 31(12), and the scope of the Regulation. 'step 1' fulfilled is not a designation. Every reading is the drafter's, not a lawyer's; four lawyer questions are named (Q1 to Q4)."
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (DORA), OJ L 333, 27.12.2022, p. 1: Article 31(1), points (a) and (b), (2), (3), (4), (5) last sentence, (8) points (i) to (iv), (12) (read to identify the provider) and (13); Article 2(1), points (a) to (t), and 2(2) (categories and financial entities); Article 2(4) and Article 3, points (19), (20) and (32) (quoted for the readings)"
+  - "Commission Delegated Regulation (EU) 2024/1502 supplementing Regulation (EU) 2022/2554 by specifying the criteria for the designation of ICT third-party service providers as critical for financial entities (THE CRITERIA REGULATION), OJ text as published: Article 1(1) and (2); Article 2(1) to (4) (sub-criteria 1.1 and 1.2); Article 3(1) to (3) (sub-criteria 2.1 and 2.2); Article 5(1) to (4) (sub-criteria 4.1 and 4.2)"
+
+query_interface:
+  2: "ctpp_designation_criteria_status/3"     # eligibility: exclusion or 'step 1' verdict, with its cite(...) list
+  7: "dora_ctpp_designation_checklist/2"      # justification: one cite(...) item per ground or requirement
+  16: "dora_ctpp_designation_what_if/4"       # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  - 32022R2554#art_031
+  - 32024R1502#art_001
+  - 32024R1502#art_002
+  - 32024R1502#art_003
+  - 32024R1502#art_005
+  - 32024R1502#art_006
+  reason: The headings of Articles 2 and 31 of the Regulation, the heading and lead
+    words of its Article 3 ('For the purposes of this Regulation, the following definitions
+    shall apply'), and the headings of Articles 1, 2, 3, 5 and 6 of THE CRITERIA REGULATION
+    carry no rule of their own.
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: article_31_5_notification_procedure
+  units:
+  - 32022R2554#parag_031.005
+  partial: true
+  reason: 'Art 31(5), last sentence (THE PROVIDER notifies the financial entities
+    to which it provides services of its designation as critical), is formalised (reading
+    (15)). Not formalised here: the Lead Overseer''s notification of the outcome of
+    the assessment, THE PROVIDER''s reasoned statement within 6 weeks, the Lead Overseer''s
+    request for information within 30 calendar days, the ESAs'' notification of the
+    designation and of the starting date of oversight, and that date no later than
+    one month after the notification. They are steps of the authorities'' procedure,
+    with its periods.'
+  consequence: No answer computes a period of the designation procedure or the start
+    of oversight.
+  declaration: answered_with_caveat
+  debt: true
+  open: a later order on the designation procedure and on oversight (Articles 32 to
+    44 of the Regulation, not pinned here).
+- what: article_31_12_use_condition
+  units:
+  - 32022R2554#parag_031.012
+  partial: true
+  reason: Art 31(12) is read only to identify the critical provider established in
+    a third country to which Art 31(13) refers (reading (15)). Its rule, that financial
+    entities shall only make use of the services of such a provider if it has established
+    a subsidiary in the Union within the 12 months following the designation, binds
+    the financial entities and is not formalised here.
+  consequence: No answer says whether a financial entity may use the services of a
+    critical provider established in a third country.
+  declaration: answered_with_caveat
+  debt: true
+  open: the financial entities' condition on use, for the family of the order eu/dora-ict-third-party-entity-duties
+    (open question (Q14)).
+- what: article_31_authorities
+  units:
+  - 32022R2554#parag_031.006
+  - 32022R2554#parag_031.007
+  - 32022R2554#parag_031.009
+  - 32022R2554#parag_031.010
+  - 32022R2554#parag_031.011
+  reason: Art 31(6) (the Commission's power to adopt the delegated act specifying
+    the criteria) and Art 31(7) (the designation is not used until that act is adopted),
+    both quoted for reading (18) only (THE CRITERIA REGULATION read as that act),
+    Art 31(9) (the ESAs establish, publish and update yearly the list of critical
+    providers), Art 31(10) (competent authorities transmit the yearly reports of Art
+    28(3) to the Oversight Forum, which assesses dependencies) and Art 31(11) (a provider
+    not on the list may apply to be designated; the ESAs decide within 6 months) address
+    the Commission, the ESAs, the Oversight Forum and the competent authorities.
+  consequence: No answer says whether a provider is on the list, whether an application
+    succeeds or when a decision is due.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: step_2_assessment
+  units:
+  - 32024R1502#parag_002.005
+  - 32024R1502#point_002.005_a
+  - 32024R1502#point_002.005_b
+  - 32024R1502#parag_003.004
+  - 32024R1502#art_004
+  - 32024R1502#parag_005.005
+  reason: 'Articles 2(5) (sub-criteria 1.3 and 1.4), 3(4) (sub-criterion 2.3), 4 (sub-criterion
+    3.1) and 5(5) (the ''step 2'' sub-criterion of Article 31(2), point (d)(i)) of
+    THE CRITERIA REGULATION: the ''step 2'' assessment the ESAs carry out in the light
+    of the intensity of the impact of discontinuing the services, the dependence on
+    the same subcontractors, the interdependence of the systemic institutions, the
+    critical nature of the services and the lack of real alternatives. They are the
+    ESAs'' assessment (reading (1)).'
+  consequence: 'step_1_sub_criteria_fulfilled is not a designation: it says that the
+    ESAs go on to this assessment (open question (Q5)).'
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: information_sources
+  units:
+  - 32024R1502#parag_006.001
+  - 32024R1502#parag_006.002
+  reason: 'Article 6 of THE CRITERIA REGULATION: the ESAs use the data of the registers
+    of information of Art 28(3) of the Regulation and other available data, and take
+    the most recent data or the data made available by 31 December of the year preceding
+    the assessment. These address the ESAs; the caller''s figures stand for the data
+    the ESAs use.'
+  consequence: No answer checks where the figures come from or which year they describe.
+  declaration: answered_with_caveat
+  not_formalized_because: institutional
+- what: entry_into_force
+  units:
+  - 32024R1502#art_007
+  reason: 'Article 7 of THE CRITERIA REGULATION: entry into force on the twentieth
+    day following publication, and the Lead Overseer applies sub-criterion 1.4 (a
+    ''step 2'' sub-criterion) as of 16 January 2025. The publication date is not in
+    the pinned text; the order reads no date (reading (18)).'
+  consequence: The answers take THE CRITERIA REGULATION as in force (open question
+    (Q16)).
+  declaration: answered_with_caveat
+  debt: true
+  open: a date of application would need the publication date pinned.
+- what: article_2_1_entities_read_for_categories
+  units:
+  - 32022R2554#parag_002.001
+  - 32022R2554#point_002.001_a
+  - 32022R2554#point_002.001_b
+  - 32022R2554#point_002.001_c
+  - 32022R2554#point_002.001_d
+  - 32022R2554#point_002.001_e
+  - 32022R2554#point_002.001_f
+  - 32022R2554#point_002.001_g
+  - 32022R2554#point_002.001_h
+  - 32022R2554#point_002.001_i
+  - 32022R2554#point_002.001_j
+  - 32022R2554#point_002.001_k
+  - 32022R2554#point_002.001_l
+  - 32022R2554#point_002.001_m
+  - 32022R2554#point_002.001_n
+  - 32022R2554#point_002.001_o
+  - 32022R2554#point_002.001_p
+  - 32022R2554#point_002.001_q
+  - 32022R2554#point_002.001_r
+  - 32022R2554#point_002.001_s
+  - 32022R2554#point_002.001_t
+  - 32022R2554#point_002.001_u
+  - 32022R2554#parag_002.002
+  partial: true
+  reason: Art 2(1), points (a) to (u), and Art 2(2) of the Regulation are read only
+    for the categories of financial entities to which THE CRITERIA REGULATION refers
+    (reading (5)), for which types of THE PROVIDER are financial entities (reading
+    (2)) and for the kinds of points (g) to (j) (reading (9)). Which entities the
+    Regulation applies to is not formalised here.
+  consequence: No answer says whether an entity is within the scope of the Regulation;
+    THE PROVIDER's type is the caller's statement (open question (Q15)).
+  declaration: answered_with_caveat
+  debt: true
+  open: which entities the Regulation applies to is not formalised in this order;
+    the deferral stands for this order.
+- what: article_2_3_scope_exclusions
+  units:
+  - 32022R2554#parag_002.003
+  - 32022R2554#point_002.003_a
+  - 32022R2554#point_002.003_b
+  - 32022R2554#point_002.003_c
+  - 32022R2554#point_002.003_d
+  - 32022R2554#point_002.003_e
+  - 32022R2554#point_002.003_f
+  reason: Art 2(3) of the Regulation (the entities to which the Regulation does not
+    apply) is not read by any limb or reading of this order.
+  consequence: No answer says whether an entity is excluded from the scope of the
+    Regulation.
+  declaration: not_an_exception
+  debt: true
+  open: the scope exclusions are not formalised in this order; the deferral stands
+    for this order.
+- what: article_2_4_member_state_option
+  units:
+  - 32022R2554#parag_002.004
+  partial: true
+  reason: 'Art 2(4) of the Regulation is read only for reading (5): the institutions
+    exempted pursuant to Directive 2013/36/EU, which Member States may exclude from
+    the scope of the Regulation, are named in no point of Article 2(1) and so are
+    no category; the Member States'' option and the information of the Commission
+    are not formalised.'
+  consequence: No answer says whether a Member State has excluded an entity from the
+    scope of the Regulation; institution_exempted_pursuant_to_directive_2013_36 is
+    no value of this order (reading (5)).
+  declaration: answered_with_caveat
+  debt: true
+  open: the Member State option is not formalised in this order; the deferral stands
+    for this order.
+- what: definitions_read_through_the_caller
+  units:
+  - 32022R2554#point_003_19
+  - 32022R2554#point_003_20
+  - 32022R2554#point_003_32
+  reason: Art 3, points (19) (ICT third-party service provider), (20) (ICT intra-group
+    service provider) and (32) (institution exempted pursuant to Directive 2013/36/EU)
+    are quoted for readings (2), (3) and (5). Whether THE PROVIDER meets the definitions
+    of points (19) and (20) is the caller's statement (the type and the intra-group
+    fact); point (32) only names the institutions that reading (5) finds in no point
+    of Article 2(1).
+  consequence: The answers take THE PROVIDER's type and the intra-group fact as given
+    (open question (Q15)).
+  declaration: answered_with_caveat
+  debt: true
+  open: the definitions are applied where an order reads the defined terms as its
+    own facts; the deferral stands for this order.
+- what: definitions_this_order_does_not_read
+  units:
+  - 32022R2554#point_003_1
+  - 32022R2554#point_003_2
+  - 32022R2554#point_003_3
+  - 32022R2554#point_003_4
+  - 32022R2554#point_003_5
+  - 32022R2554#point_003_6
+  - 32022R2554#point_003_7
+  - 32022R2554#point_003_8
+  - 32022R2554#point_003_9
+  - 32022R2554#point_003_10
+  - 32022R2554#point_003_11
+  - 32022R2554#point_003_12
+  - 32022R2554#point_003_13
+  - 32022R2554#point_003_14
+  - 32022R2554#point_003_15
+  - 32022R2554#point_003_16
+  - 32022R2554#point_003_17
+  - 32022R2554#point_003_18
+  - 32022R2554#point_003_21
+  - 32022R2554#point_003_22
+  - 32022R2554#point_003_23
+  - 32022R2554#point_003_24
+  - 32022R2554#point_003_25
+  - 32022R2554#point_003_26
+  - 32022R2554#point_003_27
+  - 32022R2554#point_003_28
+  - 32022R2554#point_003_29
+  - 32022R2554#point_003_30
+  - 32022R2554#point_003_31
+  - 32022R2554#point_003_33
+  - 32022R2554#point_003_34
+  - 32022R2554#point_003_35
+  - 32022R2554#point_003_36
+  - 32022R2554#point_003_37
+  - 32022R2554#point_003_38
+  - 32022R2554#point_003_39
+  - 32022R2554#point_003_40
+  - 32022R2554#point_003_41
+  - 32022R2554#point_003_42
+  - 32022R2554#point_003_43
+  - 32022R2554#point_003_44
+  - 32022R2554#point_003_45
+  - 32022R2554#point_003_46
+  - 32022R2554#point_003_47
+  - 32022R2554#point_003_48
+  - 32022R2554#point_003_49
+  - 32022R2554#point_003_50
+  - 32022R2554#point_003_51
+  - 32022R2554#point_003_52
+  - 32022R2554#point_003_53
+  - 32022R2554#point_003_54
+  - 32022R2554#point_003_55
+  - 32022R2554#point_003_56
+  - 32022R2554#point_003_57
+  - 32022R2554#point_003_58
+  - 32022R2554#point_003_59
+  - 32022R2554#point_003_60
+  - 32022R2554#point_003_61
+  - 32022R2554#point_003_62
+  - 32022R2554#point_003_63
+  - 32022R2554#point_003_64
+  - 32022R2554#point_003_65
+  reason: The points of Article 3 of the Regulation other than points (19), (20) and
+    (32) define terms this order does not read; the other terms are read in the orders
+    on the articles that use them.
+  consequence: 'None for these answers: no limb or reading reads those terms.'
+  declaration: not_an_exception
+  debt: true
+  open: read where used, in the other DORA orders; the deferral stands for this order.
+- what: article_31_lead_words_and_criteria_points_without_own_key
+  units:
+  - 32022R2554#parag_031.001
+  - 32022R2554#point_031.002_a
+  - 32022R2554#point_031.002_b
+  - 32022R2554#point_031.002_b_i
+  - 32022R2554#point_031.002_b_ii
+  - 32022R2554#point_031.002_c
+  - 32022R2554#point_031.002_d
+  - 32022R2554#point_031.002_d_i
+  - 32022R2554#point_031.002_d_ii
+  partial: true
+  reason: The lead words of Art 31(1) (the ESAs act through the Joint Committee upon
+    recommendation from the Oversight Forum) and points (a) to (d) of Art 31(2), with
+    their sub-points, have no citation key of their own in the order's citation vocabulary.
+    Their content is applied through the keys eu_reg_2022_2554_art_31_1_a, eu_reg_2022_2554_art_31_1_b
+    and eu_reg_2022_2554_art_31_2 and through Articles 2, 3 and 5 of THE CRITERIA
+    REGULATION, which specify the criteria as 'step 1' sub-criteria (readings (1),
+    (6) to (12)); criterion (c) has no 'step 1' sub-criterion of its own (Article
+    1(1), closing words). The institutional procedure of the lead words is the ESAs'
+    act.
+  consequence: The answers apply the criteria only through the 'step 1' sub-criteria
+    of THE CRITERIA REGULATION; no answer cites these units separately.
+  declaration: answered_with_caveat
+  debt: true
+  open: a citation key for each point of Art 31(2) would let the package cite them
+    directly.
+
+excluded_set:
+- what: register_of_information
+  instrument: Regulation (EU) 2022/2554 Article 28
+  cites:
+  - 32022R2554#art_028
+  reason: Not pinned in this domain. The registers of information of Art 28(3), the
+    data source of the ESAs (Article 6 of THE CRITERIA REGULATION), are formalised
+    in the order on the register of information.
+  consequence: 'None for these answers: the figures are the caller''s.'
+- what: oversight_framework
+  instrument: Regulation (EU) 2022/2554 Articles 32 to 44
+  cites:
+  - 32022R2554#art_032
+  - 32022R2554#art_033
+  reason: Not pinned in this domain. The Oversight Forum (Article 32) and the tasks
+    and powers of the Lead Overseer (Articles 33 to 44) follow the designation.
+  consequence: No answer says what oversight a designated provider is subject to.
+- what: referenced_union_acts
+  instrument: Directive 2013/36/EU Article 131; Treaty on the Functioning of the European
+    Union Article 127(2); Regulations (EU) No 1093/2010, 1094/2010 and 1095/2010;
+    Regulation (EU) 2022/2554 Article 46
+  cites:
+  - 32013L0036#art_131
+  - 12016E#art_127
+  - 32010R1093#art_001
+  reason: Not pinned in this domain. The identification and scores of G-SIIs and O-SIIs,
+    the oversight frameworks of Article 127(2) TFEU, the responsibilities of the ESAs
+    and the competent authorities that identify systemic entities are the caller's
+    facts and figures (readings (3), (8), (9), (14)).
+  consequence: The answers take those facts and figures as given.

@@ -1,0 +1,42 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ctpp_oversight_citations, [citation/2, implements/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+
+implements(Key) :-
+    citation(Key, _).
+
+citation(eu_reg_2022_2554_art_33_4, [label - 'Regulation (EU) 2022/2554 (DORA) Art 33(4), third and fourth sentences (draft oversight plan; reasoned statement within 15 calendar days)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'Upon receipt of the draft oversight plan, the critical ICT third-party service provider may submit a reasoned statement within 15 calendar days']).
+citation(eu_reg_2022_2554_art_33_5, [label - 'Regulation (EU) 2022/2554 (DORA) Art 33(5) (measures of competent authorities only in agreement with the Lead Overseer)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'competent authorities may take measures concerning such critical ICT third-party service providers only in agreement with the Lead Overseer']).
+citation(eu_reg_2022_2554_art_35_1, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(1), lead words (powers of the Lead Overseer in respect of critical ICT third-party service providers)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'the Lead Overseer shall have the following powers in respect of the critical ICT third-party service providers']).
+citation(eu_reg_2022_2554_art_35_1_a, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(1), point (a) (request information and documentation)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'to request all relevant information and documentation in accordance with Article 37']).
+citation(eu_reg_2022_2554_art_35_1_b, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(1), point (b) (general investigations and inspections)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'to conduct general investigations and inspections in accordance with Articles 38 and 39, respectively']).
+citation(eu_reg_2022_2554_art_35_1_c, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(1), point (c) (remediation reports after completion of the oversight activities)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'to request, after the completion of the oversight activities, reports specifying the actions that have been taken or the remedies that have been implemented']).
+citation(eu_reg_2022_2554_art_35_1_d, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(1), point (d), with its closing words (recommendations; transmission of subcontracting information on the template of Art 41(1), point (b))', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'ICT third-party service providers shall, using the template referred to in Article 41(1), point (b), transmit the information regarding subcontracting to the Lead Overseer']).
+citation(eu_reg_2022_2554_art_35_1_d_iii, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(1), point (d)(iii) (wording compared by reading (4); recorded, never returned)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'with ICT third-party service providers or with ICT subcontractors established in a third country']).
+citation(eu_reg_2022_2554_art_35_1_d_iv, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(1), point (d)(iv) (recommendation to refrain from a further subcontracting arrangement; three cumulative conditions)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'refraining from entering into a further subcontracting arrangement, where the following cumulative conditions are met']).
+citation(eu_reg_2022_2554_art_35_3, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(3), second sentence (relevant information within 30 calendar days before recommendations)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'the Lead Overseer shall give the opportunity to the ICT third-party service provider to provide, within 30 calendar days, relevant information']).
+citation(eu_reg_2022_2554_art_35_5, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(5) (cooperation in good faith with the Lead Overseer)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'Critical ICT third-party service providers shall cooperate in good faith with the Lead Overseer, and assist it in the fulfilment of its tasks.']).
+citation(eu_reg_2022_2554_art_35_6, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(6) (ground for a periodic penalty payment after at least 30 calendar days)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'after the expiry of a period of at least 30 calendar days from the date on which the critical ICT third-party service provider received notification of the respective measures']).
+citation(eu_reg_2022_2554_art_35_7, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(7) (daily basis; no more than six months after notification of the decision)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'for no more than a period of six months following the notification of the decision to impose a periodic penalty payment']).
+citation(eu_reg_2022_2554_art_35_8, [label - 'Regulation (EU) 2022/2554 (DORA) Art 35(8), first sentence (ceiling: 1 % of average daily worldwide turnover in the preceding business year)', ref - 'https://eur-lex.europa.eu/eli/reg/2022/2554/oj', verbatim - 'average daily worldwide turnover of the critical ICT third-party service provider in the preceding business year']).
+
+test(every_returned_key_is_recorded) :-
+    implements(eu_reg_2022_2554_art_33_4),
+    implements(eu_reg_2022_2554_art_33_5),
+    implements(eu_reg_2022_2554_art_35_1),
+    implements(eu_reg_2022_2554_art_35_1_a),
+    implements(eu_reg_2022_2554_art_35_1_b),
+    implements(eu_reg_2022_2554_art_35_1_c),
+    implements(eu_reg_2022_2554_art_35_1_d),
+    implements(eu_reg_2022_2554_art_35_1_d_iv),
+    implements(eu_reg_2022_2554_art_35_3),
+    implements(eu_reg_2022_2554_art_35_5),
+    implements(eu_reg_2022_2554_art_35_6),
+    implements(eu_reg_2022_2554_art_35_7),
+    implements(eu_reg_2022_2554_art_35_8).
+
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_reg_2022_2554_art_31).

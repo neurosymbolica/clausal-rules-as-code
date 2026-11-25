@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 """Run every domain's tests, or the tests under one path.
 
-    pip install 'clausal>=1.2.0'     # the engine (Clausal Prolog)
+    pip install 'clausal>=1.4.0'     # the engine (Clausal Prolog)
     python run_tests.py              # every domain
     python run_tests.py eu/aml       # one jurisdiction or area
     python run_tests.py eu/procurement/time_limits/tests/test_queries.clausal

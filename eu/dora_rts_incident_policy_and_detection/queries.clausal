@@ -1,0 +1,236 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_rts_incident_policy_and_detection.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and the kernel's input check, and nothing else.
+%
+% The query types this domain serves, and where each lives:
+%   #13 compliance_check -- rts_incident_policy_and_detection_duties_complete/3
+%                           (the slice): are the duties of RTS Arts 22-23 done?
+%   #2  eligibility      -- dora_rts_incident_policy_and_detection_status/2 and
+%                           decide_dora_rts_incident_policy_and_detection/2 (the
+%                           slice): the verdict with its cited checklist
+%   #7  justification    -- dora_rts_incident_policy_and_detection_checklist/2
+%                           (the slice): one item per duty, each with cite(...)
+%   #16 what-if          -- dora_rts_incident_policy_and_detection_what_if/4
+%                           (here): override one key, re-evaluate the status
+%
+% dora_rts_incident_policy_and_detection_profile_keys/1: top-level profile key schema
+% dora_rts_incident_policy_and_detection_input_problems/2: the problems a profile has ([] = none),
+%   re-exported as the kernel wrote it
+%
+% RESULT VOCABULARY served at the package root (the scorer reads these as
+% module attributes): the result atoms complete, incomplete, none_outstanding
+% and simplified_framework_entity; the judgement value unsure; the seventeen
+% duty atoms; the eighteen profile key atoms; and the result constructors
+% required/1, outstanding/1, indeterminate/1, needs_legal_review/2,
+% open_textured/2, inputs_relied_on/1, provenance/2, input_problems/1,
+% unknown_key/1, wrong_type/1 and duplicate_key/1. The constructors are data:
+% declared with constructors/1 below, exported, and given no clauses.
+%
+% The profile is an ATTRIBUTE LIST [attribute(Key, Value), ...], not a dict, so the
+% what-if override is written here over that list (profile plumbing, no statutory
+% condition, no provenance marker): every occurrence of the key is removed and the
+% one new attribute is put in its place. Kit candidate: an attribute-list variant of
+% query_combinators' override_key/4.
+% =====================================================================
+
+:- module(queries, [
+    dora_rts_incident_policy_and_detection_profile_keys/1,
+    dora_rts_incident_policy_and_detection_input_problems/2,
+    dora_rts_incident_policy_and_detection_what_if/4,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    simplified_framework_entity/0,
+    unsure/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    ict_related_incident_policy/0,
+    documentation_of_incident_management_process/0,
+    list_of_relevant_contacts/0,
+    incident_management_mechanisms/0,
+    retention_of_incident_evidence/0,
+    analysis_of_significant_or_recurring_incidents/0,
+    secure_retention_of_incident_evidence/0,
+    detection_and_response_roles_and_responsibilities/0,
+    collection_monitoring_and_analysis/0,
+    identification_of_anomalies_and_alerting_tools/0,
+    prioritisation_of_alerts/0,
+    recording_and_evaluation_of_anomalous_activities/0,
+    automated_alerts_on_data_source_and_log_integrity/0,
+    protection_of_records_of_anomalous_activities/0,
+    logging_of_detected_anomalous_activities/0,
+    consideration_of_incident_detection_criteria/0,
+    consideration_of_criticality_of_affected_services/0,
+    financial_entity_is_article_16_1_entity/0,
+    ict_related_incident_policy_developed_documented_and_implemented/0,
+    ict_related_incident_management_process_documented/0,
+    list_of_relevant_internal_and_external_contacts_established/0,
+    technical_organisational_and_operational_incident_management_mechanisms_operated/0,
+    incident_evidence_retained_for_a_period_no_longer_than_necessary/0,
+    mechanisms_to_analyse_significant_or_recurring_incidents_and_patterns_implemented/0,
+    incident_evidence_retained_in_a_secure_manner/0,
+    clear_roles_and_responsibilities_for_detection_and_response_set/0,
+    factors_threats_and_provider_incident_notifications_collected_monitored_and_analysed/0,
+    anomalous_activities_identified_and_alerting_tools_implemented/0,
+    alerts_prioritised_within_expected_resolution_time/0,
+    information_on_anomalous_activities_recorded_analysed_and_evaluated/0,
+    alerting_tools_include_automated_alerts_on_data_source_and_log_integrity/0,
+    records_of_anomalous_activities_protected_against_tampering_and_unauthorised_access/0,
+    information_on_each_detected_anomalous_activity_logged/0,
+    criteria_triggering_incident_detection_and_response_considered/0,
+    criticality_of_affected_services_considered/0
+]).
+
+:- use_module(eu/dora_rts_incident_policy_and_detection/kernel, [dora_rts_incident_policy_and_detection_input_problems/2]).
+:- use_module(eu/dora_rts_incident_policy_and_detection/dora_rts_incident_policy_and_detection, [
+    dora_rts_incident_policy_and_detection_status/2,
+    rts_incident_policy_and_detection_duties_required/3
+]).
+
+% ---- result constructors (exported data, no clauses) -------------------
+:- constructors([
+    required(duties),
+    outstanding(duties),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_rts_incident_policy_and_detection_profile_keys([financial_entity_is_article_16_1_entity, ict_related_incident_policy_developed_documented_and_implemented, ict_related_incident_management_process_documented, list_of_relevant_internal_and_external_contacts_established, technical_organisational_and_operational_incident_management_mechanisms_operated, incident_evidence_retained_for_a_period_no_longer_than_necessary, mechanisms_to_analyse_significant_or_recurring_incidents_and_patterns_implemented, incident_evidence_retained_in_a_secure_manner, clear_roles_and_responsibilities_for_detection_and_response_set, factors_threats_and_provider_incident_notifications_collected_monitored_and_analysed, anomalous_activities_identified_and_alerting_tools_implemented, alerts_prioritised_within_expected_resolution_time, information_on_anomalous_activities_recorded_analysed_and_evaluated, alerting_tools_include_automated_alerts_on_data_source_and_log_integrity, records_of_anomalous_activities_protected_against_tampering_and_unauthorised_access, information_on_each_detected_anomalous_activity_logged, criteria_triggering_incident_detection_and_response_considered, criticality_of_affected_services_considered]).
+
+% ---- result atoms and the judgement value (vocabulary) -----------------
+complete.
+incomplete.
+none_outstanding.
+simplified_framework_entity.
+unsure.
+
+% ---- the seventeen duty atoms, in duty order (vocabulary) --------------
+ict_related_incident_policy.
+documentation_of_incident_management_process.
+list_of_relevant_contacts.
+incident_management_mechanisms.
+retention_of_incident_evidence.
+analysis_of_significant_or_recurring_incidents.
+secure_retention_of_incident_evidence.
+detection_and_response_roles_and_responsibilities.
+collection_monitoring_and_analysis.
+identification_of_anomalies_and_alerting_tools.
+prioritisation_of_alerts.
+recording_and_evaluation_of_anomalous_activities.
+automated_alerts_on_data_source_and_log_integrity.
+protection_of_records_of_anomalous_activities.
+logging_of_detected_anomalous_activities.
+consideration_of_incident_detection_criteria.
+consideration_of_criticality_of_affected_services.
+
+% ---- the eighteen profile key atoms, in root_exports order (vocabulary) -
+financial_entity_is_article_16_1_entity.
+ict_related_incident_policy_developed_documented_and_implemented.
+ict_related_incident_management_process_documented.
+list_of_relevant_internal_and_external_contacts_established.
+technical_organisational_and_operational_incident_management_mechanisms_operated.
+incident_evidence_retained_for_a_period_no_longer_than_necessary.
+mechanisms_to_analyse_significant_or_recurring_incidents_and_patterns_implemented.
+incident_evidence_retained_in_a_secure_manner.
+clear_roles_and_responsibilities_for_detection_and_response_set.
+factors_threats_and_provider_incident_notifications_collected_monitored_and_analysed.
+anomalous_activities_identified_and_alerting_tools_implemented.
+alerts_prioritised_within_expected_resolution_time.
+information_on_anomalous_activities_recorded_analysed_and_evaluated.
+alerting_tools_include_automated_alerts_on_data_source_and_log_integrity.
+records_of_anomalous_activities_protected_against_tampering_and_unauthorised_access.
+information_on_each_detected_anomalous_activity_logged.
+criteria_triggering_incident_detection_and_response_considered.
+criticality_of_affected_services_considered.
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% Defined for a proper list profile; the hypothesis gets the facade status
+% (the functor of the complete-query result), so a badly formed hypothesis
+% answers input_problems as any profile would.
+dora_rts_incident_policy_and_detection_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    is_list(Profile),
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_rts_incident_policy_and_detection_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, Hypothesis): every attribute of Key
+% dropped, then attribute(Key, Value) put first. Exactly one Hypothesis.
+override_attribute(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|KeptAttributes]) :-
+    drop_attribute(Profile, OverriddenKey, KeptAttributes).
+
+% drop_attribute(Elements, Key, Kept): complementary clauses per element; keys
+% compared by identity (==), so no key is ever bound.
+drop_attribute([], _, []).
+drop_attribute([Element|Elements], OverriddenKey, KeptAttributes) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey,
+    drop_attribute(Elements, OverriddenKey, KeptAttributes).
+drop_attribute([Element|Elements], OverriddenKey, [Element|KeptAttributes]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== OverriddenKey,
+    drop_attribute(Elements, OverriddenKey, KeptAttributes).
+drop_attribute([Element|Elements], OverriddenKey, [Element|KeptAttributes]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    drop_attribute(Elements, OverriddenKey, KeptAttributes).
+drop_attribute([Element|Elements], OverriddenKey, [Element|KeptAttributes]) :-
+    var(Element),
+    drop_attribute(Elements, OverriddenKey, KeptAttributes).
+
+% ---- tests ---------------------------------------------------------------
+test(what_if_the_entity_is_an_article_16_1_entity) :-
+    dora_rts_incident_policy_and_detection_what_if([attribute(financial_entity_is_article_16_1_entity, false)], financial_entity_is_article_16_1_entity, true, simplified_framework_entity).
+test(what_if_the_gate_is_false_with_no_duty_answered) :-
+    dora_rts_incident_policy_and_detection_what_if([], financial_entity_is_article_16_1_entity, false, indeterminate).
+test(what_if_the_gate_is_false_is_not_simplified, fail) :-
+    dora_rts_incident_policy_and_detection_what_if([], financial_entity_is_article_16_1_entity, false, simplified_framework_entity).
+test(what_if_answers_once) :-
+    findall(NewStatus, dora_rts_incident_policy_and_detection_what_if([attribute(financial_entity_is_article_16_1_entity, true)], financial_entity_is_article_16_1_entity, false, NewStatus), Statuses),
+    Statuses == [indeterminate].
+test(the_override_replaces_every_occurrence) :-
+    override_attribute([attribute(alerts_prioritised_within_expected_resolution_time, true), attribute(alerts_prioritised_within_expected_resolution_time, false)], alerts_prioritised_within_expected_resolution_time, unsure, Hypothesis),
+    Hypothesis == [attribute(alerts_prioritised_within_expected_resolution_time, unsure)].
+test(the_schema_has_eighteen_keys) :-
+    dora_rts_incident_policy_and_detection_profile_keys(ProfileKeys),
+    length(ProfileKeys, 18).
+test(every_profile_key_atom_is_served) :-
+    dora_rts_incident_policy_and_detection_profile_keys(ProfileKeys),
+    maplist(call, ProfileKeys).
+test(every_duty_atom_of_the_required_list_is_served) :-
+    rts_incident_policy_and_detection_duties_required([attribute(financial_entity_is_article_16_1_entity, false)], required(DutyAtoms), _Citations),
+    length(DutyAtoms, 17),
+    maplist(call, DutyAtoms).
+test(the_result_atoms_are_served) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    simplified_framework_entity,
+    unsure.
+test(the_result_constructors_build_and_destructure) :-
+    Result = needs_legal_review(open_textured(criticality_of_affected_services_considered, cite(eu_reg_2024_1774_art_23_6)), [inputs_relied_on([])]),
+    Result = needs_legal_review(open_textured(JudgementKey, Citation), [inputs_relied_on(Pairs)]),
+    JudgementKey == criticality_of_affected_services_considered,
+    Citation == cite(eu_reg_2024_1774_art_23_6),
+    Pairs == [].
+
+:- end_module(queries).

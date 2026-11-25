@@ -1,0 +1,72 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: the profile schema,
+% the what-if combinator (#16) and the compliance check (#13), each on the
+% fixture profiles.
+% Run: python -m clausal.testing eu/dora_rts_physical_hr_identity_and_access/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/queries, [
+    dora_rts_physical_hr_identity_and_access_profile_keys/1,
+    dora_rts_physical_hr_identity_and_access_what_if/4,
+    dora_rts_physical_hr_identity_and_access_compliance_check/3
+]).
+:- use_module(eu/dora_rts_physical_hr_identity_and_access/fixtures, [dora_rts_physical_hr_identity_and_access_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_rts_physical_hr_identity_and_access_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_is_article_16_1_entity, physical_and_environmental_security_policy_specified_documented_and_implemented, physical_security_policy_designed_in_light_of_threat_landscape_classification_and_risk_profile, physical_security_policy_refers_to_section_on_physical_access_controls, physical_security_policy_contains_measures_protecting_premises_data_centres_and_sensitive_areas, physical_security_policy_contains_measures_securing_ict_assets_within_and_outside_premises, physical_security_policy_contains_measures_of_appropriate_maintenance, physical_security_policy_contains_clear_desk_policy_for_papers, physical_security_policy_contains_clear_screen_policy_for_information_processing_facilities, physical_security_policy_contains_measures_protecting_unattended_ict_assets, human_resource_policy_identifies_and_assigns_ict_security_responsibilities, human_resource_policy_requires_staff_to_be_informed_of_and_adhere_to_ict_security_policies, human_resource_policy_requires_staff_to_be_aware_of_reporting_channels, human_resource_policy_requires_staff_to_return_assets_upon_termination_of_employment, identity_management_policies_and_procedures_developed_documented_and_implemented, identity_management_assigns_unique_identity_corresponding_to_unique_user_account, identity_management_contains_lifecycle_management_process_for_identities_and_accounts, records_of_all_identity_assignments_maintained_and_kept, automated_solutions_for_lifecycle_identity_management_deployed_where_feasible_and_appropriate, access_control_policy_developed_documented_and_implemented, access_control_policy_assigns_access_rights_on_need_to_know_need_to_use_and_least_privilege, access_control_policy_contains_segregation_of_duties, access_control_policy_contains_provision_on_user_accountability, access_control_policy_contains_provision_on_restrictions_of_access_to_ict_assets, account_management_procedures_assign_roles_for_granting_reviewing_and_revoking_access_rights, account_management_procedures_assign_privileged_emergency_and_administrator_access_on_need_to_use_or_ad_hoc_basis, account_management_procedures_withdraw_access_rights_without_undue_delay, account_management_procedures_update_access_rights_where_necessary_and_at_the_required_intervals, access_control_policy_uses_authentication_methods_commensurate_to_classification_and_risk_profile, access_control_policy_uses_strong_authentication_methods_where_required, physical_access_controls_identify_and_log_persons_authorised_to_access_premises, physical_access_rights_to_critical_ict_assets_granted_to_authorised_persons_only, physical_access_to_premises_data_centres_and_sensitive_areas_monitored, physical_access_rights_reviewed_and_unnecessary_rights_promptly_revoked, retention_period_for_the_purposes_of_point_e_i_established, dedicated_accounts_used_for_administrative_tasks_where_possible, automated_solutions_for_privileged_access_management_deployed_where_feasible_and_appropriate].
+
+% ---- #16 what-if -------------------------------------------------------------
+test(what_if_the_failing_duty_is_performed) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    findall(Status, dora_rts_physical_hr_identity_and_access_what_if(Profile, access_control_policy_contains_segregation_of_duties, true, Status), Statuses),
+    Statuses == [complete].
+test(what_if_the_entity_is_an_article_16_1_entity) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_what_if(Profile, financial_entity_is_article_16_1_entity, true, simplified_framework_entity).
+test(what_if_the_gate_is_given) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(gate_absent, Profile),
+    dora_rts_physical_hr_identity_and_access_what_if(Profile, financial_entity_is_article_16_1_entity, false, complete).
+test(what_if_a_duty_turns_unsure) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_what_if(Profile, physical_security_policy_contains_clear_screen_policy_for_information_processing_facilities, unsure, needs_legal_review(open_textured(physical_security_policy_contains_clear_screen_policy_for_information_processing_facilities, cite(eu_reg_2024_1774_art_18_2_e_ii)), _)).
+test(what_if_on_a_bad_profile_gives_its_problems) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(unknown_key, Profile),
+    dora_rts_physical_hr_identity_and_access_what_if(Profile, financial_entity_is_article_16_1_entity, true, input_problems([unknown_key(colour)])).
+test(what_if_a_bad_value_is_an_input_problem) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_what_if(Profile, access_control_policy_contains_segregation_of_duties, maybe, input_problems([wrong_type(access_control_policy_contains_segregation_of_duties)])).
+
+% ---- #13 compliance check -------------------------------------------------------
+test(the_failing_duty_is_violated) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    findall(Verdict, dora_rts_physical_hr_identity_and_access_compliance_check(Profile, segregation_of_duties, Verdict), Verdicts),
+    Verdicts == [violated].
+test(another_duty_of_the_same_profile_is_satisfied) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, clear_desk_policy_for_papers, satisfied).
+test(the_failing_duty_is_not_satisfied, fail) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(one_duty_not_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, segregation_of_duties, satisfied).
+test(the_absent_duty_is_asked) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(first_absent_duty, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, dedicated_administrative_accounts, indeterminate([dedicated_accounts_used_for_administrative_tasks_where_possible])).
+test(the_unsure_duty_goes_to_a_lawyer) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(unsure_referral, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, segregation_of_duties, needs_legal_review(open_textured(access_control_policy_contains_segregation_of_duties, cite(eu_reg_2024_1774_art_21_b)), [inputs_relied_on(Pairs)])),
+    length(Pairs, 37).
+test(the_gate_defeats_every_obligation) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(article_16_1_entity, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, access_control_policy, simplified_framework_entity).
+test(the_absent_gate_is_asked_first) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(gate_absent, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, access_control_policy, indeterminate([financial_entity_is_article_16_1_entity])).
+test(an_unknown_duty_is_an_input_problem) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(all_duties_performed, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, colour, input_problems([unknown_key(colour)])).
+test(a_bad_profile_gives_its_problems) :-
+    dora_rts_physical_hr_identity_and_access_profile_for(duplicate_and_wrong_type, Profile),
+    dora_rts_physical_hr_identity_and_access_compliance_check(Profile, segregation_of_duties, input_problems([duplicate_key(financial_entity_is_article_16_1_entity), wrong_type(access_control_policy_contains_segregation_of_duties)])).
+
+:- end_module(test_queries).

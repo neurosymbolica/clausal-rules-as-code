@@ -1,0 +1,261 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_register_of_information_queries, [dora_register_of_information_profile_keys/1, dora_register_of_information_what_if/4, dora_register_of_information_eligibility/2, dora_register_of_information_compliance_check/3, complete/0, incomplete/0, none_outstanding/0, unsure/0, financial_entity_responsible_for_sub_consolidated_register/0, financial_entity_responsible_for_consolidated_register/0, competent_authority_requested_register/0, entity_plans_arrangement_supporting_critical_or_important_function/0, function_has_become_critical_or_important/0, entity_uses_ict_services_supporting_critical_or_important_functions/0, entity_has_branches_outside_home_country/0, ict_service_supply_chain_partly_intra_group/0, register_maintained_and_updated_at_entity_level/0, register_maintained_and_updated_at_sub_consolidated_level/0, register_maintained_and_updated_at_consolidated_level/0, arrangements_documented_distinguishing_critical_or_important_functions/0, reported_to_competent_authorities_at_least_yearly/0, register_made_available_to_competent_authority_on_request/0, competent_authority_informed_of_planned_arrangement/0, competent_authority_informed_that_function_has_become_critical_or_important/0, rank_assigned_to_each_ict_third_party_service_provider/0, templates_include_information_on_all_ict_services_of_direct_providers/0, templates_include_information_on_subcontractors_underpinning_critical_or_important_functions/0, template_information_meets_data_quality_principles/0, template_information_reviewed_regularly_and_errors_corrected/0, entity_level_information_consistent_with_sub_consolidated_level/0, entity_level_information_consistent_with_consolidated_level/0, providers_identified_by_legal_entity_identifier_or_european_unique_identifier/0, subcontractors_identified_by_legal_entity_identifier_or_european_unique_identifier/0, data_elements_completed_with_single_values/0, all_data_elements_completed_at_each_applicable_level/0, register_includes_general_information_on_maintaining_entity/0, register_includes_general_information_on_entities_in_consolidation/0, register_includes_identification_of_branches_outside_home_country/0, register_includes_general_information_on_contractual_arrangements/0, register_includes_specific_information_on_contractual_arrangements/0, register_includes_links_between_intra_group_and_other_arrangements/0, register_includes_entities_signing_arrangements_for_receiving_ict_services/0, register_includes_providers_signing_arrangements_for_providing_ict_services/0, register_includes_entities_providing_ict_services_within_consolidation/0, register_includes_entities_making_use_of_ict_services/0, register_includes_information_on_direct_providers_and_subcontractors/0, register_includes_information_on_ict_service_supply_chain/0, register_includes_identification_of_functions/0, register_includes_assessment_of_ict_services_supporting_critical_or_important_functions/0, register_includes_terminology_and_closed_lists/0, register_at_entity_level/0, register_at_sub_consolidated_level/0, register_at_consolidated_level/0, documentation_distinguishing_critical_or_important_functions/0, yearly_report_to_competent_authorities/0, register_made_available_on_request/0, information_on_planned_arrangement/0, information_on_function_become_critical_or_important/0, ranking_of_providers/0, information_on_ict_services_of_direct_providers/0, information_on_subcontractors_underpinning_critical_or_important_functions/0, data_quality/0, regular_review_and_correction/0, consistency_with_sub_consolidated_level/0, consistency_with_consolidated_level/0, identifiers_of_providers/0, identifiers_of_subcontractors/0, single_value_per_data_element/0, all_data_elements_completed/0, general_information_on_maintaining_entity/0, general_information_on_entities_in_consolidation/0, identification_of_branches_outside_home_country/0, general_information_on_contractual_arrangements/0, specific_information_on_contractual_arrangements/0, links_between_intra_group_and_other_arrangements/0, entities_signing_arrangements_for_receiving_ict_services/0, providers_signing_arrangements_for_providing_ict_services/0, entities_providing_ict_services_within_consolidation/0, entities_making_use_of_ict_services/0, direct_providers_and_subcontractors/0, ict_service_supply_chain/0, identification_of_functions/0, assessment_of_ict_services_supporting_critical_or_important_functions/0, terminology_and_closed_lists/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(m__eu_dora_register_of_information_kernel, [dora_register_of_information_input_problems/2]).
+:- use_module(m__eu_dora_register_of_information_citations, [implements/1]).
+:- use_module(m__eu_dora_register_of_information_dora_register_of_information, [dora_register_of_information_status/2, dora_register_of_information_checklist/2]).
+
+dora_register_of_information_profile_keys([financial_entity_responsible_for_sub_consolidated_register, financial_entity_responsible_for_consolidated_register, competent_authority_requested_register, entity_plans_arrangement_supporting_critical_or_important_function, function_has_become_critical_or_important, entity_uses_ict_services_supporting_critical_or_important_functions, entity_has_branches_outside_home_country, ict_service_supply_chain_partly_intra_group, register_maintained_and_updated_at_entity_level, register_maintained_and_updated_at_sub_consolidated_level, register_maintained_and_updated_at_consolidated_level, arrangements_documented_distinguishing_critical_or_important_functions, reported_to_competent_authorities_at_least_yearly, register_made_available_to_competent_authority_on_request, competent_authority_informed_of_planned_arrangement, competent_authority_informed_that_function_has_become_critical_or_important, rank_assigned_to_each_ict_third_party_service_provider, templates_include_information_on_all_ict_services_of_direct_providers, templates_include_information_on_subcontractors_underpinning_critical_or_important_functions, template_information_meets_data_quality_principles, template_information_reviewed_regularly_and_errors_corrected, entity_level_information_consistent_with_sub_consolidated_level, entity_level_information_consistent_with_consolidated_level, providers_identified_by_legal_entity_identifier_or_european_unique_identifier, subcontractors_identified_by_legal_entity_identifier_or_european_unique_identifier, data_elements_completed_with_single_values, all_data_elements_completed_at_each_applicable_level, register_includes_general_information_on_maintaining_entity, register_includes_general_information_on_entities_in_consolidation, register_includes_identification_of_branches_outside_home_country, register_includes_general_information_on_contractual_arrangements, register_includes_specific_information_on_contractual_arrangements, register_includes_links_between_intra_group_and_other_arrangements, register_includes_entities_signing_arrangements_for_receiving_ict_services, register_includes_providers_signing_arrangements_for_providing_ict_services, register_includes_entities_providing_ict_services_within_consolidation, register_includes_entities_making_use_of_ict_services, register_includes_information_on_direct_providers_and_subcontractors, register_includes_information_on_ict_service_supply_chain, register_includes_identification_of_functions, register_includes_assessment_of_ict_services_supporting_critical_or_important_functions, register_includes_terminology_and_closed_lists]).
+
+trigger_keys(Triggers) :-
+    dora_register_of_information_profile_keys(Keys),
+    length(Triggers, 8),
+    append(Triggers, _, Keys).
+
+dora_register_of_information_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    proper_list_t(Profile, IsProperList),
+    hypothesis_profile(IsProperList, Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_register_of_information_status(Hypothesis, NewStatus).
+
+proper_list_t(Term, false) :-
+    var(Term).
+proper_list_t(Term, true) :-
+    Term == [].
+proper_list_t(Term, Truth) :-
+    nonvar(Term),
+    Term = [_|Rest],
+    proper_list_t(Rest, Truth).
+proper_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+hypothesis_profile(false, Profile, _, _, Profile).
+hypothesis_profile(true, Profile, Key, Value, Hypothesis) :-
+    replace_key(Profile, Key, Value, Hypothesis).
+
+replace_key([], Key, Value, [attribute(Key, Value)]).
+replace_key([Element|Elements], Key, Value, Hypothesis) :-
+    element_key_match(Element, Key, Matches),
+    replace_step(Matches, Element, Elements, Key, Value, Hypothesis).
+
+replace_step(true, _, Elements, Key, Value, Hypothesis) :-
+    replace_key(Elements, Key, Value, Hypothesis).
+replace_step(false, Element, Elements, Key, Value, [Element|Hypothesis]) :-
+    replace_key(Elements, Key, Value, Hypothesis).
+
+element_key_match(Element, _, false) :-
+    var(Element).
+element_key_match(Element, Key, true) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == Key.
+element_key_match(Element, Key, false) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== Key.
+element_key_match(Element, _, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+dora_register_of_information_eligibility(Profile, Assessment) :-
+    dora_register_of_information_input_problems(Profile, Problems),
+    eligibility_answer(Problems, Profile, Assessment).
+
+eligibility_answer([Problem|Problems], _, input_problems([Problem|Problems])).
+eligibility_answer([], Profile, assessment(dora_register_of_information_duties, Decision, Items)) :-
+    dora_register_of_information_status(Profile, Decision),
+    dora_register_of_information_checklist(Profile, Items).
+
+dora_register_of_information_compliance_check(Profile, leave_unperformed(Duty), Verdict) :-
+    dora_register_of_information_input_problems(Profile, Problems),
+    compliance_after_input(Problems, Profile, Duty, Verdict).
+
+compliance_after_input([Problem|Problems], _, _, input_problems([Problem|Problems])).
+compliance_after_input([], Profile, Duty, Verdict) :-
+    dora_register_of_information_checklist(Profile, Items),
+    findall(Status, member(item(Duty, Status, _), Items), Statuses),
+    compliance_from_statuses(Statuses, Duty, Verdict).
+
+compliance_from_statuses([], Duty, input_problems([unknown_key(Duty)])).
+compliance_from_statuses([Status], _, Verdict) :-
+    trigger_keys(Triggers),
+    compliance_from_item(Status, Triggers, Verdict).
+
+compliance_from_item(inapplicable, _, permitted) :-
+    implements(eu_reg_2022_2554_art_28_3).
+compliance_from_item(met, _, forbidden) :-
+    implements(eu_reg_2022_2554_art_28_3).
+compliance_from_item(unmet(_), _, forbidden) :-
+    implements(eu_reg_2022_2554_art_28_3).
+compliance_from_item(unknown([Key]), Triggers, Verdict) :-
+    memberd_t(Key, Triggers, IsTrigger),
+    open_duty_verdict(IsTrigger, Key, Verdict).
+
+open_duty_verdict(true, Key, indeterminate([Key])).
+open_duty_verdict(false, _, forbidden) :-
+    implements(eu_reg_2022_2554_art_28_3).
+
+complete.
+
+incomplete.
+
+none_outstanding.
+
+unsure.
+
+financial_entity_responsible_for_sub_consolidated_register.
+
+financial_entity_responsible_for_consolidated_register.
+
+competent_authority_requested_register.
+
+entity_plans_arrangement_supporting_critical_or_important_function.
+
+function_has_become_critical_or_important.
+
+entity_uses_ict_services_supporting_critical_or_important_functions.
+
+entity_has_branches_outside_home_country.
+
+ict_service_supply_chain_partly_intra_group.
+
+register_maintained_and_updated_at_entity_level.
+
+register_maintained_and_updated_at_sub_consolidated_level.
+
+register_maintained_and_updated_at_consolidated_level.
+
+arrangements_documented_distinguishing_critical_or_important_functions.
+
+reported_to_competent_authorities_at_least_yearly.
+
+register_made_available_to_competent_authority_on_request.
+
+competent_authority_informed_of_planned_arrangement.
+
+competent_authority_informed_that_function_has_become_critical_or_important.
+
+rank_assigned_to_each_ict_third_party_service_provider.
+
+templates_include_information_on_all_ict_services_of_direct_providers.
+
+templates_include_information_on_subcontractors_underpinning_critical_or_important_functions.
+
+template_information_meets_data_quality_principles.
+
+template_information_reviewed_regularly_and_errors_corrected.
+
+entity_level_information_consistent_with_sub_consolidated_level.
+
+entity_level_information_consistent_with_consolidated_level.
+
+providers_identified_by_legal_entity_identifier_or_european_unique_identifier.
+
+subcontractors_identified_by_legal_entity_identifier_or_european_unique_identifier.
+
+data_elements_completed_with_single_values.
+
+all_data_elements_completed_at_each_applicable_level.
+
+register_includes_general_information_on_maintaining_entity.
+
+register_includes_general_information_on_entities_in_consolidation.
+
+register_includes_identification_of_branches_outside_home_country.
+
+register_includes_general_information_on_contractual_arrangements.
+
+register_includes_specific_information_on_contractual_arrangements.
+
+register_includes_links_between_intra_group_and_other_arrangements.
+
+register_includes_entities_signing_arrangements_for_receiving_ict_services.
+
+register_includes_providers_signing_arrangements_for_providing_ict_services.
+
+register_includes_entities_providing_ict_services_within_consolidation.
+
+register_includes_entities_making_use_of_ict_services.
+
+register_includes_information_on_direct_providers_and_subcontractors.
+
+register_includes_information_on_ict_service_supply_chain.
+
+register_includes_identification_of_functions.
+
+register_includes_assessment_of_ict_services_supporting_critical_or_important_functions.
+
+register_includes_terminology_and_closed_lists.
+
+register_at_entity_level.
+
+register_at_sub_consolidated_level.
+
+register_at_consolidated_level.
+
+documentation_distinguishing_critical_or_important_functions.
+
+yearly_report_to_competent_authorities.
+
+register_made_available_on_request.
+
+information_on_planned_arrangement.
+
+information_on_function_become_critical_or_important.
+
+ranking_of_providers.
+
+information_on_ict_services_of_direct_providers.
+
+information_on_subcontractors_underpinning_critical_or_important_functions.
+
+data_quality.
+
+regular_review_and_correction.
+
+consistency_with_sub_consolidated_level.
+
+consistency_with_consolidated_level.
+
+identifiers_of_providers.
+
+identifiers_of_subcontractors.
+
+single_value_per_data_element.
+
+all_data_elements_completed.
+
+general_information_on_maintaining_entity.
+
+general_information_on_entities_in_consolidation.
+
+identification_of_branches_outside_home_country.
+
+general_information_on_contractual_arrangements.
+
+specific_information_on_contractual_arrangements.
+
+links_between_intra_group_and_other_arrangements.
+
+entities_signing_arrangements_for_receiving_ict_services.
+
+providers_signing_arrangements_for_providing_ict_services.
+
+entities_providing_ict_services_within_consolidation.
+
+entities_making_use_of_ict_services.
+
+direct_providers_and_subcontractors.
+
+ict_service_supply_chain.
+
+identification_of_functions.
+
+assessment_of_ict_services_supporting_critical_or_important_functions.
+
+terminology_and_closed_lists.

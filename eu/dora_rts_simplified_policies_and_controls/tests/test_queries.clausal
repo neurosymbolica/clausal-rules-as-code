@@ -1,0 +1,137 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_queries.clausal -- tests for the query layer: one group per
+% query-taxonomy predicate registered in manifest.yaml query_interface
+% (#2 eligibility, #7 justification, #13 compliance check, #16 what-if),
+% the profile key schema, and the root exports.
+% Run: python -m clausal.testing eu/dora_rts_simplified_policies_and_controls/tests/test_queries.clausal
+% =====================================================================
+:- module(test_queries, []).
+:- use_module(eu/dora_rts_simplified_policies_and_controls/queries, [
+    dora_rts_simplified_policies_and_controls_profile_keys/1,
+    dora_rts_simplified_policies_and_controls_what_if/4,
+    dora_rts_simplified_policies_and_controls_eligibility/2,
+    dora_rts_simplified_policies_and_controls_compliance_check/3,
+    dora_rts_simplified_policies_and_controls_justification/3,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    not_article_16_1_entity/0,
+    unsure/0,
+    required/1,
+    input_problems/1
+]).
+:- use_module(eu/dora_rts_simplified_policies_and_controls/fixtures, [dora_rts_simplified_policies_and_controls_profile_for/2]).
+
+profile(Subject, Profile) :-
+    dora_rts_simplified_policies_and_controls_profile_for(Subject, Profile).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_rts_simplified_policies_and_controls_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_is_article_16_1_entity, simplified_internal_governance_and_control_framework_in_place, management_body_bears_overall_responsibility_for_simplified_framework, management_body_set_ict_roles_and_responsibilities, management_body_set_information_security_objectives_and_ict_requirements, management_body_approves_and_reviews_classification_risks_and_impact_analysis, management_body_approves_and_reviews_continuity_plans_and_recovery_measures, management_body_allocates_and_reviews_resilience_budget_yearly, management_body_specifies_and_implements_title_iii_policies_and_measures, management_body_identifies_and_implements_asset_protection_procedures, management_body_keeps_staff_ict_risk_knowledge_up_to_date, management_body_established_reporting_arrangements, control_and_internal_audit_functions_segregated_and_independent, simplified_framework_subject_to_internal_audit, critical_ict_audit_findings_verified_and_remediated, information_security_policy_developed_documented_and_implemented, ict_security_measures_established_and_implemented, critical_functions_and_supporting_assets_identified_classified_and_documented, critical_functions_supported_by_third_party_providers_identified, framework_determines_ict_risk_tolerance_levels, framework_identifies_and_assesses_ict_risks, framework_specifies_mitigation_strategies, framework_monitors_mitigation_effectiveness, framework_assesses_risks_from_changes_tests_and_incidents, ict_risk_assessment_carried_out_and_documented_periodically, threats_and_vulnerabilities_monitored_and_risk_scenarios_reviewed, incident_response_alert_thresholds_and_criteria_set, physical_security_measures_identified_and_implemented, premises_and_data_centres_protected, access_control_procedures_developed_enforced_and_reviewed, access_rights_managed_on_need_to_know_and_least_privilege, user_accountability_ensured, account_management_procedures_in_place, authentication_methods_commensurate_and_strong_where_required, access_rights_reviewed_and_withdrawn_when_not_required, ict_asset_lifecycle_monitored_and_managed, third_party_support_of_ict_assets_monitored, ict_capacity_requirements_and_availability_measures_identified, vulnerability_scanning_performed_and_patches_deployed, legacy_and_unsupported_ict_asset_risks_managed, access_operations_and_change_events_logged, anomalous_activities_monitored_and_analysed, cyber_threat_information_monitored, leakages_malicious_code_and_vulnerabilities_identified, network_and_data_security_safeguards_developed_and_implemented, data_in_use_in_transit_and_at_rest_protected, software_storage_media_and_endpoint_security_measures_implemented, unauthorised_connections_prevented_and_network_traffic_secured, data_secured_during_network_transmissions, secure_data_deletion_process_in_place, secure_storage_device_disposal_process_in_place, teleworking_and_private_device_measures_implemented].
+
+% ---- root exports and constructors ---------------------------------------
+test(root_result_atoms_are_defined) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    not_article_16_1_entity,
+    unsure.
+
+test(constructors_accept_their_shapes) :-
+    required([user_accountability]),
+    input_problems([wrong_type(profile)]).
+
+% ---- #2 eligibility --------------------------------------------------------
+test(eligibility_bound_by_title_iii) :-
+    profile(all_duties_performed, Profile),
+    findall(Verdict, dora_rts_simplified_policies_and_controls_eligibility(Profile, Verdict), Verdicts),
+    Verdicts == [eligibility(bound_by_title_iii, [item(article_16_1_entity, met, cite(eu_reg_2022_2554_art_16_1))])].
+
+test(eligibility_not_article_16_1_entity) :-
+    profile(gate_false_entity, Profile),
+    dora_rts_simplified_policies_and_controls_eligibility(Profile, eligibility(not_article_16_1_entity, [item(article_16_1_entity, unmet(not_article_16_1_entity), cite(eu_reg_2022_2554_art_16_1))])).
+
+test(eligibility_gate_false_is_not_bound, fail) :-
+    profile(gate_false_entity, Profile),
+    dora_rts_simplified_policies_and_controls_eligibility(Profile, eligibility(bound_by_title_iii, _)).
+
+test(eligibility_indeterminate_without_the_gate) :-
+    profile(gate_absent_entity, Profile),
+    dora_rts_simplified_policies_and_controls_eligibility(Profile, eligibility(indeterminate([financial_entity_is_article_16_1_entity]), [item(article_16_1_entity, unknown([financial_entity_is_article_16_1_entity]), cite(eu_reg_2022_2554_art_16_1))])).
+
+test(eligibility_refuses_a_badly_formed_profile) :-
+    profile(microenterprise_key_unknown, Profile),
+    dora_rts_simplified_policies_and_controls_eligibility(Profile, eligibility(input_problems([unknown_key(financial_entity_is_microenterprise)]), [])).
+
+% ---- #13 compliance check --------------------------------------------------
+test(compliance_performed_duty) :-
+    profile(all_duties_performed, Profile),
+    findall(Verdict, dora_rts_simplified_policies_and_controls_compliance_check(Profile, user_accountability, Verdict), Verdicts),
+    Verdicts == [compliance(user_accountability, performed, cite(eu_reg_2024_1774_art_33))].
+
+test(compliance_omitted_duty) :-
+    profile(one_duty_not_performed, Profile),
+    dora_rts_simplified_policies_and_controls_compliance_check(Profile, protection_of_premises_and_data_centres, compliance(protection_of_premises_and_data_centres, omitted, cite(eu_reg_2024_1774_art_32_2))).
+
+test(compliance_omitted_duty_is_not_performed, fail) :-
+    profile(one_duty_not_performed, Profile),
+    dora_rts_simplified_policies_and_controls_compliance_check(Profile, protection_of_premises_and_data_centres, compliance(_, performed, _)).
+
+test(compliance_absent_duty_is_indeterminate) :-
+    profile(one_duty_absent, Profile),
+    dora_rts_simplified_policies_and_controls_compliance_check(Profile, event_logging, indeterminate([access_operations_and_change_events_logged])).
+
+test(compliance_unsure_duty_is_referred) :-
+    profile(one_duty_unsure, Profile),
+    dora_rts_simplified_policies_and_controls_compliance_check(Profile, cyber_threat_information_monitoring, needs_legal_review(open_textured(cyber_threat_information_monitored, cite(eu_reg_2024_1774_art_34)), [inputs_relied_on(Pairs)])),
+    length(Pairs, 52).
+
+test(compliance_gate_false) :-
+    profile(gate_false_entity, Profile),
+    dora_rts_simplified_policies_and_controls_compliance_check(Profile, user_accountability, not_article_16_1_entity).
+
+test(compliance_check_enumerates_every_duty_once) :-
+    profile(all_duties_performed, Profile),
+    findall(Duty, dora_rts_simplified_policies_and_controls_compliance_check(Profile, Duty, compliance(Duty, performed, _)), Duties),
+    length(Duties, 51),
+    sort(Duties, DistinctDuties),
+    length(DistinctDuties, 51).
+
+% ---- #7 justification ------------------------------------------------------
+test(justification_of_a_duty) :-
+    profile(all_duties_performed, Profile),
+    findall(Citation, dora_rts_simplified_policies_and_controls_justification(Profile, event_logging, Citation), Citations),
+    Citations == [cite(eu_reg_2024_1774_art_34)].
+
+test(justification_of_the_gate) :-
+    profile(all_duties_performed, Profile),
+    dora_rts_simplified_policies_and_controls_justification(Profile, article_16_1_entity, cite(eu_reg_2022_2554_art_16_1)).
+
+test(justification_covers_every_checklist_item) :-
+    profile(all_duties_performed, Profile),
+    findall(Requirement, dora_rts_simplified_policies_and_controls_justification(Profile, Requirement, cite(_)), Requirements),
+    length(Requirements, 52).
+
+% ---- #16 what-if -----------------------------------------------------------
+test(what_if_a_duty_turns_false) :-
+    profile(all_duties_performed, Profile),
+    findall(Status, dora_rts_simplified_policies_and_controls_what_if(Profile, user_accountability_ensured, false, Status), Statuses),
+    Statuses == [incomplete].
+
+test(what_if_the_gate_turns_true) :-
+    profile(gate_false_entity, Profile),
+    dora_rts_simplified_policies_and_controls_what_if(Profile, financial_entity_is_article_16_1_entity, true, complete).
+
+test(what_if_an_absent_duty_is_given) :-
+    profile(one_duty_absent, Profile),
+    dora_rts_simplified_policies_and_controls_what_if(Profile, access_operations_and_change_events_logged, true, complete).
+
+test(what_if_a_duplicate_is_overridden_once) :-
+    profile(duplicate_contract_key, Profile),
+    dora_rts_simplified_policies_and_controls_what_if(Profile, user_accountability_ensured, true, complete).
+
+test(what_if_on_a_non_list_keeps_the_input_problem) :-
+    dora_rts_simplified_policies_and_controls_what_if(widget, user_accountability_ensured, true, input_problems([wrong_type(profile)])).
+
+:- end_module(test_queries).

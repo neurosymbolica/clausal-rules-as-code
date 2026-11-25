@@ -1,0 +1,242 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/dora_rts_incident_policy_and_detection (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL.
+% Exception: the scaffold writes the order's input check
+% dora_rts_incident_policy_and_detection_input_problems/2 here, exported, for
+% the slice and queries.clausal to import. It is kept as the scaffold wrote it.
+%
+% Source: Commission Delegated Regulation (EU) 2024/1774 (the RTS under
+% Regulation (EU) 2022/2554, DORA), Article 22 (ICT-related incident management
+% policy) and Article 23 (anomalous activities detection and criteria for
+% ICT-related incident detection and response), pinned OJ text of 32024R1774;
+% with Regulation (EU) 2022/2554 (DORA) Article 16(1), first subparagraph,
+% pinned OJ text of 32022R2554. The kernel itself decides no statutory
+% condition: the input check is profile plumbing over the typed input contract
+% and carries no provenance marker.
+%
+% deontic family: the duties of RTS Art 22 and Art 23 are obligations; each is
+% a caller judgement (true / false / unsure), and the only relief is the gate of
+% DORA Art 16(1), first subparagraph.
+%
+% Atoms and data terms need NO declaration and NO import. Nothing
+% vocabulary-shaped lives here; the comment block below only RECORDS the result
+% terms so every file spells them alike.
+%
+% NOTHING SINGLE-CALLER LIVES HERE. The duty table, the referral rows, the
+% fixed citations and the inputs_relied_on(PAIRS) builder are read only by the
+% one determination slice, dora_rts_incident_policy_and_detection.clausal, and
+% are defined there.
+%
+% Result terms (spelled exactly as the order pins them):
+%   RESULT of rts_incident_policy_and_detection_duties_required/3:
+%     required(DUTIES)           -- DUTIES all seventeen duty atoms, duty order
+%     simplified_framework_entity -- the gate is true (DORA Art 16(1))
+%   RESULT of rts_incident_policy_and_detection_duties_complete/3:
+%     complete | incomplete | simplified_framework_entity
+%   RESULT of rts_incident_policy_and_detection_duties_outstanding/3:
+%     none_outstanding
+%     outstanding(DUTIES)        -- the failing duties, duty order, each once
+%     simplified_framework_entity
+%   Status compounds of every query (CITATIONS []; never written bare):
+%     indeterminate(MISSING_KEYS) -- MISSING_KEYS a list of exactly one key atom
+%     needs_legal_review(open_textured(KEY, cite(CITATION_KEY)),
+%                        [inputs_relied_on(PAIRS)])
+%                                -- KEY the unsure judgement key, PAIRS the
+%                                   Key-Value pairs present, root_exports order
+%     input_problems(PROBLEMS)   -- PROBLEMS duplicate_key(KEY), wrong_type(KEY),
+%                                   unknown_key(KEY) terms, in the check's order
+%   CITATIONS: a list of cite(KEY) terms, KEY a canonical lexicon key.
+%   The slice's facade verdict:
+%     dora_rts_incident_policy_and_detection_verdict(status, citations)
+%   status the functor of the complete-query result (complete, incomplete,
+%   simplified_framework_entity, indeterminate, needs_legal_review,
+%   input_problems), citations its cite(KEY) list.
+% =====================================================================
+
+:- module(kernel, [dora_rts_incident_policy_and_detection_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% dora_rts_incident_policy_and_detection_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+dora_rts_incident_policy_and_detection_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [financial_entity_is_article_16_1_entity, ict_related_incident_policy_developed_documented_and_implemented, ict_related_incident_management_process_documented, list_of_relevant_internal_and_external_contacts_established, technical_organisational_and_operational_incident_management_mechanisms_operated, incident_evidence_retained_for_a_period_no_longer_than_necessary, mechanisms_to_analyse_significant_or_recurring_incidents_and_patterns_implemented, incident_evidence_retained_in_a_secure_manner, clear_roles_and_responsibilities_for_detection_and_response_set, factors_threats_and_provider_incident_notifications_collected_monitored_and_analysed, anomalous_activities_identified_and_alerting_tools_implemented, alerts_prioritised_within_expected_resolution_time, information_on_anomalous_activities_recorded_analysed_and_evaluated, alerting_tools_include_automated_alerts_on_data_source_and_log_integrity, records_of_anomalous_activities_protected_against_tampering_and_unauthorised_access, information_on_each_detected_anomalous_activity_logged, criteria_triggering_incident_detection_and_response_considered, criticality_of_affected_services_considered],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(financial_entity_is_article_16_1_entity, fact).
+key_type(ict_related_incident_policy_developed_documented_and_implemented, judgement).
+key_type(ict_related_incident_management_process_documented, judgement).
+key_type(list_of_relevant_internal_and_external_contacts_established, judgement).
+key_type(technical_organisational_and_operational_incident_management_mechanisms_operated, judgement).
+key_type(incident_evidence_retained_for_a_period_no_longer_than_necessary, judgement).
+key_type(mechanisms_to_analyse_significant_or_recurring_incidents_and_patterns_implemented, judgement).
+key_type(incident_evidence_retained_in_a_secure_manner, judgement).
+key_type(clear_roles_and_responsibilities_for_detection_and_response_set, judgement).
+key_type(factors_threats_and_provider_incident_notifications_collected_monitored_and_analysed, judgement).
+key_type(anomalous_activities_identified_and_alerting_tools_implemented, judgement).
+key_type(alerts_prioritised_within_expected_resolution_time, judgement).
+key_type(information_on_anomalous_activities_recorded_analysed_and_evaluated, judgement).
+key_type(alerting_tools_include_automated_alerts_on_data_source_and_log_integrity, judgement).
+key_type(records_of_anomalous_activities_protected_against_tampering_and_unauthorised_access, judgement).
+key_type(information_on_each_detected_anomalous_activity_logged, judgement).
+key_type(criteria_triggering_incident_detection_and_response_considered, judgement).
+key_type(criticality_of_affected_services_considered, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(fact, Value, T) :-
+    in_type_t(boolean, Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+:- end_module(kernel).

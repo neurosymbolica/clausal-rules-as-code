@@ -1,0 +1,102 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_load.clausal -- LOAD: the shared floor of eu/dora_penalties loads,
+% its result terms build and destructure, the pinned answer atoms are
+% distinct, the recorded citations resolve, and the kernel's input check
+% gives exactly one answer for the basic profile shapes.
+% Self-contained: the determination slice does not exist yet, so this
+% test imports only from the kernel and the citations module.
+% Run: cd <corpus root> && python -m clausal.testing \
+%      eu/dora_penalties/tests/test_load.clausal
+% =====================================================================
+:- module(test_load, []).
+:- use_module(eu/dora_penalties/kernel, [dora_penalties_input_problems/2]).
+:- use_module(eu/dora_penalties/citations, [citation/2, implements/1]).
+
+% ---- the pinned answer atoms are distinct ----
+
+test(the_rules_answers_are_distinct) :-
+    dif(required, not_required_criminal_penalties).
+
+test(the_power_kinds_are_distinct) :-
+    dif(supervisory, penalty),
+    dif(supervisory, extension),
+    dif(penalty, extension).
+
+test(the_judgement_value_is_not_a_boolean) :-
+    dif(unsure, true),
+    dif(unsure, false).
+
+% ---- the result terms build and destructure ----
+
+test(the_power_term_carries_kind_measure_and_citation) :-
+    Power = power(supervisory, access_to_documents_and_data, cite(eu_reg_2022_2554_art_50_2_a)),
+    Power = power(Kind, Measure, cite(CitationKey)),
+    Kind == supervisory,
+    Measure == access_to_documents_and_data,
+    CitationKey == eu_reg_2022_2554_art_50_2_a.
+
+test(the_circumstance_term_carries_atom_and_citation) :-
+    Circumstance = circumstance(intent_or_negligence, cite(eu_reg_2022_2554_art_51_2)),
+    Circumstance = circumstance(Atom, cite(CitationKey)),
+    Atom == intent_or_negligence,
+    CitationKey == eu_reg_2022_2554_art_51_2.
+
+test(the_referral_status_destructures) :-
+    Status = needs_legal_review(open_textured(financial_strength_relevant, cite(eu_reg_2022_2554_art_51_2_c)), [inputs_relied_on([financial_strength_relevant-unsure])]),
+    Status = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == financial_strength_relevant,
+    CitationKey == eu_reg_2022_2554_art_51_2_c,
+    Pairs == [financial_strength_relevant-unsure].
+
+test(the_missing_key_status_holds_one_key) :-
+    Status = indeterminate([decision_imposes_art_50_2_c_measure]),
+    Status = indeterminate(MissingKeys),
+    length(MissingKeys, 1).
+
+% ---- the recorded citations resolve ----
+
+test(the_rules_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_50_3, _Record).
+
+test(the_option_citation_is_recorded) :-
+    citation(eu_reg_2022_2554_art_52_1, _Record).
+
+test(the_citation_record_has_label_ref_and_verbatim) :-
+    citation(eu_reg_2022_2554_art_50_6, Record),
+    Record = [label-_Label, ref-_Reference, verbatim-_Verbatim].
+
+test(a_recorded_key_implements) :-
+    implements(eu_reg_2022_2554_art_51_2_g).
+
+test(an_unrecorded_key_does_not_implement, fail) :-
+    implements(eu_todo_primary_source).
+
+% ---- the kernel's input check ----
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, dora_penalties_input_problems([], Problems), Answers),
+    Answers == [[]].
+
+test(a_well_formed_profile_has_no_problem) :-
+    dora_penalties_input_problems([attribute(breach_subject_to_criminal_penalties_under_national_law, true), attribute(previous_breaches_relevant, unsure)], []).
+
+test(a_non_list_is_not_a_profile) :-
+    dora_penalties_input_problems(profile, [wrong_type(profile)]).
+
+test(an_unbound_profile_is_not_a_profile) :-
+    dora_penalties_input_problems(_Profile, [wrong_type(profile)]).
+
+test(unsure_is_wrong_for_a_fact_key) :-
+    dora_penalties_input_problems([attribute(measures_applied_to_legal_person, unsure)], [wrong_type(measures_applied_to_legal_person)]).
+
+test(an_unknown_key_is_named) :-
+    dora_penalties_input_problems([attribute(colour, red)], [unknown_key(colour)]).
+
+test(a_repeated_key_is_a_duplicate) :-
+    dora_penalties_input_problems([attribute(decision_imposes_art_50_2_c_measure, true), attribute(decision_imposes_art_50_2_c_measure, true)], [duplicate_key(decision_imposes_art_50_2_c_measure)]).
+
+test(a_well_formed_profile_has_no_unknown_key, fail) :-
+    dora_penalties_input_problems([attribute(breach_subject_to_criminal_penalties_under_national_law, true)], [unknown_key(_Key)]).
+
+:- end_module(test_load).

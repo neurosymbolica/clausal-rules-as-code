@@ -1,0 +1,205 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_penalties.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Source: Regulation (EU) 2022/2554 (DORA), Articles 50 to 52, from the
+% pinned original OJ text 32022R2554 (OJ L 333, 27.12.2022, p. 1).
+%
+% Query types this domain serves:
+%   #2 eligibility   -- decide_dora_penalties/2 and dora_penalties_status/2
+%                       (the slice), answered over administrative_penalty_
+%                       rules_required/3: required | not_required_criminal_
+%                       penalties | indeterminate | input_problems.
+%   #7 justification -- dora_penalties_checklist/2 (the slice): one item per
+%                       question of the order, each with its cite(...) terms.
+%   #16 what-if      -- dora_penalties_what_if/4 below: one key overridden
+%                       in the attribute-list profile (query_combinators'
+%                       override_key/4 works on dicts only), then the facade
+%                       status re-evaluated.
+%
+% dora_penalties_profile_keys/1: the thirteen profile keys, in root_exports
+%   and input_contract order.
+% dora_penalties_input_problems/2: the order's input check, as the scaffold
+%   wrote it in kernel.clausal, re-exported here; never redefined.
+%
+% ROOT EXPORTS. The result, KIND, MEASURE and circumstance atoms of the
+% order are read by the scorer as package-root attributes. The result
+% constructors are exported as the order's contract lists them; they are
+% data and have no clauses (their fields are named by the constructors
+% declaration below). None is ever called as a query.
+%
+% This layer decides no statutory condition: it is plumbing over the
+% slice's public answers, so it carries no provenance marker.
+% =====================================================================
+
+:- module(queries, [
+    dora_penalties_profile_keys/1,
+    dora_penalties_input_problems/2,
+    dora_penalties_what_if/4,
+    required/0,
+    not_required_criminal_penalties/0,
+    supervisory/0,
+    penalty/0,
+    extension/0,
+    access_to_documents_and_data/0,
+    on_site_inspections_and_investigations/0,
+    require_corrective_and_remedial_measures/0,
+    cease_and_desist_order/0,
+    cessation_of_practice_or_conduct/0,
+    measures_to_ensure_continued_compliance/0,
+    require_data_traffic_records/0,
+    public_notice/0,
+    management_body_and_responsible_individuals/0,
+    intent_or_negligence/0,
+    materiality_gravity_and_duration/0,
+    degree_of_responsibility/0,
+    financial_strength/0,
+    profits_gained_or_losses_avoided/0,
+    losses_for_third_parties/0,
+    cooperation_with_competent_authority/0,
+    previous_breaches/0,
+    power/3,
+    circumstance/2,
+    properly_reasoned/1,
+    right_of_appeal/1,
+    receive_criminal_proceedings_information/1,
+    provide_information_to_authorities_and_esas/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1
+]).
+
+:- use_module(eu/dora_penalties/kernel, [dora_penalties_input_problems/2]).
+:- use_module(eu/dora_penalties/dora_penalties, [dora_penalties_status/2]).
+
+% ---- result constructors (exported, data only, never called) ----------
+:- constructors([
+    power(kind, measure, cite),
+    circumstance(atom, cite),
+    properly_reasoned(cite),
+    right_of_appeal(cite),
+    receive_criminal_proceedings_information(cite),
+    provide_information_to_authorities_and_esas(cite),
+    indeterminate(missing_keys),
+    needs_legal_review(reason, context),
+    open_textured(key, citation),
+    inputs_relied_on(pairs),
+    provenance(clause, citations),
+    input_problems(problems),
+    unknown_key(key),
+    wrong_type(key),
+    duplicate_key(key)
+]).
+
+% The keys of the order's typed input contract, in its order: six crisp
+% facts, then the seven Article 51(2) judgement keys.
+dora_penalties_profile_keys([
+    breach_subject_to_criminal_penalties_under_national_law,
+    member_state_chose_no_administrative_rules_for_criminally_penalised_breaches,
+    member_state_laid_down_criminal_penalties_for_breaches,
+    national_law_permits_requiring_data_traffic_records,
+    measures_applied_to_legal_person,
+    decision_imposes_art_50_2_c_measure,
+    breach_materiality_gravity_duration_relevant,
+    degree_of_responsibility_relevant,
+    financial_strength_relevant,
+    profits_gained_or_losses_avoided_relevant,
+    third_party_losses_relevant,
+    cooperation_with_authority_relevant,
+    previous_breaches_relevant
+]).
+
+% ---- root-export vocabulary (atoms of the order's answers) ------------
+% administrative_penalty_rules_required/3 final RESULT atoms.
+required.
+not_required_criminal_penalties.
+% power/3 KIND atoms.
+supervisory.
+penalty.
+extension.
+% power/3 MEASURE atoms, printed order.
+access_to_documents_and_data.
+on_site_inspections_and_investigations.
+require_corrective_and_remedial_measures.
+cease_and_desist_order.
+cessation_of_practice_or_conduct.
+measures_to_ensure_continued_compliance.
+require_data_traffic_records.
+public_notice.
+management_body_and_responsible_individuals.
+% circumstance/2 atoms, printed order.
+intent_or_negligence.
+materiality_gravity_and_duration.
+degree_of_responsibility.
+financial_strength.
+profits_gained_or_losses_avoided.
+losses_for_third_parties.
+cooperation_with_competent_authority.
+previous_breaches.
+
+% #16 what-if: re-evaluate the facade status with one key hypothetically
+% overridden (for example the Member State's choice under Art 52(1)).
+% The override REPLACES the key's attribute in place (or appends it when
+% the key is absent), so the hypothesis holds the key exactly once.
+dora_penalties_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    is_list(Profile),
+    replace_attribute(Profile, OverriddenKey, NewValue, Kept, Found),
+    with_override(Found, Kept, OverriddenKey, NewValue, Hypothesis),
+    dora_penalties_status(Hypothesis, NewStatus).
+
+% replace_attribute(Elements, AttributeKey, Value, NewElements, Found): the
+% first attribute of AttributeKey (compared with ==) becomes
+% attribute(AttributeKey, Value), any later one is dropped; Found is found
+% or none. Other elements are kept.
+replace_attribute([], _, _, [], none).
+replace_attribute([Element|Elements], AttributeKey, Value, [Element|NewElements], Found) :-
+    var(Element),
+    replace_attribute(Elements, AttributeKey, Value, NewElements, Found).
+replace_attribute([Element|Elements], AttributeKey, Value, [Element|NewElements], Found) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    replace_attribute(Elements, AttributeKey, Value, NewElements, Found).
+replace_attribute([Element|Elements], AttributeKey, Value, [attribute(AttributeKey, Value)|NewElements], found) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == AttributeKey,
+    drop_attribute(Elements, AttributeKey, NewElements).
+replace_attribute([Element|Elements], AttributeKey, Value, [Element|NewElements], Found) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== AttributeKey,
+    replace_attribute(Elements, AttributeKey, Value, NewElements, Found).
+
+% drop_attribute(Elements, AttributeKey, Kept): every attribute of the key removed.
+drop_attribute([], _, []).
+drop_attribute([Element|Elements], AttributeKey, [Element|Kept]) :-
+    var(Element),
+    drop_attribute(Elements, AttributeKey, Kept).
+drop_attribute([Element|Elements], AttributeKey, [Element|Kept]) :-
+    nonvar(Element),
+    Element \= attribute(_, _),
+    drop_attribute(Elements, AttributeKey, Kept).
+drop_attribute([Element|Elements], AttributeKey, Kept) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == AttributeKey,
+    drop_attribute(Elements, AttributeKey, Kept).
+drop_attribute([Element|Elements], AttributeKey, [Element|Kept]) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey \== AttributeKey,
+    drop_attribute(Elements, AttributeKey, Kept).
+
+with_override(found, Kept, _, _, Kept).
+with_override(none, Kept, AttributeKey, Value, Hypothesis) :-
+    append(Kept, [attribute(AttributeKey, Value)], Hypothesis).
+
+:- end_module(queries).

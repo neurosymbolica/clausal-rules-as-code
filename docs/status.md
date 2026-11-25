@@ -8,7 +8,7 @@ units of the pinned statute extract are formalized, deferred and unaccounted.
 Hidden-test results (reference implementation, mutation testing, adversarial review) are
 not listed yet; they will be added per domain in the next release.
 
-The 8 domains of the first release have a provision-tracking ledger. The domains added on 2026-11-16, 2026-11-18, 2026-11-20, 2026-11-21 and 2026-11-22 do not: their provision tracking is "none", and no check accounts for the share of the statute they cover. `check_provisions.py` is not run for them.
+The 8 domains of the first release have a provision-tracking ledger. The domains added on 2026-11-16, 2026-11-18, 2026-11-20, 2026-11-21, 2026-11-22 and 2026-11-25 do not: their provision tracking is "none", and no check accounts for the share of the statute they cover. `check_provisions.py` is not run for them.
 
 
 | Domain | Tests passed | Provision tracking | Citations | Parameters | Provenance |
@@ -20,6 +20,7 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `ch/swiss_fadp_s4_criminal_provisions` | 189/189 | none (no provision-tracking ledger) | pass | pass | pass |
 | `cn/pipl_handler_duties` | 204/204 | none (no provision-tracking ledger) | pass | pass | pass |
 | `cn/pipl_individual_rights` | 199/199 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/ai_act/conformity_marking_registration` | 264/264 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/ai_act/deployer_duties_fria` | 207/207 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/ai_act/gpai_models` | 282/282 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/ai_act/high_risk_requirements` | 194/194 | none (no provision-tracking ledger) | pass | pass | pass |
@@ -27,7 +28,7 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `eu/ai_act/post_market_monitoring` | 213/213 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/ai_act/provider_side_duties` | 187/187 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/ai_act/scope_and_roles` | 267/267 | none (no provision-tracking ledger) | pass | pass | pass |
-| `eu/ai_act/serious_incident_reporting` | 262/262 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/ai_act/serious_incident_reporting` | 247/247 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/ai_act/small_items` | 300/300 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/ai_act/transparency_art50` | 250/250 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/aml/amlr_beneficial_ownership_threshold` | 106/106 | enforced: 13 units: 3 formalized, 10 deferred (9 authorized, 1 expansion), 0 unaccounted | pass | pass | pass |
@@ -51,6 +52,7 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `eu/data_protection/gdpr_child_consent_age_fields` | 216/216 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_child_consent_age_verdict` | 138/138 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_churches_and_religious_associations` | 175/175 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/data_protection/gdpr_codes_and_certification` | 338/338 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_common_definitions_data_and_processing` | 231/231 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_common_definitions_roles_and_establishments` | 213/213 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/data_protection/gdpr_compensation_and_liability` | 192/192 | none (no provision-tracking ledger) | pass | pass | pass |
@@ -85,13 +87,34 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `eu/dma_art_3_gatekeeper_order` | 175/175 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dma_art_5_2_data_combination_order` | 211/211 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dma_art_6_9_10_portability_and_business_data_order` | 280/280 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_ctpp_designation` | 222/222 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_ctpp_oversight` | 215/215 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_ict_incident_management_process` | 171/171 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_ict_risk_governance_and_framework` | 242/242 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_ict_risk_learning_and_evolving` | 180/180 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_ict_risk_protection_and_detection` | 188/188 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_ict_risk_response_and_recovery` | 184/184 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_ict_third_party_contract_provisions` | 178/178 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_ict_third_party_entity_duties` | 198/198 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_incident_classification_thresholds` | 256/256 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_information_sharing_arrangements` | 148/148 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_payment_related_incidents` | 193/193 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_penalties` | 182/182 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_proportionality_and_simplified_framework` | 208/208 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_register_of_information` | 171/171 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_resilience_testing_programme` | 210/210 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_asset_management_and_cryptography` | 174/174 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_change_management` | 178/178 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_continuity_testing_and_recovery` | 191/191 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_ict_operations_and_capacity` | 205/205 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_incident_policy_and_detection` | 214/214 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_logging_and_network_security` | 175/175 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_physical_hr_identity_and_access` | 175/175 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_policies_and_risk_management` | 178/178 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_review_report_format` | 205/205 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_simplified_policies_and_controls` | 189/189 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_simplified_testing_continuity_and_report` | 153/153 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/dora_rts_vulnerability_and_data_security` | 133/133 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_scope_and_entity_types` | 245/245 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dora_tlpt` | 291/291 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/dsa_art_14_terms_and_conditions_order` | 171/171 | none (no provision-tracking ledger) | pass | pass | pass |
@@ -108,6 +131,7 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 | `eu/nis2_incident_reporting` | 174/174 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/nis2_information_sharing_voluntary_notification` | 203/203 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/nis2_jurisdiction_registration` | 216/216 | none (no provision-tracking ledger) | pass | pass | pass |
+| `eu/nis2_lex_specialis_and_definitions` | 157/157 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/nis2_scope_entity_class` | 242/242 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/nis2_supervision_fines` | 191/191 | none (no provision-tracking ledger) | pass | pass | pass |
 | `eu/procurement/framework_agreements` | 200/200 | enforced: 13 units: 12 formalized, 1 deferred (1 authorized, 0 expansion), 0 unaccounted | pass | pass | pass |

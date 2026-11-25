@@ -1,0 +1,353 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_conformity_marking_registration_tests_test_public_interface, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_ai_act_conformity_marking_registration_conformity_marking_registration, [conformity_assessment_procedure/4, annex_vii_notified_body/4, new_conformity_assessment_status/4, declaration_of_conformity_status/4, declaration_keeping_status/4, ce_marking_status/5, registration_status/5, listed_items/3, decide_conformity_marking_registration/2, conformity_marking_registration_status/2, conformity_marking_registration_checklist/2, conformity_marking_registration_decision_resolvable/1, conformity_marking_registration_status_values/1]).
+:- use_module(m__eu_ai_act_conformity_marking_registration_kernel, [conformity_marking_registration_input_problems/2]).
+:- use_module(m__eu_ai_act_conformity_marking_registration_queries, [conformity_marking_registration_what_if/4]).
+:- use_module(m__eu_ai_act_conformity_marking_registration_fixtures, [conformity_marking_registration_subject/1, conformity_marking_registration_profile_for/2, conformity_marking_registration_assess/2]).
+
+answer_of(procedure, Profile, AssessmentDate, Result, Citations) :-
+    conformity_assessment_procedure(Profile, AssessmentDate, Result, Citations).
+answer_of(notified_body, Profile, AssessmentDate, Result, Citations) :-
+    annex_vii_notified_body(Profile, AssessmentDate, Result, Citations).
+answer_of(new_assessment, Profile, AssessmentDate, Result, Citations) :-
+    new_conformity_assessment_status(Profile, AssessmentDate, Result, Citations).
+answer_of(declaration, Profile, AssessmentDate, Result, Citations) :-
+    declaration_of_conformity_status(Profile, AssessmentDate, Result, Citations).
+answer_of(ce(Element), Profile, AssessmentDate, Result, Citations) :-
+    ce_marking_status(Profile, Element, AssessmentDate, Result, Citations).
+answer_of(registration(Registrant), Profile, AssessmentDate, Result, Citations) :-
+    registration_status(Profile, Registrant, AssessmentDate, Result, Citations).
+
+expected_row_holds(row(SubjectName, Query, ExpectedResult, ExpectedCitations)) :-
+    conformity_marking_registration_profile_for(SubjectName, assessment(Profile, AssessmentDate)),
+    findall(ActualResult - ActualCitations, answer_of(Query, Profile, AssessmentDate, ActualResult, ActualCitations), Answers),
+    Answers = [OnlyResult - OnlyCitations],
+    OnlyResult == ExpectedResult,
+    sort(OnlyCitations, SortedActual),
+    sort(ExpectedCitations, SortedExpected),
+    SortedActual == SortedExpected.
+
+status_holds(SubjectName - ExpectedStatus) :-
+    findall(ActualStatus, conformity_marking_registration_assess(SubjectName, conformity_marking_registration_verdict(ActualStatus, _)), Statuses),
+    Statuses == [ExpectedStatus].
+
+checklist_has_eleven_items(SubjectName) :-
+    conformity_marking_registration_profile_for(SubjectName, AssessmentCase),
+    conformity_marking_registration_checklist(AssessmentCase, Items),
+    length(Items, 11).
+
+cited_item(item(_, _, [_|_])).
+
+expected_answer(point_three_internal_control, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_on_application_day, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_day_before_application_day, procedure, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113), cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i)]).
+expected_answer(point_three_concluded_not_high_risk, procedure, not_high_risk_under_annex_iii_or_section_a_of_annex_i, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_art_43_3)]).
+expected_answer(point_one_full_standards, procedure, choice_of_internal_control_under_annex_vi_or_notified_body_procedure_under_annex_vii, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_1_first_subparagraph_a), cite(eu_reg_2024_1689_art_43_1_first_subparagraph_b), cite(eu_reg_2024_1689_annex_vi), cite(eu_reg_2024_1689_annex_vii)]).
+expected_answer(point_one_partial_standards, procedure, notified_body_procedure_under_annex_vii, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_1_second_subparagraph_a), cite(eu_reg_2024_1689_art_43_1_second_subparagraph_b), cite(eu_reg_2024_1689_art_43_1_second_subparagraph_c), cite(eu_reg_2024_1689_annex_vii)]).
+expected_answer(point_one_restricted_standard, procedure, choice_of_annex_vi_or_annex_vii_with_annex_vii_for_the_restricted_part, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_1_first_subparagraph_a), cite(eu_reg_2024_1689_art_43_1_first_subparagraph_b), cite(eu_reg_2024_1689_art_43_1_second_subparagraph_d), cite(eu_reg_2024_1689_annex_vi), cite(eu_reg_2024_1689_annex_vii)]).
+expected_answer(point_one_standards_unstated, procedure, indeterminate([harmonised_standards_or_common_specifications_applied_in_full]), []).
+expected_answer(point_one_law_enforcement, procedure, choice_of_internal_control_under_annex_vi_or_notified_body_procedure_under_annex_vii, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_1_first_subparagraph_a), cite(eu_reg_2024_1689_art_43_1_first_subparagraph_b), cite(eu_reg_2024_1689_annex_vi), cite(eu_reg_2024_1689_annex_vii)]).
+expected_answer(point_one_concluded_not_high_risk, procedure, not_high_risk_under_annex_iii_or_section_a_of_annex_i, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_art_43_3)]).
+expected_answer(point_two_internal_control, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(section_a_product_on_application_day, procedure, procedure_of_the_union_harmonisation_legislation, [cite(eu_reg_2024_1689_art_43_3)]).
+expected_answer(section_a_product_day_before_application_day, procedure, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113), cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]).
+expected_answer(section_a_product_option_with_full_standards, procedure, procedure_of_the_union_harmonisation_legislation_with_the_option_without_a_third_party, [cite(eu_reg_2024_1689_art_43_3)]).
+expected_answer(section_a_product_option_without_full_standards, procedure, procedure_of_the_union_harmonisation_legislation_with_third_party_assessment, [cite(eu_reg_2024_1689_art_43_3)]).
+expected_answer(annex_x_component_day_before_compliance_day, procedure, compliance_required_by_31_december_2030, [cite(eu_reg_2024_1689_art_111_1)]).
+expected_answer(annex_x_component_on_compliance_day, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(public_authority_legacy_day_before_compliance_day, procedure, compliance_required_by_2_august_2030, [cite(eu_reg_2024_1689_art_111_2)]).
+expected_answer(public_authority_legacy_on_compliance_day, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(legacy_system_without_significant_changes, procedure, not_applicable_to_a_system_placed_before_the_application_day, [cite(eu_reg_2024_1689_art_111_2)]).
+expected_answer(legacy_system_with_significant_changes, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(legacy_system_significant_changes_unsure, procedure, needs_legal_review(open_textured(significant_changes_in_design_from_the_application_day, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_from_the_application_day - unsure, intended_to_be_used_by_public_authorities - false])]), []).
+expected_answer(point_three_private_deployer, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_other_declaration, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_not_substantial, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_predetermined_change, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_first_assessment, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_substantial_unsure, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_provided_digitally, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_three_affixing_unsure, procedure, internal_control_under_annex_vi, [cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_annex_vi)]).
+expected_answer(point_one_full_standards, notified_body, notified_body_of_the_providers_choice, [cite(eu_reg_2024_1689_art_43_1)]).
+expected_answer(point_one_law_enforcement, notified_body, market_surveillance_authority_acts_as_notified_body, [cite(eu_reg_2024_1689_art_43_1)]).
+expected_answer(point_three_internal_control, notified_body, article_43_1_not_applicable, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_art_43_3)]).
+expected_answer(section_a_product_option_with_full_standards, notified_body, article_43_1_not_applicable, [cite(eu_reg_2024_1689_art_43_1), cite(eu_reg_2024_1689_art_43_2), cite(eu_reg_2024_1689_art_43_3)]).
+expected_answer(point_three_internal_control, new_assessment, new_conformity_assessment_required, [cite(eu_reg_2024_1689_art_43_4), cite(eu_reg_2024_1689_art_3_23)]).
+expected_answer(point_three_not_substantial, new_assessment, new_conformity_assessment_not_required, [cite(eu_reg_2024_1689_art_43_4), cite(eu_reg_2024_1689_art_3_23)]).
+expected_answer(point_three_predetermined_change, new_assessment, new_conformity_assessment_not_required, [cite(eu_reg_2024_1689_art_43_4), cite(eu_reg_2024_1689_art_3_23)]).
+expected_answer(point_three_first_assessment, new_assessment, no_previous_conformity_assessment, [cite(eu_reg_2024_1689_art_43_4)]).
+expected_answer(point_three_concluded_not_high_risk, new_assessment, not_high_risk_under_annex_iii_or_section_a_of_annex_i, [cite(eu_reg_2024_1689_art_43_4)]).
+expected_answer(point_three_substantial_unsure, new_assessment, needs_legal_review(open_textured(substantial_modification, cite(eu_reg_2024_1689_art_3_23)), [inputs_relied_on([significant_changes_in_design_from_the_application_day - false, intended_to_be_used_by_public_authorities - false, substantial_modification - unsure])]), []).
+expected_answer(point_three_internal_control, declaration, declaration_under_this_regulation, [cite(eu_reg_2024_1689_art_47_1)]).
+expected_answer(point_three_other_declaration, declaration, single_declaration_for_all_applicable_union_law, [cite(eu_reg_2024_1689_art_47_1), cite(eu_reg_2024_1689_art_47_3)]).
+expected_answer(point_three_day_before_application_day, declaration, not_applicable_on_date, [cite(eu_reg_2024_1689_art_113), cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i)]).
+expected_answer(point_three_internal_control, ce(digital_ce_marking), marking_element_not_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_2)]).
+expected_answer(point_three_internal_control, ce(ce_marking_affixed_to_the_system), marking_element_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_2), cite(eu_reg_2024_1689_art_48_3)]).
+expected_answer(point_three_internal_control, ce(ce_marking_affixed_to_the_packaging_or_accompanying_documentation), marking_element_not_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_2), cite(eu_reg_2024_1689_art_48_3)]).
+expected_answer(point_three_internal_control, ce(identification_number_of_the_notified_body), marking_element_not_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_4)]).
+expected_answer(point_three_internal_control, ce(indication_of_the_other_union_law), marking_element_not_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_5)]).
+expected_answer(point_three_provided_digitally, ce(digital_ce_marking), marking_element_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_2)]).
+expected_answer(point_three_provided_digitally, ce(ce_marking_affixed_to_the_system), marking_element_not_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_2), cite(eu_reg_2024_1689_art_48_3)]).
+expected_answer(point_three_affixing_unsure, ce(ce_marking_affixed_to_the_system), needs_legal_review(open_textured(affixing_to_the_system_possible_and_warranted, cite(eu_reg_2024_1689_art_48_3)), [inputs_relied_on([significant_changes_in_design_from_the_application_day - false, intended_to_be_used_by_public_authorities - false, affixing_to_the_system_possible_and_warranted - unsure])]), []).
+expected_answer(point_three_affixing_unsure, ce(digital_ce_marking), marking_element_not_required, [cite(eu_reg_2024_1689_art_48_1), cite(eu_reg_2024_1689_art_48_2)]).
+expected_answer(point_three_internal_control, registration(provider), registration_in_the_eu_database, [cite(eu_reg_2024_1689_art_49_1)]).
+expected_answer(point_three_internal_control, registration(deployer), registration_in_the_eu_database, [cite(eu_reg_2024_1689_art_49_3)]).
+expected_answer(point_one_full_standards, registration(provider), registration_in_the_secure_non_public_section_of_the_eu_database, [cite(eu_reg_2024_1689_art_49_1), cite(eu_reg_2024_1689_art_49_4), cite(eu_reg_2024_1689_art_49_4_a)]).
+expected_answer(point_one_full_standards, registration(deployer), registration_in_the_secure_non_public_section_of_the_eu_database, [cite(eu_reg_2024_1689_art_49_3), cite(eu_reg_2024_1689_art_49_4), cite(eu_reg_2024_1689_art_49_4_c)]).
+expected_answer(point_two_internal_control, registration(provider), registration_at_national_level, [cite(eu_reg_2024_1689_art_49_1), cite(eu_reg_2024_1689_art_49_5)]).
+expected_answer(point_two_internal_control, registration(deployer), no_registration_duty, [cite(eu_reg_2024_1689_art_49_3)]).
+expected_answer(point_three_concluded_not_high_risk, registration(provider), registration_in_the_eu_database, [cite(eu_reg_2024_1689_art_49_2)]).
+expected_answer(point_three_concluded_not_high_risk, registration(deployer), no_registration_duty, [cite(eu_reg_2024_1689_art_49_3)]).
+expected_answer(point_one_concluded_not_high_risk, registration(provider), registration_in_the_secure_non_public_section_of_the_eu_database, [cite(eu_reg_2024_1689_art_49_2), cite(eu_reg_2024_1689_art_49_4), cite(eu_reg_2024_1689_art_49_4_b)]).
+expected_answer(point_three_private_deployer, registration(deployer), no_registration_duty, [cite(eu_reg_2024_1689_art_49_3)]).
+expected_answer(point_three_private_deployer, registration(provider), registration_in_the_eu_database, [cite(eu_reg_2024_1689_art_49_1)]).
+expected_answer(point_three_day_before_application_day, registration(provider), not_applicable_on_date, [cite(eu_reg_2024_1689_art_113), cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i)]).
+expected_answer(legacy_system_without_significant_changes, registration(provider), not_applicable_to_a_system_placed_before_the_application_day, [cite(eu_reg_2024_1689_art_111_2)]).
+expected_answer(legacy_system_significant_changes_unsure, registration(provider), needs_legal_review(open_textured(significant_changes_in_design_from_the_application_day, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_from_the_application_day - unsure, intended_to_be_used_by_public_authorities - false])]), []).
+expected_answer(annex_x_component_day_before_compliance_day, registration(provider), compliance_required_by_31_december_2030, [cite(eu_reg_2024_1689_art_111_1)]).
+expected_answer(section_a_product_option_with_full_standards, registration(provider), no_registration_duty, [cite(eu_reg_2024_1689_art_49_1), cite(eu_reg_2024_1689_art_49_2)]).
+
+expected_status(point_three_internal_control, high_risk_obligations_apply).
+expected_status(point_three_on_application_day, high_risk_obligations_apply).
+expected_status(point_three_day_before_application_day, not_applicable_on_date).
+expected_status(point_three_concluded_not_high_risk, not_high_risk_under_annex_iii_or_section_a_of_annex_i).
+expected_status(point_one_full_standards, high_risk_obligations_apply).
+expected_status(point_one_partial_standards, high_risk_obligations_apply).
+expected_status(point_one_restricted_standard, high_risk_obligations_apply).
+expected_status(point_one_standards_unstated, indeterminate([harmonised_standards_or_common_specifications_applied_in_full])).
+expected_status(point_one_law_enforcement, high_risk_obligations_apply).
+expected_status(point_one_concluded_not_high_risk, not_high_risk_under_annex_iii_or_section_a_of_annex_i).
+expected_status(point_two_internal_control, high_risk_obligations_apply).
+expected_status(section_a_product_on_application_day, high_risk_obligations_apply).
+expected_status(section_a_product_day_before_application_day, not_applicable_on_date).
+expected_status(section_a_product_option_with_full_standards, high_risk_obligations_apply).
+expected_status(section_a_product_option_without_full_standards, high_risk_obligations_apply).
+expected_status(annex_x_component_day_before_compliance_day, compliance_required_by_31_december_2030).
+expected_status(annex_x_component_on_compliance_day, high_risk_obligations_apply).
+expected_status(public_authority_legacy_day_before_compliance_day, compliance_required_by_2_august_2030).
+expected_status(public_authority_legacy_on_compliance_day, high_risk_obligations_apply).
+expected_status(legacy_system_without_significant_changes, not_applicable_to_a_system_placed_before_the_application_day).
+expected_status(legacy_system_with_significant_changes, high_risk_obligations_apply).
+expected_status(legacy_system_significant_changes_unsure, needs_legal_review(open_textured(significant_changes_in_design_from_the_application_day, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_changes_in_design_from_the_application_day - unsure, intended_to_be_used_by_public_authorities - false])])).
+expected_status(point_three_private_deployer, high_risk_obligations_apply).
+expected_status(point_three_other_declaration, high_risk_obligations_apply).
+expected_status(point_three_not_substantial, high_risk_obligations_apply).
+expected_status(point_three_predetermined_change, high_risk_obligations_apply).
+expected_status(point_three_first_assessment, high_risk_obligations_apply).
+expected_status(point_three_substantial_unsure, high_risk_obligations_apply).
+expected_status(point_three_provided_digitally, high_risk_obligations_apply).
+expected_status(point_three_affixing_unsure, high_risk_obligations_apply).
+
+test(every_expected_answer_is_given_exactly_once) :-
+    findall(row(SubjectName, Query, Result, Citations), expected_answer(SubjectName, Query, Result, Citations), ExpectedRows),
+    ExpectedRows = [_|_],
+    maplist(expected_row_holds, ExpectedRows).
+test(every_subject_has_its_expected_status) :-
+    findall(SubjectName - Status, expected_status(SubjectName, Status), StatusPairs),
+    StatusPairs = [_|_],
+    maplist(status_holds, StatusPairs).
+test(every_subject_has_an_expected_status) :-
+    findall(SubjectName, conformity_marking_registration_subject(SubjectName), SubjectNames),
+    findall(SubjectName, expected_status(SubjectName, _), ExpectedNames),
+    clausal_msort(SubjectNames, SortedSubjects),
+    clausal_msort(ExpectedNames, SortedExpected),
+    SortedSubjects == SortedExpected.
+test(every_subject_has_an_eleven_item_checklist) :-
+    findall(SubjectName, conformity_marking_registration_subject(SubjectName), SubjectNames),
+    maplist(checklist_has_eleven_items, SubjectNames).
+test(every_subject_is_resolvable) :-
+    findall(SubjectName, conformity_marking_registration_subject(SubjectName), SubjectNames),
+    maplist(subject_resolvable, SubjectNames).
+test(checklist_and_resolvable_hold_on_the_baseline_fixture) :-
+    conformity_marking_registration_profile_for(point_three_internal_control, AssessmentCase),
+    conformity_marking_registration_checklist(AssessmentCase, [_|_]),
+    conformity_marking_registration_decision_resolvable(AssessmentCase).
+test(the_public_interface_resolves_on_the_baseline_fixture) :-
+    conformity_marking_registration_profile_for(point_three_internal_control, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, internal_control_under_annex_vi, [_|_]),
+    conformity_marking_registration_status(assessment(Profile, AssessmentDate), high_risk_obligations_apply).
+test(the_checklist_of_a_settled_case_cites_every_item) :-
+    conformity_marking_registration_profile_for(point_three_internal_control, AssessmentCase),
+    conformity_marking_registration_checklist(AssessmentCase, Items),
+    Items = [item(conformity_assessment_procedure, internal_control_under_annex_vi, _)|_],
+    maplist(cited_item, Items).
+test(the_verdict_of_a_settled_case_carries_citations) :-
+    conformity_marking_registration_profile_for(point_three_internal_control, AssessmentCase),
+    decide_conformity_marking_registration(AssessmentCase, conformity_marking_registration_verdict(high_risk_obligations_apply, [_|_])).
+test(the_verdict_of_an_unsettled_case_has_no_citations) :-
+    conformity_marking_registration_profile_for(point_one_standards_unstated, AssessmentCase),
+    decide_conformity_marking_registration(AssessmentCase, conformity_marking_registration_verdict(indeterminate([harmonised_standards_or_common_specifications_applied_in_full]), [])).
+test(a_final_status_is_in_the_status_vocabulary) :-
+    conformity_marking_registration_status_values(StatusValues),
+    conformity_marking_registration_profile_for(legacy_system_without_significant_changes, AssessmentCase),
+    conformity_marking_registration_status(AssessmentCase, Status),
+    member(Status, StatusValues).
+test(a_referral_context_may_carry_a_trailing_provenance_element) :-
+    Context = [inputs_relied_on([substantial_modification - unsure]), provenance(new_conformity_assessment_status, [cite(eu_reg_2024_1689_art_3_23)])],
+    Context = [inputs_relied_on(Pairs), provenance(Clause, Citations)],
+    Pairs == [substantial_modification - unsure],
+    Clause == new_conformity_assessment_status,
+    Citations == [cite(eu_reg_2024_1689_art_3_23)].
+test(the_referral_context_opens_with_the_inputs_relied_on) :-
+    conformity_marking_registration_profile_for(point_three_substantial_unsure, assessment(Profile, AssessmentDate)),
+    new_conformity_assessment_status(Profile, AssessmentDate, needs_legal_review(_, [FirstElement|_]), []),
+    FirstElement = inputs_relied_on(_).
+test(what_if_the_annex_x_component_is_asked_on_its_compliance_day) :-
+    conformity_marking_registration_profile_for(annex_x_component_day_before_compliance_day, assessment(Profile, _)),
+    conformity_marking_registration_what_if(assessment(Profile, date(2030, 12, 31)), annex_iii_point, annex_iii_point_3, high_risk_obligations_apply).
+test(what_if_the_legacy_system_had_significant_changes) :-
+    conformity_marking_registration_profile_for(legacy_system_without_significant_changes, AssessmentCase),
+    conformity_marking_registration_what_if(AssessmentCase, significant_changes_in_design_from_the_application_day, true, high_risk_obligations_apply).
+test(the_declaration_is_kept_on_the_end_day) :-
+    declaration_keeping_status(date(2027, 12, 2), date(2037, 12, 2), Result, Citations),
+    Result == declaration_to_be_kept,
+    Citations == [cite(eu_reg_2024_1689_art_47_1)].
+test(the_keeping_period_ends_the_day_after_the_end_day) :-
+    declaration_keeping_status(date(2027, 12, 2), date(2037, 12, 3), Result, Citations),
+    Result == keeping_period_ended,
+    Citations == [cite(eu_reg_2024_1689_art_47_1)].
+test(a_leap_day_placing_is_kept_to_28_february) :-
+    declaration_keeping_status(date(2028, 2, 29), date(2038, 2, 28), declaration_to_be_kept, [cite(eu_reg_2024_1689_art_47_1)]).
+test(a_leap_day_placing_ends_on_1_march) :-
+    declaration_keeping_status(date(2028, 2, 29), date(2038, 3, 1), keeping_period_ended, [cite(eu_reg_2024_1689_art_47_1)]).
+test(an_assessment_before_the_placing_is_an_input_problem) :-
+    declaration_keeping_status(date(2028, 2, 29), date(2028, 2, 28), Result, []),
+    Result == input_problems([wrong_type(assessment_date)]).
+test(the_keeping_status_has_one_answer) :-
+    findall(Result - Citations, declaration_keeping_status(date(2027, 12, 2), date(2030, 1, 1), Result, Citations), Answers),
+    length(Answers, 1).
+test(the_section_b_list_follows_the_amended_annex) :-
+    listed_items(annex_viii_section_b, Items, [_|_]),
+    Items == [name_address_and_contact_details_of_the_provider, name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_provider, name_address_and_contact_details_of_the_authorised_representative, trade_name_and_unambiguous_reference_for_identification_and_traceability, description_of_the_intended_purpose, conditions_under_article_6_3_on_which_the_system_is_considered_not_high_risk, status_of_the_ai_system].
+test(the_secure_section_a_list_leaves_out_points_6_8_and_9) :-
+    listed_items(annex_viii_section_a_secure_section, Items, Citations),
+    Items == [name_address_and_contact_details_of_the_provider, name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_provider, name_address_and_contact_details_of_the_authorised_representative, trade_name_and_unambiguous_reference_for_identification_and_traceability, description_of_the_intended_purpose_and_of_the_components_and_functions, status_of_the_ai_system, member_states_where_placed_on_the_market_put_into_service_or_made_available],
+    member(cite(eu_reg_2024_1689_art_49_4_a), Citations).
+test(the_annex_vi_list_has_three_checks) :-
+    listed_items(annex_vi_internal_control, Items, _),
+    Items == [verification_of_the_quality_management_system_against_article_17, examination_of_the_technical_documentation_against_the_essential_requirements, verification_of_the_consistency_of_design_development_and_post_market_monitoring_with_the_technical_documentation].
+test(the_annex_vii_quality_management_system_application_has_six_items) :-
+    listed_items(annex_vii_quality_management_system_application, Items, Citations),
+    Items == [name_and_address_of_the_provider_and_of_any_authorised_representative_lodging_the_application, list_of_ai_systems_covered_by_the_quality_management_system, technical_documentation_for_each_ai_system_covered, documentation_of_the_quality_management_system, description_of_the_procedures_keeping_the_quality_management_system_adequate_and_effective, written_declaration_that_the_application_has_not_been_lodged_with_another_notified_body],
+    member(cite(eu_reg_2024_1689_annex_vii_3_1_f), Citations).
+test(the_annex_vii_technical_documentation_application_has_three_items) :-
+    listed_items(annex_vii_technical_documentation_application, Items, Citations),
+    Items == [name_and_address_of_the_provider, written_declaration_that_the_application_has_not_been_lodged_with_another_notified_body, technical_documentation_referred_to_in_annex_iv],
+    member(cite(eu_reg_2024_1689_annex_vii_4_2_b), Citations).
+test(the_section_a_list_has_thirteen_items_in_annex_order) :-
+    listed_items(annex_viii_section_a, Items, Citations),
+    Items == [name_address_and_contact_details_of_the_provider, name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_provider, name_address_and_contact_details_of_the_authorised_representative, trade_name_and_unambiguous_reference_for_identification_and_traceability, description_of_the_intended_purpose_and_of_the_components_and_functions, description_of_the_information_used_and_of_the_operating_logic, status_of_the_ai_system, type_number_and_expiry_date_of_the_certificate_and_name_or_number_of_the_notified_body, scanned_copy_of_the_certificate, member_states_where_placed_on_the_market_put_into_service_or_made_available, copy_of_the_eu_declaration_of_conformity, electronic_instructions_for_use, url_for_additional_information],
+    member(cite(eu_reg_2024_1689_annex_viii_section_a_13), Citations).
+test(the_section_c_list_has_five_items) :-
+    listed_items(annex_viii_section_c, Items, Citations),
+    Items == [name_address_and_contact_details_of_the_deployer, name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_deployer, url_of_the_providers_entry_in_the_eu_database, summary_of_the_findings_of_the_fundamental_rights_impact_assessment, summary_of_the_data_protection_impact_assessment],
+    member(cite(eu_reg_2024_1689_annex_viii_section_c_5), Citations).
+test(the_secure_section_c_list_has_points_1_to_3) :-
+    listed_items(annex_viii_section_c_secure_section, Items, _),
+    Items == [name_address_and_contact_details_of_the_deployer, name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_deployer, url_of_the_providers_entry_in_the_eu_database].
+test(the_annex_ix_list_has_five_items) :-
+    listed_items(annex_ix, Items, Citations),
+    Items == [union_wide_unique_single_identification_number_of_the_testing, name_and_contact_details_of_the_provider_and_of_the_deployers_involved_in_the_testing, brief_description_of_the_ai_system_and_of_its_intended_purpose, summary_of_the_main_characteristics_of_the_testing_plan, information_on_suspension_or_termination_of_the_testing],
+    member(cite(eu_reg_2024_1689_annex_ix_4), Citations).
+test(the_secure_annex_ix_list_has_points_1_2_3_and_5) :-
+    listed_items(annex_ix_secure_section, Items, _),
+    Items == [union_wide_unique_single_identification_number_of_the_testing, name_and_contact_details_of_the_provider_and_of_the_deployers_involved_in_the_testing, brief_description_of_the_ai_system_and_of_its_intended_purpose, information_on_suspension_or_termination_of_the_testing].
+test(the_secure_annex_ix_list_keeps_point_5) :-
+    listed_items(annex_ix_secure_section, Items, _),
+    member(information_on_suspension_or_termination_of_the_testing, Items).
+test(an_unknown_list_is_an_input_problem) :-
+    listed_items(colour, Items, Citations),
+    Items == input_problems([wrong_type(item_list)]),
+    Citations == [].
+test(a_list_lookup_has_one_answer) :-
+    findall(Items - Citations, listed_items(annex_viii_section_c, Items, Citations), Answers),
+    length(Answers, 1).
+test(a_well_formed_fixture_profile_has_no_problem) :-
+    conformity_marking_registration_profile_for(point_three_internal_control, assessment(Profile, _)),
+    conformity_marking_registration_input_problems(Profile, []).
+test(a_crisp_key_given_unsure_is_a_wrong_type) :-
+    conformity_marking_registration_input_problems([attribute(provided_digitally, unsure)], [wrong_type(provided_digitally)]).
+test(a_profile_problem_comes_before_every_answer) :-
+    conformity_assessment_procedure([attribute(colour, red)], date(2029, 1, 1), Result, Citations),
+    Result == input_problems([unknown_key(colour)]),
+    Citations == [].
+test(an_impossible_date_is_an_input_problem) :-
+    declaration_of_conformity_status([], date(2029, 2, 30), Result, []),
+    Result == input_problems([wrong_type(assessment_date)]).
+test(an_unknown_element_is_an_input_problem) :-
+    ce_marking_status([], colour, date(2029, 1, 1), Result, []),
+    Result == input_problems([wrong_type(element)]).
+test(an_unknown_registrant_is_an_input_problem) :-
+    registration_status([], somebody, date(2029, 1, 1), Result, []),
+    Result == input_problems([wrong_type(registrant)]).
+test(an_empty_profile_asks_the_provider_for_the_annex_iii_point) :-
+    findall(Result - Citations, registration_status([], provider, date(2029, 1, 1), Result, Citations), Answers),
+    Answers == [indeterminate([annex_iii_point]) - []].
+
+subject_resolvable(SubjectName) :-
+    conformity_marking_registration_profile_for(SubjectName, AssessmentCase),
+    conformity_marking_registration_decision_resolvable(AssessmentCase).
+
+test(a_provenance_term_is_not_an_inputs_relied_on_term, fail) :-
+    provenance(new_conformity_assessment_status, []) = inputs_relied_on(_).
+test(the_day_before_the_application_day_is_not_internal_control, fail) :-
+    conformity_marking_registration_profile_for(point_three_day_before_application_day, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, internal_control_under_annex_vi, _).
+test(the_application_day_is_not_before_the_application_day, fail) :-
+    conformity_marking_registration_profile_for(point_three_on_application_day, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, not_applicable_on_date, _).
+test(a_partial_standard_point_one_system_has_no_choice, fail) :-
+    conformity_marking_registration_profile_for(point_one_partial_standards, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, choice_of_internal_control_under_annex_vi_or_notified_body_procedure_under_annex_vii, _).
+test(a_full_standard_point_one_system_is_not_bound_to_annex_vii, fail) :-
+    conformity_marking_registration_profile_for(point_one_full_standards, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, notified_body_procedure_under_annex_vii, _).
+test(on_the_annex_x_compliance_day_compliance_is_no_longer_pending, fail) :-
+    conformity_marking_registration_profile_for(annex_x_component_on_compliance_day, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, compliance_required_by_31_december_2030, _).
+test(on_the_public_authority_compliance_day_compliance_is_no_longer_pending, fail) :-
+    conformity_marking_registration_profile_for(public_authority_legacy_on_compliance_day, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, compliance_required_by_2_august_2030, _).
+test(a_section_a_product_the_day_before_has_no_procedure, fail) :-
+    conformity_marking_registration_profile_for(section_a_product_day_before_application_day, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, procedure_of_the_union_harmonisation_legislation, _).
+test(a_legacy_system_with_significant_changes_is_not_exempt, fail) :-
+    conformity_marking_registration_profile_for(legacy_system_with_significant_changes, assessment(Profile, AssessmentDate)),
+    conformity_assessment_procedure(Profile, AssessmentDate, not_applicable_to_a_system_placed_before_the_application_day, _).
+test(a_private_deployer_does_not_register, fail) :-
+    conformity_marking_registration_profile_for(point_three_private_deployer, assessment(Profile, AssessmentDate)),
+    registration_status(Profile, deployer, AssessmentDate, registration_in_the_eu_database, _).
+test(a_point_two_provider_does_not_register_in_the_eu_database, fail) :-
+    conformity_marking_registration_profile_for(point_two_internal_control, assessment(Profile, AssessmentDate)),
+    registration_status(Profile, provider, AssessmentDate, registration_in_the_eu_database, _).
+test(a_first_assessment_is_not_a_new_assessment, fail) :-
+    conformity_marking_registration_profile_for(point_three_first_assessment, assessment(Profile, AssessmentDate)),
+    new_conformity_assessment_status(Profile, AssessmentDate, new_conformity_assessment_required, _).
+test(the_end_day_is_not_after_the_end_day, fail) :-
+    declaration_keeping_status(date(2027, 12, 2), date(2037, 12, 2), keeping_period_ended, _).
+test(the_technical_documentation_application_has_no_quality_management_documentation, fail) :-
+    listed_items(annex_vii_technical_documentation_application, Items, _),
+    member(documentation_of_the_quality_management_system, Items).
+test(the_secure_section_a_list_leaves_out_the_certificate, fail) :-
+    listed_items(annex_viii_section_a_secure_section, Items, _),
+    member(scanned_copy_of_the_certificate, Items).
+test(the_secure_section_c_list_leaves_out_the_impact_assessments, fail) :-
+    listed_items(annex_viii_section_c_secure_section, Items, _),
+    member(summary_of_the_findings_of_the_fundamental_rights_impact_assessment, Items).
+test(the_secure_annex_ix_list_leaves_out_point_4, fail) :-
+    listed_items(annex_ix_secure_section, Items, _),
+    member(summary_of_the_main_characteristics_of_the_testing_plan, Items).
+
+cp_test_names([every_expected_answer_is_given_exactly_once, every_subject_has_its_expected_status, every_subject_has_an_expected_status, every_subject_has_an_eleven_item_checklist, every_subject_is_resolvable, checklist_and_resolvable_hold_on_the_baseline_fixture, the_public_interface_resolves_on_the_baseline_fixture, the_checklist_of_a_settled_case_cites_every_item, the_verdict_of_a_settled_case_carries_citations, the_verdict_of_an_unsettled_case_has_no_citations, a_final_status_is_in_the_status_vocabulary, a_referral_context_may_carry_a_trailing_provenance_element, the_referral_context_opens_with_the_inputs_relied_on, what_if_the_annex_x_component_is_asked_on_its_compliance_day, what_if_the_legacy_system_had_significant_changes, the_declaration_is_kept_on_the_end_day, the_keeping_period_ends_the_day_after_the_end_day, a_leap_day_placing_is_kept_to_28_february, a_leap_day_placing_ends_on_1_march, an_assessment_before_the_placing_is_an_input_problem, the_keeping_status_has_one_answer, the_section_b_list_follows_the_amended_annex, the_secure_section_a_list_leaves_out_points_6_8_and_9, the_annex_vi_list_has_three_checks, the_annex_vii_quality_management_system_application_has_six_items, the_annex_vii_technical_documentation_application_has_three_items, the_section_a_list_has_thirteen_items_in_annex_order, the_section_c_list_has_five_items, the_secure_section_c_list_has_points_1_to_3, the_annex_ix_list_has_five_items, the_secure_annex_ix_list_has_points_1_2_3_and_5, the_secure_annex_ix_list_keeps_point_5, an_unknown_list_is_an_input_problem, a_list_lookup_has_one_answer, a_well_formed_fixture_profile_has_no_problem, a_crisp_key_given_unsure_is_a_wrong_type, a_profile_problem_comes_before_every_answer, an_impossible_date_is_an_input_problem, an_unknown_element_is_an_input_problem, an_unknown_registrant_is_an_input_problem, an_empty_profile_asks_the_provider_for_the_annex_iii_point]).
+cp_test_fail_names([a_provenance_term_is_not_an_inputs_relied_on_term, the_day_before_the_application_day_is_not_internal_control, the_application_day_is_not_before_the_application_day, a_partial_standard_point_one_system_has_no_choice, a_full_standard_point_one_system_is_not_bound_to_annex_vii, on_the_annex_x_compliance_day_compliance_is_no_longer_pending, on_the_public_authority_compliance_day_compliance_is_no_longer_pending, a_section_a_product_the_day_before_has_no_procedure, a_legacy_system_with_significant_changes_is_not_exempt, a_private_deployer_does_not_register, a_point_two_provider_does_not_register_in_the_eu_database, a_first_assessment_is_not_a_new_assessment, the_end_day_is_not_after_the_end_day, the_technical_documentation_application_has_no_quality_management_documentation, the_secure_section_a_list_leaves_out_the_certificate, the_secure_section_c_list_leaves_out_the_impact_assessments, the_secure_annex_ix_list_leaves_out_point_4]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

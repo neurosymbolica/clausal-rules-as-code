@@ -1,0 +1,167 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one condition changed -> a different verdict), proving the route is
+% LOAD-BEARING. A negative states "no solution" as `test(Name, fail) :- Goal.`;
+% every atom a negative names also appears in a positive test, so a
+% misspelling shows up as a failing positive.
+% Run: python -m clausal.testing eu/dora_rts_simplified_policies_and_controls/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_rts_simplified_policies_and_controls/dora_rts_simplified_policies_and_controls, [
+    simplified_policies_and_controls_duties_required/3,
+    simplified_policies_and_controls_duties_complete/3,
+    simplified_policies_and_controls_duties_outstanding/3,
+    dora_rts_simplified_policies_and_controls_status/2,
+    dora_rts_simplified_policies_and_controls_status_values/1
+]).
+:- use_module(eu/dora_rts_simplified_policies_and_controls/kernel, [dora_rts_simplified_policies_and_controls_input_problems/2]).
+:- use_module(eu/dora_rts_simplified_policies_and_controls/fixtures, [dora_rts_simplified_policies_and_controls_profile_for/2]).
+
+profile(Subject, Profile) :-
+    dora_rts_simplified_policies_and_controls_profile_for(Subject, Profile).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    dora_rts_simplified_policies_and_controls_status_values(StatusValues),
+    StatusValues = [_, _|_].
+
+test(the_near_miss_atoms_are_table_statuses) :-
+    dora_rts_simplified_policies_and_controls_status_values(StatusValues),
+    member(complete, StatusValues),
+    member(incomplete, StatusValues),
+    member(not_article_16_1_entity, StatusValues).
+
+test(the_baseline_profile_yields_no_other_table_status, fail) :-
+    profile(all_duties_performed, Profile),
+    findall(Status, dora_rts_simplified_policies_and_controls_status(Profile, Status), [BaselineStatus]),
+    dora_rts_simplified_policies_and_controls_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_rts_simplified_policies_and_controls_status(Profile, Other).
+
+% ---- complete (S4) vs one duty false ---------------------------------
+test(all_duties_performed_is_complete) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, complete, _).
+test(one_duty_not_performed_is_not_complete, fail) :-
+    profile(one_duty_not_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, complete, _).
+
+% ---- incomplete (S1) vs all performed ----------------------------------
+test(one_duty_not_performed_is_incomplete) :-
+    profile(one_duty_not_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, incomplete, _).
+test(all_duties_performed_is_not_incomplete, fail) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, incomplete, _).
+
+% ---- gate false (R-G1, S-G1, M-G1) vs gate true --------------------------
+test(gate_false_is_not_article_16_1_entity) :-
+    profile(gate_false_entity, Profile),
+    simplified_policies_and_controls_duties_required(Profile, not_article_16_1_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+test(gate_true_is_not_not_article_16_1_entity, fail) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_required(Profile, not_article_16_1_entity, _).
+test(gate_true_gets_the_duty_list) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_required(Profile, required(_), _).
+test(gate_false_gets_no_duty_list, fail) :-
+    profile(gate_false_entity, Profile),
+    simplified_policies_and_controls_duties_required(Profile, required(_), _).
+test(gate_false_decides_before_a_false_duty) :-
+    profile(gate_false_with_duty_not_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, not_article_16_1_entity, _),
+    simplified_policies_and_controls_duties_outstanding(Profile, not_article_16_1_entity, _).
+test(gate_false_with_a_false_duty_is_not_incomplete, fail) :-
+    profile(gate_false_with_duty_not_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, incomplete, _).
+
+% ---- gate absent (R-G2, S-G2, M-G2) vs gate true ------------------------
+test(gate_absent_is_indeterminate_on_the_gate) :-
+    profile(gate_absent_entity, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []).
+test(gate_absent_is_not_incomplete_despite_a_false_duty, fail) :-
+    profile(gate_absent_entity, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, incomplete, _).
+test(gate_true_with_a_false_duty_is_not_indeterminate, fail) :-
+    profile(one_duty_not_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, indeterminate(_), _).
+
+% ---- absent duty (S2, M1) vs present ------------------------------------
+test(an_absent_duty_is_indeterminate) :-
+    profile(one_duty_absent, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, indeterminate([access_operations_and_change_events_logged]), []).
+test(a_present_duty_is_not_indeterminate, fail) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, indeterminate(_), _).
+
+% ---- unsure duty (S3, M2) vs true and vs absent ---------------------------
+test(an_unsure_duty_is_referred) :-
+    profile(one_duty_unsure, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, needs_legal_review(open_textured(cyber_threat_information_monitored, cite(eu_reg_2024_1774_art_34)), [inputs_relied_on(_)]), []).
+test(an_unsure_duty_is_not_indeterminate, fail) :-
+    profile(one_duty_unsure, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, indeterminate(_), _).
+test(a_true_duty_is_not_referred, fail) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, needs_legal_review(_, _), _).
+test(an_absent_key_is_named_before_an_unsure_one) :-
+    profile(absent_before_unsure, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, indeterminate([teleworking_and_private_device_measures_implemented]), []).
+test(an_absent_key_before_an_unsure_one_is_not_referred, fail) :-
+    profile(absent_before_unsure, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, needs_legal_review(_, _), _).
+
+% ---- a false duty ends complete, not outstanding -------------------------
+test(a_false_duty_decides_complete_before_an_absent_key) :-
+    profile(false_and_absent, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, incomplete, _).
+test(a_false_duty_does_not_end_outstanding) :-
+    profile(false_and_absent, Profile),
+    simplified_policies_and_controls_duties_outstanding(Profile, indeterminate([access_operations_and_change_events_logged]), []).
+test(false_and_absent_is_not_outstanding_yet, fail) :-
+    profile(false_and_absent, Profile),
+    simplified_policies_and_controls_duties_outstanding(Profile, outstanding(_), _).
+test(a_false_duty_decides_complete_before_an_unsure_key) :-
+    profile(false_and_unsure, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, incomplete, _).
+test(false_and_unsure_is_not_referred_by_complete, fail) :-
+    profile(false_and_unsure, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, needs_legal_review(_, _), _).
+
+% ---- outstanding (M3) vs none_outstanding ---------------------------------
+test(several_false_duties_are_outstanding_in_duty_order) :-
+    profile(several_duties_not_performed, Profile),
+    simplified_policies_and_controls_duties_outstanding(Profile, outstanding([internal_governance_and_control_framework, protection_of_premises_and_data_centres, user_accountability]), _).
+test(all_true_has_nothing_outstanding, fail) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_outstanding(Profile, outstanding(_), _).
+test(all_true_is_none_outstanding) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_outstanding(Profile, none_outstanding, _).
+test(one_false_is_not_none_outstanding, fail) :-
+    profile(one_duty_not_performed, Profile),
+    simplified_policies_and_controls_duties_outstanding(Profile, none_outstanding, _).
+
+% ---- input problems (R0, S0, M0) vs a well-formed profile -----------------
+test(a_wrong_type_gate_is_an_input_problem) :-
+    profile(gate_unsure_wrong_type, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, input_problems([wrong_type(financial_entity_is_article_16_1_entity)]), []).
+test(a_well_formed_profile_has_no_input_problem) :-
+    profile(all_duties_performed, Profile),
+    dora_rts_simplified_policies_and_controls_input_problems(Profile, []).
+test(a_well_formed_profile_is_not_refused, fail) :-
+    profile(all_duties_performed, Profile),
+    simplified_policies_and_controls_duties_complete(Profile, input_problems(_), _).
+test(an_unknown_key_is_refused) :-
+    profile(microenterprise_key_unknown, Profile),
+    simplified_policies_and_controls_duties_outstanding(Profile, input_problems([unknown_key(financial_entity_is_microenterprise)]), []).
+test(a_duplicate_key_is_refused) :-
+    profile(duplicate_contract_key, Profile),
+    simplified_policies_and_controls_duties_required(Profile, input_problems([duplicate_key(user_accountability_ensured)]), []).
+test(a_refused_profile_gets_no_duty_list, fail) :-
+    profile(duplicate_contract_key, Profile),
+    simplified_policies_and_controls_duties_required(Profile, required(_), _).
+
+:- end_module(test_negative_controls).

@@ -1,0 +1,307 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the generated package facade (what an external caller sees).
+% Each fixture subject resolves to its EXPECTED concrete verdict, exactly
+% once; near-miss controls get the opposite verdict; every negative test is
+% paired with a positive one over the same case.
+% Run: python -m clausal.testing eu/dora_rts_logging_and_network_security/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(eu/dora_rts_logging_and_network_security, [
+    decide_dora_rts_logging_and_network_security/2,
+    dora_rts_logging_and_network_security_status/2,
+    dora_rts_logging_and_network_security_checklist/2,
+    dora_rts_logging_and_network_security_decision_resolvable/1,
+    dora_rts_logging_and_network_security_status_values/1,
+    dora_rts_logging_and_network_security_subject/1,
+    dora_rts_logging_and_network_security_profile_for/2,
+    dora_rts_logging_and_network_security_assess/2,
+    rts_logging_and_network_security_duties_required/3,
+    rts_logging_and_network_security_duties_complete/3,
+    rts_logging_and_network_security_duties_outstanding/3,
+    dora_rts_logging_and_network_security_input_problems/2
+]).
+
+% ---- expected verdict of every subject ---------------------------------
+expected_status(all_performed_larger_entity_with_critical_systems, complete).
+expected_status(encryption_not_performed_larger_entity, incomplete).
+expected_status(all_performed_microenterprise_without_critical_systems, complete).
+expected_status(periodic_review_not_performed_microenterprise, incomplete).
+expected_status(yearly_review_not_performed_microenterprise, complete).
+expected_status(yearly_review_not_performed_larger_entity, incomplete).
+expected_status(verification_not_performed_without_critical_systems, complete).
+expected_status(verification_not_performed_with_critical_systems, incomplete).
+expected_status(article_16_1_entity, simplified_framework_entity).
+expected_status(gate_not_stated, indeterminate([financial_entity_is_article_16_1_entity])).
+expected_status(both_reviews_not_performed_size_not_stated, incomplete).
+expected_status(yearly_review_not_performed_size_not_stated, indeterminate([financial_entity_is_microenterprise])).
+expected_status(logging_duty_and_size_not_stated, indeterminate([logging_procedures_protocols_and_tools_developed_documented_and_implemented])).
+expected_status(size_not_stated_logging_duty_performed, indeterminate([financial_entity_is_microenterprise])).
+expected_status(verification_performed_critical_not_stated, complete).
+expected_status(verification_not_performed_critical_not_stated, indeterminate([financial_entity_has_ict_systems_supporting_critical_or_important_functions])).
+expected_status(encryption_unsure, needs_legal_review(open_textured(network_connections_encrypted, cite(eu_reg_2024_1774_art_13_e)), [inputs_relied_on(_)])).
+expected_status(several_duties_not_performed, incomplete).
+expected_status(unknown_key_present, input_problems([unknown_key(colour)])).
+expected_status(fact_given_unsure, input_problems([wrong_type(financial_entity_is_microenterprise)])).
+expected_status(duplicate_gate_key, input_problems([duplicate_key(financial_entity_is_article_16_1_entity)])).
+expected_status(gate_only_stated, indeterminate([logging_procedures_protocols_and_tools_developed_documented_and_implemented])).
+
+subject_has_expected_status(Subject) :-
+    expected_status(Subject, Expected),
+    findall(Status, dora_rts_logging_and_network_security_assess(Subject, dora_rts_logging_and_network_security_verdict(Status, _)), [Only]),
+    Only = Expected.
+
+subject_answers_once_in_every_query(Subject) :-
+    dora_rts_logging_and_network_security_profile_for(Subject, Profile),
+    findall(Result-Citations, rts_logging_and_network_security_duties_required(Profile, Result, Citations), RequiredAnswers),
+    length(RequiredAnswers, 1),
+    findall(Result-Citations, rts_logging_and_network_security_duties_complete(Profile, Result, Citations), CompleteAnswers),
+    length(CompleteAnswers, 1),
+    findall(Result-Citations, rts_logging_and_network_security_duties_outstanding(Profile, Result, Citations), OutstandingAnswers),
+    length(OutstandingAnswers, 1),
+    findall(Problems, dora_rts_logging_and_network_security_input_problems(Profile, Problems), ProblemAnswers),
+    length(ProblemAnswers, 1).
+
+subject_is_resolvable(Subject) :-
+    dora_rts_logging_and_network_security_profile_for(Subject, Profile),
+    dora_rts_logging_and_network_security_decision_resolvable(Profile),
+    dora_rts_logging_and_network_security_checklist(Profile, [_FirstItem|_OtherItems]).
+
+subject_profile(Subject, Profile) :-
+    dora_rts_logging_and_network_security_profile_for(Subject, Profile).
+
+% ---- every subject -------------------------------------------------------
+test(every_subject_has_its_expected_verdict) :-
+    findall(Subject, dora_rts_logging_and_network_security_subject(Subject), Subjects),
+    length(Subjects, 22),
+    maplist(subject_has_expected_status, Subjects).
+
+test(every_subject_answers_once_in_every_query) :-
+    findall(Subject, dora_rts_logging_and_network_security_subject(Subject), Subjects),
+    maplist(subject_answers_once_in_every_query, Subjects).
+
+test(every_subject_is_resolvable_with_a_non_empty_checklist) :-
+    findall(Subject, dora_rts_logging_and_network_security_subject(Subject), Subjects),
+    maplist(subject_is_resolvable, Subjects).
+
+test(final_atoms_are_in_the_status_vocabulary) :-
+    dora_rts_logging_and_network_security_status_values(StatusValues),
+    member(complete, StatusValues),
+    member(incomplete, StatusValues),
+    member(simplified_framework_entity, StatusValues).
+
+% ---- complete and its near-miss --------------------------------------------
+test(all_performed_is_complete_with_thirty_five_citations) :-
+    dora_rts_logging_and_network_security_assess(all_performed_larger_entity_with_critical_systems, dora_rts_logging_and_network_security_verdict(complete, Citations)),
+    length(Citations, 35).
+
+test(all_performed_is_not_incomplete, fail) :-
+    dora_rts_logging_and_network_security_assess(all_performed_larger_entity_with_critical_systems, dora_rts_logging_and_network_security_verdict(incomplete, _)).
+
+test(one_duty_not_performed_is_incomplete) :-
+    subject_profile(encryption_not_performed_larger_entity, Profile),
+    dora_rts_logging_and_network_security_status(Profile, incomplete),
+    rts_logging_and_network_security_duties_complete(Profile, incomplete, Citations),
+    length(Citations, 35).
+
+test(one_duty_not_performed_is_not_complete, fail) :-
+    subject_profile(encryption_not_performed_larger_entity, Profile),
+    dora_rts_logging_and_network_security_status(Profile, complete).
+
+test(one_duty_not_performed_is_outstanding) :-
+    subject_profile(encryption_not_performed_larger_entity, Profile),
+    rts_logging_and_network_security_duties_outstanding(Profile, outstanding([encryption_of_network_connections]), [cite(eu_reg_2024_1774_art_13_e)]).
+
+test(all_performed_is_none_outstanding) :-
+    subject_profile(all_performed_larger_entity_with_critical_systems, Profile),
+    rts_logging_and_network_security_duties_outstanding(Profile, none_outstanding, Citations),
+    length(Citations, 35).
+
+% ---- Art 13(i): microenterprise branch -----------------------------------
+test(a_microenterprise_without_the_yearly_review_is_complete) :-
+    subject_profile(yearly_review_not_performed_microenterprise, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, complete, _),
+    rts_logging_and_network_security_duties_outstanding(Profile, none_outstanding, _).
+
+test(a_larger_entity_without_the_yearly_review_is_outstanding) :-
+    subject_profile(yearly_review_not_performed_larger_entity, Profile),
+    rts_logging_and_network_security_duties_outstanding(Profile, outstanding([yearly_network_architecture_review]), [cite(eu_reg_2024_1774_art_13_i)]).
+
+test(a_larger_entity_without_the_yearly_review_is_not_complete, fail) :-
+    subject_profile(yearly_review_not_performed_larger_entity, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, complete, _).
+
+test(a_microenterprise_without_the_periodic_review_is_outstanding) :-
+    subject_profile(periodic_review_not_performed_microenterprise, Profile),
+    rts_logging_and_network_security_duties_outstanding(Profile, outstanding([periodic_network_architecture_review]), [cite(eu_reg_2024_1774_art_13_i)]).
+
+test(both_reviews_false_is_incomplete_but_the_list_needs_the_size) :-
+    subject_profile(both_reviews_not_performed_size_not_stated, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, incomplete, _),
+    rts_logging_and_network_security_duties_outstanding(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+
+test(one_review_false_without_the_size_asks_the_size) :-
+    subject_profile(yearly_review_not_performed_size_not_stated, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+
+test(one_review_false_without_the_size_is_not_settled_incomplete, fail) :-
+    subject_profile(yearly_review_not_performed_size_not_stated, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, incomplete, _).
+
+% ---- the behind rule ---------------------------------------------
+test(an_always_duty_is_named_before_a_size_that_cannot_decide_alone) :-
+    subject_profile(logging_duty_and_size_not_stated, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, indeterminate([logging_procedures_protocols_and_tools_developed_documented_and_implemented]), []),
+    rts_logging_and_network_security_duties_outstanding(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+
+test(once_the_always_duty_is_given_the_size_is_named) :-
+    subject_profile(size_not_stated_logging_duty_performed, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+
+% ---- the six-monthly verification ----------------------------------------
+test(a_verification_not_performed_without_critical_systems_is_complete) :-
+    subject_profile(verification_not_performed_without_critical_systems, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, complete, _).
+
+test(a_verification_not_performed_with_critical_systems_is_incomplete) :-
+    subject_profile(verification_not_performed_with_critical_systems, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, incomplete, _),
+    rts_logging_and_network_security_duties_outstanding(Profile, outstanding([six_monthly_firewall_rule_verification]), [cite(eu_reg_2024_1774_art_13)]).
+
+test(a_verification_performed_needs_no_critical_question) :-
+    subject_profile(verification_performed_critical_not_stated, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, complete, _).
+
+test(a_verification_not_performed_asks_the_critical_question) :-
+    subject_profile(verification_not_performed_critical_not_stated, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, indeterminate([financial_entity_has_ict_systems_supporting_critical_or_important_functions]), []),
+    rts_logging_and_network_security_duties_outstanding(Profile, indeterminate([financial_entity_has_ict_systems_supporting_critical_or_important_functions]), []).
+
+% ---- the DORA Art 16(1) gate --------------------------------------------
+test(an_article_16_1_entity_is_a_simplified_framework_entity_in_every_query) :-
+    subject_profile(article_16_1_entity, Profile),
+    rts_logging_and_network_security_duties_required(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]),
+    rts_logging_and_network_security_duties_complete(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]),
+    rts_logging_and_network_security_duties_outstanding(Profile, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]).
+
+test(an_article_16_1_entity_is_not_complete, fail) :-
+    subject_profile(article_16_1_entity, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, complete, _).
+
+test(the_gate_not_stated_is_asked_first_in_every_query) :-
+    subject_profile(gate_not_stated, Profile),
+    rts_logging_and_network_security_duties_required(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []),
+    rts_logging_and_network_security_duties_complete(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []),
+    rts_logging_and_network_security_duties_outstanding(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []).
+
+% ---- the required query --------------------------------------------------
+test(a_larger_entity_with_critical_systems_has_thirty_four_duties) :-
+    subject_profile(all_performed_larger_entity_with_critical_systems, Profile),
+    rts_logging_and_network_security_duties_required(Profile, required(Duties), Citations),
+    length(Duties, 34),
+    length(Citations, 35),
+    Duties = [logging_procedures_protocols_and_tools|_],
+    last(Duties, information_in_transit_design_basis),
+    member(yearly_network_architecture_review, Duties),
+    member(six_monthly_firewall_rule_verification, Duties).
+
+test(a_microenterprise_without_critical_systems_has_thirty_three_duties) :-
+    subject_profile(all_performed_microenterprise_without_critical_systems, Profile),
+    rts_logging_and_network_security_duties_required(Profile, required(Duties), Citations),
+    length(Duties, 33),
+    length(Citations, 35),
+    member(periodic_network_architecture_review, Duties).
+
+test(a_microenterprise_without_critical_systems_has_no_six_monthly_verification, fail) :-
+    subject_profile(all_performed_microenterprise_without_critical_systems, Profile),
+    rts_logging_and_network_security_duties_required(Profile, required(Duties), _),
+    member(six_monthly_firewall_rule_verification, Duties).
+
+test(the_required_query_asks_the_critical_question) :-
+    subject_profile(verification_performed_critical_not_stated, Profile),
+    rts_logging_and_network_security_duties_required(Profile, indeterminate([financial_entity_has_ict_systems_supporting_critical_or_important_functions]), []).
+
+% ---- several duties outstanding ------------------------------------------
+test(several_duties_are_outstanding_in_duty_order) :-
+    subject_profile(several_duties_not_performed, Profile),
+    rts_logging_and_network_security_duties_outstanding(Profile, outstanding([log_retention_period, encryption_of_network_connections, six_monthly_firewall_rule_verification]), Citations),
+    sort(Citations, Sorted),
+    Sorted == [cite(eu_reg_2024_1774_art_12_2), cite(eu_reg_2024_1774_art_13), cite(eu_reg_2024_1774_art_13_e)].
+
+% ---- an unsure judgement goes to a lawyer ---------------------------------
+test(an_unsure_judgement_needs_legal_review_with_every_pair) :-
+    subject_profile(encryption_unsure, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, needs_legal_review(open_textured(network_connections_encrypted, cite(eu_reg_2024_1774_art_13_e)), [inputs_relied_on(Pairs)]), []),
+    length(Pairs, 38),
+    Pairs = [financial_entity_is_article_16_1_entity-false|_],
+    member(network_connections_encrypted-unsure, Pairs).
+
+test(an_unsure_judgement_is_not_complete, fail) :-
+    subject_profile(encryption_unsure, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, complete, _).
+
+% ---- the optional, unscored provenance constructor (data only) -------------
+test(the_provenance_constructor_builds_and_destructures) :-
+    Term = provenance(completeness_after_unsure, [cite(eu_reg_2024_1774_art_13_e)]),
+    Term = provenance(Clause, Citations),
+    Clause == completeness_after_unsure,
+    Citations == [cite(eu_reg_2024_1774_art_13_e)].
+
+test(the_referral_context_carries_no_provenance_item, fail) :-
+    subject_profile(encryption_unsure, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, needs_legal_review(_, Context), []),
+    member(provenance(_, _), Context).
+
+test(the_referral_context_carries_the_inputs_relied_on) :-
+    subject_profile(encryption_unsure, Profile),
+    rts_logging_and_network_security_duties_complete(Profile, needs_legal_review(_, Context), []),
+    member(inputs_relied_on(_), Context).
+
+% ---- the input check -----------------------------------------------------
+test(a_well_formed_profile_has_no_input_problem) :-
+    subject_profile(all_performed_larger_entity_with_critical_systems, Profile),
+    dora_rts_logging_and_network_security_input_problems(Profile, []).
+
+test(an_unknown_key_is_refused_by_every_query) :-
+    subject_profile(unknown_key_present, Profile),
+    dora_rts_logging_and_network_security_input_problems(Profile, [unknown_key(colour)]),
+    rts_logging_and_network_security_duties_required(Profile, input_problems([unknown_key(colour)]), []),
+    rts_logging_and_network_security_duties_outstanding(Profile, input_problems([unknown_key(colour)]), []).
+
+test(a_fact_given_unsure_is_wrong_type) :-
+    subject_profile(fact_given_unsure, Profile),
+    dora_rts_logging_and_network_security_input_problems(Profile, [wrong_type(financial_entity_is_microenterprise)]).
+
+test(a_duplicate_key_is_only_a_duplicate) :-
+    subject_profile(duplicate_gate_key, Profile),
+    dora_rts_logging_and_network_security_input_problems(Profile, [duplicate_key(financial_entity_is_article_16_1_entity)]).
+
+test(a_non_list_profile_is_wrong_type) :-
+    rts_logging_and_network_security_duties_complete(not_a_profile, input_problems([wrong_type(profile)]), []).
+
+% ---- justification: the checklist ----------------------------------------
+test(the_checklist_has_a_cited_row_per_duty) :-
+    subject_profile(all_performed_larger_entity_with_critical_systems, Profile),
+    dora_rts_logging_and_network_security_checklist(Profile, Items),
+    length(Items, 35),
+    member(item(encryption_of_network_connections, met, [cite(eu_reg_2024_1774_art_13_e)]), Items),
+    member(item(periodic_network_architecture_review, inapplicable, [cite(eu_reg_2024_1774_art_13_i)]), Items),
+    member(item(network_segregation_and_segmentation, met, SegmentationCitations), Items),
+    length(SegmentationCitations, 4).
+
+test(the_checklist_marks_a_duty_not_performed) :-
+    subject_profile(encryption_not_performed_larger_entity, Profile),
+    dora_rts_logging_and_network_security_checklist(Profile, Items),
+    member(item(encryption_of_network_connections, unmet(not_performed), [cite(eu_reg_2024_1774_art_13_e)]), Items).
+
+test(the_checklist_of_a_performed_duty_is_not_unmet, fail) :-
+    subject_profile(all_performed_larger_entity_with_critical_systems, Profile),
+    dora_rts_logging_and_network_security_checklist(Profile, Items),
+    member(item(encryption_of_network_connections, unmet(_), _), Items).
+
+test(the_checklist_of_an_article_16_1_entity_cites_the_gate) :-
+    subject_profile(article_16_1_entity, Profile),
+    dora_rts_logging_and_network_security_checklist(Profile, [item(simplified_framework_entity, inapplicable, [cite(eu_reg_2022_2554_art_16_1)])]).
+
+:- end_module(test_public_interface).

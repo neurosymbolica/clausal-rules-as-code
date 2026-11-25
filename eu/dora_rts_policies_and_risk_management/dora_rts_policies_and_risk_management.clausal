@@ -1,0 +1,469 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% dora_rts_policies_and_risk_management.clausal -- the "dora_rts_policies_and_risk_management" DETERMINATION for
+% eu/dora_rts_policies_and_risk_management, self-contained top to bottom: its
+% duty table (the statutory VALUE facts, with ready-made cite(Key) terms),
+% its gate, its three contract queries, its per-rule tests, its checklist
+% and its verdict assembly.
+%
+% Source (the law formalised here):
+%   Commission Delegated Regulation (EU) 2024/1774 (the RTS on ICT risk
+%   management tools, methods, processes and policies), Articles 1, 2(1),
+%   2(2) and 3 (both paragraphs), CELEX 32024R1774, OJ L, 2024/1774,
+%   25.6.2024; read with Regulation (EU) 2022/2554 (DORA) Article 16(1),
+%   first subparagraph, CELEX 32022R2554 (the gate of every query).
+%
+% Shape: deontic. Twenty-seven duties, each applying always behind the
+% gate (no trigger, no condition). Each duty is one caller judgement:
+% true (performed), false (not performed) or unsure (handed to a lawyer as
+% open_textured: no crisp test is invented, reading (3)).
+%
+% DEFEASIBILITY: the duties of Articles 1 to 3 hold by default; the one
+% defeater is DORA Art 16(1), first subparagraph (an entity of Article
+% 16(1) applies the simplified framework of Title III instead). The
+% defeater is a GUARDED route: the gate value is read once into an atom
+% (true, false or absent) and each value has its own clause, so the
+% defeater fires without cut, without once/1 and without negation.
+%
+% Precedence of every query (THE LIMBS): input problems; the gate true;
+% the gate absent; then, in duties_complete, a failing duty before any
+% absent or unsure key; the first absent duty key (every duty
+% decides alone, so no key is behind another); the first unsure duty key;
+% the final answer.
+% =====================================================================
+
+:- module(dora_rts_policies_and_risk_management, [
+    rts_policies_and_risk_management_duties_required/3,
+    rts_policies_and_risk_management_duties_complete/3,
+    rts_policies_and_risk_management_duties_outstanding/3,
+    decide_dora_rts_policies_and_risk_management/2,
+    dora_rts_policies_and_risk_management_status/2,
+    dora_rts_policies_and_risk_management_checklist/2,
+    dora_rts_policies_and_risk_management_decision_resolvable/1,
+    dora_rts_policies_and_risk_management_status_values/1
+]).
+
+:- use_module(eu/dora_rts_policies_and_risk_management/kernel, [dora_rts_policies_and_risk_management_input_problems/2]).
+:- use_module(eu/dora_rts_policies_and_risk_management/citations, [implements/1]).
+:- use_module(formalize_lib, [profile_get/3, profile_lacks/2]).
+:- use_module(library(reif), [if_/3]).
+
+% ---- statutory VALUE facts owned by this determination ---------------
+% The final answers of rts_policies_and_risk_management_duties_complete/3
+% (the status compounds are never written bare).
+dora_rts_policies_and_risk_management_status_values([complete, incomplete, simplified_framework_entity]).
+
+% THE FIXED CITATIONS (reading (15)): Art 1, Art 2(1), Art 2(2), Art 3.
+fixed_citations([
+    cite(eu_reg_2024_1774_art_1),
+    cite(eu_reg_2024_1774_art_2_1),
+    cite(eu_reg_2024_1774_art_2_2),
+    cite(eu_reg_2024_1774_art_3)
+]).
+
+% THE TWENTY-SEVEN DUTIES, in DUTY ORDER (the printed order of the text):
+% duty(DutyAtom, ProfileKey, cite(CitationKey)). findall/3 keeps this
+% clause order, so every list of duties this file returns is in duty order.
+% Art 1 (points (a) to (e) are examples inside the one judgement, reading (4)).
+duty(risk_profile_and_complexity_consideration,
+    size_risk_profile_and_complexity_taken_into_account,
+    cite(eu_reg_2024_1774_art_1)).
+% Art 2(1), first sentence (reading (5)).
+duty(embedding_of_security_policies,
+    ict_security_policies_embedded_in_ict_risk_management_framework,
+    cite(eu_reg_2024_1774_art_2_1)).
+% Art 2(1), points (a) to (d).
+duty(network_security,
+    security_policies_ensure_security_of_networks,
+    cite(eu_reg_2024_1774_art_2_1_a)).
+duty(intrusion_and_data_misuse_safeguards,
+    security_policies_contain_safeguards_against_intrusions_and_data_misuse,
+    cite(eu_reg_2024_1774_art_2_1_b)).
+duty(data_availability_authenticity_integrity_and_confidentiality,
+    security_policies_preserve_availability_authenticity_integrity_and_confidentiality_of_data,
+    cite(eu_reg_2024_1774_art_2_1_c)).
+duty(accurate_and_prompt_data_transmission,
+    security_policies_guarantee_accurate_and_prompt_data_transmission,
+    cite(eu_reg_2024_1774_art_2_1_d)).
+% Art 2(2), points (a) to (k) (conditions inside the judgement, reading (7)).
+duty(alignment_to_information_security_objectives,
+    security_policies_aligned_to_information_security_objectives,
+    cite(eu_reg_2024_1774_art_2_2_a)).
+duty(indication_of_approval_date,
+    security_policies_indicate_date_of_management_body_approval,
+    cite(eu_reg_2024_1774_art_2_2_b)).
+duty(implementation_and_exception_indicators,
+    security_policies_contain_indicators_and_measures_for_implementation_and_exceptions,
+    cite(eu_reg_2024_1774_art_2_2_c)).
+duty(staff_security_responsibilities,
+    security_policies_specify_staff_responsibilities_for_ict_security,
+    cite(eu_reg_2024_1774_art_2_2_d)).
+duty(consequences_of_non_compliance,
+    security_policies_specify_consequences_of_staff_non_compliance,
+    cite(eu_reg_2024_1774_art_2_2_e)).
+duty(documentation_list,
+    security_policies_list_documentation_to_be_maintained,
+    cite(eu_reg_2024_1774_art_2_2_f)).
+duty(segregation_of_duties,
+    security_policies_specify_segregation_of_duties_arrangements,
+    cite(eu_reg_2024_1774_art_2_2_g)).
+duty(leading_practices_and_standards,
+    security_policies_consider_leading_practices_and_standards,
+    cite(eu_reg_2024_1774_art_2_2_h)).
+duty(roles_for_security_policies,
+    security_policies_identify_roles_for_development_implementation_and_maintenance,
+    cite(eu_reg_2024_1774_art_2_2_i)).
+duty(review_of_security_policies,
+    security_policies_reviewed_in_accordance_with_article_6_5,
+    cite(eu_reg_2024_1774_art_2_2_j)).
+duty(material_changes,
+    security_policies_take_material_changes_into_account,
+    cite(eu_reg_2024_1774_art_2_2_k)).
+% Art 3, first paragraph, lead words and points (a) to (f).
+duty(ict_risk_management_policies_and_procedures,
+    ict_risk_management_policies_and_procedures_developed_documented_and_implemented,
+    cite(eu_reg_2024_1774_art_3)).
+duty(risk_tolerance_approval,
+    risk_management_policies_indicate_approval_of_risk_tolerance_level,
+    cite(eu_reg_2024_1774_art_3_a)).
+duty(risk_assessment_procedure_and_methodology,
+    risk_management_policies_contain_risk_assessment_procedure_and_methodology,
+    cite(eu_reg_2024_1774_art_3_b)).
+duty(risk_treatment_procedure,
+    risk_management_policies_contain_risk_treatment_procedure,
+    cite(eu_reg_2024_1774_art_3_c)).
+duty(residual_risk_provisions,
+    risk_management_policies_contain_residual_risk_provisions,
+    cite(eu_reg_2024_1774_art_3_d)).
+duty(risk_monitoring_provisions,
+    risk_management_policies_contain_risk_monitoring_provisions,
+    cite(eu_reg_2024_1774_art_3_e)).
+duty(strategy_change_process,
+    risk_management_policies_contain_process_for_strategy_changes,
+    cite(eu_reg_2024_1774_art_3_f)).
+% Art 3, second paragraph, points (a) to (c) (the second run, reading (8)).
+duty(monitoring_of_treatment_effectiveness,
+    risk_treatment_procedure_ensures_monitoring_of_treatment_effectiveness,
+    cite(eu_reg_2024_1774_art_3_a_run2)).
+duty(assessment_of_risk_tolerance_attainment,
+    risk_treatment_procedure_ensures_assessment_of_risk_tolerance_attainment,
+    cite(eu_reg_2024_1774_art_3_b_run2)).
+duty(assessment_of_corrective_actions,
+    risk_treatment_procedure_ensures_assessment_of_corrective_actions,
+    cite(eu_reg_2024_1774_art_3_c_run2)).
+
+% ---- profile plumbing (decides nothing statutory) ---------------------
+% key_state(Profile, ProfileKey, State): State is absent or the value as
+% given. Only reached for a profile with no input problem, so a present
+% key has exactly one value.
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, Value) :-
+    profile_get(Profile, ProfileKey, Value).
+
+% The contract keys in root_exports order: the gate, then the duty keys.
+contract_keys([financial_entity_is_article_16_1_entity|DutyKeys]) :-
+    findall(ProfileKey, duty(_, ProfileKey, _), DutyKeys).
+
+% present_pairs(ContractKeys, Profile, Pairs): every Key-Value present in
+% Profile, in root_exports order, the value exactly as given (PAIRS).
+present_pairs([], _, []).
+present_pairs([ProfileKey|ContractKeys], Profile, Pairs) :-
+    profile_lacks(Profile, ProfileKey),
+    present_pairs(ContractKeys, Profile, Pairs).
+present_pairs([ProfileKey|ContractKeys], Profile, [ProfileKey-Value|LaterPairs]) :-
+    profile_get(Profile, ProfileKey, Value),
+    present_pairs(ContractKeys, Profile, LaterPairs).
+
+relied_on_context(Profile, [inputs_relied_on(Pairs)]) :-
+    contract_keys(ContractKeys),
+    present_pairs(ContractKeys, Profile, Pairs).
+
+% duty_rows(Profile, DutyRows): row(DutyAtom, ProfileKey, Citation, State)
+% for every duty, in duty order.
+duty_rows(Profile, DutyRows) :-
+    findall(row(DutyAtom, ProfileKey, Citation, State),
+        ( duty(DutyAtom, ProfileKey, Citation),
+          key_state(Profile, ProfileKey, State) ),
+        DutyRows).
+
+% first_state(DutyRows, Target, Found): found(DutyAtom, ProfileKey,
+% Citation) for the first row in State Target, or none.
+first_state([], _, none).
+first_state([row(DutyAtom, ProfileKey, Citation, Target)|_], Target, found(DutyAtom, ProfileKey, Citation)).
+first_state([row(_, _, _, State)|DutyRows], Target, Found) :-
+    dif(State, Target),
+    first_state(DutyRows, Target, Found).
+
+% ---- the gate: DORA Art 16(1), first subparagraph (reading (2)) -------
+gate_state(Profile, GateValue) :-
+    key_state(Profile, financial_entity_is_article_16_1_entity, GateValue).
+
+% ---- the duties that fail (a duty FAILS when its key is false) --------
+failing_duties(DutyRows, FailingDuties) :-
+    implements(eu_reg_2024_1774_art_3),
+    findall(DutyAtom, member(row(DutyAtom, _, _, false), DutyRows), FailingDuties).
+
+failing_citations(DutyRows, FailingCitations) :-
+    implements(eu_reg_2024_1774_art_3),
+    findall(Citation, member(row(_, _, Citation, false), DutyRows), FailingCitations).
+
+% =====================================================================
+% (A) rts_policies_and_risk_management_duties_required/3
+% =====================================================================
+rts_policies_and_risk_management_duties_required(Profile, input_problems([Problem|Problems]), []) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, [Problem|Problems]).
+rts_policies_and_risk_management_duties_required(Profile, Result, Citations) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, []),
+    gate_state(Profile, GateValue),
+    required_after_gate(GateValue, Result, Citations).
+
+% (R-G1) the defeater fires.
+required_after_gate(true, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+% (R-G2) the gate is asked first.
+required_after_gate(absent, indeterminate([financial_entity_is_article_16_1_entity]), []) :-
+    implements(eu_reg_2022_2554_art_16_1).
+% (R1) every duty applies always.
+required_after_gate(false, required(Duties), Citations) :-
+    implements(eu_reg_2024_1774_art_1),
+    findall(DutyAtom, duty(DutyAtom, _, _), Duties),
+    fixed_citations(Citations).
+
+% =====================================================================
+% (B) rts_policies_and_risk_management_duties_complete/3
+% =====================================================================
+rts_policies_and_risk_management_duties_complete(Profile, input_problems([Problem|Problems]), []) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, [Problem|Problems]).
+rts_policies_and_risk_management_duties_complete(Profile, Result, Citations) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, []),
+    gate_state(Profile, GateValue),
+    complete_after_gate(GateValue, Profile, Result, Citations).
+
+% (S-G1)
+complete_after_gate(true, _, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+% (S-G2)
+complete_after_gate(absent, _, indeterminate([financial_entity_is_article_16_1_entity]), []) :-
+    implements(eu_reg_2022_2554_art_16_1).
+complete_after_gate(false, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1774_art_3),
+    duty_rows(Profile, DutyRows),
+    first_state(DutyRows, false, FirstFalse),
+    first_state(DutyRows, absent, FirstAbsent),
+    first_state(DutyRows, unsure, FirstUnsure),
+    complete_answer(FirstFalse, FirstAbsent, FirstUnsure, Profile, Result, Citations).
+
+% (S1) a failing duty decides before any absent or unsure key.
+complete_answer(found(_, _, _), _, _, _, incomplete, Citations) :-
+    implements(eu_reg_2024_1774_art_3),
+    fixed_citations(Citations).
+% (S2) the first absent duty key (every duty decides alone: <<DNUM>>).
+complete_answer(none, found(_, ProfileKey, _), _, _, indeterminate([ProfileKey]), []) :-
+    implements(eu_reg_2024_1774_art_3).
+% (S3) the first unsure duty key goes to a lawyer.
+complete_answer(none, none, found(_, ProfileKey, Citation), Profile, needs_legal_review(open_textured(ProfileKey, Citation), Context), []) :-
+    implements(eu_reg_2024_1774_art_3),
+    relied_on_context(Profile, Context).
+% (S4) every duty key true.
+complete_answer(none, none, none, _, complete, Citations) :-
+    implements(eu_reg_2024_1774_art_3),
+    fixed_citations(Citations).
+
+% =====================================================================
+% (C) rts_policies_and_risk_management_duties_outstanding/3
+% =====================================================================
+rts_policies_and_risk_management_duties_outstanding(Profile, input_problems([Problem|Problems]), []) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, [Problem|Problems]).
+rts_policies_and_risk_management_duties_outstanding(Profile, Result, Citations) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, []),
+    gate_state(Profile, GateValue),
+    outstanding_after_gate(GateValue, Profile, Result, Citations).
+
+% (M-G1)
+outstanding_after_gate(true, _, simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+% (M-G2)
+outstanding_after_gate(absent, _, indeterminate([financial_entity_is_article_16_1_entity]), []) :-
+    implements(eu_reg_2022_2554_art_16_1).
+outstanding_after_gate(false, Profile, Result, Citations) :-
+    implements(eu_reg_2024_1774_art_3),
+    duty_rows(Profile, DutyRows),
+    first_state(DutyRows, absent, FirstAbsent),
+    first_state(DutyRows, unsure, FirstUnsure),
+    failing_duties(DutyRows, FailingDuties),
+    outstanding_answer(FirstAbsent, FirstUnsure, FailingDuties, Profile, DutyRows, Result, Citations).
+
+% (M1) the first absent duty key, even when a duty already fails.
+outstanding_answer(found(_, ProfileKey, _), _, _, _, _, indeterminate([ProfileKey]), []) :-
+    implements(eu_reg_2024_1774_art_3).
+% (M2) the first unsure duty key goes to a lawyer.
+outstanding_answer(none, found(_, ProfileKey, Citation), _, Profile, _, needs_legal_review(open_textured(ProfileKey, Citation), Context), []) :-
+    implements(eu_reg_2024_1774_art_3),
+    relied_on_context(Profile, Context).
+% (M3) no duty fails.
+outstanding_answer(none, none, [], _, _, none_outstanding, Citations) :-
+    implements(eu_reg_2024_1774_art_3),
+    fixed_citations(Citations).
+% (M3) the failing duties, in duty order, each with its own citation.
+outstanding_answer(none, none, [FirstDuty|LaterDuties], _, DutyRows, outstanding([FirstDuty|LaterDuties]), Citations) :-
+    implements(eu_reg_2024_1774_art_3),
+    failing_citations(DutyRows, Citations).
+
+% =====================================================================
+% FACADE: verdict, status projection, checklist
+% =====================================================================
+% The verdict is the answer of rts_policies_and_risk_management_duties_complete/3.
+decide_dora_rts_policies_and_risk_management(Profile, dora_rts_policies_and_risk_management_verdict(Result, Citations)) :-
+    rts_policies_and_risk_management_duties_complete(Profile, Result, Citations).
+
+dora_rts_policies_and_risk_management_status(Profile, Status) :-
+    decide_dora_rts_policies_and_risk_management(Profile, dora_rts_policies_and_risk_management_verdict(Status, _Citations)).
+
+% Checklist: one item(DutyAtom, Status, cite(Key)) row per duty, Status
+% met (true), unmet(not_performed) (false) or unknown([Key]) (unsure or
+% absent); a gate row alone when the gate is true or absent; no rows for
+% a profile with input problems.
+dora_rts_policies_and_risk_management_checklist(Profile, []) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, [_|_]).
+dora_rts_policies_and_risk_management_checklist(Profile, Items) :-
+    dora_rts_policies_and_risk_management_input_problems(Profile, []),
+    gate_state(Profile, GateValue),
+    checklist_after_gate(GateValue, Profile, Items).
+
+checklist_after_gate(true, _, [item(simplified_framework_entity, met, cite(eu_reg_2022_2554_art_16_1))]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+checklist_after_gate(absent, _, [item(simplified_framework_entity, unknown([financial_entity_is_article_16_1_entity]), cite(eu_reg_2022_2554_art_16_1))]) :-
+    implements(eu_reg_2022_2554_art_16_1).
+checklist_after_gate(false, Profile, Items) :-
+    implements(eu_reg_2024_1774_art_3),
+    duty_rows(Profile, DutyRows),
+    maplist(duty_item, DutyRows, Items).
+
+duty_item(row(DutyAtom, _, Citation, true), item(DutyAtom, met, Citation)).
+duty_item(row(DutyAtom, _, Citation, false), item(DutyAtom, unmet(not_performed), Citation)).
+duty_item(row(DutyAtom, ProfileKey, Citation, unsure), item(DutyAtom, unknown([ProfileKey]), Citation)).
+duty_item(row(DutyAtom, ProfileKey, Citation, absent), item(DutyAtom, unknown([ProfileKey]), Citation)).
+
+dora_rts_policies_and_risk_management_decision_resolvable(Profile) :-
+    decide_dora_rts_policies_and_risk_management(Profile, _Verdict).
+
+% =====================================================================
+% TEST PLUMBING (profile builders; decide nothing statutory)
+% =====================================================================
+all_true_profile([attribute(financial_entity_is_article_16_1_entity, false)|DutyAttributes]) :-
+    findall(attribute(ProfileKey, true), duty(_, ProfileKey, _), DutyAttributes).
+
+with_value(Profile, ProfileKey, Value, NewProfile) :-
+    maplist(replaced_attribute(ProfileKey, Value), Profile, NewProfile).
+
+replaced_attribute(ProfileKey, Value, attribute(OtherKey, OldValue), attribute(OtherKey, NewValue)) :-
+    if_(OtherKey = ProfileKey, NewValue = Value, NewValue = OldValue).
+
+without_key(Profile, ProfileKey, NewProfile) :-
+    tfilter(attribute_kept_t(ProfileKey), Profile, NewProfile).
+
+attribute_kept_t(ProfileKey, attribute(OtherKey, _), Truth) :-
+    if_(OtherKey = ProfileKey, Truth = false, Truth = true).
+
+% =====================================================================
+% TESTS
+% =====================================================================
+test(twenty_seven_duties) :-
+    findall(DutyAtom, duty(DutyAtom, _, _), Duties),
+    length(Duties, 27).
+
+test(required_lists_every_duty_in_order) :-
+    all_true_profile(Profile),
+    findall(Result-Citations, rts_policies_and_risk_management_duties_required(Profile, Result, Citations), Answers),
+    Answers = [required(Duties)-Citations],
+    length(Duties, 27),
+    Duties = [risk_profile_and_complexity_consideration, embedding_of_security_policies|_],
+    last(Duties, assessment_of_corrective_actions),
+    fixed_citations(Citations).
+
+test(gate_true_is_simplified_framework_entity) :-
+    all_true_profile(Profile),
+    with_value(Profile, financial_entity_is_article_16_1_entity, true, GateProfile),
+    findall(Result-Citations, rts_policies_and_risk_management_duties_complete(GateProfile, Result, Citations), Answers),
+    Answers == [simplified_framework_entity-[cite(eu_reg_2022_2554_art_16_1)]].
+
+test(gate_true_is_not_complete, fail) :-
+    all_true_profile(Profile),
+    with_value(Profile, financial_entity_is_article_16_1_entity, true, GateProfile),
+    rts_policies_and_risk_management_duties_complete(GateProfile, complete, _).
+
+test(gate_absent_is_asked_first) :-
+    findall(Result-Citations, rts_policies_and_risk_management_duties_outstanding([attribute(security_policies_ensure_security_of_networks, false)], Result, Citations), Answers),
+    Answers == [indeterminate([financial_entity_is_article_16_1_entity])-[]].
+
+test(every_duty_true_is_complete_once) :-
+    all_true_profile(Profile),
+    findall(Result-Citations, rts_policies_and_risk_management_duties_complete(Profile, Result, Citations), Answers),
+    Answers == [complete-[cite(eu_reg_2024_1774_art_1), cite(eu_reg_2024_1774_art_2_1), cite(eu_reg_2024_1774_art_2_2), cite(eu_reg_2024_1774_art_3)]].
+
+test(every_duty_true_is_none_outstanding) :-
+    all_true_profile(Profile),
+    findall(Result, rts_policies_and_risk_management_duties_outstanding(Profile, Result, _), Answers),
+    Answers == [none_outstanding].
+
+test(a_false_duty_decides_complete_before_an_absent_key) :-
+    all_true_profile(Profile),
+    without_key(Profile, size_risk_profile_and_complexity_taken_into_account, ShortProfile),
+    with_value(ShortProfile, security_policies_ensure_security_of_networks, false, FailingProfile),
+    findall(Result, rts_policies_and_risk_management_duties_complete(FailingProfile, Result, _), Answers),
+    Answers == [incomplete].
+
+test(outstanding_asks_the_absent_key_despite_a_false_duty) :-
+    all_true_profile(Profile),
+    without_key(Profile, size_risk_profile_and_complexity_taken_into_account, ShortProfile),
+    with_value(ShortProfile, security_policies_ensure_security_of_networks, false, FailingProfile),
+    findall(Result-Citations, rts_policies_and_risk_management_duties_outstanding(FailingProfile, Result, Citations), Answers),
+    Answers == [indeterminate([size_risk_profile_and_complexity_taken_into_account])-[]].
+
+test(absent_key_named_before_unsure) :-
+    all_true_profile(Profile),
+    with_value(Profile, size_risk_profile_and_complexity_taken_into_account, unsure, UnsureProfile),
+    without_key(UnsureProfile, risk_management_policies_contain_risk_treatment_procedure, ShortProfile),
+    rts_policies_and_risk_management_duties_complete(ShortProfile, indeterminate([risk_management_policies_contain_risk_treatment_procedure]), []).
+
+test(unsure_duty_goes_to_a_lawyer_with_every_present_pair) :-
+    all_true_profile(Profile),
+    with_value(Profile, size_risk_profile_and_complexity_taken_into_account, unsure, UnsureProfile),
+    findall(Result-Citations, rts_policies_and_risk_management_duties_complete(UnsureProfile, Result, Citations), Answers),
+    Answers = [needs_legal_review(open_textured(size_risk_profile_and_complexity_taken_into_account, cite(eu_reg_2024_1774_art_1)), [inputs_relied_on(Pairs)])-[]],
+    length(Pairs, 28),
+    Pairs = [financial_entity_is_article_16_1_entity-false, size_risk_profile_and_complexity_taken_into_account-unsure|_].
+
+test(unsure_duty_is_not_complete, fail) :-
+    all_true_profile(Profile),
+    with_value(Profile, size_risk_profile_and_complexity_taken_into_account, unsure, UnsureProfile),
+    rts_policies_and_risk_management_duties_complete(UnsureProfile, complete, _).
+
+test(outstanding_lists_failing_duties_with_their_own_citations) :-
+    all_true_profile(Profile),
+    with_value(Profile, security_policies_ensure_security_of_networks, false, FirstProfile),
+    with_value(FirstProfile, risk_treatment_procedure_ensures_assessment_of_corrective_actions, false, SecondProfile),
+    findall(Result-Citations, rts_policies_and_risk_management_duties_outstanding(SecondProfile, Result, Citations), Answers),
+    Answers == [outstanding([network_security, assessment_of_corrective_actions])-[cite(eu_reg_2024_1774_art_2_1_a), cite(eu_reg_2024_1774_art_3_c_run2)]].
+
+test(input_problems_come_first) :-
+    findall(Result-Citations, rts_policies_and_risk_management_duties_required([attribute(colour, 3)], Result, Citations), Answers),
+    Answers == [input_problems([unknown_key(colour)])-[]].
+
+test(input_problems_are_not_a_final_answer, fail) :-
+    rts_policies_and_risk_management_duties_complete([attribute(financial_entity_is_article_16_1_entity, unsure)], complete, _).
+
+test(checklist_has_a_cited_row_per_duty) :-
+    all_true_profile(Profile),
+    with_value(Profile, security_policies_ensure_security_of_networks, false, FailingProfile),
+    dora_rts_policies_and_risk_management_checklist(FailingProfile, Items),
+    length(Items, 27),
+    member(item(network_security, unmet(not_performed), cite(eu_reg_2024_1774_art_2_1_a)), Items),
+    member(item(risk_profile_and_complexity_consideration, met, cite(eu_reg_2024_1774_art_1)), Items).
+
+test(verdict_projects_the_complete_query) :-
+    all_true_profile(Profile),
+    dora_rts_policies_and_risk_management_status(Profile, complete).
+
+:- end_module(dora_rts_policies_and_risk_management).

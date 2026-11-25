@@ -1,0 +1,519 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_review_report_format_dora_rts_review_report_format, [ict_risk_framework_review_report_duties_required/3, ict_risk_framework_review_report_duties_complete/3, ict_risk_framework_review_report_duties_outstanding/3, decide_dora_rts_review_report_format/2, dora_rts_review_report_format_status/2, dora_rts_review_report_format_checklist/2, dora_rts_review_report_format_decision_resolvable/1, dora_rts_review_report_format_status_values/1]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(m__eu_dora_rts_review_report_format_kernel, [dora_rts_review_report_format_input_problems/2]).
+:- use_module(m__eu_dora_rts_review_report_format_citations, [implements/1]).
+
+dora_rts_review_report_format_status_values([complete, incomplete, simplified_framework_entity, framework_review_report_not_requested]).
+
+trigger_keys([financial_entity_is_microenterprise, review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, review_initiated_following_ict_related_incidents, identified_weaknesses_not_subject_to_corrective_measures, past_corrective_measures_proved_ineffective_or_created_unexpected_challenges]).
+
+duty(report_in_searchable_electronic_format, review_report_in_searchable_electronic_format, always, [cite(eu_reg_2024_1774_art_27_1)]).
+duty(report_identifies_entity_and_group_structure, review_report_identifies_entity_and_group_structure, always, [cite(eu_reg_2024_1774_art_27_2_a_i)]).
+duty(report_describes_context, review_report_describes_context, always, [cite(eu_reg_2024_1774_art_27_2_a_ii)]).
+duty(report_summarises_changes_since_previous_report, review_report_summarises_changes_since_previous_report, always, [cite(eu_reg_2024_1774_art_27_2_a_iii)]).
+duty(report_gives_executive_summary, review_report_gives_executive_summary, always, [cite(eu_reg_2024_1774_art_27_2_a_iv)]).
+duty(report_states_approval_date, review_report_states_approval_date, always, [cite(eu_reg_2024_1774_art_27_2_b)]).
+duty(report_describes_reason_for_review, review_report_describes_reason_for_review, always, [cite(eu_reg_2024_1774_art_27_2_c)]).
+duty(report_references_initiating_instructions_or_conclusions, review_report_references_initiating_instructions_or_conclusions, condition(review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, true), [cite(eu_reg_2024_1774_art_27_2_c), cite(eu_reg_2024_1774_art_27_2)]).
+duty(report_lists_incidents_with_root_cause_analysis, review_report_lists_incidents_with_root_cause_analysis, condition(review_initiated_following_ict_related_incidents, true), [cite(eu_reg_2024_1774_art_27_2_c), cite(eu_reg_2024_1774_art_27_2)]).
+duty(report_states_review_period_dates, review_report_states_review_period_dates, always, [cite(eu_reg_2024_1774_art_27_2_d)]).
+duty(report_indicates_responsible_function, review_report_indicates_responsible_function, always, [cite(eu_reg_2024_1774_art_27_2_e)]).
+duty(report_describes_major_changes_and_improvements, review_report_describes_major_changes_and_improvements, always, [cite(eu_reg_2024_1774_art_27_2_f)]).
+duty(report_analyses_impact_of_changes, review_report_analyses_impact_of_changes, always, [cite(eu_reg_2024_1774_art_27_2_f), cite(eu_reg_2024_1774_art_27_2)]).
+duty(report_summarises_findings_and_severity, review_report_summarises_findings_and_severity, always, [cite(eu_reg_2024_1774_art_27_2_g)]).
+duty(report_summarises_remediation_measures, review_report_summarises_remediation_measures, always, [cite(eu_reg_2024_1774_art_27_2_h_i)]).
+duty(report_gives_measure_dates_and_progress, review_report_gives_measure_dates_and_progress, always, [cite(eu_reg_2024_1774_art_27_2_h_ii)]).
+duty(report_gives_measure_tools_and_functions, review_report_gives_measure_tools_and_functions, always, [cite(eu_reg_2024_1774_art_27_2_h_iii)]).
+duty(report_describes_resource_impact, review_report_describes_resource_impact, always, [cite(eu_reg_2024_1774_art_27_2_h_iv)]).
+duty(report_informs_on_authority_information_process, review_report_informs_on_authority_information_process, always, [cite(eu_reg_2024_1774_art_27_2_h_v)]).
+duty(report_explains_residual_risk_acceptance, review_report_explains_residual_risk_acceptance, condition(identified_weaknesses_not_subject_to_corrective_measures, true), [cite(eu_reg_2024_1774_art_27_2_h_vi)]).
+duty(report_informs_on_planned_developments, review_report_informs_on_planned_developments, always, [cite(eu_reg_2024_1774_art_27_2_i)]).
+duty(report_states_conclusions, review_report_states_conclusions, always, [cite(eu_reg_2024_1774_art_27_2_j)]).
+duty(report_lists_past_reviews, review_report_lists_past_reviews, always, [cite(eu_reg_2024_1774_art_27_2_k_i)]).
+duty(report_states_corrective_measure_implementation, review_report_states_corrective_measure_implementation, always, [cite(eu_reg_2024_1774_art_27_2_k_ii)]).
+duty(report_describes_corrective_measure_improvements, review_report_describes_corrective_measure_improvements, condition(past_corrective_measures_proved_ineffective_or_created_unexpected_challenges, true), [cite(eu_reg_2024_1774_art_27_2_k_iii)]).
+duty(report_uses_internal_audit_results, review_report_uses_internal_audit_results, condition(financial_entity_is_microenterprise, false), [cite(eu_reg_2024_1774_art_27_2_l_i)]).
+duty(report_uses_compliance_assessments, review_report_uses_compliance_assessments, always, [cite(eu_reg_2024_1774_art_27_2_l_ii)]).
+duty(report_uses_resilience_testing_results, review_report_uses_resilience_testing_results, always, [cite(eu_reg_2024_1774_art_27_2_l_iii)]).
+duty(report_uses_external_sources, review_report_uses_external_sources, always, [cite(eu_reg_2024_1774_art_27_2_l_iv)]).
+
+referral_citation(ProfileKey, Citation) :-
+    duty(_, ProfileKey, _, [Citation|_]).
+
+duty_keys(DutyKeys) :-
+    findall(DutyKey, duty(_, DutyKey, _, _), DutyKeys).
+
+root_keys(ProfileKeys) :-
+    trigger_keys(Triggers),
+    duty_keys(DutyKeys),
+    append([financial_entity_is_article_16_1_entity, authority_requested_framework_review_report|Triggers], DutyKeys, ProfileKeys).
+
+profile_state(Profile, State) :-
+    root_keys(ProfileKeys),
+    maplist(key_value(Profile), ProfileKeys, State).
+
+key_value(Profile, ProfileKey, ProfileKey - Value) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value).
+key_value(Profile, ProfileKey, ProfileKey - absent) :-
+    profile_lacks(Profile, ProfileKey).
+
+value_of(State, ProfileKey, Value) :-
+    member(ProfileKey - Value, State).
+
+value_present(true).
+value_present(false).
+value_present(unsure).
+
+settled_or_absent(true).
+settled_or_absent(false).
+settled_or_absent(absent).
+
+present_pairs([], []).
+present_pairs([_ - absent|Others], Pairs) :-
+    present_pairs(Others, Pairs).
+present_pairs([ProfileKey - Value|Others], [ProfileKey - Value|Pairs]) :-
+    value_present(Value),
+    present_pairs(Others, Pairs).
+
+framework_step(State, answer(simplified_framework_entity, [cite(eu_reg_2022_2554_art_16_1)])) :-
+    implements(eu_reg_2022_2554_art_16_1),
+    value_of(State, financial_entity_is_article_16_1_entity, true).
+framework_step(State, answer(indeterminate([financial_entity_is_article_16_1_entity]), [])) :-
+    value_of(State, financial_entity_is_article_16_1_entity, absent).
+framework_step(State, Outcome) :-
+    implements(eu_reg_2022_2554_art_16_1),
+    value_of(State, financial_entity_is_article_16_1_entity, false),
+    request_step(State, Outcome).
+
+request_step(State, answer(indeterminate([authority_requested_framework_review_report]), [])) :-
+    value_of(State, authority_requested_framework_review_report, absent).
+request_step(State, answer(framework_review_report_not_requested, [])) :-
+    implements(eu_reg_2022_2554_art_6_5),
+    value_of(State, authority_requested_framework_review_report, false).
+request_step(State, proceed) :-
+    implements(eu_reg_2022_2554_art_6_5),
+    value_of(State, authority_requested_framework_review_report, true).
+
+applicability(_, always, applies) :-
+    implements(eu_reg_2024_1774_art_27_2).
+applicability(State, condition(Trigger, HoldingValue), Applicability) :-
+    implements(eu_reg_2024_1774_art_27_2),
+    value_of(State, Trigger, TriggerValue),
+    condition_status(TriggerValue, HoldingValue, Applicability).
+
+condition_status(true, true, applies).
+condition_status(false, false, applies).
+condition_status(true, false, excluded).
+condition_status(false, true, excluded).
+condition_status(absent, _, open).
+
+duty_records(State, Records) :-
+    findall(duty_record(Duty, ProfileKey, Condition, Applicability, KeyValue, Citations), (duty(Duty, ProfileKey, Condition, Citations), applicability(State, Condition, Applicability), value_of(State, ProfileKey, KeyValue)), Records).
+
+record_fails_t(duty_record(_, _, _, Applicability, KeyValue, _), Truth) :-
+    failure_table(Applicability, KeyValue, Truth).
+
+failure_table(applies, false, true).
+failure_table(applies, true, false).
+failure_table(applies, unsure, false).
+failure_table(applies, absent, false).
+failure_table(open, _, false).
+failure_table(excluded, _, false).
+
+any_failure_t([], false).
+any_failure_t([Record|Records], Truth) :-
+    record_fails_t(Record, RecordTruth),
+    any_failure_t(Records, OthersTruth),
+    truth_or(RecordTruth, OthersTruth, Truth).
+
+truth_or(true, _, true).
+truth_or(false, Truth, Truth).
+
+failing_duties([], []).
+failing_duties([Record|Records], Duties) :-
+    record_fails_t(Record, Truth),
+    failing_duties(Records, Rest),
+    keep_duty(Truth, Record, Rest, Duties).
+
+applying_duties([], []).
+applying_duties([Record|Records], Duties) :-
+    record_applies_t(Record, Truth),
+    applying_duties(Records, Rest),
+    keep_duty(Truth, Record, Rest, Duties).
+
+record_applies_t(duty_record(_, _, _, Applicability, _, _), Truth) :-
+    applies_table(Applicability, Truth).
+
+applies_table(applies, true).
+applies_table(open, false).
+applies_table(excluded, false).
+
+keep_duty(true, duty_record(Duty, _, _, _, _, _), Rest, [Duty|Rest]).
+keep_duty(false, _, Rest, Rest).
+
+duty_citations(Duties, Citations) :-
+    findall(Citation, (member(Duty, Duties), duty(Duty, _, _, DutyCitations), member(Citation, DutyCitations)), AllCitations),
+    sort(AllCitations, Citations).
+
+first_absent_trigger([], _, none).
+first_absent_trigger([Trigger|Triggers], State, Named) :-
+    value_of(State, Trigger, TriggerValue),
+    absent_trigger_step(TriggerValue, Trigger, Triggers, State, Named).
+
+absent_trigger_step(absent, Trigger, _, _, named(Trigger)).
+absent_trigger_step(TriggerValue, _, Triggers, State, Named) :-
+    value_present(TriggerValue),
+    first_absent_trigger(Triggers, State, Named).
+
+candidates(QueryName, State, Records, Candidates) :-
+    trigger_keys(Triggers),
+    trigger_candidates(Triggers, QueryName, State, Records, TriggerCandidates),
+    duty_key_candidates(Records, DutyKeyCandidates),
+    append(TriggerCandidates, DutyKeyCandidates, Candidates).
+
+trigger_candidates([], _, _, _, []).
+trigger_candidates([Trigger|Triggers], QueryName, State, Records, Candidates) :-
+    value_of(State, Trigger, TriggerValue),
+    trigger_candidacy(TriggerValue, QueryName, Trigger, Records, Candidacy),
+    trigger_candidates(Triggers, QueryName, State, Records, Rest),
+    add_candidate(Candidacy, Rest, Candidates).
+
+trigger_candidacy(true, _, _, _, none).
+trigger_candidacy(false, _, _, _, none).
+trigger_candidacy(absent, QueryName, Trigger, Records, Candidacy) :-
+    trigger_duty_value(Records, Trigger, DutyKeyValue),
+    absent_trigger_candidacy(QueryName, DutyKeyValue, Trigger, Candidacy).
+
+trigger_duty_value(Records, Trigger, DutyKeyValue) :-
+    member(duty_record(_, _, condition(Trigger, _), _, DutyKeyValue, _), Records).
+
+absent_trigger_candidacy(completeness_query, true, _, none).
+absent_trigger_candidacy(completeness_query, false, Trigger, candidate(Trigger, alone)).
+absent_trigger_candidacy(completeness_query, unsure, Trigger, candidate(Trigger, not_alone)).
+absent_trigger_candidacy(completeness_query, absent, Trigger, candidate(Trigger, not_alone)).
+absent_trigger_candidacy(outstanding_query, true, _, none).
+absent_trigger_candidacy(outstanding_query, false, Trigger, candidate(Trigger, alone)).
+absent_trigger_candidacy(outstanding_query, unsure, Trigger, candidate(Trigger, alone)).
+absent_trigger_candidacy(outstanding_query, absent, Trigger, candidate(Trigger, alone)).
+
+duty_key_candidates([], []).
+duty_key_candidates([duty_record(_, ProfileKey, _, Applicability, KeyValue, _)|Records], Candidates) :-
+    duty_key_candidacy(KeyValue, Applicability, ProfileKey, Candidacy),
+    duty_key_candidates(Records, Rest),
+    add_candidate(Candidacy, Rest, Candidates).
+
+duty_key_candidacy(KeyValue, _, _, none) :-
+    value_present(KeyValue).
+duty_key_candidacy(absent, applies, ProfileKey, candidate(ProfileKey, alone)).
+duty_key_candidacy(absent, open, ProfileKey, candidate(ProfileKey, not_alone)).
+duty_key_candidacy(absent, excluded, _, none).
+
+add_candidate(none, Candidates, Candidates).
+add_candidate(candidate(ProfileKey, Alone), Candidates, [candidate(ProfileKey, Alone)|Candidates]).
+
+named_candidate(Candidates, Named) :-
+    first_alone(Candidates, AloneNamed),
+    resolve_named(AloneNamed, Candidates, Named).
+
+first_alone([], none).
+first_alone([candidate(ProfileKey, alone)|_], named(ProfileKey)).
+first_alone([candidate(_, not_alone)|Candidates], Named) :-
+    first_alone(Candidates, Named).
+
+resolve_named(named(ProfileKey), _, named(ProfileKey)).
+resolve_named(none, Candidates, Named) :-
+    first_candidate(Candidates, Named).
+
+first_candidate([], none).
+first_candidate([candidate(ProfileKey, _)|_], named(ProfileKey)).
+
+first_unsure([], none).
+first_unsure([duty_record(_, ProfileKey, _, Applicability, KeyValue, _)|Records], Named) :-
+    unsure_mark(Applicability, KeyValue, Mark),
+    first_unsure_step(Mark, ProfileKey, Records, Named).
+
+unsure_mark(applies, unsure, referable).
+unsure_mark(open, unsure, referable).
+unsure_mark(applies, KeyValue, skip) :-
+    settled_or_absent(KeyValue).
+unsure_mark(open, KeyValue, skip) :-
+    settled_or_absent(KeyValue).
+unsure_mark(excluded, _, skip).
+
+first_unsure_step(referable, ProfileKey, _, named(ProfileKey)).
+first_unsure_step(skip, _, Records, Named) :-
+    first_unsure(Records, Named).
+
+referral(named(ProfileKey), State, needs_legal_review(open_textured(ProfileKey, Citation), [inputs_relied_on(Pairs)])) :-
+    referral_citation(ProfileKey, Citation),
+    present_pairs(State, Pairs).
+
+ict_risk_framework_review_report_duties_required(Profile, Result, Citations) :-
+    dora_rts_review_report_format_input_problems(Profile, Problems),
+    required_after_check(Problems, Profile, Result, Citations).
+
+required_after_check([FirstProblem|OtherProblems], _, input_problems([FirstProblem|OtherProblems]), []).
+required_after_check([], Profile, Result, Citations) :-
+    profile_state(Profile, State),
+    framework_step(State, Outcome),
+    required_outcome(Outcome, State, Result, Citations).
+
+required_outcome(answer(Result, Citations), _, Result, Citations).
+required_outcome(proceed, State, Result, Citations) :-
+    duty_records(State, Records),
+    trigger_keys(Triggers),
+    first_absent_trigger(Triggers, State, Named),
+    required_answer(Named, Records, Result, Citations).
+
+required_answer(named(Trigger), _, indeterminate([Trigger]), []).
+required_answer(none, Records, required(Duties), Citations) :-
+    implements(eu_reg_2024_1774_art_27_2),
+    applying_duties(Records, Duties),
+    duty_citations(Duties, Citations).
+
+ict_risk_framework_review_report_duties_complete(Profile, Result, Citations) :-
+    dora_rts_review_report_format_input_problems(Profile, Problems),
+    complete_after_check(Problems, Profile, Result, Citations).
+
+complete_after_check([FirstProblem|OtherProblems], _, input_problems([FirstProblem|OtherProblems]), []).
+complete_after_check([], Profile, Result, Citations) :-
+    profile_state(Profile, State),
+    framework_step(State, Outcome),
+    complete_outcome(Outcome, State, Result, Citations).
+
+complete_outcome(answer(Result, Citations), _, Result, Citations).
+complete_outcome(proceed, State, Result, Citations) :-
+    duty_records(State, Records),
+    any_failure_t(Records, Failure),
+    complete_after_failure(Failure, State, Records, Result, Citations).
+
+complete_after_failure(true, _, _, incomplete, [cite(eu_reg_2024_1774_art_27_1), cite(eu_reg_2024_1774_art_27_2)]) :-
+    implements(eu_reg_2024_1774_art_27_2).
+complete_after_failure(false, State, Records, Result, Citations) :-
+    candidates(completeness_query, State, Records, Candidates),
+    named_candidate(Candidates, Named),
+    complete_after_missing(Named, State, Records, Result, Citations).
+
+complete_after_missing(named(ProfileKey), _, _, indeterminate([ProfileKey]), []).
+complete_after_missing(none, State, Records, Result, Citations) :-
+    first_unsure(Records, Unsure),
+    complete_after_unsure(Unsure, State, Result, Citations).
+
+complete_after_unsure(named(ProfileKey), State, Result, []) :-
+    referral(named(ProfileKey), State, Result).
+complete_after_unsure(none, _, complete, [cite(eu_reg_2024_1774_art_27_1), cite(eu_reg_2024_1774_art_27_2)]) :-
+    implements(eu_reg_2024_1774_art_27_2).
+
+ict_risk_framework_review_report_duties_outstanding(Profile, Result, Citations) :-
+    dora_rts_review_report_format_input_problems(Profile, Problems),
+    outstanding_after_check(Problems, Profile, Result, Citations).
+
+outstanding_after_check([FirstProblem|OtherProblems], _, input_problems([FirstProblem|OtherProblems]), []).
+outstanding_after_check([], Profile, Result, Citations) :-
+    profile_state(Profile, State),
+    framework_step(State, Outcome),
+    outstanding_outcome(Outcome, State, Result, Citations).
+
+outstanding_outcome(answer(Result, Citations), _, Result, Citations).
+outstanding_outcome(proceed, State, Result, Citations) :-
+    duty_records(State, Records),
+    candidates(outstanding_query, State, Records, Candidates),
+    named_candidate(Candidates, Named),
+    outstanding_after_missing(Named, State, Records, Result, Citations).
+
+outstanding_after_missing(named(ProfileKey), _, _, indeterminate([ProfileKey]), []).
+outstanding_after_missing(none, State, Records, Result, Citations) :-
+    first_unsure(Records, Unsure),
+    outstanding_after_unsure(Unsure, State, Records, Result, Citations).
+
+outstanding_after_unsure(named(ProfileKey), State, _, Result, []) :-
+    referral(named(ProfileKey), State, Result).
+outstanding_after_unsure(none, _, Records, Result, Citations) :-
+    failing_duties(Records, Outstanding),
+    outstanding_answer(Outstanding, Result, Citations).
+
+outstanding_answer([], none_outstanding, [cite(eu_reg_2024_1774_art_27_1), cite(eu_reg_2024_1774_art_27_2)]) :-
+    implements(eu_reg_2024_1774_art_27_2).
+outstanding_answer([FirstDuty|OtherDuties], outstanding([FirstDuty|OtherDuties]), Citations) :-
+    implements(eu_reg_2024_1774_art_27_2),
+    duty_citations([FirstDuty|OtherDuties], Citations).
+
+decide_dora_rts_review_report_format(Profile, dora_rts_review_report_format_verdict(Status, Citations)) :-
+    ict_risk_framework_review_report_duties_complete(Profile, Status, Citations).
+
+dora_rts_review_report_format_status(Profile, Status) :-
+    decide_dora_rts_review_report_format(Profile, dora_rts_review_report_format_verdict(Status, _)).
+
+dora_rts_review_report_format_decision_resolvable(Profile) :-
+    decide_dora_rts_review_report_format(Profile, _).
+
+dora_rts_review_report_format_checklist(Profile, Items) :-
+    dora_rts_review_report_format_input_problems(Profile, Problems),
+    checklist_after_check(Problems, Profile, Items).
+
+checklist_after_check([FirstProblem|OtherProblems], _, [item(input_check, unmet(input_problems([FirstProblem|OtherProblems])), [])]).
+checklist_after_check([], Profile, [GateItem, RequestItem|DutyItems]) :-
+    profile_state(Profile, State),
+    value_of(State, financial_entity_is_article_16_1_entity, GateValue),
+    gate_item(GateValue, GateItem),
+    value_of(State, authority_requested_framework_review_report, RequestValue),
+    request_item(RequestValue, RequestItem),
+    duty_records(State, Records),
+    maplist(duty_item, Records, DutyItems).
+
+gate_item(false, item(article_16_1_entity, met, [cite(eu_reg_2022_2554_art_16_1)])).
+gate_item(true, item(article_16_1_entity, unmet(simplified_framework_entity), [cite(eu_reg_2022_2554_art_16_1)])).
+gate_item(absent, item(article_16_1_entity, unknown([financial_entity_is_article_16_1_entity]), [cite(eu_reg_2022_2554_art_16_1)])).
+
+request_item(true, item(framework_review_report_request, met, [cite(eu_reg_2024_1774_art_27_1)])).
+request_item(false, item(framework_review_report_request, unmet(framework_review_report_not_requested), [cite(eu_reg_2024_1774_art_27_1)])).
+request_item(absent, item(framework_review_report_request, unknown([authority_requested_framework_review_report]), [cite(eu_reg_2024_1774_art_27_1)])).
+
+duty_item(duty_record(Duty, ProfileKey, Condition, Applicability, KeyValue, Citations), item(Duty, Status, Citations)) :-
+    duty_item_status(Applicability, KeyValue, ProfileKey, Condition, Status).
+
+duty_item_status(excluded, _, _, _, inapplicable).
+duty_item_status(open, _, _, condition(Trigger, _), unknown([Trigger])).
+duty_item_status(applies, true, _, _, met).
+duty_item_status(applies, false, ProfileKey, _, unmet(ProfileKey)).
+duty_item_status(applies, unsure, ProfileKey, _, unknown([ProfileKey])).
+duty_item_status(applies, absent, ProfileKey, _, unknown([ProfileKey])).
+
+baseline_profile(Profile) :-
+    duty_keys(DutyKeys),
+    findall(attribute(DutyKey, true), member(DutyKey, DutyKeys), DutyAttributes),
+    append([attribute(financial_entity_is_article_16_1_entity, false), attribute(authority_requested_framework_review_report, true), attribute(financial_entity_is_microenterprise, false), attribute(review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, false), attribute(review_initiated_following_ict_related_incidents, false), attribute(identified_weaknesses_not_subject_to_corrective_measures, false), attribute(past_corrective_measures_proved_ineffective_or_created_unexpected_challenges, false)], DutyAttributes, Profile).
+
+override_attribute([], _, _, []).
+override_attribute([attribute(ProfileKey, _)|Others], ProfileKey, Value, [attribute(ProfileKey, Value)|Rest]) :-
+    override_attribute(Others, ProfileKey, Value, Rest).
+override_attribute([attribute(OtherKey, OtherValue)|Others], ProfileKey, Value, [attribute(OtherKey, OtherValue)|Rest]) :-
+    dif(OtherKey, ProfileKey),
+    override_attribute(Others, ProfileKey, Value, Rest).
+
+remove_attribute([], _, []).
+remove_attribute([attribute(ProfileKey, _)|Others], ProfileKey, Rest) :-
+    remove_attribute(Others, ProfileKey, Rest).
+remove_attribute([attribute(OtherKey, OtherValue)|Others], ProfileKey, [attribute(OtherKey, OtherValue)|Rest]) :-
+    dif(OtherKey, ProfileKey),
+    remove_attribute(Others, ProfileKey, Rest).
+
+test(the_baseline_requires_twenty_five_duties) :-
+    baseline_profile(Profile),
+    ict_risk_framework_review_report_duties_required(Profile, required(Duties), _),
+    length(Duties, 25),
+    Duties = [report_in_searchable_electronic_format|_].
+test(the_baseline_is_complete) :-
+    baseline_profile(Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, Result, Citations),
+    Result == complete,
+    Citations == [cite(eu_reg_2024_1774_art_27_1), cite(eu_reg_2024_1774_art_27_2)].
+test(the_baseline_has_none_outstanding) :-
+    baseline_profile(Profile),
+    ict_risk_framework_review_report_duties_outstanding(Profile, none_outstanding, _).
+test(each_query_answers_once) :-
+    baseline_profile(Profile),
+    findall(Result - Citations, ict_risk_framework_review_report_duties_complete(Profile, Result, Citations), Answers),
+    length(Answers, 1).
+test(the_gate_true_gives_the_simplified_framework) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, financial_entity_is_article_16_1_entity, true, Profile),
+    ict_risk_framework_review_report_duties_required(Profile, simplified_framework_entity, Citations),
+    Citations == [cite(eu_reg_2022_2554_art_16_1)].
+test(the_gate_absent_is_asked_first) :-
+    baseline_profile(BaselineProfile),
+    remove_attribute(BaselineProfile, financial_entity_is_article_16_1_entity, Profile),
+    ict_risk_framework_review_report_duties_outstanding(Profile, indeterminate([financial_entity_is_article_16_1_entity]), []).
+test(no_request_gives_not_requested) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, authority_requested_framework_review_report, false, Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, framework_review_report_not_requested, []).
+test(a_missing_format_is_incomplete_and_outstanding) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, review_report_in_searchable_electronic_format, false, Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, incomplete, _),
+    ict_risk_framework_review_report_duties_outstanding(Profile, outstanding([report_in_searchable_electronic_format]), Citations),
+    Citations == [cite(eu_reg_2024_1774_art_27_1)].
+test(two_outstanding_duties_in_duty_order) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, review_report_in_searchable_electronic_format, false, FirstProfile),
+    override_attribute(FirstProfile, review_report_uses_internal_audit_results, false, Profile),
+    ict_risk_framework_review_report_duties_outstanding(Profile, outstanding(Duties), Citations),
+    Duties == [report_in_searchable_electronic_format, report_uses_internal_audit_results],
+    Citations == [cite(eu_reg_2024_1774_art_27_1), cite(eu_reg_2024_1774_art_27_2_l_i)].
+test(an_absent_trigger_is_asked_by_required) :-
+    baseline_profile(BaselineProfile),
+    remove_attribute(BaselineProfile, financial_entity_is_microenterprise, Profile),
+    ict_risk_framework_review_report_duties_required(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+test(an_absent_always_duty_comes_before_a_trigger_that_is_behind) :-
+    baseline_profile(BaselineProfile),
+    remove_attribute(BaselineProfile, financial_entity_is_microenterprise, FirstProfile),
+    remove_attribute(FirstProfile, review_report_in_searchable_electronic_format, SecondProfile),
+    override_attribute(SecondProfile, review_report_uses_internal_audit_results, unsure, Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, indeterminate([review_report_in_searchable_electronic_format]), []).
+test(an_absent_trigger_over_a_false_duty_decides_alone) :-
+    baseline_profile(BaselineProfile),
+    remove_attribute(BaselineProfile, financial_entity_is_microenterprise, FirstProfile),
+    override_attribute(FirstProfile, review_report_uses_internal_audit_results, false, Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, indeterminate([financial_entity_is_microenterprise]), []).
+test(an_absent_trigger_over_a_true_duty_does_not_matter) :-
+    baseline_profile(BaselineProfile),
+    remove_attribute(BaselineProfile, financial_entity_is_microenterprise, Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, complete, _),
+    ict_risk_framework_review_report_duties_outstanding(Profile, none_outstanding, _).
+test(the_trigger_comes_before_the_key_behind_it_in_outstanding) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, review_report_in_searchable_electronic_format, false, FirstProfile),
+    remove_attribute(FirstProfile, financial_entity_is_microenterprise, SecondProfile),
+    remove_attribute(SecondProfile, review_report_uses_internal_audit_results, Profile),
+    ict_risk_framework_review_report_duties_outstanding(Profile, indeterminate([financial_entity_is_microenterprise]), []),
+    ict_risk_framework_review_report_duties_complete(Profile, incomplete, _).
+test(an_unsure_format_goes_to_a_lawyer) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, review_report_in_searchable_electronic_format, unsure, Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, needs_legal_review(open_textured(review_report_in_searchable_electronic_format, cite(eu_reg_2024_1774_art_27_1)), [inputs_relied_on(Pairs)]), Citations),
+    Citations == [],
+    length(Pairs, 36),
+    member(review_report_in_searchable_electronic_format - unsure, Pairs).
+test(supervisory_initiation_adds_the_references_duty) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, review_initiated_following_supervisory_instructions_or_testing_or_audit_conclusions, true, FirstProfile),
+    override_attribute(FirstProfile, review_report_references_initiating_instructions_or_conclusions, false, Profile),
+    ict_risk_framework_review_report_duties_required(Profile, required(Duties), _),
+    member(report_references_initiating_instructions_or_conclusions, Duties),
+    ict_risk_framework_review_report_duties_outstanding(Profile, outstanding([report_references_initiating_instructions_or_conclusions]), Citations),
+    Citations == [cite(eu_reg_2024_1774_art_27_2), cite(eu_reg_2024_1774_art_27_2_c)].
+test(uncorrected_weaknesses_add_the_residual_risk_citation) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, identified_weaknesses_not_subject_to_corrective_measures, true, Profile),
+    ict_risk_framework_review_report_duties_required(Profile, required(_), Citations),
+    member(cite(eu_reg_2024_1774_art_27_2_h_vi), Citations).
+test(a_microenterprise_gets_twenty_four_duties) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, financial_entity_is_microenterprise, true, Profile),
+    ict_risk_framework_review_report_duties_required(Profile, required(Duties), _),
+    length(Duties, 24).
+test(an_unknown_key_is_an_input_problem) :-
+    ict_risk_framework_review_report_duties_complete([attribute(colour, red)], input_problems([unknown_key(colour)]), []).
+test(the_checklist_has_a_row_per_duty) :-
+    baseline_profile(Profile),
+    dora_rts_review_report_format_checklist(Profile, Items),
+    length(Items, 31).
+test(the_facade_verdict_is_complete) :-
+    baseline_profile(Profile),
+    dora_rts_review_report_format_status(Profile, complete).
+
+test(the_baseline_is_not_incomplete, fail) :-
+    baseline_profile(Profile),
+    ict_risk_framework_review_report_duties_complete(Profile, incomplete, _).
+test(a_microenterprise_does_not_need_internal_audit_results, fail) :-
+    baseline_profile(BaselineProfile),
+    override_attribute(BaselineProfile, financial_entity_is_microenterprise, true, Profile),
+    ict_risk_framework_review_report_duties_required(Profile, required(Duties), _),
+    member(report_uses_internal_audit_results, Duties).

@@ -1,0 +1,95 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_ict_incident_management_process_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_ict_incident_management_process_dora_ict_incident_management_process, [ict_incident_management_process_duties_required/3, ict_incident_management_process_duties_complete/3, ict_incident_management_process_duties_outstanding/3, decide_dora_ict_incident_management_process/2, dora_ict_incident_management_process_status/2, dora_ict_incident_management_process_checklist/2]).
+:- use_module(m__eu_dora_ict_incident_management_process_fixtures, [dora_ict_incident_management_process_profile_for/2]).
+
+fixed_citations([cite(eu_reg_2022_2554_art_17_1), cite(eu_reg_2022_2554_art_17_2), cite(eu_reg_2022_2554_art_17_3), cite(eu_reg_2022_2554_art_18_2)]).
+
+attribute_pair(attribute(ProfileKey, JudgementValue), ProfileKey - JudgementValue).
+
+complete_answers(Subject, Answers) :-
+    dora_ict_incident_management_process_profile_for(Subject, Profile),
+    findall(Result - Citations, ict_incident_management_process_duties_complete(Profile, Result, Citations), Answers).
+
+outstanding_answers(Subject, Answers) :-
+    dora_ict_incident_management_process_profile_for(Subject, Profile),
+    findall(Result - Citations, ict_incident_management_process_duties_outstanding(Profile, Result, Citations), Answers).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dora_ict_incident_management_process_profile_for(all_duties_performed, Profile),
+    findall(Status, dora_ict_incident_management_process_status(Profile, Status), Statuses),
+    Statuses == [complete].
+test(the_verdict_carries_the_fixed_citations) :-
+    dora_ict_incident_management_process_profile_for(all_duties_performed, Profile),
+    fixed_citations(Fixed),
+    decide_dora_ict_incident_management_process(Profile, dora_ict_incident_management_process_verdict(complete, Fixed)).
+test(required_reads_out_all_ten_duties) :-
+    dora_ict_incident_management_process_profile_for(no_duty_answered, Profile),
+    findall(Result - Citations, ict_incident_management_process_duties_required(Profile, Result, Citations), Answers),
+    fixed_citations(Fixed),
+    Answers == [required([incident_management_process, recording_of_incidents_and_significant_cyber_threats, monitoring_handling_and_follow_up_procedures, early_warning_indicators, identification_and_classification_procedures, incident_roles_and_responsibilities, communication_and_escalation_plans, reporting_to_senior_management_and_management_body, incident_response_procedures, classification_of_significant_cyber_threats]) - Fixed].
+test(complete_reads_out_complete) :-
+    complete_answers(all_duties_performed, Answers),
+    fixed_citations(Fixed),
+    Answers == [complete - Fixed].
+test(complete_reads_out_incomplete) :-
+    complete_answers(classification_of_significant_cyber_threats_not_performed, Answers),
+    fixed_citations(Fixed),
+    Answers == [incomplete - Fixed].
+test(complete_reads_out_incomplete_before_an_absent_key) :-
+    complete_answers(not_performed_and_unanswered, Answers),
+    fixed_citations(Fixed),
+    Answers == [incomplete - Fixed].
+test(complete_reads_out_the_first_absent_key) :-
+    complete_answers(no_duty_answered, Answers),
+    Answers == [indeterminate([ict_related_incident_management_process_defined_established_and_implemented]) - []].
+test(complete_names_an_absent_key_before_an_unsure_one) :-
+    complete_answers(early_warning_unsure_and_response_unanswered, Answers),
+    Answers == [indeterminate([incident_response_procedures_established]) - []].
+test(complete_reads_out_the_referral_with_every_pair) :-
+    dora_ict_incident_management_process_profile_for(communication_plans_unsure, Profile),
+    maplist(attribute_pair, Profile, Pairs),
+    complete_answers(communication_plans_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(communication_notification_escalation_and_counterpart_information_plans_set_out, cite(eu_reg_2022_2554_art_17_3_d)), [inputs_relied_on(Pairs)]) - []].
+test(complete_reads_out_input_problems) :-
+    complete_answers(duplicate_key_present, Answers),
+    Answers == [input_problems([duplicate_key(incident_response_procedures_established)]) - []].
+test(outstanding_reads_out_none_outstanding) :-
+    outstanding_answers(all_duties_performed, Answers),
+    fixed_citations(Fixed),
+    Answers == [none_outstanding - Fixed].
+test(outstanding_reads_out_one_duty_with_its_citation) :-
+    outstanding_answers(early_warning_indicators_not_performed, Answers),
+    Answers == [outstanding([early_warning_indicators]) - [cite(eu_reg_2022_2554_art_17_3_a)]].
+test(outstanding_writes_a_shared_citation_once) :-
+    outstanding_answers(both_article_17_2_duties_not_performed, Answers),
+    Answers == [outstanding([recording_of_incidents_and_significant_cyber_threats, monitoring_handling_and_follow_up_procedures]) - [cite(eu_reg_2022_2554_art_17_2)]].
+test(outstanding_waits_for_the_absent_key) :-
+    outstanding_answers(not_performed_and_unanswered, Answers),
+    Answers == [indeterminate([ict_related_incident_management_process_defined_established_and_implemented]) - []].
+test(outstanding_reads_out_the_referral) :-
+    dora_ict_incident_management_process_profile_for(communication_plans_unsure, Profile),
+    maplist(attribute_pair, Profile, Pairs),
+    outstanding_answers(communication_plans_unsure, Answers),
+    Answers == [needs_legal_review(open_textured(communication_notification_escalation_and_counterpart_information_plans_set_out, cite(eu_reg_2022_2554_art_17_3_d)), [inputs_relied_on(Pairs)]) - []].
+test(outstanding_reads_out_input_problems) :-
+    outstanding_answers(not_an_attribute_list, Answers),
+    Answers == [input_problems([wrong_type(profile)]) - []].
+test(the_checklist_reads_out_ten_cited_items) :-
+    dora_ict_incident_management_process_profile_for(early_warning_indicators_not_performed, Profile),
+    findall(Items, dora_ict_incident_management_process_checklist(Profile, Items), [Items]),
+    length(Items, 10),
+    member(item(early_warning_indicators, unmet(not_performed), cite(eu_reg_2022_2554_art_17_3_a)), Items).
+
+cp_test_names([the_baseline_profile_yields_exactly_one_status, the_verdict_carries_the_fixed_citations, required_reads_out_all_ten_duties, complete_reads_out_complete, complete_reads_out_incomplete, complete_reads_out_incomplete_before_an_absent_key, complete_reads_out_the_first_absent_key, complete_names_an_absent_key_before_an_unsure_one, complete_reads_out_the_referral_with_every_pair, complete_reads_out_input_problems, outstanding_reads_out_none_outstanding, outstanding_reads_out_one_duty_with_its_citation, outstanding_writes_a_shared_citation_once, outstanding_waits_for_the_absent_key, outstanding_reads_out_the_referral, outstanding_reads_out_input_problems, the_checklist_reads_out_ten_cited_items]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

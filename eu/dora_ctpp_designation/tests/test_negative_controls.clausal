@@ -1,0 +1,177 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one
+% condition changed by one unit or one fact), a `fail` test that the
+% positive verdict is NOT produced for the control, and a positive test of
+% the verdict the control DOES get (so a misspelt atom shows up).
+% Run: python -m clausal.testing eu/dora_ctpp_designation/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_ctpp_designation/dora_ctpp_designation, [
+    ctpp_designation_criteria_status/3,
+    ctpp_step_1_indicators/3,
+    ctpp_lead_overseer/3,
+    ctpp_designated_provider_duties/3,
+    dora_ctpp_designation_status/2,
+    dora_ctpp_designation_status_values/1
+]).
+:- use_module(eu/dora_ctpp_designation/fixtures, [dora_ctpp_designation_profile_for/2]).
+
+criteria_of(Subject, Result) :-
+    dora_ctpp_designation_profile_for(Subject, Profile),
+    ctpp_designation_criteria_status(Profile, Result, _).
+
+indicators_of(Subject, Result) :-
+    dora_ctpp_designation_profile_for(Subject, Profile),
+    ctpp_step_1_indicators(Profile, Result, _).
+
+lead_of(Subject, Result) :-
+    dora_ctpp_designation_profile_for(Subject, Profile),
+    ctpp_lead_overseer(Profile, Result, _).
+
+duties_of(Subject, Result) :-
+    dora_ctpp_designation_profile_for(Subject, Profile),
+    ctpp_designated_provider_duties(Profile, Result, _).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    dora_ctpp_designation_status_values(StatusValues),
+    StatusValues = [_, _|_].
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    findall(Status, dora_ctpp_designation_status(Profile, Status), [_]).
+test(the_baseline_profile_yields_no_other_table_status, fail) :-
+    dora_ctpp_designation_profile_for(fixture_step_1_fulfilled_exact_ten_percent, Profile),
+    findall(Status, dora_ctpp_designation_status(Profile, Status), [BaselineStatus]),
+    dora_ctpp_designation_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_ctpp_designation_status(Profile, Other).
+
+% ---- sub-criteria 1.1 and 1.2: 10 % boundary --------------------------
+test(impact_at_ten_percent_fulfils) :-
+    criteria_of(fixture_step_1_fulfilled_exact_ten_percent, step_1_sub_criteria_fulfilled).
+test(impact_just_below_does_not_fulfil, fail) :-
+    criteria_of(fixture_impact_just_below_ten_percent, step_1_sub_criteria_fulfilled).
+test(impact_just_below_is_not_fulfilled) :-
+    criteria_of(fixture_impact_just_below_ten_percent, step_1_sub_criteria_not_fulfilled).
+
+% ---- both shares in the same category ----------------------------------
+test(split_categories_do_not_fulfil, fail) :-
+    criteria_of(fixture_step_1_fails_impact_split_categories, step_1_sub_criteria_fulfilled).
+test(split_categories_are_not_fulfilled) :-
+    criteria_of(fixture_step_1_fails_impact_split_categories, step_1_sub_criteria_not_fulfilled).
+
+% ---- sub-criterion 2.1: O-SII score above 3 000 ------------------------
+test(o_sii_score_3001_fulfils) :-
+    criteria_of(fixture_o_sii_score_3001, step_1_sub_criteria_fulfilled).
+test(o_sii_score_3000_does_not_fulfil, fail) :-
+    criteria_of(fixture_o_sii_score_exactly_3000, step_1_sub_criteria_fulfilled).
+test(o_sii_score_3000_is_not_fulfilled) :-
+    criteria_of(fixture_o_sii_score_exactly_3000, step_1_sub_criteria_not_fulfilled).
+
+% ---- sub-criterion 2.1: three O-SIIs -----------------------------------
+test(three_o_siis_fulfil) :-
+    criteria_of(fixture_three_o_siis, step_1_sub_criteria_fulfilled).
+test(two_o_siis_do_not_fulfil, fail) :-
+    criteria_of(fixture_two_o_siis, step_1_sub_criteria_fulfilled).
+test(two_o_siis_are_not_fulfilled) :-
+    criteria_of(fixture_two_o_siis, step_1_sub_criteria_not_fulfilled).
+
+% ---- sub-criterion 2.2: three other systemic entities -----------------
+test(three_other_systemic_entities_fulfil) :-
+    criteria_of(fixture_three_other_systemic_entities, step_1_sub_criteria_fulfilled).
+test(two_other_systemic_entities_do_not_fulfil, fail) :-
+    criteria_of(fixture_two_other_systemic_entities, step_1_sub_criteria_fulfilled).
+test(two_other_systemic_entities_are_not_fulfilled) :-
+    criteria_of(fixture_two_other_systemic_entities, step_1_sub_criteria_not_fulfilled).
+
+% ---- sub-criteria 4.1 and 4.2 -----------------------------------------
+test(migration_share_at_ten_percent_fulfils) :-
+    criteria_of(fixture_migration_share_exactly_ten_percent, step_1_sub_criteria_fulfilled).
+test(substitutability_just_below_does_not_fulfil, fail) :-
+    criteria_of(fixture_substitutability_just_below, step_1_sub_criteria_fulfilled).
+test(substitutability_just_below_is_not_fulfilled) :-
+    criteria_of(fixture_substitutability_just_below, step_1_sub_criteria_not_fulfilled).
+
+% ---- pooling of a main atom and its synonym ----------------------------
+test(pooled_two_of_twenty_fulfils) :-
+    criteria_of(fixture_pooled_payment_institutions, step_1_sub_criteria_fulfilled).
+test(pooled_one_of_twelve_does_not_fulfil, fail) :-
+    criteria_of(fixture_pooled_payment_institutions_below, step_1_sub_criteria_fulfilled).
+test(pooled_one_of_twelve_is_not_fulfilled) :-
+    criteria_of(fixture_pooled_payment_institutions_below, step_1_sub_criteria_not_fulfilled).
+
+% ---- naming of categories ---------------------------------------------
+test(a_synonym_alone_is_named_by_the_synonym) :-
+    indicators_of(fixture_synonym_alone, step_1_indicators([sub_criteria_1_1_and_1_2([exempted_payment_institution])|_])).
+test(a_synonym_alone_is_not_named_by_the_main_atom, fail) :-
+    indicators_of(fixture_synonym_alone, step_1_indicators([sub_criteria_1_1_and_1_2([payment_institution])|_])).
+test(a_pooled_category_is_named_by_the_main_atom) :-
+    indicators_of(fixture_pooled_payment_institutions, step_1_indicators([sub_criteria_1_1_and_1_2([payment_institution])|_])).
+
+% ---- Art 31(8)(iv): both facts needed -------------------------------------
+test(both_facts_of_point_iv_exclude) :-
+    criteria_of(fixture_single_member_state_excluded, designation_not_applicable(single_member_state_provider)).
+test(one_fact_of_point_iv_does_not_exclude, fail) :-
+    criteria_of(fixture_point_iv_one_fact_only, designation_not_applicable(single_member_state_provider)).
+test(one_fact_of_point_iv_leaves_step_1) :-
+    criteria_of(fixture_point_iv_one_fact_only, step_1_sub_criteria_fulfilled).
+
+% ---- Art 31(8)(i): a financial entity -------------------------------------
+test(a_financial_entity_is_excluded) :-
+    criteria_of(fixture_financial_entity_provider, designation_not_applicable(financial_entity)).
+test(an_ict_provider_is_not_excluded_as_a_financial_entity, fail) :-
+    criteria_of(fixture_step_1_fulfilled_exact_ten_percent, designation_not_applicable(financial_entity)).
+
+% ---- Art 3(19): not an ICT third-party service provider ------------------
+test(none_of_the_listed_types_is_no_provider) :-
+    criteria_of(fixture_not_a_provider, not_an_ict_third_party_service_provider).
+test(an_ict_provider_is_a_provider, fail) :-
+    criteria_of(fixture_step_1_fulfilled_exact_ten_percent, not_an_ict_third_party_service_provider).
+
+% ---- Art 31(8)(ii) ----------------------------------------------------
+test(an_article_127_2_framework_excludes) :-
+    criteria_of(fixture_tfeu_oversight_excluded, designation_not_applicable(article_127_2_tfeu_oversight_framework)).
+test(no_article_127_2_framework_does_not_exclude, fail) :-
+    criteria_of(fixture_step_1_fulfilled_exact_ten_percent, designation_not_applicable(article_127_2_tfeu_oversight_framework)).
+
+% ---- Art 31(8)(iii) ---------------------------------------------------
+test(an_intra_group_provider_is_excluded) :-
+    criteria_of(fixture_intra_group_excluded, designation_not_applicable(ict_intra_group_service_provider)).
+test(a_provider_outside_the_group_is_not_excluded, fail) :-
+    criteria_of(fixture_step_1_fulfilled_exact_ten_percent, designation_not_applicable(ict_intra_group_service_provider)).
+
+% ---- missing key ------------------------------------------------------
+test(a_missing_type_is_indeterminate) :-
+    criteria_of(fixture_missing_type, indeterminate([dora_entity_type])).
+test(a_stated_type_is_not_indeterminate, fail) :-
+    criteria_of(fixture_step_1_fulfilled_exact_ten_percent, indeterminate(_)).
+
+% ---- input check ------------------------------------------------------
+test(the_directive_2013_36_type_is_an_input_problem) :-
+    criteria_of(fixture_directive_2013_36_type, input_problems([wrong_type(dora_entity_type)])).
+test(a_well_formed_profile_has_no_input_problem, fail) :-
+    criteria_of(fixture_step_1_fulfilled_exact_ten_percent, input_problems(_)).
+
+% ---- Lead Overseer ----------------------------------------------------
+test(eiopa_one_euro_ahead_is_lead_overseer) :-
+    lead_of(fixture_lead_overseer_eiopa, lead_overseer(eiopa)).
+test(a_tie_appoints_no_single_overseer, fail) :-
+    lead_of(fixture_lead_overseer_tied_eba_eiopa, lead_overseer(_)).
+test(a_tie_is_reported_as_tied) :-
+    lead_of(fixture_lead_overseer_tied_eba_eiopa, lead_overseer_tied([eba, eiopa])).
+
+% ---- duties -----------------------------------------------------------
+test(a_designated_provider_must_notify) :-
+    duties_of(fixture_duties_notification_only, required([notify_financial_entities_of_designation])).
+test(a_provider_not_designated_has_no_duty, fail) :-
+    duties_of(fixture_not_designated, required(_)).
+test(a_provider_not_designated_is_reported) :-
+    duties_of(fixture_not_designated, not_designated_as_critical).
+test(a_group_member_designates_a_coordination_point) :-
+    duties_of(fixture_duties_group_third_country, required([designate_coordination_point|_])).
+test(a_provider_outside_a_group_designates_none, fail) :-
+    duties_of(fixture_duties_notification_only, required([designate_coordination_point|_])).
+
+:- end_module(test_negative_controls).

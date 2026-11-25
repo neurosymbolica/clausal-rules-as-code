@@ -1,0 +1,88 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_incident_classification_thresholds_tests_test_load, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_incident_classification_thresholds_kernel, [dora_incident_classification_thresholds_input_problems/2]).
+:- use_module(m__eu_dora_incident_classification_thresholds_citations, [citation/2, implements/1]).
+
+test(an_empty_profile_has_no_problem) :-
+    findall(Problems, dora_incident_classification_thresholds_input_problems([], Problems), Answers),
+    Answers == [[]].
+test(a_well_formed_profile_has_no_problem) :-
+    Profile = [attribute(affected_clients, 100001), attribute(incident_reflected_in_media, unsure), attribute(final_report_weekend_extension, true)],
+    findall(Problems, dora_incident_classification_thresholds_input_problems(Profile, Problems), Answers),
+    Answers == [[]].
+test(a_term_that_is_not_an_attribute_list_is_wrong_type_profile) :-
+    findall(Problems, dora_incident_classification_thresholds_input_problems(not_a_list, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(an_unbound_profile_is_wrong_type_profile) :-
+    findall(Problems, dora_incident_classification_thresholds_input_problems(_, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_list_with_a_foreign_element_is_wrong_type_profile) :-
+    Profile = [attribute(affected_clients, 1), something_else],
+    findall(Problems, dora_incident_classification_thresholds_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_repeated_contract_key_is_duplicate_key_only) :-
+    Profile = [attribute(affected_clients, 1), attribute(affected_clients, wrong)],
+    findall(Problems, dora_incident_classification_thresholds_input_problems(Profile, Problems), Answers),
+    Answers == [[duplicate_key(affected_clients)]].
+test(a_float_duration_is_wrong_type) :-
+    Profile = [attribute(incident_duration_seconds, 86401.0)],
+    findall(Problems, dora_incident_classification_thresholds_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(incident_duration_seconds)]].
+test(unsure_is_wrong_type_for_the_fact_key) :-
+    Profile = [attribute(final_report_weekend_extension, unsure)],
+    findall(Problems, dora_incident_classification_thresholds_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(final_report_weekend_extension)]].
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    Profile = [attribute(zeta_key, 1), attribute(final_report_weekend_extension, unsure), attribute(affected_clients, -1), attribute(zeta_key, 2)],
+    findall(Problems, dora_incident_classification_thresholds_input_problems(Profile, Problems), Answers),
+    Answers == [[wrong_type(affected_clients), wrong_type(final_report_weekend_extension), unknown_key(zeta_key)]].
+test(the_verdict_term_carries_status_and_citations) :-
+    Verdict = dora_incident_classification_thresholds_verdict(met, [cite(eu_reg_2022_2554_art_18_1), cite(eu_reg_2024_1772_art_9_4), cite(eu_reg_2024_1772_art_4)]),
+    Verdict = dora_incident_classification_thresholds_verdict(Status, Citations),
+    Status == met,
+    Citations == [cite(eu_reg_2022_2554_art_18_1), cite(eu_reg_2024_1772_art_9_4), cite(eu_reg_2024_1772_art_4)].
+test(the_referral_term_destructures) :-
+    Status = needs_legal_review(open_textured(incident_reflected_in_media, cite(eu_reg_2024_1772_art_9_2)), [inputs_relied_on([incident_reflected_in_media - unsure])]),
+    Status = needs_legal_review(open_textured(Key, cite(CitationKey)), [inputs_relied_on(Pairs)]),
+    Key == incident_reflected_in_media,
+    CitationKey == eu_reg_2024_1772_art_9_2,
+    Pairs == [incident_reflected_in_media - unsure].
+test(the_late_term_names_the_month_limit) :-
+    Result = late(month_limit),
+    Result = late(Requirement),
+    Requirement == month_limit.
+test(the_missing_key_term_holds_one_bare_key) :-
+    Status = indeterminate([final_report_weekend_extension]),
+    Status = indeterminate([MissingKey]),
+    MissingKey == final_report_weekend_extension.
+test(the_threshold_verdict_atoms_are_distinct) :-
+    dif(met, not_met).
+test(the_timeliness_verdicts_are_distinct) :-
+    dif(on_time, late(month_limit)).
+test(the_bare_atom_is_not_the_missing_key_compound) :-
+    dif(indeterminate, indeterminate([final_report_weekend_extension])).
+test(the_parent_provision_is_recorded) :-
+    citation(eu_reg_2022_2554_art_18_1, _Record).
+test(the_final_report_limit_is_recorded) :-
+    citation(eu_reg_2025_301_art_5_1_c, Record),
+    Record = [label - _, ref - _, verbatim - _].
+test(a_recorded_key_is_implemented) :-
+    implements(eu_reg_2024_1772_art_9_6).
+
+test(a_well_formed_profile_is_not_refused, fail) :-
+    dora_incident_classification_thresholds_input_problems([attribute(member_states_with_impact, 2)], [_|_]).
+test(an_unrecorded_key_is_not_implemented, fail) :-
+    implements(eu_todo_primary_source).
+
+cp_test_names([an_empty_profile_has_no_problem, a_well_formed_profile_has_no_problem, a_term_that_is_not_an_attribute_list_is_wrong_type_profile, an_unbound_profile_is_wrong_type_profile, a_list_with_a_foreign_element_is_wrong_type_profile, a_repeated_contract_key_is_duplicate_key_only, a_float_duration_is_wrong_type, unsure_is_wrong_type_for_the_fact_key, problems_come_in_contract_order_then_unknown_keys, the_verdict_term_carries_status_and_citations, the_referral_term_destructures, the_late_term_names_the_month_limit, the_missing_key_term_holds_one_bare_key, the_threshold_verdict_atoms_are_distinct, the_timeliness_verdicts_are_distinct, the_bare_atom_is_not_the_missing_key_compound, the_parent_provision_is_recorded, the_final_report_limit_is_recorded, a_recorded_key_is_implemented]).
+cp_test_fail_names([a_well_formed_profile_is_not_refused, an_unrecorded_key_is_not_implemented]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

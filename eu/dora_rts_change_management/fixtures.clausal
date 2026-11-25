@@ -1,0 +1,181 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dora_rts_change_management.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicate it calls. Profile keys and subject ids are atoms.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's
+% typed input contract). Every route has a positive subject and a one-unit
+% near-miss control (one key changed):
+%   gate true (simplified_framework_entity)  vs gate false (complete)
+%   gate absent (indeterminate gate)         vs gate false (complete)
+%   all Art 17(1) elements performed (complete)
+%                                            vs one element false (incomplete)
+%   central counterparty tested with parties (complete)
+%                                            vs parties not involved (incomplete)
+%   central securities depository, no significant changes (complete)
+%                                            vs significant changes, involvement
+%                                               unstated (indeterminate)
+%   one element unsure (needs_legal_review)  vs that element true (complete)
+%   entity type unstated (indeterminate type)
+%                                            vs investment firm (complete)
+%   unknown key / unsure gate / duplicate gate (input_problems)
+%                                            vs the well-formed profile (complete)
+% =====================================================================
+
+:- module(fixtures, [
+    dora_rts_change_management_subject/1,
+    dora_rts_change_management_profile_for/2,
+    dora_rts_change_management_assess/2
+]).
+
+:- use_module(eu/dora_rts_change_management/dora_rts_change_management, [decide_dora_rts_change_management/2]).
+
+% ---- Subject registry ------------------------------------------------
+dora_rts_change_management_subject(article_16_1_entity).
+dora_rts_change_management_subject(article_16_1_status_unstated).
+dora_rts_change_management_subject(credit_institution_all_elements_performed).
+dora_rts_change_management_subject(credit_institution_verification_not_performed).
+dora_rts_change_management_subject(central_counterparty_tested_with_parties).
+dora_rts_change_management_subject(central_counterparty_parties_not_involved).
+dora_rts_change_management_subject(central_securities_depository_without_significant_changes).
+dora_rts_change_management_subject(central_securities_depository_involvement_unstated).
+dora_rts_change_management_subject(credit_institution_verification_unsure).
+dora_rts_change_management_subject(entity_type_unstated).
+dora_rts_change_management_subject(investment_firm_trigger_unstated).
+dora_rts_change_management_subject(profile_with_unknown_key).
+dora_rts_change_management_subject(article_16_1_status_unsure).
+dora_rts_change_management_subject(duplicated_gate_key).
+
+% ---- The thirteen elements of Art 17(1), the first given FirstValue ----
+performed_elements(FirstValue, [
+    attribute(change_procedures_verify_whether_ict_security_requirements_met, FirstValue),
+    attribute(change_procedures_ensure_independence_of_approving_functions, true),
+    attribute(change_roles_described_for_specifying_and_planning, true),
+    attribute(change_roles_described_for_designing_adequate_transition, true),
+    attribute(change_roles_described_for_controlled_testing_and_finalisation, true),
+    attribute(change_roles_described_for_effective_quality_assurance, true),
+    attribute(change_purpose_and_scope_documented_and_communicated, true),
+    attribute(change_implementation_timeline_documented_and_communicated, true),
+    attribute(change_expected_outcomes_documented_and_communicated, true),
+    attribute(change_fall_back_procedures_and_responsibilities_identified, true),
+    attribute(emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards, true),
+    attribute(emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation, true),
+    attribute(change_impact_on_ict_security_measures_identified_and_assessed, true)
+]).
+
+% ---- Profiles --------------------------------------------------------
+dora_rts_change_management_profile_for(article_16_1_entity, Profile) :-
+    performed_elements(false, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, true),
+        attribute(dora_entity_type, investment_firm)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(article_16_1_status_unstated, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(dora_entity_type, credit_institution)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, credit_institution)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(credit_institution_verification_not_performed, Profile) :-
+    performed_elements(false, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, credit_institution)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(central_counterparty_tested_with_parties, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, central_counterparty),
+        attribute(significant_changes_made_to_ict_systems, true),
+        attribute(ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions, true),
+        attribute(clearing_members_clients_and_other_parties_involved_in_testing, true)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(central_counterparty_parties_not_involved, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, central_counterparty),
+        attribute(significant_changes_made_to_ict_systems, true),
+        attribute(ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions, true),
+        attribute(clearing_members_clients_and_other_parties_involved_in_testing, false)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(central_securities_depository_without_significant_changes, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, central_securities_depository),
+        attribute(significant_changes_made_to_ict_systems, false)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(central_securities_depository_involvement_unstated, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, central_securities_depository),
+        attribute(significant_changes_made_to_ict_systems, true),
+        attribute(ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions, true)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(credit_institution_verification_unsure, Profile) :-
+    performed_elements(unsure, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, credit_institution)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(entity_type_unstated, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(investment_firm_trigger_unstated, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, investment_firm)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(profile_with_unknown_key, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(colour, blue),
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, credit_institution)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(article_16_1_status_unsure, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, unsure),
+        attribute(dora_entity_type, credit_institution)
+        | Elements
+    ].
+dora_rts_change_management_profile_for(duplicated_gate_key, Profile) :-
+    performed_elements(true, Elements),
+    Profile = [
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(financial_entity_is_article_16_1_entity, false),
+        attribute(dora_entity_type, credit_institution)
+        | Elements
+    ].
+
+% ---- Convenience wrapper ---------------------------------------------
+dora_rts_change_management_assess(Subject, Result) :-
+    dora_rts_change_management_profile_for(Subject, Profile),
+    decide_dora_rts_change_management(Profile, Result).
+
+:- end_module(fixtures).

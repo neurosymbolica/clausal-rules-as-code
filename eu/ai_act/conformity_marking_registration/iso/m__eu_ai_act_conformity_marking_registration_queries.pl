@@ -1,0 +1,219 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_ai_act_conformity_marking_registration_queries, [conformity_marking_registration_profile_keys/1, conformity_marking_registration_what_if/4, not_applicable_on_date/0, not_high_risk_under_annex_iii_or_section_a_of_annex_i/0, compliance_required_by_31_december_2030/0, compliance_required_by_2_august_2030/0, not_applicable_to_a_system_placed_before_the_application_day/0, procedure_of_the_union_harmonisation_legislation/0, procedure_of_the_union_harmonisation_legislation_with_the_option_without_a_third_party/0, procedure_of_the_union_harmonisation_legislation_with_third_party_assessment/0, choice_of_internal_control_under_annex_vi_or_notified_body_procedure_under_annex_vii/0, choice_of_annex_vi_or_annex_vii_with_annex_vii_for_the_restricted_part/0, notified_body_procedure_under_annex_vii/0, internal_control_under_annex_vi/0, article_43_1_not_applicable/0, market_surveillance_authority_acts_as_notified_body/0, notified_body_of_the_providers_choice/0, no_previous_conformity_assessment/0, new_conformity_assessment_required/0, new_conformity_assessment_not_required/0, single_declaration_for_all_applicable_union_law/0, declaration_under_this_regulation/0, declaration_to_be_kept/0, keeping_period_ended/0, marking_element_required/0, marking_element_not_required/0, no_registration_duty/0, registration_in_the_eu_database/0, registration_in_the_secure_non_public_section_of_the_eu_database/0, registration_at_national_level/0, verification_of_the_quality_management_system_against_article_17/0, examination_of_the_technical_documentation_against_the_essential_requirements/0, verification_of_the_consistency_of_design_development_and_post_market_monitoring_with_the_technical_documentation/0, name_and_address_of_the_provider_and_of_any_authorised_representative_lodging_the_application/0, list_of_ai_systems_covered_by_the_quality_management_system/0, technical_documentation_for_each_ai_system_covered/0, documentation_of_the_quality_management_system/0, description_of_the_procedures_keeping_the_quality_management_system_adequate_and_effective/0, written_declaration_that_the_application_has_not_been_lodged_with_another_notified_body/0, name_and_address_of_the_provider/0, technical_documentation_referred_to_in_annex_iv/0, name_address_and_contact_details_of_the_provider/0, name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_provider/0, name_address_and_contact_details_of_the_authorised_representative/0, trade_name_and_unambiguous_reference_for_identification_and_traceability/0, description_of_the_intended_purpose_and_of_the_components_and_functions/0, description_of_the_information_used_and_of_the_operating_logic/0, status_of_the_ai_system/0, type_number_and_expiry_date_of_the_certificate_and_name_or_number_of_the_notified_body/0, scanned_copy_of_the_certificate/0, member_states_where_placed_on_the_market_put_into_service_or_made_available/0, copy_of_the_eu_declaration_of_conformity/0, electronic_instructions_for_use/0, url_for_additional_information/0, description_of_the_intended_purpose/0, conditions_under_article_6_3_on_which_the_system_is_considered_not_high_risk/0, name_address_and_contact_details_of_the_deployer/0, name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_deployer/0, url_of_the_providers_entry_in_the_eu_database/0, summary_of_the_findings_of_the_fundamental_rights_impact_assessment/0, summary_of_the_data_protection_impact_assessment/0, union_wide_unique_single_identification_number_of_the_testing/0, name_and_contact_details_of_the_provider_and_of_the_deployers_involved_in_the_testing/0, brief_description_of_the_ai_system_and_of_its_intended_purpose/0, summary_of_the_main_characteristics_of_the_testing_plan/0, information_on_suspension_or_termination_of_the_testing/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(error), [must_be/2]).
+:- use_module(clausal_hof, [exclude/3]).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(m__eu_ai_act_conformity_marking_registration_kernel, [conformity_marking_registration_input_problems/2]).
+:- use_module(m__eu_ai_act_conformity_marking_registration_conformity_marking_registration, [conformity_marking_registration_status/2]).
+
+conformity_marking_registration_profile_keys([annex_iii_point, provider_concluded_under_article_6_3_that_the_system_is_not_high_risk, covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, placed_on_the_market_or_put_into_service_before_the_application_day, significant_changes_in_design_from_the_application_day, intended_to_be_used_by_public_authorities, harmonised_standards_or_common_specifications_applied_in_full, applied_harmonised_standard_published_with_a_restriction, harmonisation_legislation_offers_an_option_without_third_party_conformity_assessment, intended_to_be_put_into_service_by_law_enforcement_immigration_or_asylum_authorities_or_union_institutions_bodies_offices_or_agencies, already_subject_to_a_conformity_assessment_procedure, change_pre_determined_for_a_system_that_continues_to_learn, substantial_modification, other_union_harmonisation_legislation_requires_an_eu_declaration_of_conformity, provided_digitally, affixing_to_the_system_possible_and_warranted, notified_body_involved_in_the_conformity_assessment, other_union_law_provides_for_affixing_the_ce_marking, deployer_is_a_public_authority_or_union_institution_body_office_or_agency_or_acts_on_their_behalf]).
+
+conformity_marking_registration_what_if(AssessmentCase, OverriddenKey, NewValue, NewStatus) :-
+    assessment_case_t(AssessmentCase, IsAssessment),
+    what_if_case(IsAssessment, AssessmentCase, OverriddenKey, NewValue, NewStatus).
+
+what_if_case(true, assessment(Profile, AssessmentDate), OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    conformity_marking_registration_status(assessment(Hypothesis, AssessmentDate), NewStatus).
+what_if_case(false, AssessmentCase, _, _, NewStatus) :-
+    conformity_marking_registration_status(AssessmentCase, NewStatus).
+
+assessment_case_t(AssessmentCase, false) :-
+    var(AssessmentCase).
+assessment_case_t(AssessmentCase, Truth) :-
+    nonvar(AssessmentCase),
+    functor(AssessmentCase, Functor, Arity),
+    memberd_t(Functor/Arity, [assessment/2], Truth).
+
+override_attribute(Profile, OverriddenKey, NewValue, Hypothesis) :-
+    proper_list_t(Profile, IsList),
+    override_in(IsList, Profile, OverriddenKey, NewValue, Hypothesis).
+
+override_in(false, Profile, _, _, Profile).
+override_in(true, Profile, OverriddenKey, NewValue, Hypothesis) :-
+    exclude(same_key(OverriddenKey), Profile, KeptElements),
+    append(KeptElements, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+same_key(OverriddenKey, Element) :-
+    nonvar(Element),
+    Element = attribute(ElementKey, _),
+    ElementKey == OverriddenKey.
+
+proper_list_t(Term, Truth) :-
+    catch(list_check(Term, Truth), error(_, _), Truth = false).
+
+list_check(Term, true) :-
+    must_be(list, Term).
+
+not_applicable_on_date.
+
+not_high_risk_under_annex_iii_or_section_a_of_annex_i.
+
+compliance_required_by_31_december_2030.
+
+compliance_required_by_2_august_2030.
+
+not_applicable_to_a_system_placed_before_the_application_day.
+
+procedure_of_the_union_harmonisation_legislation.
+
+procedure_of_the_union_harmonisation_legislation_with_the_option_without_a_third_party.
+
+procedure_of_the_union_harmonisation_legislation_with_third_party_assessment.
+
+choice_of_internal_control_under_annex_vi_or_notified_body_procedure_under_annex_vii.
+
+choice_of_annex_vi_or_annex_vii_with_annex_vii_for_the_restricted_part.
+
+notified_body_procedure_under_annex_vii.
+
+internal_control_under_annex_vi.
+
+article_43_1_not_applicable.
+
+market_surveillance_authority_acts_as_notified_body.
+
+notified_body_of_the_providers_choice.
+
+no_previous_conformity_assessment.
+
+new_conformity_assessment_required.
+
+new_conformity_assessment_not_required.
+
+single_declaration_for_all_applicable_union_law.
+
+declaration_under_this_regulation.
+
+declaration_to_be_kept.
+
+keeping_period_ended.
+
+marking_element_required.
+
+marking_element_not_required.
+
+no_registration_duty.
+
+registration_in_the_eu_database.
+
+registration_in_the_secure_non_public_section_of_the_eu_database.
+
+registration_at_national_level.
+
+verification_of_the_quality_management_system_against_article_17.
+
+examination_of_the_technical_documentation_against_the_essential_requirements.
+
+verification_of_the_consistency_of_design_development_and_post_market_monitoring_with_the_technical_documentation.
+
+name_and_address_of_the_provider_and_of_any_authorised_representative_lodging_the_application.
+
+list_of_ai_systems_covered_by_the_quality_management_system.
+
+technical_documentation_for_each_ai_system_covered.
+
+documentation_of_the_quality_management_system.
+
+description_of_the_procedures_keeping_the_quality_management_system_adequate_and_effective.
+
+written_declaration_that_the_application_has_not_been_lodged_with_another_notified_body.
+
+name_and_address_of_the_provider.
+
+technical_documentation_referred_to_in_annex_iv.
+
+name_address_and_contact_details_of_the_provider.
+
+name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_provider.
+
+name_address_and_contact_details_of_the_authorised_representative.
+
+trade_name_and_unambiguous_reference_for_identification_and_traceability.
+
+description_of_the_intended_purpose_and_of_the_components_and_functions.
+
+description_of_the_information_used_and_of_the_operating_logic.
+
+status_of_the_ai_system.
+
+type_number_and_expiry_date_of_the_certificate_and_name_or_number_of_the_notified_body.
+
+scanned_copy_of_the_certificate.
+
+member_states_where_placed_on_the_market_put_into_service_or_made_available.
+
+copy_of_the_eu_declaration_of_conformity.
+
+electronic_instructions_for_use.
+
+url_for_additional_information.
+
+description_of_the_intended_purpose.
+
+conditions_under_article_6_3_on_which_the_system_is_considered_not_high_risk.
+
+name_address_and_contact_details_of_the_deployer.
+
+name_address_and_contact_details_of_the_person_submitting_on_behalf_of_the_deployer.
+
+url_of_the_providers_entry_in_the_eu_database.
+
+summary_of_the_findings_of_the_fundamental_rights_impact_assessment.
+
+summary_of_the_data_protection_impact_assessment.
+
+union_wide_unique_single_identification_number_of_the_testing.
+
+name_and_contact_details_of_the_provider_and_of_the_deployers_involved_in_the_testing.
+
+brief_description_of_the_ai_system_and_of_its_intended_purpose.
+
+summary_of_the_main_characteristics_of_the_testing_plan.
+
+information_on_suspension_or_termination_of_the_testing.
+
+example_profile([attribute(annex_iii_point, annex_iii_point_3), attribute(provider_concluded_under_article_6_3_that_the_system_is_not_high_risk, false), attribute(covered_by_union_harmonisation_legislation_listed_in_section_a_of_annex_i, false), attribute(component_of_an_annex_x_large_scale_it_system_placed_on_the_market_or_put_into_service_before_2_august_2027, false), attribute(placed_on_the_market_or_put_into_service_before_the_application_day, false), attribute(harmonised_standards_or_common_specifications_applied_in_full, true), attribute(applied_harmonised_standard_published_with_a_restriction, false)]).
+
+test(the_example_profile_has_high_risk_obligations) :-
+    example_profile(Profile),
+    conformity_marking_registration_status(assessment(Profile, date(2029, 1, 1)), high_risk_obligations_apply).
+test(what_if_listed_under_point_one_keeps_high_risk_obligations) :-
+    example_profile(Profile),
+    conformity_marking_registration_what_if(assessment(Profile, date(2029, 1, 1)), annex_iii_point, annex_iii_point_1, high_risk_obligations_apply).
+test(what_if_the_provider_concludes_not_high_risk) :-
+    example_profile(Profile),
+    conformity_marking_registration_what_if(assessment(Profile, date(2029, 1, 1)), provider_concluded_under_article_6_3_that_the_system_is_not_high_risk, true, NewStatus),
+    NewStatus == not_high_risk_under_annex_iii_or_section_a_of_annex_i.
+test(the_override_replaces_the_key_without_a_duplicate) :-
+    example_profile(Profile),
+    override_attribute(Profile, annex_iii_point, annex_iii_point_1, Hypothesis),
+    conformity_marking_registration_input_problems(Hypothesis, []).
+test(what_if_has_one_answer) :-
+    example_profile(Profile),
+    findall(NewStatus, conformity_marking_registration_what_if(assessment(Profile, date(2029, 1, 1)), annex_iii_point, annex_iii_point_2, NewStatus), Answers),
+    Answers == [high_risk_obligations_apply].
+test(a_case_that_is_not_an_assessment_is_an_input_problem) :-
+    conformity_marking_registration_what_if(colour, annex_iii_point, annex_iii_point_1, NewStatus),
+    NewStatus == input_problems([wrong_type(case)]).
+test(the_schema_has_twenty_keys) :-
+    conformity_marking_registration_profile_keys(Keys),
+    length(Keys, 20).
+test(the_result_atoms_are_served) :-
+    not_applicable_on_date,
+    internal_control_under_annex_vi,
+    registration_at_national_level.
+test(the_constructors_build_data_terms) :-
+    Missing = indeterminate([annex_iii_point]),
+    functor(Missing, indeterminate, 1),
+    Problems = input_problems([unknown_key(colour)]),
+    Problems = input_problems([FirstProblem]),
+    FirstProblem == unknown_key(colour).
+
+test(what_if_the_provider_concludes_not_high_risk_is_not_high_risk_obligations, fail) :-
+    example_profile(Profile),
+    conformity_marking_registration_what_if(assessment(Profile, date(2029, 1, 1)), provider_concluded_under_article_6_3_that_the_system_is_not_high_risk, true, high_risk_obligations_apply).

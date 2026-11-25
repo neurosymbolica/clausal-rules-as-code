@@ -1,0 +1,243 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for eu/dora_ctpp_oversight.
+% A TOP-LAYER consumer: import the determination slice's PUBLIC predicates
+% it calls -- that is the whole import list. Profile keys and subject ids
+% are atoms and need no import.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's typed
+% input contract); dates are date(Y, M, D) terms.
+%
+% Every route has a positive subject and a one-unit near-miss control:
+%   facade status   designated / not designated / unstated / input problems
+%                   (float number of days, computed as float(365) because a
+%                   float literal is refused (C28), against the integer 365);
+%   Art 33(4)       window last day (start + 15) against the day after it,
+%                   and the day before the start;
+%   Art 35(3)       window last day (start + 30) against the day after it;
+%   Art 35(6)       thirtieth day after receipt (running) against the
+%                   thirty-first (ground met); recommendation against a
+%                   remediation report request; full against partial
+%                   compliance;
+%   Art 35(7), (8)  31 August (end of February, ordinary and leap year);
+%                   turnover 0 against turnover 1;
+%   Art 35(1)       all point (iv) facts true against one false; oversight
+%                   activities not completed;
+%   Art 35(1)(d), 35(5)  planned subcontracting against none;
+%   Art 33(5)       plan adopted and notified against not.
+% =====================================================================
+
+:- module(fixtures, [
+    dora_ctpp_oversight_subject/1,
+    dora_ctpp_oversight_profile_for/2,
+    dora_ctpp_oversight_assess/2
+]).
+
+:- use_module(eu/dora_ctpp_oversight/dora_ctpp_oversight, [decide_dora_ctpp_oversight/2]).
+
+% ---- Subject registry ------------------------------------------------
+dora_ctpp_oversight_subject(designated_provider_full_profile).
+dora_ctpp_oversight_subject(not_designated_provider).
+dora_ctpp_oversight_subject(designation_unstated).
+dora_ctpp_oversight_subject(profile_with_unknown_key).
+dora_ctpp_oversight_subject(profile_with_float_year_length).
+dora_ctpp_oversight_subject(profile_with_integer_year_length).
+dora_ctpp_oversight_subject(statement_window_last_day).
+dora_ctpp_oversight_subject(statement_window_day_after_last_day).
+dora_ctpp_oversight_subject(statement_window_day_before_start).
+dora_ctpp_oversight_subject(information_window_last_day).
+dora_ctpp_oversight_subject(information_window_day_after_last_day).
+dora_ctpp_oversight_subject(penalty_thirtieth_day_after_receipt).
+dora_ctpp_oversight_subject(penalty_thirty_first_day_after_receipt).
+dora_ctpp_oversight_subject(penalty_recommendation_measure).
+dora_ctpp_oversight_subject(penalty_remediation_report_measure).
+dora_ctpp_oversight_subject(penalty_full_compliance).
+dora_ctpp_oversight_subject(penalty_partial_compliance).
+dora_ctpp_oversight_subject(limits_notified_end_of_august).
+dora_ctpp_oversight_subject(limits_notified_end_of_august_before_leap_year).
+dora_ctpp_oversight_subject(limits_zero_turnover).
+dora_ctpp_oversight_subject(limits_one_euro_turnover).
+dora_ctpp_oversight_subject(powers_all_point_four_facts_hold).
+dora_ctpp_oversight_subject(powers_risk_not_deemed).
+dora_ctpp_oversight_subject(powers_oversight_activities_not_completed).
+dora_ctpp_oversight_subject(duties_with_planned_subcontracting).
+dora_ctpp_oversight_subject(duties_without_planned_subcontracting).
+dora_ctpp_oversight_subject(measure_plan_adopted).
+dora_ctpp_oversight_subject(measure_plan_not_adopted).
+
+% ---- Profiles --------------------------------------------------------
+dora_ctpp_oversight_profile_for(designated_provider_full_profile, [
+    attribute(provider_designated_as_critical, true),
+    attribute(response_window, oversight_plan_statement),
+    attribute(draft_oversight_plan_received_on, date(2026, 3, 2)),
+    attribute(annual_oversight_plan_adopted_and_notified, true),
+    attribute(oversight_activities_completed, true),
+    attribute(provider_plans_further_subcontracting_arrangement, true),
+    attribute(envisaged_subcontractor_is_ict_provider_or_subcontractor_in_third_country, true),
+    attribute(subcontracting_concerns_critical_or_important_functions, true),
+    attribute(lead_overseer_deems_clear_and_serious_risk, true),
+    attribute(recommendation_information_opportunity_given_on, date(2026, 1, 1)),
+    attribute(measure_power, information_request),
+    attribute(measure_compliance, partial),
+    attribute(measure_notification_received_on, date(2026, 1, 1)),
+    attribute(penalty_decision_notified_on, date(2026, 8, 31)),
+    attribute(preceding_business_year_worldwide_turnover, 36500000),
+    attribute(preceding_business_year_length_in_days, 365),
+    attribute(assessment_date, date(2026, 3, 17))
+]).
+dora_ctpp_oversight_profile_for(not_designated_provider, [
+    attribute(provider_designated_as_critical, false)
+]).
+dora_ctpp_oversight_profile_for(designation_unstated, []).
+dora_ctpp_oversight_profile_for(profile_with_unknown_key, [
+    attribute(provider_designated_as_critical, true),
+    attribute(colour, blue)
+]).
+% The float is computed, not written as a literal (C28).
+dora_ctpp_oversight_profile_for(profile_with_float_year_length, [
+    attribute(provider_designated_as_critical, true),
+    attribute(preceding_business_year_length_in_days, FloatDays)
+]) :-
+    FloatDays is float(365).
+dora_ctpp_oversight_profile_for(profile_with_integer_year_length, [
+    attribute(provider_designated_as_critical, true),
+    attribute(preceding_business_year_length_in_days, 365)
+]).
+dora_ctpp_oversight_profile_for(statement_window_last_day, [
+    attribute(provider_designated_as_critical, true),
+    attribute(response_window, oversight_plan_statement),
+    attribute(draft_oversight_plan_received_on, date(2026, 3, 2)),
+    attribute(assessment_date, date(2026, 3, 17))
+]).
+dora_ctpp_oversight_profile_for(statement_window_day_after_last_day, [
+    attribute(provider_designated_as_critical, true),
+    attribute(response_window, oversight_plan_statement),
+    attribute(draft_oversight_plan_received_on, date(2026, 3, 2)),
+    attribute(assessment_date, date(2026, 3, 18))
+]).
+dora_ctpp_oversight_profile_for(statement_window_day_before_start, [
+    attribute(provider_designated_as_critical, true),
+    attribute(response_window, oversight_plan_statement),
+    attribute(draft_oversight_plan_received_on, date(2026, 3, 2)),
+    attribute(assessment_date, date(2026, 3, 1))
+]).
+dora_ctpp_oversight_profile_for(information_window_last_day, [
+    attribute(provider_designated_as_critical, true),
+    attribute(response_window, recommendation_information),
+    attribute(recommendation_information_opportunity_given_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 1, 31))
+]).
+dora_ctpp_oversight_profile_for(information_window_day_after_last_day, [
+    attribute(provider_designated_as_critical, true),
+    attribute(response_window, recommendation_information),
+    attribute(recommendation_information_opportunity_given_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 2, 1))
+]).
+dora_ctpp_oversight_profile_for(penalty_thirtieth_day_after_receipt, [
+    attribute(provider_designated_as_critical, true),
+    attribute(measure_power, information_request),
+    attribute(measure_compliance, partial),
+    attribute(measure_notification_received_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 1, 31))
+]).
+dora_ctpp_oversight_profile_for(penalty_thirty_first_day_after_receipt, [
+    attribute(provider_designated_as_critical, true),
+    attribute(measure_power, information_request),
+    attribute(measure_compliance, partial),
+    attribute(measure_notification_received_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 2, 1))
+]).
+dora_ctpp_oversight_profile_for(penalty_recommendation_measure, [
+    attribute(provider_designated_as_critical, true),
+    attribute(measure_power, recommendation),
+    attribute(measure_compliance, partial),
+    attribute(measure_notification_received_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 2, 1))
+]).
+dora_ctpp_oversight_profile_for(penalty_remediation_report_measure, [
+    attribute(provider_designated_as_critical, true),
+    attribute(measure_power, remediation_report_request),
+    attribute(measure_compliance, partial),
+    attribute(measure_notification_received_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 2, 1))
+]).
+dora_ctpp_oversight_profile_for(penalty_full_compliance, [
+    attribute(provider_designated_as_critical, true),
+    attribute(measure_power, inspection),
+    attribute(measure_compliance, full),
+    attribute(measure_notification_received_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 2, 1))
+]).
+dora_ctpp_oversight_profile_for(penalty_partial_compliance, [
+    attribute(provider_designated_as_critical, true),
+    attribute(measure_power, inspection),
+    attribute(measure_compliance, partial),
+    attribute(measure_notification_received_on, date(2026, 1, 1)),
+    attribute(assessment_date, date(2026, 2, 1))
+]).
+dora_ctpp_oversight_profile_for(limits_notified_end_of_august, [
+    attribute(provider_designated_as_critical, true),
+    attribute(penalty_decision_notified_on, date(2026, 8, 31)),
+    attribute(preceding_business_year_worldwide_turnover, 36500000),
+    attribute(preceding_business_year_length_in_days, 365)
+]).
+dora_ctpp_oversight_profile_for(limits_notified_end_of_august_before_leap_year, [
+    attribute(provider_designated_as_critical, true),
+    attribute(penalty_decision_notified_on, date(2027, 8, 31)),
+    attribute(preceding_business_year_worldwide_turnover, 1),
+    attribute(preceding_business_year_length_in_days, 366)
+]).
+dora_ctpp_oversight_profile_for(limits_zero_turnover, [
+    attribute(provider_designated_as_critical, true),
+    attribute(penalty_decision_notified_on, date(2026, 1, 10)),
+    attribute(preceding_business_year_worldwide_turnover, 0)
+]).
+dora_ctpp_oversight_profile_for(limits_one_euro_turnover, [
+    attribute(provider_designated_as_critical, true),
+    attribute(penalty_decision_notified_on, date(2026, 1, 10)),
+    attribute(preceding_business_year_worldwide_turnover, 1)
+]).
+dora_ctpp_oversight_profile_for(powers_all_point_four_facts_hold, [
+    attribute(provider_designated_as_critical, true),
+    attribute(oversight_activities_completed, true),
+    attribute(provider_plans_further_subcontracting_arrangement, true),
+    attribute(envisaged_subcontractor_is_ict_provider_or_subcontractor_in_third_country, true),
+    attribute(subcontracting_concerns_critical_or_important_functions, true),
+    attribute(lead_overseer_deems_clear_and_serious_risk, true)
+]).
+dora_ctpp_oversight_profile_for(powers_risk_not_deemed, [
+    attribute(provider_designated_as_critical, true),
+    attribute(oversight_activities_completed, true),
+    attribute(provider_plans_further_subcontracting_arrangement, true),
+    attribute(envisaged_subcontractor_is_ict_provider_or_subcontractor_in_third_country, true),
+    attribute(subcontracting_concerns_critical_or_important_functions, true),
+    attribute(lead_overseer_deems_clear_and_serious_risk, false)
+]).
+dora_ctpp_oversight_profile_for(powers_oversight_activities_not_completed, [
+    attribute(provider_designated_as_critical, true),
+    attribute(oversight_activities_completed, false),
+    attribute(provider_plans_further_subcontracting_arrangement, false)
+]).
+dora_ctpp_oversight_profile_for(duties_with_planned_subcontracting, [
+    attribute(provider_designated_as_critical, true),
+    attribute(provider_plans_further_subcontracting_arrangement, true)
+]).
+dora_ctpp_oversight_profile_for(duties_without_planned_subcontracting, [
+    attribute(provider_designated_as_critical, true),
+    attribute(provider_plans_further_subcontracting_arrangement, false)
+]).
+dora_ctpp_oversight_profile_for(measure_plan_adopted, [
+    attribute(provider_designated_as_critical, true),
+    attribute(annual_oversight_plan_adopted_and_notified, true)
+]).
+dora_ctpp_oversight_profile_for(measure_plan_not_adopted, [
+    attribute(provider_designated_as_critical, true),
+    attribute(annual_oversight_plan_adopted_and_notified, false)
+]).
+
+% ---- Convenience wrapper ---------------------------------------------
+dora_ctpp_oversight_assess(Subject, Result) :-
+    dora_ctpp_oversight_profile_for(Subject, Profile),
+    decide_dora_ctpp_oversight(Profile, Result).
+
+:- end_module(fixtures).

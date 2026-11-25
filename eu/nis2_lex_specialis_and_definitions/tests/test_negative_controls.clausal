@@ -1,0 +1,121 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss control (one key
+% changed -> different answer). Each `fail` test is paired with a positive
+% test of the answer the near miss DOES get, so a misspelt atom shows up.
+% Run: python -m clausal.testing eu/nis2_lex_specialis_and_definitions/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/nis2_lex_specialis_and_definitions/nis2_lex_specialis_and_definitions, [
+    nis2_risk_management_provisions_status/3,
+    nis2_incident_notification_provisions_status/3,
+    nis2_lex_specialis_and_definitions_status_values/1
+]).
+:- use_module(eu/nis2_lex_specialis_and_definitions/fixtures, [nis2_lex_specialis_and_definitions_profile_for/2]).
+
+risk_answer(Subject, Result) :-
+    nis2_lex_specialis_and_definitions_profile_for(Subject, Profile),
+    nis2_risk_management_provisions_status(Profile, Result, _).
+
+notification_answer(Subject, Result) :-
+    nis2_lex_specialis_and_definitions_profile_for(Subject, Profile),
+    nis2_incident_notification_provisions_status(Profile, Result, _).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    nis2_lex_specialis_and_definitions_status_values(StatusValues),
+    StatusValues = [_, _|_].
+
+% ---- A3: point (a) met -> risk provisions disapplied ----------------------
+test(a3_positive_risk_disapplied) :-
+    risk_answer(essential_all_equivalent, nis2_provisions_disapplied).
+test(a3_near_miss_is_not_disapplied, fail) :-
+    risk_answer(essential_risk_not_equivalent, nis2_provisions_disapplied).
+test(a3_near_miss_applies) :-
+    risk_answer(essential_risk_not_equivalent, nis2_provisions_apply).
+
+% ---- B6: both point (b) conditions met -> notification disapplied ---------
+test(b6_positive_notification_disapplied) :-
+    notification_answer(essential_all_equivalent, nis2_provisions_disapplied).
+test(b6_near_miss_is_not_disapplied, fail) :-
+    notification_answer(important_requirements_not_equivalent, nis2_provisions_disapplied).
+test(b6_near_miss_applies) :-
+    notification_answer(important_requirements_not_equivalent, nis2_provisions_apply).
+
+% ---- B3: access false decides alone (Q1: point (a) met does not help) -----
+test(b3_positive_access_false_applies) :-
+    notification_answer(important_only_point_a_met, nis2_provisions_apply).
+test(b3_near_miss_does_not_apply, fail) :-
+    notification_answer(essential_all_equivalent, nis2_provisions_apply).
+test(b3_access_false_beside_absent_equivalence_applies) :-
+    nis2_incident_notification_provisions_status([attribute(entity_class, important_entity), attribute(dora_gives_immediate_access_to_incident_notifications, false)], nis2_provisions_apply, _).
+
+% ---- A2/B2: out_of_scope decides alone ------------------------------------
+test(a2_positive_out_of_scope) :-
+    risk_answer(out_of_scope_entity, out_of_scope).
+test(b2_positive_out_of_scope) :-
+    notification_answer(out_of_scope_entity, out_of_scope).
+test(a2_near_miss_is_not_out_of_scope, fail) :-
+    risk_answer(essential_judgements_missing, out_of_scope).
+test(b2_near_miss_is_not_out_of_scope, fail) :-
+    notification_answer(essential_judgements_missing, out_of_scope).
+
+% ---- A4/B4a: a judgement absent is named -----------------------------------
+test(a4_positive_risk_judgement_named) :-
+    risk_answer(essential_judgements_missing, indeterminate([dora_risk_management_measures_at_least_equivalent_in_effect])).
+test(a4_near_miss_given_true_is_not_indeterminate, fail) :-
+    nis2_risk_management_provisions_status([attribute(entity_class, essential_entity), attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true)], indeterminate(_), _).
+test(a4_near_miss_given_true_is_disapplied) :-
+    nis2_risk_management_provisions_status([attribute(entity_class, essential_entity), attribute(dora_risk_management_measures_at_least_equivalent_in_effect, true)], nis2_provisions_disapplied, _).
+
+% ---- A1/B1: entity_class absent is named first -----------------------------
+test(a1_positive_class_named) :-
+    risk_answer(class_missing, indeterminate([entity_class])).
+test(b1_positive_class_named) :-
+    notification_answer(class_missing, indeterminate([entity_class])).
+test(a1_near_miss_is_not_class_indeterminate, fail) :-
+    risk_answer(class_given_all_unsure, indeterminate([entity_class])).
+
+% ---- A5: unsure point (a) judgement is referred -----------------------------
+test(a5_positive_risk_referred) :-
+    risk_answer(class_given_all_unsure, needs_legal_review(open_textured(dora_risk_management_measures_at_least_equivalent_in_effect, cite(eu_dir_2022_2555_art_4_2_a)), [inputs_relied_on([entity_class-essential_entity, dora_risk_management_measures_at_least_equivalent_in_effect-unsure])])).
+test(a5_near_miss_is_not_referred, fail) :-
+    risk_answer(essential_all_equivalent, needs_legal_review(_, _)).
+
+% ---- B4a/B4b: an absent judgement is named before an unsure one -----------
+test(b4a_positive_access_named) :-
+    notification_answer(access_missing_requirements_unsure, indeterminate([dora_gives_immediate_access_to_incident_notifications])).
+test(b4a_near_miss_access_true_is_not_indeterminate, fail) :-
+    nis2_incident_notification_provisions_status([attribute(entity_class, important_entity), attribute(dora_gives_immediate_access_to_incident_notifications, true), attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, unsure)], indeterminate(_), _).
+test(b4a_near_miss_access_true_is_referred) :-
+    nis2_incident_notification_provisions_status([attribute(entity_class, important_entity), attribute(dora_gives_immediate_access_to_incident_notifications, true), attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, unsure)], needs_legal_review(open_textured(dora_incident_notification_requirements_at_least_equivalent_in_effect, cite(eu_dir_2022_2555_art_4_2_b)), _), _).
+test(b4b_positive_equivalence_named) :-
+    notification_answer(access_unsure_requirements_missing, indeterminate([dora_incident_notification_requirements_at_least_equivalent_in_effect])).
+test(b4b_near_miss_equivalence_false_is_not_indeterminate, fail) :-
+    nis2_incident_notification_provisions_status([attribute(entity_class, important_entity), attribute(dora_gives_immediate_access_to_incident_notifications, unsure), attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, false)], indeterminate(_), _).
+test(b4b_near_miss_equivalence_false_applies) :-
+    nis2_incident_notification_provisions_status([attribute(entity_class, important_entity), attribute(dora_gives_immediate_access_to_incident_notifications, unsure), attribute(dora_incident_notification_requirements_at_least_equivalent_in_effect, false)], nis2_provisions_apply, _).
+
+% ---- B5a/B5b: the first unsure condition is referred -----------------------
+test(b5a_positive_access_referred) :-
+    notification_answer(class_given_all_unsure, needs_legal_review(open_textured(dora_gives_immediate_access_to_incident_notifications, cite(eu_dir_2022_2555_art_4_2_b)), _)).
+test(b5a_near_miss_access_true_does_not_refer_access, fail) :-
+    notification_answer(access_true_requirements_unsure, needs_legal_review(open_textured(dora_gives_immediate_access_to_incident_notifications, _), _)).
+test(b5b_positive_equivalence_referred) :-
+    notification_answer(access_true_requirements_unsure, needs_legal_review(open_textured(dora_incident_notification_requirements_at_least_equivalent_in_effect, cite(eu_dir_2022_2555_art_4_2_b)), _)).
+test(b5b_near_miss_is_not_referred, fail) :-
+    notification_answer(essential_all_equivalent, needs_legal_review(_, _)).
+
+% ---- A0/B0: input problems come first ---------------------------------------
+test(a0_positive_input_problems) :-
+    risk_answer(malformed_duplicate_and_unknown, input_problems([duplicate_key(entity_class), unknown_key(sector)])).
+test(b0_positive_input_problems) :-
+    notification_answer(malformed_wrong_type, input_problems([wrong_type(entity_class)])).
+test(a0_near_miss_well_formed_has_no_input_problems, fail) :-
+    risk_answer(essential_all_equivalent, input_problems(_)).
+test(b0_out_of_scope_beside_a_judgement_is_not_a_problem, fail) :-
+    nis2_incident_notification_provisions_status([attribute(entity_class, out_of_scope), attribute(dora_gives_immediate_access_to_incident_notifications, unsure)], input_problems(_), _).
+test(b0_out_of_scope_beside_a_judgement_is_out_of_scope) :-
+    nis2_incident_notification_provisions_status([attribute(entity_class, out_of_scope), attribute(dora_gives_immediate_access_to_incident_notifications, unsure)], out_of_scope, _).
+
+:- end_module(test_negative_controls).

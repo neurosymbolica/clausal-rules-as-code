@@ -1,0 +1,125 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one key changed -> a different answer), proving the route is
+% LOAD-BEARING and a wrong answer is NOT produced. Every `fail` test has a
+% positive partner over the same profile, so a misspelt atom shows up.
+% Run: python -m clausal.testing eu/dora_ict_incident_management_process/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_ict_incident_management_process/dora_ict_incident_management_process, [
+    ict_incident_management_process_duties_required/3,
+    ict_incident_management_process_duties_complete/3,
+    ict_incident_management_process_duties_outstanding/3,
+    dora_ict_incident_management_process_status/2,
+    dora_ict_incident_management_process_status_values/1
+]).
+:- use_module(eu/dora_ict_incident_management_process/fixtures, [dora_ict_incident_management_process_profile_for/2]).
+
+complete_result(Subject, Result) :-
+    dora_ict_incident_management_process_profile_for(Subject, Profile),
+    ict_incident_management_process_duties_complete(Profile, Result, _).
+
+outstanding_result(Subject, Result) :-
+    dora_ict_incident_management_process_profile_for(Subject, Profile),
+    ict_incident_management_process_duties_outstanding(Profile, Result, _).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    dora_ict_incident_management_process_status_values(StatusValues),
+    StatusValues = [_, _|_].
+test(every_route_status_is_in_the_table) :-
+    dora_ict_incident_management_process_status_values(StatusValues),
+    member(complete, StatusValues),
+    member(incomplete, StatusValues),
+    member(indeterminate, StatusValues),
+    member(needs_legal_review, StatusValues),
+    member(input_problems, StatusValues).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dora_ict_incident_management_process_profile_for(all_duties_performed, Profile),
+    findall(Status, dora_ict_incident_management_process_status(Profile, Status), [_]).
+test(the_baseline_profile_yields_no_other_table_status, fail) :-
+    dora_ict_incident_management_process_profile_for(all_duties_performed, Profile),
+    findall(Status, dora_ict_incident_management_process_status(Profile, Status), [BaselineStatus]),
+    dora_ict_incident_management_process_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_ict_incident_management_process_status(Profile, Other).
+
+% ---- (S4) complete ------------------------------------------------------
+test(all_performed_is_complete) :-
+    complete_result(all_duties_performed, complete).
+test(one_duty_not_performed_is_not_complete, fail) :-
+    complete_result(early_warning_indicators_not_performed, complete).
+
+% ---- (S1) incomplete ----------------------------------------------------
+test(one_duty_not_performed_is_incomplete) :-
+    complete_result(early_warning_indicators_not_performed, incomplete).
+test(all_performed_is_not_incomplete, fail) :-
+    complete_result(all_duties_performed, incomplete).
+test(a_false_duty_decides_before_an_absent_key) :-
+    complete_result(not_performed_and_unanswered, incomplete).
+test(a_false_duty_with_an_absent_key_is_not_indeterminate, fail) :-
+    complete_result(not_performed_and_unanswered, indeterminate(_)).
+
+% ---- (S2) indeterminate -------------------------------------------------
+test(an_unanswered_duty_is_indeterminate) :-
+    complete_result(last_duty_unanswered, indeterminate([cyber_threats_classified_as_significant_on_the_article_18_2_criteria])).
+test(all_answered_is_not_indeterminate, fail) :-
+    complete_result(all_duties_performed, indeterminate(_)).
+test(an_unanswered_duty_is_not_read_as_performed, fail) :-
+    complete_result(last_duty_unanswered, complete).
+
+% ---- (S3) needs_legal_review, and <<DNUM>> ----------------------------------
+test(an_unsure_duty_is_referred) :-
+    complete_result(communication_plans_unsure, needs_legal_review(open_textured(communication_notification_escalation_and_counterpart_information_plans_set_out, cite(eu_reg_2022_2554_art_17_3_d)), _)).
+test(a_sure_profile_is_not_referred, fail) :-
+    complete_result(all_duties_performed, needs_legal_review(_, _)).
+test(an_unsure_duty_is_not_read_as_performed, fail) :-
+    complete_result(communication_plans_unsure, complete).
+test(an_absent_key_is_named_before_an_unsure_one) :-
+    complete_result(early_warning_unsure_and_response_unanswered, indeterminate([incident_response_procedures_established])).
+test(an_absent_key_blocks_the_referral, fail) :-
+    complete_result(early_warning_unsure_and_response_unanswered, needs_legal_review(_, _)).
+
+% ---- (S0, M0, R0) input problems ----------------------------------------
+test(an_unknown_key_is_refused) :-
+    complete_result(unknown_key_present, input_problems([unknown_key(colour)])).
+test(a_well_formed_profile_is_not_refused, fail) :-
+    complete_result(all_duties_performed, input_problems(_)).
+test(a_wrong_type_value_is_refused) :-
+    complete_result(wrong_type_value, input_problems([wrong_type(early_warning_indicators_put_in_place)])).
+test(a_wrong_type_value_gets_no_final_answer, fail) :-
+    complete_result(wrong_type_value, incomplete).
+
+% ---- (R1) required ------------------------------------------------------
+test(an_empty_profile_has_every_duty_required) :-
+    ict_incident_management_process_duties_required([], required(Duties), _),
+    length(Duties, 10).
+test(a_bad_profile_has_no_duty_list, fail) :-
+    ict_incident_management_process_duties_required(not_a_list, required(_), _).
+
+% ---- (M3) outstanding / none_outstanding ---------------------------------
+test(two_failing_duties_are_outstanding) :-
+    outstanding_result(both_article_17_2_duties_not_performed, outstanding([recording_of_incidents_and_significant_cyber_threats, monitoring_handling_and_follow_up_procedures])).
+test(all_performed_has_nothing_outstanding, fail) :-
+    outstanding_result(all_duties_performed, outstanding(_)).
+test(all_performed_is_none_outstanding) :-
+    outstanding_result(all_duties_performed, none_outstanding).
+test(a_failing_duty_is_not_none_outstanding, fail) :-
+    outstanding_result(classification_of_significant_cyber_threats_not_performed, none_outstanding).
+
+% ---- (M1) outstanding waits for every duty -------------------------------
+test(outstanding_names_the_absent_key_despite_a_false_one) :-
+    outstanding_result(not_performed_and_unanswered, indeterminate([ict_related_incident_management_process_defined_established_and_implemented])).
+test(outstanding_gives_no_list_while_a_key_is_absent, fail) :-
+    outstanding_result(not_performed_and_unanswered, outstanding(_)).
+
+% ---- (M2) outstanding refers an unsure duty ------------------------------
+test(outstanding_refers_an_unsure_duty) :-
+    outstanding_result(communication_plans_unsure, needs_legal_review(open_textured(communication_notification_escalation_and_counterpart_information_plans_set_out, cite(eu_reg_2022_2554_art_17_3_d)), _)).
+test(outstanding_does_not_read_unsure_as_performed, fail) :-
+    outstanding_result(communication_plans_unsure, none_outstanding).
+
+:- end_module(test_negative_controls).

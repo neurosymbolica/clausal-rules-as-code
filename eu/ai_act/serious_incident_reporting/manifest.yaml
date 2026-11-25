@@ -16,14 +16,18 @@ modules:
   - "queries"
   - "fixtures"
 # public_interface: name/arity PREDICATES only, grouped per submodule -- kept in
-# sync with the :- module(...) export lists re-exported via the package facade.
-# The bare /0 entries are the contract atoms and root_exports (profile keys,
-# enumeration atoms, unsure) that queries.clausal exports as facts.
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal. The 0-arity entries are the answer vocabulary and the
+# root_exports atoms the scorer reads as package-root attributes; the
+# constructor entries are result constructors, never called as queries.
 public_interface:
-  # -- kernel.clausal --
+  # -- kernel.clausal (re-exported by queries.clausal) --
+  - "serious_incident_reporting_input_problems/2"
   # -- citations.clausal --
   - "citation/2"
   # -- serious_incident_reporting.clausal --
+  - "serious_incident_report_duty/4"
+  - "serious_incident_report_timeliness/5"
   - "decide_serious_incident_reporting/2"
   - "serious_incident_reporting_status/2"
   - "serious_incident_reporting_checklist/2"
@@ -31,10 +35,7 @@ public_interface:
   - "serious_incident_reporting_status_values/1"
   # -- queries.clausal --
   - "serious_incident_reporting_profile_keys/1"
-  - "serious_incident_reporting_input_problems/2"
   - "serious_incident_reporting_what_if/4"
-  - "serious_incident_report_duty/4"
-  - "serious_incident_report_timeliness/5"
   - "not_applicable_on_date/0"
   - "not_a_high_risk_ai_system/0"
   - "not_covered_placed_before_application_date/0"
@@ -45,6 +46,7 @@ public_interface:
   - "report_not_immediate/0"
   - "market_surveillance_authority_of_member_state_where_incident_occurred/0"
   - "national_competent_authority_chosen_by_member_state_where_incident_occurred/0"
+  - "ai_office/0"
   - "perform_necessary_investigations_without_delay/0"
   - "risk_assessment_of_the_incident/0"
   - "corrective_action/0"
@@ -72,6 +74,7 @@ public_interface:
   - "serious_harm_to_property_or_environment/0"
   - "widespread_infringement/0"
   - "report_made_immediately/0"
+  - "system_under_the_exclusive_competence_of_the_ai_office/0"
   - "annex_iii_high_risk/0"
   - "annex_i_high_risk/0"
   - "not_high_risk/0"
@@ -88,50 +91,51 @@ public_interface:
 # same-author differential one. Upgrade when an external anchor lands.
 independence: no_external_scorer
 
-# Reuse-declaration lever: shared backbone packages this domain imports. It
-# imports only kit modules (formalize_lib, kit/deadline_lib), none of which is a
-# shared domain backbone package.
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports none (only the kit's formalize_lib and the
+# libraries reif, clpz and datetime).
 uses: []
 
-scope: >-
-  For one incident or malfunctioning of an AI system whose provider (or the caller
-  acting for it) is the provider of a system placed on the Union market: whether the
-  provider must report it as a serious incident under Article 73 of Regulation (EU)
-  2024/1689 (Artificial Intelligence Act, consolidated text 02024R1689-20260727 as
-  amended by Regulation (EU) 2026/1744), to which authority (Art 73(1) and (10)), by
-  which last calendar day (2, 10 or 15 days after awareness, Art 73(2) to (4)), with
-  the follow-up duties of Art 73(6) listed; and whether a first report made on a given
-  day was in time. Decided here are the dates of application read from Art 113 third
-  paragraph point (c)(i) and (ii), the systems already on the market of Art 111(2),
-  the definition of serious incident of Art 3(49), the point (c) limitation of Art
-  73(9) and (10), and the widespread infringement of Art 3(61) as a judgement. Out of
-  scope and handed to the caller or a lawyer: high-risk classification under Art 6 and
-  the Annexes, whether the event is an incident of a provider's system placed on the
-  market, open-textured judgements (significant change in design, equivalent Union
-  reporting obligations, widespread infringement, immediacy), the severity rule of the
-  second subparagraph of Art 73(2), the content of reports and follow-up, the duties
-  of authorities, deployers and the Commission, and the period rules of Regulation
-  (EEC, Euratom) No 1182/71.
+scope: "For one incident or malfunctioning of an AI system whose provider (or
+  someone acting for it) asks, under Regulation (EU) 2024/1689 as consolidated
+  on 27 July 2026 (amended by Regulation (EU) 2026/1744): whether the report of
+  a serious incident under Art 73(1) is due (Art 3(49) and (61), Art 73(1) to
+  (4), (9) and (10), Art 75(1a), Art 111(2), Art 113 third paragraph point (c)),
+  to which recipient (the market surveillance authority, the national competent
+  authority of Art 73(10), or the AI Office), within 2, 10 or 15 calendar days
+  of awareness and by which last day, with the follow-up duties of Art 73(6)
+  listed; and whether a first report made on a given day was in time (Art
+  73(2) to (5)). Open-textured judgements (significant change in design, use by
+  public authorities, equivalent Union reporting obligations, widespread
+  infringement, immediacy) are handed to the caller or a lawyer. Out of scope:
+  classification as high-risk (Art 6, Annexes I and III), whether Art 75(1)
+  applies (attested outside fact), the severity rule of Art 73(2) second
+  subparagraph, the content of reports and follow-up, the authorities' side of
+  Art 73(7), (8) and (11), Art 111(1) and the period rules of Regulation
+  1182/71."
 
 sources:
-  - "Regulation (EU) 2024/1689 of the European Parliament and of the Council of 13 June 2024 laying down harmonised rules on artificial intelligence (Artificial Intelligence Act), OJ L, 2024/1689, 12.7.2024; consolidated text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744 (Formex CL2024R1689EN0010010.0001.xml, sha256 dfeac37ec03557cfe751427429c6314c11792f88bf654a381484e5c7239f7893)"
-  - "Regulation (EU) 2024/1689 Art 3 point (49) points (a) to (d) (serious incident) and point (61) (widespread infringement)"
-  - "Regulation (EU) 2024/1689 Art 73(1) to (6), (9) and (10) (reporting of serious incidents)"
-  - "Regulation (EU) 2024/1689 Art 111(2) (AI systems already placed on the market or put into service)"
-  - "Regulation (EU) 2024/1689 Art 113 first and second paragraphs and third paragraph point (c)(i) and (ii) (entry into force and application)"
+  - "Regulation (EU) 2024/1689 of the European Parliament and of the Council of
+    13 June 2024 laying down harmonised rules on artificial intelligence
+    (Artificial Intelligence Act), OJ L, 2024/1689, 12.7.2024, consolidated
+    text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744: Art 3
+    points (49) and (61), Art 73(1) to (6), (9) and (10), Art 75(1) and (1a),
+    Art 111(2), Art 113 second paragraph and third paragraph point (c)(i) and
+    (ii)"
 
 query_interface:
-  2: "serious_incident_reporting_status/2"       # status verdict of a checked query term
-  14: "serious_incident_report_duty/4"           # obligation_surfacing: what the provider must report, to whom, by when
-  15: "serious_incident_report_timeliness/5"     # deadline: was the first report in time, consequence of missing
-  16: "serious_incident_reporting_what_if/4"     # what_if: re-evaluate under an overridden key
+  2: "serious_incident_reporting_status/2"      # status verdict of a request term
+  14: "serious_incident_report_duty/4"          # obligation_surfacing: is the report due, to whom, by when, with which follow-up
+  15: "serious_incident_report_timeliness/5"    # deadline: was the report in time; consequence of missing the limit
+  16: "serious_incident_reporting_what_if/4"    # what_if: re-evaluate under an overridden key
 
 deferred_set:
 - what: article_headings
   units:
   - 02024R1689-20260727#art_073
+  - 02024R1689-20260727#art_075
   - 02024R1689-20260727#art_111
-  reason: 'The titles of Articles 73 and 111 carry no obligation: document structure.
+  reason: 'The titles of Articles 73, 75 and 111 carry no obligation: document structure.
     Deferred so every unit of the pinned extract is accounted for.'
   consequence: 'None for a caller: the titles carry no obligation.'
   declaration: not_an_exception
@@ -184,6 +188,85 @@ deferred_set:
   debt: true
   open: formalisable; to be formalised in a later change to the orders, not in this
     order's rules; the deferral stands for this run.
+- what: ai_office_competence_and_transmission
+  units:
+  - 02024R1689-20260727#parag_075.001
+  - 02024R1689-20260727#point_075.001_a
+  - 02024R1689-20260727#point_075.001_a_i
+  - 02024R1689-20260727#point_075.001_a_ii
+  - 02024R1689-20260727#point_075.001_a_iii
+  - 02024R1689-20260727#point_075.001_a_iv
+  - 02024R1689-20260727#point_075.001_b
+  - 02024R1689-20260727#parag_075.001A
+  partial: true
+  reason: Art 75(1) (which AI systems are under the exclusive competence of the AI
+    Office, points (a) and (b) with the exceptions (i) to (iv), and the second subparagraph
+    on providers and deployers) is quoted for what the outside fact system_under_the_exclusive_competence_of_the_ai_office
+    means; this order does not test it, the caller attests the fact. The third sentence
+    of Art 75(1a) (the AI Office transmits the relevant information to the market
+    surveillance authority of the Member State where the provider or its legal representative
+    is situated) binds the AI Office and is not formalised.
+  consequence: The answers take the exclusive competence of the AI Office as attested
+    (absent reads as not under it); they do not say whether Art 75(1) applies, nor
+    what the AI Office does with a report.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; whether Art 75(1) applies is for the order on Arts 74 to 78
+    (powers and confidentiality) once it is promoted; to be taken up in a later change
+    to the orders, not in this order's rules; the deferral stands for this run.
+- what: other_paragraphs_of_article_75
+  units:
+  - 02024R1689-20260727#parag_075.001B
+  - 02024R1689-20260727#parag_075.001C
+  - 02024R1689-20260727#parag_075.001D
+  - 02024R1689-20260727#parag_075.001E
+  - 02024R1689-20260727#parag_075.002
+  - 02024R1689-20260727#parag_075.002A
+  - 02024R1689-20260727#point_075.002A_a
+  - 02024R1689-20260727#point_075.002A_b
+  - 02024R1689-20260727#point_075.002A_c
+  - 02024R1689-20260727#parag_075.003
+  reason: Art 75(1b) to (1e) (cooperation with and assistance to the AI Office, its
+    notice before restrictive decisions, its conformity assessments), (2), (2a) with
+    points (a) to (c) and (3) (market surveillance of general-purpose AI systems and
+    requests to the AI Office) bind the authorities and the AI Office; none changes
+    what the provider must report, to whom or by when.
+  consequence: 'None for a provider caller: these paragraphs bind the authorities
+    and the AI Office.'
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: division_headings_quoted
+  units:
+  - 02024R1689-20260727#division_chapter_iii
+  - 02024R1689-20260727#division_chapter_iii-section_1
+  - 02024R1689-20260727#division_chapter_ix
+  - 02024R1689-20260727#division_chapter_ix-section_2
+  partial: true
+  reason: The headings of Chapter III and its Section 1, and of Chapter IX and its
+    Section 2, are quoted only for where Art 6 and Art 73 sit (reading (2)); the other
+    article lines under them (Art 7) and the headings themselves carry no obligation
+    this order reads.
+  consequence: 'None for a caller: the headings place Art 6 and Art 73 for the dates
+    of reading (2); they carry no obligation.'
+  declaration: not_an_exception
+  debt: true
+  open: formalisable; structure only; the deferral stands for this run.
+- what: other_division_headings
+  units:
+  - 02024R1689-20260727#division_chapter_iii-section_2
+  - 02024R1689-20260727#division_chapter_iii-section_3
+  - 02024R1689-20260727#division_chapter_iii-section_4
+  - 02024R1689-20260727#division_chapter_iii-section_5
+  - 02024R1689-20260727#division_chapter_ix-section_1
+  - 02024R1689-20260727#division_chapter_ix-section_3
+  - 02024R1689-20260727#division_chapter_ix-section_4
+  - 02024R1689-20260727#division_chapter_ix-section_5
+  reason: The other section headings of Chapters III and IX, with their article lines,
+    are pinned with the chapter extracts and carry no obligation; no limb of this
+    order reads them.
+  consequence: 'None for a caller: headings carry no obligation.'
+  declaration: not_an_exception
+  not_formalized_because: structural
 - what: application_dates_of_other_provisions
   units:
   - 02024R1689-20260727#point_113_a
@@ -196,50 +279,55 @@ deferred_set:
   consequence: 'None for these answers: no limb of this order depends on those dates.'
   declaration: not_an_exception
   not_formalized_because: structural
-- what: entry_into_force_and_general_date_of_application
+- what: general_date_of_application
   units:
   - 02024R1689-20260727#art_113
   partial: true
-  reason: >-
-    The first and second paragraphs of Art 113 (entry into force on the twentieth day
-    following publication; application from 2 August 2026, the date of Chapter IX)
-    decide no answer under reading (2): the duty of Art 73 is read as binding a
-    provider only from the date of application of Chapter III for its class, Art 113
-    third paragraph point (c)(i) and (ii), which is formalised (open question Q1).
-  consequence: >-
-    An awareness date from 2 August 2026 to 1 December 2027 is answered
-    not_applicable_on_date; a caller who holds that the duty runs from 2 August 2026
-    must apply Art 73 to such an incident itself.
-- what: points_a_b_and_d_of_the_serious_incident_definition
+  reason: The first and second paragraphs of Art 113 (entry into force; application
+    from 2 August 2026, the date of Chapter IX) are read only to place Art 73 (reading
+    (2)); the general date is earlier than every Chapter III date of point (c), so it
+    never decides an answer, and the order's citation vocabulary gives the unit no key
+    that an answer returns.
+  consequence: 'None for these answers: the later dates of Art 113 third paragraph
+    point (c) govern every answer.'
+  declaration: not_an_exception
+  debt: true
+  open: formalisable; structure of the dates only; the deferral stands for this run.
+- what: harm_points_of_article_3_49
   units:
   - 02024R1689-20260727#point_003_49_a
   - 02024R1689-20260727#point_003_49_b
   - 02024R1689-20260727#point_003_49_d
-  reason: >-
-    Points (a), (b) and (d) of Art 3(49) are read only as the caller's classification
-    given in the keys harm_to_health, critical_infrastructure_disruption and
-    serious_harm_to_property_or_environment (open question Q6); the order defines
-    neither serious harm, nor a serious and irreversible disruption, nor directly or
-    indirectly leading to it. The answers cite the lead of point (49) and point
-    (49)(c), never points (a), (b) or (d).
-  consequence: >-
-    The caller classifies each harm itself; the answers take that classification as
-    given.
-- what: limbs_of_the_widespread_infringement_definition
+  partial: true
+  reason: Points (a), (b) and (d) of Art 3(49) are read through the caller's classification
+    in the keys harm_to_health, critical_infrastructure_disruption and serious_harm_to_property_or_environment
+    (open question Q6); whether the harm was serious, the disruption serious and irreversible,
+    and whether the incident directly or indirectly led to it, are not decided here,
+    and the order's citation vocabulary gives these points no key that an answer returns.
+  consequence: The caller classifies each harm itself; the answers take the classification
+    as given.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable; the meaning of serious and irreversible is open-textured; the
+    deferral stands for this run.
+- what: points_of_article_3_61
   units:
   - 02024R1689-20260727#point_003_61_a
   - 02024R1689-20260727#point_003_61_a_i
   - 02024R1689-20260727#point_003_61_a_ii
   - 02024R1689-20260727#point_003_61_a_iii
   - 02024R1689-20260727#point_003_61_b
-  reason: >-
-    Whether there is a widespread infringement is the judgement widespread_infringement
-    (reading (6)): the limbs count Member States, but whether an act has harmed or is
-    likely to harm the collective interests of individuals is open-textured, so no
-    crisp test is built; an unsure value goes to a lawyer under the referral row that
-    cites Art 3(61).
-  consequence: >-
-    The caller judges the limbs of Art 3(61) itself and gives true, false or unsure.
+  partial: true
+  reason: Points (a), (a)(i) to (iii) and (b) of Art 3(61) count Member States, but
+    whether an act has harmed or is likely to harm the collective interests of individuals
+    is open-textured, so no crisp test is built (reading (6)); widespread_infringement
+    is a judgement of the caller, referred under Art 3(61) when unsure.
+  consequence: The caller judges whether there is a widespread infringement; the answers
+    take the judgement as given or refer it to a lawyer.
+  declaration: answered_with_caveat
+  debt: true
+  open: the Member State counts are formalisable, the harm to collective interests
+    is not; the deferral stands for this run.
 
 excluded_set:
 - what: classification_as_high_risk

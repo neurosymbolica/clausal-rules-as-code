@@ -1,0 +1,67 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_change_management_tests_test_queries, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_rts_change_management_queries, [dora_rts_change_management_profile_keys/1, dora_rts_change_management_what_if/4, complete/0]).
+:- use_module(m__eu_dora_rts_change_management_dora_rts_change_management, [ict_change_management_duties_complete/3, dora_rts_change_management_status/2, dora_rts_change_management_checklist/2]).
+:- use_module(m__eu_dora_rts_change_management_fixtures, [dora_rts_change_management_profile_for/2]).
+
+test(profile_keys_are_the_contract_keys) :-
+    dora_rts_change_management_profile_keys(ProfileKeys),
+    ProfileKeys == [financial_entity_is_article_16_1_entity, dora_entity_type, significant_changes_made_to_ict_systems, change_procedures_verify_whether_ict_security_requirements_met, change_procedures_ensure_independence_of_approving_functions, change_roles_described_for_specifying_and_planning, change_roles_described_for_designing_adequate_transition, change_roles_described_for_controlled_testing_and_finalisation, change_roles_described_for_effective_quality_assurance, change_purpose_and_scope_documented_and_communicated, change_implementation_timeline_documented_and_communicated, change_expected_outcomes_documented_and_communicated, change_fall_back_procedures_and_responsibilities_identified, emergency_change_procedures_protocols_and_tools_provide_adequate_safeguards, emergency_changes_documented_reevaluated_assessed_and_approved_after_implementation, change_impact_on_ict_security_measures_identified_and_assessed, ict_systems_submitted_to_stringent_testing_simulating_stressed_conditions, clearing_members_clients_and_other_parties_involved_in_testing, users_service_providers_and_other_parties_involved_in_testing].
+test(profile_keys_are_nineteen) :-
+    dora_rts_change_management_profile_keys(ProfileKeys),
+    length(ProfileKeys, 19).
+test(what_if_an_element_is_not_performed) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    dora_rts_change_management_what_if(Profile, change_procedures_verify_whether_ict_security_requirements_met, false, NewStatus),
+    NewStatus == incomplete.
+test(what_if_the_entity_is_an_article_16_1_entity) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    dora_rts_change_management_what_if(Profile, financial_entity_is_article_16_1_entity, true, NewStatus),
+    NewStatus == simplified_framework_entity.
+test(what_if_the_parties_are_involved) :-
+    dora_rts_change_management_profile_for(central_counterparty_parties_not_involved, Profile),
+    dora_rts_change_management_what_if(Profile, clearing_members_clients_and_other_parties_involved_in_testing, true, NewStatus),
+    NewStatus == complete.
+test(eligibility_status_is_one_atom) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    findall(Status, dora_rts_change_management_status(Profile, Status), Statuses),
+    Statuses == [complete].
+test(compliance_check_reads_out_incomplete) :-
+    dora_rts_change_management_profile_for(central_counterparty_parties_not_involved, Profile),
+    ict_change_management_duties_complete(Profile, Result, _),
+    Result == incomplete.
+test(checklist_has_one_cited_item_per_duty) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    dora_rts_change_management_checklist(Profile, Items),
+    length(Items, 16),
+    maplist(cited_item, Items).
+test(checklist_marks_the_failing_element) :-
+    dora_rts_change_management_profile_for(credit_institution_verification_not_performed, Profile),
+    dora_rts_change_management_checklist(Profile, [FirstItem|_]),
+    FirstItem == item(verification_of_ict_security_requirements, unmet(not_performed), cite(eu_reg_2024_1774_art_17_1)).
+test(checklist_marks_testing_inapplicable_for_a_credit_institution) :-
+    dora_rts_change_management_profile_for(credit_institution_all_elements_performed, Profile),
+    dora_rts_change_management_checklist(Profile, Items),
+    member(item(stringent_testing_after_significant_changes, Status, cite(eu_reg_2024_1774_art_17_2)), Items),
+    Status == inapplicable.
+test(checklist_for_an_article_16_1_entity) :-
+    dora_rts_change_management_profile_for(article_16_1_entity, Profile),
+    dora_rts_change_management_checklist(Profile, Items),
+    Items == [item(article_16_1_entity, inapplicable, cite(eu_reg_2022_2554_art_16_1))].
+test(result_atoms_are_exported) :-
+    complete.
+
+cited_item(item(_, _, cite(_))).
+
+cp_test_names([profile_keys_are_the_contract_keys, profile_keys_are_nineteen, what_if_an_element_is_not_performed, what_if_the_entity_is_an_article_16_1_entity, what_if_the_parties_are_involved, eligibility_status_is_one_atom, compliance_check_reads_out_incomplete, checklist_has_one_cited_item_per_duty, checklist_marks_the_failing_element, checklist_marks_testing_inapplicable_for_a_credit_institution, checklist_for_an_article_16_1_entity, result_atoms_are_exported]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

@@ -1,0 +1,283 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% kernel.clausal -- the SHARED FLOOR for eu/dora_rts_logging_and_network_security (deontic family).
+% DAG root of the determination-slices layout. It holds ONLY the
+% PREDICATES that two or more files CALL. There is one determination
+% slice (dora_rts_logging_and_network_security.clausal), so no statutory
+% predicate is shared and none lives here.
+% Exception: the scaffold writes the order's input check
+% dora_rts_logging_and_network_security_input_problems/2 here, exported,
+% for every slice (and queries.clausal) to import:
+%   :- use_module(eu/dora_rts_logging_and_network_security/kernel, [dora_rts_logging_and_network_security_input_problems/2]).
+% deontic family: every norm of this order is an OBLIGATION of the
+% financial entity; STATUS records whether the obligations are performed.
+%
+% Source: Commission Delegated Regulation (EU) 2024/1774 (the RTS on the
+% ICT risk management framework under Regulation (EU) 2022/2554), Articles
+% 12 (logging), 13 (network security management) and 14 (securing
+% information in transit), pinned base act 32024R1774; and Regulation (EU)
+% 2022/2554 (DORA) Article 16(1), first subparagraph (the entities to which
+% Articles 5 to 15 of DORA do not apply), pinned OJ text 32022R2554.
+% The input check below follows the order's INTERFACE - THE INPUT CHECK
+% and decides no statutory condition, so it carries no provenance marker.
+%
+% Atoms and data terms need NO declaration and NO import. The comment
+% block below only RECORDS the result terms so every file spells them
+% alike.
+%
+% RESULT TERMS (each query is QUERY(Profile, Result, Citations)):
+%   rts_logging_and_network_security_duties_required/3 Result:
+%     required(Duties)            -- final; Duties a non-empty list of duty
+%                                    atoms in DUTY ORDER (positions 1..35);
+%     simplified_framework_entity -- final; the DORA Art 16(1) gate is true.
+%   rts_logging_and_network_security_duties_complete/3 Result:
+%     complete | incomplete | simplified_framework_entity -- final atoms.
+%   rts_logging_and_network_security_duties_outstanding/3 Result:
+%     none_outstanding            -- final atom;
+%     outstanding(Duties)         -- final; Duties a non-empty list of the
+%                                    failing duty atoms in DUTY ORDER;
+%     simplified_framework_entity -- final atom.
+%   Status compounds of every query (Citations always []):
+%     indeterminate([Key])        -- exactly one absent key; the bare
+%                                    atom indeterminate is NEVER written;
+%     needs_legal_review(open_textured(Key, cite(CitationKey)),
+%                        [inputs_relied_on(Pairs)])
+%                                 -- Key the unsure judgement key, CitationKey
+%                                    its referral citation, Pairs every
+%                                    Key-Value present in the profile, in
+%                                    root_exports order;
+%     input_problems(Problems)    -- Problems the non-empty list derived by
+%                                    the input check below.
+%   Citations of a final answer: a set-like list of cite(Key) terms
+%   (each written once; order not scored).
+%   The facade verdict of the single slice:
+%     dora_rts_logging_and_network_security_verdict(Status, Citations)
+%   Status and Citations exactly as the completeness query gives them.
+%
+% Spell every result and verdict atom exactly as REQUIRED PUBLIC
+% PREDICATES and the order pin it: an atom spelled differently is a
+% DIFFERENT atom, and nothing will warn you.
+% =====================================================================
+
+:- module(kernel, [dora_rts_logging_and_network_security_input_problems/2]).
+
+:- use_module(library(reif), [memberd_t/3]).
+
+% ---- input checks: the problems a profile has, if any -----------
+% dora_rts_logging_and_network_security_input_problems(Profile, Problems): Problems = [] means the profile can be
+% judged. Written from the order's typed input contract
+% (input_contract.types.profile: attribute_list).
+% Each public query calls this check first: it gives its normal answer only when
+% Problems = [], and when Problems is not [] it gives the answer the order states for
+% a profile with input problems.
+% It gives exactly one answer for every Profile, and the answer is ground except for a
+% Key named as given:
+% - a Profile that is not an attribute list [attribute(Key, Value), ...] gives [wrong_type(profile)]:
+%   an unbound Profile, a partial list, a list holding an unbound item or an item that is
+%   not attribute(_, _);
+% - a Key that is not an atom (a number, a string, a compound term, an unbound variable)
+%   is a key outside the contract: unknown_key(Key), Key as given;
+% - otherwise, for each contract key in the contract's key order, duplicate_key(Key) when
+%   the key occurs more than once in Profile (whatever its values: none of them is read,
+%   so it is never also wrong_type(Key)), else wrong_type(Key) when its one value is
+%   outside its type; then unknown_key(Key) for each key outside the contract, in the
+%   order of its first occurrence in Profile. Each key is named once. An absent key is
+%   not a problem.
+% Every step is complementary clauses: exactly one clause holds for each input.
+dora_rts_logging_and_network_security_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [financial_entity_is_article_16_1_entity, financial_entity_is_microenterprise, financial_entity_has_ict_systems_supporting_critical_or_important_functions, logging_procedures_protocols_and_tools_developed_documented_and_implemented, logging_procedures_identify_logged_events_retention_and_log_data_security, logging_detail_aligned_with_purpose_and_usage, logging_covers_access_control_and_identity_management_events, logging_covers_capacity_management_events, logging_covers_change_management_events, logging_covers_ict_operations_events, logging_covers_network_traffic_events, logging_systems_and_log_information_protected, logging_system_failure_detection_measures_in_place, ict_system_clocks_synchronised_to_reliable_reference_time_source, log_retention_period_established_taking_into_account_required_considerations, network_security_management_policies_procedures_protocols_and_tools_developed_documented_and_implemented, network_segregation_and_segmentation_considering_criticality_classification_and_risk_profile, network_connections_and_data_flows_documented, separate_dedicated_administration_network_used, network_access_controls_identified_and_implemented, network_connections_encrypted, networks_designed_in_line_with_ict_security_requirements, traffic_to_internet_and_external_connections_secured, firewall_rules_roles_responsibilities_and_steps_identified, network_architecture_and_security_design_reviewed_once_a_year, network_architecture_and_security_design_reviewed_periodically, subnetworks_and_network_components_isolation_measures_in_place, secure_network_configuration_baseline_and_hardening_implemented, inactive_system_and_remote_sessions_limited_locked_and_terminated, network_services_security_measures_and_service_levels_specified, network_services_provider_type_identified, firewall_rules_and_connection_filters_reviewed_on_a_regular_basis, firewall_rules_and_connection_filters_for_critical_or_important_systems_verified_at_least_every_6_months, information_in_transit_policies_procedures_protocols_and_tools_developed_documented_and_implemented, data_protected_during_network_transmission_with_compliance_assessment, data_leakage_prevented_and_detected_and_external_transfer_secured, confidentiality_and_non_disclosure_requirements_implemented_documented_and_reviewed, information_in_transit_policies_designed_on_classification_and_risk_assessment],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+% The contract: each key and the type of its value.
+key_type(financial_entity_is_article_16_1_entity, fact).
+key_type(financial_entity_is_microenterprise, fact).
+key_type(financial_entity_has_ict_systems_supporting_critical_or_important_functions, fact).
+key_type(logging_procedures_protocols_and_tools_developed_documented_and_implemented, judgement).
+key_type(logging_procedures_identify_logged_events_retention_and_log_data_security, judgement).
+key_type(logging_detail_aligned_with_purpose_and_usage, judgement).
+key_type(logging_covers_access_control_and_identity_management_events, judgement).
+key_type(logging_covers_capacity_management_events, judgement).
+key_type(logging_covers_change_management_events, judgement).
+key_type(logging_covers_ict_operations_events, judgement).
+key_type(logging_covers_network_traffic_events, judgement).
+key_type(logging_systems_and_log_information_protected, judgement).
+key_type(logging_system_failure_detection_measures_in_place, judgement).
+key_type(ict_system_clocks_synchronised_to_reliable_reference_time_source, judgement).
+key_type(log_retention_period_established_taking_into_account_required_considerations, judgement).
+key_type(network_security_management_policies_procedures_protocols_and_tools_developed_documented_and_implemented, judgement).
+key_type(network_segregation_and_segmentation_considering_criticality_classification_and_risk_profile, judgement).
+key_type(network_connections_and_data_flows_documented, judgement).
+key_type(separate_dedicated_administration_network_used, judgement).
+key_type(network_access_controls_identified_and_implemented, judgement).
+key_type(network_connections_encrypted, judgement).
+key_type(networks_designed_in_line_with_ict_security_requirements, judgement).
+key_type(traffic_to_internet_and_external_connections_secured, judgement).
+key_type(firewall_rules_roles_responsibilities_and_steps_identified, judgement).
+key_type(network_architecture_and_security_design_reviewed_once_a_year, judgement).
+key_type(network_architecture_and_security_design_reviewed_periodically, judgement).
+key_type(subnetworks_and_network_components_isolation_measures_in_place, judgement).
+key_type(secure_network_configuration_baseline_and_hardening_implemented, judgement).
+key_type(inactive_system_and_remote_sessions_limited_locked_and_terminated, judgement).
+key_type(network_services_security_measures_and_service_levels_specified, judgement).
+key_type(network_services_provider_type_identified, judgement).
+key_type(firewall_rules_and_connection_filters_reviewed_on_a_regular_basis, judgement).
+key_type(firewall_rules_and_connection_filters_for_critical_or_important_systems_verified_at_least_every_6_months, judgement).
+key_type(information_in_transit_policies_procedures_protocols_and_tools_developed_documented_and_implemented, judgement).
+key_type(data_protected_during_network_transmission_with_compliance_assessment, judgement).
+key_type(data_leakage_prevented_and_detected_and_external_transfer_secured, judgement).
+key_type(confidentiality_and_non_disclosure_requirements_implemented_documented_and_reviewed, judgement).
+key_type(information_in_transit_policies_designed_on_classification_and_risk_assessment, judgement).
+
+% attribute_list_t(Term, T): T is true when Term is a list of attribute(Key, Value)
+% items, whatever each Key is; false for anything else, an unbound Term or item included.
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+% Unknown keys, in profile order, each once: Known grows by each key named. A key is
+% known when it is identical (==) to one in Known, so an unbound Key is never bound:
+% the same variable twice is one unknown key, two different variables are two.
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+% Contract keys, in contract order: duplicate_key(Key) when the key occurs more than once
+% (none of its values is read), else wrong_type(Key) when its one value is outside the
+% key's type. An absent key has no value to check.
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+% key_occurrences(Elements, Key, Occurrences): none, one or many items give Key.
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+% values_in_type_t(Elements, Key, Type, T): T is true when every value Elements gives Key is
+% in Type (true when Elements gives Key none).
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+% A value with an unbound part is outside every type; a ground one is checked.
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+% in_type_t(Type, Value, T): one clause per type, for a ground Value.
+in_type_t(fact, Value, T) :-
+    in_type_t(boolean, Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+% in_some_type_t(Types, Value, T): T is true when Value is in at least one of Types.
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+test(an_empty_profile_has_no_problem) :-
+    dora_rts_logging_and_network_security_input_problems([], []).
+test(a_good_profile_has_no_problem) :-
+    dora_rts_logging_and_network_security_input_problems([attribute(financial_entity_is_article_16_1_entity, false), attribute(network_connections_encrypted, unsure)], []).
+test(unsure_is_wrong_type_for_a_fact) :-
+    dora_rts_logging_and_network_security_input_problems([attribute(financial_entity_is_microenterprise, unsure)], [wrong_type(financial_entity_is_microenterprise)]).
+test(unsure_is_not_a_problem_for_a_judgement, fail) :-
+    dora_rts_logging_and_network_security_input_problems([attribute(network_connections_encrypted, unsure)], [wrong_type(network_connections_encrypted)]).
+test(a_duplicate_key_is_not_also_wrong_type) :-
+    dora_rts_logging_and_network_security_input_problems([attribute(network_connections_encrypted, 7), attribute(network_connections_encrypted, true)], [duplicate_key(network_connections_encrypted)]).
+test(an_unknown_key_comes_after_contract_problems) :-
+    dora_rts_logging_and_network_security_input_problems([attribute(colour, blue), attribute(financial_entity_is_microenterprise, 1)], [wrong_type(financial_entity_is_microenterprise), unknown_key(colour)]).
+test(a_non_list_profile) :-
+    dora_rts_logging_and_network_security_input_problems(profile, [wrong_type(profile)]).
+test(an_unbound_profile) :-
+    dora_rts_logging_and_network_security_input_problems(_, [wrong_type(profile)]).
+
+:- end_module(kernel).

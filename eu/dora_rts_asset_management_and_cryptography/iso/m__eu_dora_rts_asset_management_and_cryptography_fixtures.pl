@@ -1,0 +1,95 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_asset_management_and_cryptography_fixtures, [dora_rts_asset_management_and_cryptography_subject/1, dora_rts_asset_management_and_cryptography_profile_for/2, dora_rts_asset_management_and_cryptography_assess/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__eu_dora_rts_asset_management_and_cryptography_dora_rts_asset_management_and_cryptography, [decide_dora_rts_asset_management_and_cryptography/2]).
+
+dora_rts_asset_management_and_cryptography_subject(gate_true_entity).
+dora_rts_asset_management_and_cryptography_subject(gate_false_all_performed).
+dora_rts_asset_management_and_cryptography_subject(gate_absent_entity).
+dora_rts_asset_management_and_cryptography_subject(microenterprise_all_performed).
+dora_rts_asset_management_and_cryptography_subject(one_duty_not_performed).
+dora_rts_asset_management_and_cryptography_subject(microenterprise_legacy_records_not_performed).
+dora_rts_asset_management_and_cryptography_subject(non_microenterprise_legacy_records_not_performed).
+dora_rts_asset_management_and_cryptography_subject(trigger_absent_legacy_records_not_performed).
+dora_rts_asset_management_and_cryptography_subject(trigger_absent_legacy_records_performed).
+dora_rts_asset_management_and_cryptography_subject(always_duty_key_absent).
+dora_rts_asset_management_and_cryptography_subject(false_duty_before_absent_key).
+dora_rts_asset_management_and_cryptography_subject(unsure_judgement_referred).
+dora_rts_asset_management_and_cryptography_subject(absent_key_before_unsure_judgement).
+dora_rts_asset_management_and_cryptography_subject(two_duties_not_performed).
+dora_rts_asset_management_and_cryptography_subject(duplicate_and_unknown_keys).
+dora_rts_asset_management_and_cryptography_subject(gate_given_unsure).
+dora_rts_asset_management_and_cryptography_subject(not_an_attribute_list).
+
+dora_rts_asset_management_and_cryptography_profile_for(gate_true_entity, Profile) :-
+    fixture_profile(true, false, [], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(gate_false_all_performed, Profile) :-
+    fixture_profile(false, false, [], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(gate_absent_entity, Profile) :-
+    fixture_profile(absent, false, [], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(microenterprise_all_performed, Profile) :-
+    fixture_profile(false, true, [], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(one_duty_not_performed, Profile) :-
+    fixture_profile(false, false, [certificates_renewed_promptly_before_expiration - false], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(microenterprise_legacy_records_not_performed, Profile) :-
+    fixture_profile(false, true, [asset_policy_prescribes_records_for_legacy_system_risk_assessment - false], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(non_microenterprise_legacy_records_not_performed, Profile) :-
+    fixture_profile(false, false, [asset_policy_prescribes_records_for_legacy_system_risk_assessment - false], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(trigger_absent_legacy_records_not_performed, Profile) :-
+    fixture_profile(false, absent, [asset_policy_prescribes_records_for_legacy_system_risk_assessment - false], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(trigger_absent_legacy_records_performed, Profile) :-
+    fixture_profile(false, absent, [], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(always_duty_key_absent, Profile) :-
+    fixture_profile(false, false, [ict_asset_management_policy_developed_documented_and_implemented - absent], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(false_duty_before_absent_key, Profile) :-
+    fixture_profile(false, false, [ict_asset_management_policy_developed_documented_and_implemented - absent, certificates_renewed_promptly_before_expiration - false], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(unsure_judgement_referred, Profile) :-
+    fixture_profile(false, false, [encryption_policy_has_rules_for_data_in_use_where_necessary - unsure], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(absent_key_before_unsure_judgement, Profile) :-
+    fixture_profile(false, false, [encryption_policy_has_rules_for_data_in_use_where_necessary - unsure, certificates_renewed_promptly_before_expiration - absent], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(two_duties_not_performed, Profile) :-
+    fixture_profile(false, false, [asset_policy_prescribes_records_of_ict_assets - false, certificate_register_created_maintained_and_kept_up_to_date - false], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(duplicate_and_unknown_keys, Profile) :-
+    Profile = [attribute(financial_entity_is_article_16_1_entity, false), attribute(financial_entity_is_article_16_1_entity, true), attribute(foreign_contract_key, true)].
+dora_rts_asset_management_and_cryptography_profile_for(gate_given_unsure, Profile) :-
+    fixture_profile(unsure, false, [], Profile).
+dora_rts_asset_management_and_cryptography_profile_for(not_an_attribute_list, Profile) :-
+    Profile = not_an_attribute_list_profile.
+
+fixture_duty_keys([ict_asset_management_policy_developed_documented_and_implemented, asset_policy_prescribes_monitoring_and_management_of_asset_lifecycle, asset_policy_prescribes_records_of_ict_assets, asset_policy_prescribes_records_for_legacy_system_risk_assessment, ict_asset_management_procedure_developed_documented_and_implemented, asset_procedure_specifies_criticality_assessment_criteria, encryption_policy_developed_documented_and_implemented, encryption_policy_designed_on_data_classification_and_ict_risk_assessment, encryption_policy_has_rules_for_data_at_rest_and_in_transit, encryption_policy_has_rules_for_data_in_use_where_necessary, encryption_policy_has_rules_for_network_connections_and_external_traffic, encryption_policy_has_rules_for_cryptographic_key_management, data_in_use_protected_where_its_encryption_is_not_possible, encryption_policy_has_criteria_for_selecting_cryptographic_techniques, mitigation_and_monitoring_where_leading_practices_or_standards_not_followed, encryption_policy_has_provisions_for_updating_cryptographic_technology, mitigation_and_monitoring_where_cryptographic_technology_not_updated, encryption_policy_requires_recording_of_mitigation_measures_with_reasons, key_management_policy_has_requirements_for_whole_key_lifecycle, key_protection_controls_identified_and_implemented, key_protection_controls_designed_on_data_classification_and_ict_risk_assessment, key_replacement_methods_developed_and_implemented, certificate_register_created_maintained_and_kept_up_to_date, certificates_renewed_promptly_before_expiration]).
+
+fixture_profile(GateValue, TriggerValue, Overrides, Profile) :-
+    fixture_duty_keys(DutyKeys),
+    fixture_attributes(DutyKeys, Overrides, DutyAttributes),
+    fixture_fact(financial_entity_is_article_16_1_entity, GateValue, GateAttributes),
+    fixture_fact(financial_entity_is_microenterprise, TriggerValue, TriggerAttributes),
+    append([GateAttributes, TriggerAttributes, DutyAttributes], Profile).
+
+fixture_fact(_, absent, []).
+fixture_fact(FactKey, true, [attribute(FactKey, true)]).
+fixture_fact(FactKey, false, [attribute(FactKey, false)]).
+fixture_fact(FactKey, unsure, [attribute(FactKey, unsure)]).
+
+fixture_attributes([], _, []).
+fixture_attributes([DutyKey|RemainingKeys], Overrides, Attributes) :-
+    override_value(Overrides, DutyKey, KeyValue),
+    fixture_attribute_step(KeyValue, DutyKey, RemainingKeys, Overrides, Attributes).
+
+fixture_attribute_step(absent, _, RemainingKeys, Overrides, Attributes) :-
+    fixture_attributes(RemainingKeys, Overrides, Attributes).
+fixture_attribute_step(KeyValue, DutyKey, RemainingKeys, Overrides, [attribute(DutyKey, KeyValue)|Attributes]) :-
+    dif(KeyValue, absent),
+    fixture_attributes(RemainingKeys, Overrides, Attributes).
+
+override_value([], _, true).
+override_value([DutyKey - KeyValue|_], DutyKey, KeyValue).
+override_value([OtherKey - _|LaterOverrides], DutyKey, KeyValue) :-
+    dif(OtherKey, DutyKey),
+    override_value(LaterOverrides, DutyKey, KeyValue).
+
+dora_rts_asset_management_and_cryptography_assess(Subject, Result) :-
+    dora_rts_asset_management_and_cryptography_profile_for(Subject, Profile),
+    decide_dora_rts_asset_management_and_cryptography(Profile, Result).

@@ -1,0 +1,198 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_ict_incident_management_process.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, the kernel's input check and the provenance marker.
+%
+% Source: Regulation (EU) 2022/2554 (DORA), Article 17 and Article 18(2),
+% pinned text 32022R2554 (original OJ text as published).
+%
+% Query types served by this package:
+%   #2  eligibility   -- dora_ict_incident_management_process_status/2 (slice):
+%                        complete (eligible) | incomplete (ineligible) |
+%                        indeterminate | needs_legal_review | input_problems.
+%   #7  justification -- dora_ict_incident_management_process_checklist/2
+%                        (slice): one item per duty, each with its cite(...).
+%   #13 compliance    -- dora_ict_incident_management_process_compliance/3
+%                        (here): is a proposed action allowed. Every duty of
+%                        DORA Art 17 and Art 18(2) binds every financial
+%                        entity with no condition (readings (2) to (4)), so
+%                        omit(Duty) is prohibited and perform(Duty) is
+%                        allowed, each with the duty's own citation.
+%   #16 what-if       -- dora_ict_incident_management_process_what_if/4: one
+%                        key overridden, the facade status re-evaluated.
+%
+% dora_ict_incident_management_process_profile_keys/1: the profile key schema.
+% dora_ict_incident_management_process_input_problems/2: re-exported from
+% the kernel as the scaffold wrote it.
+%
+% ROOT EXPORTS: the result atoms (complete, incomplete, none_outstanding),
+% the judgement value unsure, the ten profile key atoms, the ten duty atoms
+% and the result constructors are served here as package-root names so
+% the scorer can read each one. They are data, never called as queries.
+% The result constructors have no clauses: a constructor is data.
+% =====================================================================
+
+:- module(queries, [
+    dora_ict_incident_management_process_profile_keys/1,
+    dora_ict_incident_management_process_input_problems/2,
+    dora_ict_incident_management_process_what_if/4,
+    dora_ict_incident_management_process_compliance/3,
+    complete/0,
+    incomplete/0,
+    none_outstanding/0,
+    unsure/0,
+    required/1,
+    outstanding/1,
+    indeterminate/1,
+    needs_legal_review/2,
+    open_textured/2,
+    inputs_relied_on/1,
+    provenance/2,
+    input_problems/1,
+    unknown_key/1,
+    wrong_type/1,
+    duplicate_key/1,
+    ict_related_incident_management_process_defined_established_and_implemented/0,
+    all_ict_related_incidents_and_significant_cyber_threats_recorded/0,
+    procedures_for_monitoring_handling_follow_up_and_root_causes_established/0,
+    early_warning_indicators_put_in_place/0,
+    procedures_to_identify_track_log_categorise_and_classify_incidents_established/0,
+    roles_and_responsibilities_for_incident_types_and_scenarios_assigned/0,
+    communication_notification_escalation_and_counterpart_information_plans_set_out/0,
+    major_incidents_reported_to_senior_management_and_management_body_informed/0,
+    incident_response_procedures_established/0,
+    cyber_threats_classified_as_significant_on_the_article_18_2_criteria/0,
+    incident_management_process/0,
+    recording_of_incidents_and_significant_cyber_threats/0,
+    monitoring_handling_and_follow_up_procedures/0,
+    early_warning_indicators/0,
+    identification_and_classification_procedures/0,
+    incident_roles_and_responsibilities/0,
+    communication_and_escalation_plans/0,
+    reporting_to_senior_management_and_management_body/0,
+    incident_response_procedures/0,
+    classification_of_significant_cyber_threats/0
+]).
+
+:- use_module(formalize_lib, [not_member/2]).
+:- use_module(eu/dora_ict_incident_management_process/kernel, [dora_ict_incident_management_process_input_problems/2]).
+:- use_module(eu/dora_ict_incident_management_process/citations, [implements/1]).
+:- use_module(eu/dora_ict_incident_management_process/dora_ict_incident_management_process, [
+    dora_ict_incident_management_process_status/2,
+    dora_ict_incident_management_process_checklist/2
+]).
+
+% Result constructors: data terms, no clauses.
+:- constructors([required(duties), outstanding(duties), indeterminate(missing_keys), needs_legal_review(reason, context), open_textured(key, citation), inputs_relied_on(pairs), provenance(clause, citations), input_problems(problems), unknown_key(key), wrong_type(key), duplicate_key(key)]).
+
+% schema of top-level profile keys: the keys of the order's typed input
+% contract, in its order (root_exports order = duty order).
+dora_ict_incident_management_process_profile_keys([ict_related_incident_management_process_defined_established_and_implemented, all_ict_related_incidents_and_significant_cyber_threats_recorded, procedures_for_monitoring_handling_follow_up_and_root_causes_established, early_warning_indicators_put_in_place, procedures_to_identify_track_log_categorise_and_classify_incidents_established, roles_and_responsibilities_for_incident_types_and_scenarios_assigned, communication_notification_escalation_and_counterpart_information_plans_set_out, major_incidents_reported_to_senior_management_and_management_body_informed, incident_response_procedures_established, cyber_threats_classified_as_significant_on_the_article_18_2_criteria]).
+
+% ---- root exports (data only, never called as queries) --------------
+% Result atoms and the judgement value besides true and false.
+complete.
+incomplete.
+none_outstanding.
+unsure.
+
+% The ten profile key atoms, in root_exports order.
+ict_related_incident_management_process_defined_established_and_implemented.
+all_ict_related_incidents_and_significant_cyber_threats_recorded.
+procedures_for_monitoring_handling_follow_up_and_root_causes_established.
+early_warning_indicators_put_in_place.
+procedures_to_identify_track_log_categorise_and_classify_incidents_established.
+roles_and_responsibilities_for_incident_types_and_scenarios_assigned.
+communication_notification_escalation_and_counterpart_information_plans_set_out.
+major_incidents_reported_to_senior_management_and_management_body_informed.
+incident_response_procedures_established.
+cyber_threats_classified_as_significant_on_the_article_18_2_criteria.
+
+% The ten duty atoms, in duty order.
+incident_management_process.
+recording_of_incidents_and_significant_cyber_threats.
+monitoring_handling_and_follow_up_procedures.
+early_warning_indicators.
+identification_and_classification_procedures.
+incident_roles_and_responsibilities.
+communication_and_escalation_plans.
+reporting_to_senior_management_and_management_body.
+incident_response_procedures.
+classification_of_significant_cyber_threats.
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% (a) THE LOGIC WAS WRONG: query_combinators' override_key/4 takes a dict,
+% but this order's PROFILE is an attribute list, so it raised type_error.
+% The override is done on the attribute list itself (plumbing below).
+dora_ict_incident_management_process_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_ict_incident_management_process_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, NewProfile): the first attribute
+% with Key (==) takes Value; an absent Key is added at the end.
+override_attribute([], OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)]).
+override_attribute([attribute(EntryKey, _)|Entries], OverriddenKey, NewValue, [attribute(EntryKey, NewValue)|Entries]) :-
+    EntryKey == OverriddenKey.
+override_attribute([attribute(EntryKey, EntryValue)|Entries], OverriddenKey, NewValue, [attribute(EntryKey, EntryValue)|NewEntries]) :-
+    EntryKey \== OverriddenKey,
+    override_attribute(Entries, OverriddenKey, NewValue, NewEntries).
+
+% ---- #13 compliance check -------------------------------------------
+% dora_ict_incident_management_process_compliance(Profile, Action, Verdict)
+%   Action: omit(Duty) | perform(Duty), Duty one of the ten duty atoms.
+%   Verdict: permission(prohibited, [Citation]) | permission(allowed, [Citation])
+%            | permission(not_regulated, []) | input_problems(Problems).
+% A badly formed profile is refused first. The duty's citation is read
+% from the justification checklist, so it is the duty table's own cite.
+
+% The profile has input problems: refused first.
+dora_ict_incident_management_process_compliance(Profile, _Action, input_problems([Problem|Problems])) :-
+    dora_ict_incident_management_process_input_problems(Profile, [Problem|Problems]).
+% NL "Financial entities shall ...": omitting a duty is prohibited; no
+% defeater reaches Art 17 or Art 18(2) (readings (2) to (4)).
+dora_ict_incident_management_process_compliance(Profile, omit(DutyName), permission(prohibited, [Citation])) :-
+    implements(eu_reg_2022_2554_art_17_1),
+    dora_ict_incident_management_process_input_problems(Profile, []),
+    dora_ict_incident_management_process_checklist(Profile, Items),
+    member(item(DutyName, _, Citation), Items).
+% Performing a duty is what the provision requires: allowed.
+dora_ict_incident_management_process_compliance(Profile, perform(DutyName), permission(allowed, [Citation])) :-
+    implements(eu_reg_2022_2554_art_17_1),
+    dora_ict_incident_management_process_input_problems(Profile, []),
+    dora_ict_incident_management_process_checklist(Profile, Items),
+    member(item(DutyName, _, Citation), Items).
+% An action that is neither the omission nor the performance of a duty of
+% this order is not regulated by it.
+dora_ict_incident_management_process_compliance(Profile, Action, permission(not_regulated, [])) :-
+    dora_ict_incident_management_process_input_problems(Profile, []),
+    dora_ict_incident_management_process_checklist(Profile, Items),
+    findall(RegulatedAction, (member(item(DutyName, _, _), Items), regulated_action(DutyName, RegulatedAction)), RegulatedActions),
+    not_member(Action, RegulatedActions).
+
+regulated_action(DutyName, omit(DutyName)).
+regulated_action(DutyName, perform(DutyName)).
+
+test(omitting_a_duty_is_prohibited) :-
+    dora_ict_incident_management_process_compliance([], omit(early_warning_indicators), permission(prohibited, [cite(eu_reg_2022_2554_art_17_3_a)])).
+test(omitting_a_duty_is_not_allowed, fail) :-
+    dora_ict_incident_management_process_compliance([], omit(early_warning_indicators), permission(allowed, _)).
+test(performing_a_duty_is_allowed) :-
+    dora_ict_incident_management_process_compliance([], perform(classification_of_significant_cyber_threats), permission(allowed, [cite(eu_reg_2022_2554_art_18_2)])).
+test(an_unrelated_action_is_not_regulated) :-
+    dora_ict_incident_management_process_compliance([], omit(annual_party), permission(not_regulated, [])).
+test(a_bad_profile_is_refused_first) :-
+    dora_ict_incident_management_process_compliance(not_a_list, omit(early_warning_indicators), input_problems([wrong_type(profile)])).
+test(the_override_replaces_a_present_key) :-
+    override_attribute([attribute(early_warning_indicators_put_in_place, true)], early_warning_indicators_put_in_place, false, Hypothesis),
+    Hypothesis == [attribute(early_warning_indicators_put_in_place, false)].
+test(the_override_adds_an_absent_key) :-
+    override_attribute([], early_warning_indicators_put_in_place, true, Hypothesis),
+    Hypothesis == [attribute(early_warning_indicators_put_in_place, true)].
+test(the_result_atoms_are_served) :-
+    complete,
+    incomplete,
+    none_outstanding,
+    unsure.
+
+:- end_module(queries).

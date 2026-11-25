@@ -1,4 +1,4 @@
-# For one incident or malfunctioning of an AI system whose provider (or the caller acting for it) is the provider of a system placed on the Union market: whether the ...
+# For one incident or malfunctioning of an AI system whose provider (or someone acting for it) asks, under Regulation (EU) 2024/1689 as consolidated on 27 July 2026 ...
 
 `eu/ai_act/serious_incident_reporting`
 
@@ -7,11 +7,11 @@
 
 | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|
-| 262/262 | none (no provision-tracking ledger) | pass | pass | pass |
+| 247/247 | none (no provision-tracking ledger) | pass | pass | pass |
 
 ## Scope
 
-For one incident or malfunctioning of an AI system whose provider (or the caller acting for it) is the provider of a system placed on the Union market: whether the provider must report it as a serious incident under Article 73 of Regulation (EU) 2024/1689 (Artificial Intelligence Act, consolidated text 02024R1689-20260727 as amended by Regulation (EU) 2026/1744), to which authority (Art 73(1) and (10)), by which last calendar day (2, 10 or 15 days after awareness, Art 73(2) to (4)), with the follow-up duties of Art 73(6) listed; and whether a first report made on a given day was in time. Decided here are the dates of application read from Art 113 third paragraph point (c)(i) and (ii), the systems already on the market of Art 111(2), the definition of serious incident of Art 3(49), the point (c) limitation of Art 73(9) and (10), and the widespread infringement of Art 3(61) as a judgement. Out of scope and handed to the caller or a lawyer: high-risk classification under Art 6 and the Annexes, whether the event is an incident of a provider's system placed on the market, open-textured judgements (significant change in design, equivalent Union reporting obligations, widespread ...
+For one incident or malfunctioning of an AI system whose provider (or someone acting for it) asks, under Regulation (EU) 2024/1689 as consolidated on 27 July 2026 (amended by Regulation (EU) 2026/1744): whether the report of a serious incident under Art 73(1) is due (Art 3(49) and (61), Art 73(1) to (4), (9) and (10), Art 75(1a), Art 111(2), Art 113 third paragraph point (c)), to which recipient (the market surveillance authority, the national competent authority of Art 73(10), or the AI Office), within 2, 10 or 15 calendar days of awareness and by which last day, with the follow-up duties of Art 73(6) listed; and whether a first report made on a given day was in time (Art 73(2) to (5)). Open-textured judgements (significant change in design, use by public authorities, equivalent Union reporting obligations, widespread infringement, immediacy) are handed to the caller or a lawyer. Out of scope: classification as high-risk (Art 6, Annexes I and III), whether Art 75(1) applies (attested outside fact), the severity rule of Art 73(2) second subparagraph, the content of reports and follow-up, the authorities' side of Art 73(7), (8) and (11), Art 111(1) and the period rules of ...
 
 ## Pinned sources
 
@@ -19,8 +19,11 @@ For one incident or malfunctioning of an AI system whose provider (or the caller
 |---|---|---|---|
 | CELEX 02024R1689 | 2026-07-27 | 2026-11-12 | `ca245cb516a1feb2...` |
 | CELEX 02024R1689 | 2026-07-27 | 2026-11-12 | `88125bdf6e61ce18...` |
+| CELEX 02024R1689 | 2026-07-27 | 2026-11-23 | `b560407e26b9241b...` |
 | CELEX 02024R1689 | 2026-07-27 | 2026-11-12 | `4e9d975c73fd231d...` |
 | CELEX 02024R1689 | 2026-07-27 | 2026-11-12 | `3299e42e8e44be0d...` |
+| CELEX 02024R1689 | 2026-07-27 | 2026-11-23 | `f925700bb4f224fd...` |
+| CELEX 02024R1689 | 2026-07-27 | 2026-11-23 | `ddd7acf963620b1d...` |
 
 [Source on GitHub](https://github.com/neurosymbolica/clausal-rules-as-code/blob/main/eu/ai_act/serious_incident_reporting){ .md-button }
 
@@ -38,21 +41,21 @@ For one incident or malfunctioning of an AI system whose provider (or the caller
 
     **Consequence for a user:** The answers do not say whether a report or its follow-up was adequate; the caller must check the content itself.
 
-??? info "entry_into_force_and_general_date_of_application"
+??? info "ai_office_competence_and_transmission"
 
-    **Why:** The first and second paragraphs of Art 113 (entry into force on the twentieth day following publication; application from 2 August 2026, the date of Chapter IX) decide no answer under reading (2): the duty of Art 73 is read as binding a provider only from the date of application of Chapter III for its class, Art 113 third paragraph point (c)(i) and (ii), which is formalised (open question Q1).
+    **Why:** Art 75(1) (which AI systems are under the exclusive competence of the AI Office, points (a) and (b) with the exceptions (i) to (iv), and the second subparagraph on providers and deployers) is quoted for what the outside fact system_under_the_exclusive_competence_of_the_ai_office means; this order does not test it, the caller attests the fact. The third sentence of Art 75(1a) (the AI Office transmits the relevant information to the market surveillance authority of the Member State where the provider or its legal representative is situated) binds the AI Office and is not formalised.
 
-    **Consequence for a user:** An awareness date from 2 August 2026 to 1 December 2027 is answered not_applicable_on_date; a caller who holds that the duty runs from 2 August 2026 must apply Art 73 to such an incident itself.
+    **Consequence for a user:** The answers take the exclusive competence of the AI Office as attested (absent reads as not under it); they do not say whether Art 75(1) applies, nor what the AI Office does with a report.
 
-??? info "points_a_b_and_d_of_the_serious_incident_definition"
+??? info "harm_points_of_article_3_49"
 
-    **Why:** Points (a), (b) and (d) of Art 3(49) are read only as the caller's classification given in the keys harm_to_health, critical_infrastructure_disruption and serious_harm_to_property_or_environment (open question Q6); the order defines neither serious harm, nor a serious and irreversible disruption, nor directly or indirectly leading to it. The answers cite the lead of point (49) and point (49)(c), never points (a), (b) or (d).
+    **Why:** Points (a), (b) and (d) of Art 3(49) are read through the caller's classification in the keys harm_to_health, critical_infrastructure_disruption and serious_harm_to_property_or_environment (open question Q6); whether the harm was serious, the disruption serious and irreversible, and whether the incident directly or indirectly led to it, are not decided here, and the order's citation vocabulary gives these points no key that an answer returns.
 
-    **Consequence for a user:** The caller classifies each harm itself; the answers take that classification as given.
+    **Consequence for a user:** The caller classifies each harm itself; the answers take the classification as given.
 
-??? info "limbs_of_the_widespread_infringement_definition"
+??? info "points_of_article_3_61"
 
-    **Why:** Whether there is a widespread infringement is the judgement widespread_infringement (reading (6)): the limbs count Member States, but whether an act has harmed or is likely to harm the collective interests of individuals is open-textured, so no crisp test is built; an unsure value goes to a lawyer under the referral row that cites Art 3(61).
+    **Why:** Points (a), (a)(i) to (iii) and (b) of Art 3(61) count Member States, but whether an act has harmed or is likely to harm the collective interests of individuals is open-textured, so no crisp test is built (reading (6)); widespread_infringement is a judgement of the caller, referred under Art 3(61) when unsure.
 
-    **Consequence for a user:** The caller judges the limbs of Art 3(61) itself and gives true, false or unsure.
+    **Consequence for a user:** The caller judges whether there is a widespread infringement; the answers take the judgement as given or refer it to a lawyer.
 

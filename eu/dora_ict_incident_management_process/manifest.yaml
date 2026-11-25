@@ -1,0 +1,286 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_ict_incident_management_process
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_ict_incident_management_process"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept
+# in sync with the :- module(...) export lists re-exported via the package
+# facade __init__.clausal. The /0 and constructor entries under queries are
+# the root_exports the scorer reads as package-root names.
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_ict_incident_management_process.clausal --
+  - "ict_incident_management_process_duties_required/3"
+  - "ict_incident_management_process_duties_complete/3"
+  - "ict_incident_management_process_duties_outstanding/3"
+  - "decide_dora_ict_incident_management_process/2"
+  - "dora_ict_incident_management_process_status/2"
+  - "dora_ict_incident_management_process_checklist/2"
+  - "dora_ict_incident_management_process_decision_resolvable/1"
+  - "dora_ict_incident_management_process_status_values/1"
+  # -- queries.clausal --
+  - "dora_ict_incident_management_process_profile_keys/1"
+  - "dora_ict_incident_management_process_input_problems/2"
+  - "dora_ict_incident_management_process_what_if/4"
+  - "dora_ict_incident_management_process_compliance/3"
+  - "complete/0"
+  - "incomplete/0"
+  - "none_outstanding/0"
+  - "unsure/0"
+  - "required/1"
+  - "outstanding/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  - "ict_related_incident_management_process_defined_established_and_implemented/0"
+  - "all_ict_related_incidents_and_significant_cyber_threats_recorded/0"
+  - "procedures_for_monitoring_handling_follow_up_and_root_causes_established/0"
+  - "early_warning_indicators_put_in_place/0"
+  - "procedures_to_identify_track_log_categorise_and_classify_incidents_established/0"
+  - "roles_and_responsibilities_for_incident_types_and_scenarios_assigned/0"
+  - "communication_notification_escalation_and_counterpart_information_plans_set_out/0"
+  - "major_incidents_reported_to_senior_management_and_management_body_informed/0"
+  - "incident_response_procedures_established/0"
+  - "cyber_threats_classified_as_significant_on_the_article_18_2_criteria/0"
+  - "incident_management_process/0"
+  - "recording_of_incidents_and_significant_cyber_threats/0"
+  - "monitoring_handling_and_follow_up_procedures/0"
+  - "early_warning_indicators/0"
+  - "identification_and_classification_procedures/0"
+  - "incident_roles_and_responsibilities/0"
+  - "communication_and_escalation_plans/0"
+  - "reporting_to_senior_management_and_management_body/0"
+  - "incident_response_procedures/0"
+  - "classification_of_significant_cyber_threats/0"
+  # -- fixtures.clausal --
+  - "dora_ict_incident_management_process_subject/1"
+  - "dora_ict_incident_management_process_profile_for/2"
+  - "dora_ict_incident_management_process_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only kit modules (formalize_lib,
+# kit/query_combinators), which are not backbone packages.
+uses: []
+
+scope: "For ONE financial entity presupposed to be within the scope of DORA, which
+  duties of Regulation (EU) 2022/2554 (DORA) Article 17 (the ICT-related incident
+  management process: paragraph 1, the two sentences of paragraph 2, and paragraph
+  3, points (a) to (f)) and Article 18(2) (the classification of cyber threats as
+  significant) apply to it (all ten, always, the entities of Article 16(1) included),
+  whether it has performed all of them, and which are outstanding, each duty being
+  a tri-state judgement of the caller (true, false, unsure; unsure is referred to
+  a lawyer). Out of scope: whether the entity is a financial entity within scope
+  (Articles 2 and 3), the classification of one incident under Article 18(1) and
+  its reporting (the order on incident reporting), the mandates of Article 18(3)
+  and (4), the simplified framework of Article 16, proportionality under Article
+  4, Articles 10, 11, 13 and 14, the delegated regulations 2024/1772 and 2024/1774,
+  and dates of application."
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (DORA), OJ L 333, 27.12.2022, p. 1 (CELEX 32022R2554, original OJ text as published): Article 17(1), 17(2), 17(3) points (a) to (f), Article 18(2); read only for readings: Article 4(2), Article 16(1), Article 18(1), (3) and (4)"
+
+query_interface:
+  2: "dora_ict_incident_management_process_status/2"       # eligibility/status verdict (complete | incomplete | statuses)
+  7: "dora_ict_incident_management_process_checklist/2"    # justification: one cited item per duty
+  13: "dora_ict_incident_management_process_compliance/3"  # compliance_check: is omitting/performing a duty allowed
+  16: "dora_ict_incident_management_process_what_if/4"     # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_004
+  - 32022R2554#art_016
+  - 32022R2554#art_018
+  reason: The headings of DORA Articles 4, 16 and 18 carry no rule of their own (the
+    heading of Article 17 sits in the article unit quoted with Article 17(1)).
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: incident_classification_criteria
+  units:
+  - 32022R2554#parag_018.001
+  - 32022R2554#point_018.001_a
+  - 32022R2554#point_018.001_b
+  - 32022R2554#point_018.001_c
+  - 32022R2554#point_018.001_d
+  - 32022R2554#point_018.001_e
+  - 32022R2554#point_018.001_f
+  reason: DORA Art 18(1) (the classification of ICT-related incidents and the criteria
+    for their impact) is applied to each incident, with Commission Delegated Regulation
+    (EU) 2024/1772, in the order on incident reporting. Its lead words are quoted
+    here because Art 17(3)(b) names its criteria (reading (10)); no key of this order
+    reads them.
+  consequence: Point (b) asks only whether the classification procedures are established,
+    not how one incident is classified.
+  declaration: answered_with_caveat
+  not_formalized_because: in_sibling
+  decided_in: dora-incident-reporting
+- what: simplified_framework_and_its_entities
+  units:
+  - 32022R2554#parag_016.001
+  - 32022R2554#point_016.001_a
+  - 32022R2554#point_016.001_b
+  - 32022R2554#point_016.001_c
+  - 32022R2554#point_016.001_d
+  - 32022R2554#point_016.001_e
+  - 32022R2554#point_016.001_f
+  - 32022R2554#point_016.001_g
+  - 32022R2554#point_016.001_h
+  - 32022R2554#parag_016.002
+  reason: 'DORA Art 16(1) and (2): who the entities of the simplified ICT risk management
+    framework are, and that framework''s duties. They are formalised in the order
+    on proportionality and the simplified framework. Art 16(1), first subparagraph,
+    is quoted here only for reading (2): its exemption names Articles 5 to 15, so
+    it does not reach Article 17 or 18, and no key of this order reads it.'
+  consequence: Every answer holds for the entities of Article 16(1) as for any other
+    financial entity; the order gives none of the duties of the simplified framework.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised in the order on proportionality and the simplified framework, not
+    in this order; the deferral stands for this order (open question (Q2)).
+- what: proportionality_in_chapter_ii
+  units:
+  - 32022R2554#parag_004.001
+  reason: DORA Art 4(1) applies the principle of proportionality to Chapter II, which
+    this order does not formalise; it is read in the order on proportionality and
+    the simplified framework.
+  consequence: None for these answers.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised in the order on proportionality and the simplified framework, not
+    in this order; the deferral stands for this order (open question (Q3)).
+- what: proportionality_in_chapter_iii
+  units:
+  - 32022R2554#parag_004.002
+  reason: 'DORA Art 4(2) (proportionality in Chapters III, IV and V, Section I, ''as
+    specifically provided for in the relevant rules of those Chapters'') is quoted
+    for reading (3): Article 17 and Article 18(2) provide nothing specific, so it
+    removes no duty and adds no key here. Not formalised as a rule.'
+  consequence: No duty is removed for size; how far a duty goes for a small entity
+    is part of the caller's judgement.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalisable only where a rule of Chapter III, IV or V, Section I, specifically
+    provides for proportionality; none does in Article 17 or 18(2); the deferral stands
+    for this order (open question (Q3)).
+- what: authority_review_of_proportionality
+  units:
+  - 32022R2554#parag_004.003
+  reason: DORA Art 4(3) binds the competent authorities when they review the ICT risk
+    management framework.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: simplified_framework_mandate
+  units:
+  - 32022R2554#parag_016.003
+  - 32022R2554#point_016.003_a
+  - 32022R2554#point_016.003_b
+  - 32022R2554#point_016.003_c
+  - 32022R2554#point_016.003_d
+  - 32022R2554#point_016.003_e
+  reason: DORA Art 16(3) gives the European Supervisory Authorities a mandate to draft
+    regulatory technical standards on the simplified framework, and the Commission
+    power to adopt them.
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+- what: classification_standards_mandate
+  units:
+  - 32022R2554#parag_018.003
+  - 32022R2554#point_018.003_a
+  - 32022R2554#point_018.003_b
+  - 32022R2554#point_018.003_c
+  - 32022R2554#parag_018.004
+  reason: DORA Art 18(3) and (4) give the European Supervisory Authorities a mandate
+    to develop draft regulatory technical standards on the criteria of Article 18(1)
+    and (2), and say how; they bind the Authorities and the Commission, not the financial
+    entity (reading (13)). Art 18(3) and (4) are quoted for reading (3), reading (11)
+    and reading (13).
+  consequence: None for these answers.
+  declaration: not_an_exception
+  not_formalized_because: institutional
+
+excluded_set:
+- what: scope_and_entity_types
+  instrument: Regulation (EU) 2022/2554 Articles 2 and 3
+  cites:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: Not pinned in this domain. Whether the entity is a financial entity within
+    the scope of DORA is presupposed (reading (1)); no size class or entity type is
+    read (reading (4)).
+  consequence: The answers presuppose a financial entity within scope (open question
+    (Q1)).
+- what: ict_risk_management_framework_articles
+  instrument: Regulation (EU) 2022/2554 Articles 10, 11, 13 and 14
+  cites:
+  - 32022R2554#art_010
+  - 32022R2554#art_011
+  - 32022R2554#art_013
+  - 32022R2554#art_014
+  reason: Not pinned in this domain. Article 10(1) (detection in accordance with Article
+    17), Article 11 (response and recovery), Article 13 (learning and evolving) and
+    Article 14 (communication, named by Article 17(3)(d)) are formalised in their
+    own orders (reading (14), reading (12)).
+  consequence: complete and none_outstanding say nothing about those articles (open
+    question (Q14)).
+- what: incident_reporting
+  instrument: Regulation (EU) 2022/2554 Articles 19 and 20
+  cites:
+  - 32022R2554#art_019
+  - 32022R2554#art_020
+  reason: Not pinned in this domain. The reporting of major ICT-related incidents
+    and the voluntary notification of significant cyber threats are the subject of
+    the order on incident reporting (reading (10)).
+  consequence: No answer says whether an incident was reported (open question (Q10)).
+- what: significant_cyber_threat_thresholds
+  instrument: Commission Delegated Regulation (EU) 2024/1772 Article 10
+  cites:
+  - 32024R1772#art_010
+  reason: Not pinned in this domain. It sets the high materiality thresholds for determining
+    significant cyber threats under the mandate of DORA Art 18(3)(c); the order reads
+    no threshold (reading (11)).
+  consequence: The order does not check a classification against those thresholds
+    (open question (Q11)).
+- what: rts_incident_policy_and_detection
+  instrument: Commission Delegated Regulation (EU) 2024/1774 Articles 22 and 23
+  cites:
+  - 32024R1774#art_022
+  - 32024R1774#art_023
+  reason: Not pinned in this domain. They specify the ICT-related incident policy
+    and the detection of anomalous activities for entities other than those of DORA
+    Article 16(1), and are formalised in their own order (reading (2), reading (14)).
+  consequence: complete and none_outstanding say nothing about those articles (open
+    question (Q14)).
+- what: dates_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64
+  cites:
+  - 32022R2554#art_064
+  reason: Not pinned in this domain. The order answers on DORA as it applies and reads
+    no date (reading (15)).
+  consequence: No answer depends on a date (open question (Q15)).

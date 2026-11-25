@@ -1,0 +1,146 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss (one value
+% changed -> a different answer), proving the route is LOAD-BEARING, and a
+% `fail` test that the wrong answer is NOT produced. Every atom a `fail`
+% test names also appears in a positive test, so a misspelling shows up.
+% Run: python -m clausal.testing eu/dora_register_of_information/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_register_of_information/dora_register_of_information, [
+    register_of_information_duties_required/3,
+    register_of_information_duties_complete/3,
+    register_of_information_duties_outstanding/3,
+    dora_register_of_information_status_values/1
+]).
+:- use_module(eu/dora_register_of_information/fixtures, [dora_register_of_information_profile_for/2]).
+
+subject_complete(Subject, Result) :-
+    dora_register_of_information_profile_for(Subject, Profile),
+    register_of_information_duties_complete(Profile, Result, _).
+
+with_value([], Key, Value, [attribute(Key, Value)]).
+with_value([attribute(ElementKey, _)|Elements], Key, Value, [attribute(Key, Value)|Elements]) :-
+    ElementKey == Key.
+with_value([attribute(ElementKey, ElementValue)|Elements], Key, Value, [attribute(ElementKey, ElementValue)|Rest]) :-
+    ElementKey \== Key,
+    with_value(Elements, Key, Value, Rest).
+
+% A planned arrangement not informed, with every trigger still unanswered.
+planned_not_informed_triggers_open(Profile) :-
+    dora_register_of_information_profile_for(triggers_unanswered, Base),
+    append(Base, [attribute(competent_authority_informed_of_planned_arrangement, false)], Profile).
+
+test(the_status_table_names_every_status) :-
+    dora_register_of_information_status_values(StatusValues),
+    StatusValues == [complete, incomplete, indeterminate, needs_legal_review, input_problems].
+
+% ---- route S4/S1: complete vs incomplete (entity level) ---------------
+test(solo_all_performed_is_complete) :-
+    subject_complete(solo_entity_all_performed, complete).
+test(solo_missed_report_is_incomplete) :-
+    subject_complete(solo_entity_yearly_report_missed, incomplete).
+test(solo_missed_report_is_not_complete, fail) :-
+    subject_complete(solo_entity_yearly_report_missed, complete).
+
+% ---- group levels -------------------------------------------------
+test(group_parent_all_performed_is_complete) :-
+    subject_complete(group_parent_all_performed, complete).
+test(group_parent_consistency_missed_is_incomplete) :-
+    subject_complete(group_parent_consolidated_consistency_missed, incomplete).
+test(group_parent_consistency_missed_is_not_complete, fail) :-
+    subject_complete(group_parent_consolidated_consistency_missed, complete).
+
+% ---- critical functions: the trigger is load-bearing --------------------
+test(critical_function_all_performed_is_complete) :-
+    subject_complete(critical_function_entity_all_performed, complete).
+test(critical_function_identifiers_missed_is_incomplete) :-
+    subject_complete(critical_function_subcontractor_identifiers_missed, incomplete).
+test(false_trigger_leaves_the_false_key_unread) :-
+    subject_complete(false_trigger_with_unread_duty_key, complete).
+test(false_trigger_is_not_incomplete, fail) :-
+    subject_complete(false_trigger_with_unread_duty_key, incomplete).
+
+% ---- planned arrangement --------------------------------------------
+test(planned_arrangement_informed_is_complete) :-
+    subject_complete(planned_arrangement_informed, complete).
+test(planned_arrangement_not_informed_is_incomplete) :-
+    subject_complete(planned_arrangement_not_informed, incomplete).
+test(planned_arrangement_not_informed_is_not_complete, fail) :-
+    subject_complete(planned_arrangement_not_informed, complete).
+
+% ---- route S2: a missing key -----------------------------------------
+test(branches_answered_is_complete) :-
+    subject_complete(branches_and_intra_group_all_performed, complete).
+test(branches_unanswered_is_indeterminate) :-
+    subject_complete(branches_template_unanswered, indeterminate([register_includes_identification_of_branches_outside_home_country])).
+test(branches_unanswered_is_not_complete, fail) :-
+    subject_complete(branches_template_unanswered, complete).
+
+% ---- <<DNUM>>: a trigger that decides alone is named first ------------------
+test(a_trigger_that_decides_alone_is_named_first) :-
+    planned_not_informed_triggers_open(Profile),
+    register_of_information_duties_complete(Profile, indeterminate([entity_plans_arrangement_supporting_critical_or_important_function]), []).
+test(the_deciding_trigger_true_gives_incomplete) :-
+    planned_not_informed_triggers_open(Base),
+    append(Base, [attribute(entity_plans_arrangement_supporting_critical_or_important_function, true)], Profile),
+    register_of_information_duties_complete(Profile, incomplete, _).
+test(the_deciding_trigger_false_names_the_next_trigger) :-
+    planned_not_informed_triggers_open(Base),
+    append(Base, [attribute(entity_plans_arrangement_supporting_critical_or_important_function, false)], Profile),
+    register_of_information_duties_complete(Profile, indeterminate([financial_entity_responsible_for_sub_consolidated_register]), []).
+test(the_first_trigger_is_not_named_while_a_deciding_one_is_absent, fail) :-
+    planned_not_informed_triggers_open(Profile),
+    register_of_information_duties_complete(Profile, indeterminate([financial_entity_responsible_for_sub_consolidated_register]), _).
+
+% ---- route S3: referral, and S1 before S3 ----------------------------
+test(data_quality_unsure_is_referred) :-
+    subject_complete(data_quality_unsure, needs_legal_review(open_textured(template_information_meets_data_quality_principles, cite(eu_reg_2024_2956_art_3_3)), _)).
+test(a_false_duty_decides_before_the_referral) :-
+    subject_complete(data_quality_unsure_with_missed_report, incomplete).
+test(a_false_duty_is_not_referred, fail) :-
+    subject_complete(data_quality_unsure_with_missed_report, needs_legal_review(_, _)).
+
+% ---- route S0: input problems first ----------------------------------
+test(a_key_of_another_order_is_an_input_problem) :-
+    subject_complete(microenterprise_key_given, input_problems([unknown_key(financial_entity_is_microenterprise)])).
+test(the_same_profile_without_it_is_complete) :-
+    subject_complete(solo_entity_all_performed, complete).
+test(a_key_of_another_order_is_not_complete, fail) :-
+    subject_complete(microenterprise_key_given, complete).
+
+% ---- routes R1/R2: required ------------------------------------------
+test(required_without_a_request_omits_the_request_duty, fail) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    register_of_information_duties_required(Profile, required(Duties), _),
+    member(register_made_available_on_request, Duties).
+test(required_with_a_request_adds_the_request_duty) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Solo),
+    with_value(Solo, competent_authority_requested_register, true, Profile),
+    register_of_information_duties_required(Profile, required(Duties), _),
+    member(register_made_available_on_request, Duties),
+    length(Duties, 23).
+test(required_with_triggers_unanswered_is_indeterminate) :-
+    dora_register_of_information_profile_for(triggers_unanswered, Profile),
+    register_of_information_duties_required(Profile, indeterminate([financial_entity_responsible_for_sub_consolidated_register]), []).
+test(required_with_triggers_unanswered_lists_no_duties, fail) :-
+    dora_register_of_information_profile_for(triggers_unanswered, Profile),
+    register_of_information_duties_required(Profile, required(_), _).
+
+% ---- routes M1/M2/M3: outstanding ------------------------------------
+test(outstanding_lists_the_missed_report) :-
+    dora_register_of_information_profile_for(solo_entity_yearly_report_missed, Profile),
+    register_of_information_duties_outstanding(Profile, outstanding([yearly_report_to_competent_authorities]), _).
+test(outstanding_none_for_the_performing_entity) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    register_of_information_duties_outstanding(Profile, none_outstanding, _).
+test(outstanding_lists_nothing_for_the_performing_entity, fail) :-
+    dora_register_of_information_profile_for(solo_entity_all_performed, Profile),
+    register_of_information_duties_outstanding(Profile, outstanding(_), _).
+test(outstanding_a_false_duty_does_not_end_the_query) :-
+    dora_register_of_information_profile_for(triggers_unanswered, Base),
+    with_value(Base, reported_to_competent_authorities_at_least_yearly, false, Profile),
+    register_of_information_duties_outstanding(Profile, indeterminate([financial_entity_responsible_for_sub_consolidated_register]), []).
+
+:- end_module(test_negative_controls).

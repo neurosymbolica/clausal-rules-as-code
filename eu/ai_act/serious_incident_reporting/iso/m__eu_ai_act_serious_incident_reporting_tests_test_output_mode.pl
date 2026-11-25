@@ -4,115 +4,142 @@
 :- use_module(library(iso_ext)).
 :- use_module(library(between)).
 :- use_module(library(dif)).
-:- use_module(clausal_lists_extra, [last/2]).
-:- use_module(clausal_lists, [msort/2]).
-:- use_module(m__eu_ai_act_serious_incident_reporting_serious_incident_reporting, [decide_serious_incident_reporting/2, serious_incident_reporting_status/2, serious_incident_reporting_checklist/2]).
-:- use_module(m__eu_ai_act_serious_incident_reporting_fixtures, [serious_incident_reporting_profile_for/2, serious_incident_reporting_assess/2]).
-
-sole_answer(Subject, Status, Citations) :-
-    findall(FoundStatus - FoundCitations, serious_incident_reporting_assess(Subject, serious_incident_reporting_verdict(FoundStatus, FoundCitations)), Answers),
-    Answers = [Status - Citations].
-
-same_citations(FoundCitations, ExpectedCitations) :-
-    msort(FoundCitations, SortedCitations),
-    msort(ExpectedCitations, SortedCitations).
+:- use_module(m__eu_ai_act_serious_incident_reporting_serious_incident_reporting, [decide_serious_incident_reporting/2, serious_incident_reporting_status/2]).
+:- use_module(m__eu_ai_act_serious_incident_reporting_fixtures, [serious_incident_reporting_profile_for/2]).
 
 follow_up_list([perform_necessary_investigations_without_delay, risk_assessment_of_the_incident, corrective_action, cooperate_with_competent_authorities, inform_authorities_before_altering_the_system]).
 
-test(the_day_before_2_december_2027_is_not_applicable) :-
-    sole_answer(before_annex_iii_application_date, Status, Citations),
-    Status == not_applicable_on_date,
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i)]).
-test(on_2_december_2027_a_death_gives_ten_days) :-
-    sole_answer(on_annex_iii_application_date, Status, Citations),
-    follow_up_list(FollowUpDuties),
-    Status == report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, date(2027, 12, 12), FollowUpDuties),
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_4), cite(eu_reg_2024_1689_art_73_6)]).
-test(annex_i_the_day_before_2_august_2028_is_not_applicable) :-
-    sole_answer(annex_i_before_application_date, Status, Citations),
-    Status == not_applicable_on_date,
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]).
-test(annex_i_on_2_august_2028_critical_infrastructure_gives_two_days) :-
-    sole_answer(annex_i_on_application_date, Status, Citations),
-    Status = report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 2, date(2028, 8, 4), _),
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_3), cite(eu_reg_2024_1689_art_73_6)]).
-test(a_system_that_is_not_high_risk_has_no_duty) :-
-    sole_answer(not_high_risk_system, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_73_1)]).
-test(a_missing_classification_is_named) :-
-    sole_answer(classification_missing, indeterminate([high_risk_classification]), []).
-test(an_early_unchanged_system_before_2_august_2030_is_not_covered) :-
-    sole_answer(early_unchanged_public_day_before_2030, not_covered_placed_before_application_date, [cite(eu_reg_2024_1689_art_111_2)]).
-test(an_early_public_authority_system_on_2_august_2030_is_covered) :-
-    sole_answer(early_unchanged_public_on_2030, report_due(_, 10, date(2030, 8, 12), _), _).
-test(a_significant_change_covers_an_early_system) :-
-    sole_answer(early_significantly_changed, report_due(_, 10, date(2029, 3, 11), _), _).
-test(a_missing_placement_is_named) :-
-    sole_answer(placement_missing, indeterminate([placed_before_chapter_iii_application_date]), []).
-test(two_days_reach_a_leap_day) :-
-    sole_answer(leap_day_critical_infrastructure, report_due(_, 2, date(2028, 2, 29), _), _).
-test(fifteen_days_cross_the_year) :-
-    sole_answer(year_crossing_general_limit, Status, Citations),
-    Status = report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 15, date(2028, 1, 4), _),
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_2), cite(eu_reg_2024_1689_art_73_6)]).
-test(ten_days_from_a_leap_day) :-
-    sole_answer(awareness_on_leap_day, report_due(_, 10, date(2028, 3, 10), _), _).
-test(no_qualifying_harm_is_not_a_serious_incident) :-
-    sole_answer(no_qualifying_harm, not_a_serious_incident, [cite(eu_reg_2024_1689_art_3_49)]).
-test(harm_to_property_gives_fifteen_days) :-
-    sole_answer(harm_to_property, report_due(_, 15, date(2028, 1, 25), _), _).
-test(a_device_without_point_c_is_not_reportable) :-
-    sole_answer(device_without_point_c, Status, Citations),
-    Status == not_a_reportable_incident,
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_73_10), cite(eu_reg_2024_1689_art_3_49_c)]).
-test(a_device_with_point_c_goes_to_the_national_authority) :-
-    sole_answer(device_with_point_c, Status, Citations),
-    Status = report_due(national_competent_authority_chosen_by_member_state_where_incident_occurred, 15, date(2028, 1, 25), _),
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_2), cite(eu_reg_2024_1689_art_73_6), cite(eu_reg_2024_1689_art_73_10)]).
-test(equivalent_obligations_without_point_c_are_not_reportable) :-
-    sole_answer(equivalent_obligations_without_point_c, Status, Citations),
-    Status == not_a_reportable_incident,
-    same_citations(Citations, [cite(eu_reg_2024_1689_art_73_9), cite(eu_reg_2024_1689_art_3_49_c)]).
-test(equivalent_obligations_with_point_c_keep_the_death_limit) :-
-    sole_answer(equivalent_obligations_with_point_c, report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, date(2028, 1, 20), _), _).
-test(a_report_on_the_last_day_made_immediately_is_in_time) :-
-    sole_answer(report_on_last_day_made_immediately, report_in_time, [_|_]).
-test(a_report_the_day_after_the_last_day_is_late) :-
-    sole_answer(report_day_after_last_day, report_after_time_limit, [_|_]).
-test(a_report_not_made_immediately_is_not_immediate) :-
-    sole_answer(report_on_last_day_not_immediate, report_not_immediate, [_|_]).
-test(a_missing_immediacy_is_named) :-
-    sole_answer(report_immediacy_missing, indeterminate([report_made_immediately]), []).
-test(an_unsure_immediacy_goes_to_a_lawyer) :-
-    sole_answer(report_immediacy_unsure, needs_legal_review(open_textured(report_made_immediately, cite(eu_reg_2024_1689_art_73_2)), [inputs_relied_on([provider_subject_to_equivalent_union_reporting_obligations - false, widespread_infringement - false, report_made_immediately - unsure])]), []).
-test(a_late_report_is_late_whatever_the_immediacy) :-
-    sole_answer(late_report_immediacy_unsure, report_after_time_limit, [_|_]).
-test(a_report_before_awareness_is_in_time) :-
-    sole_answer(report_before_awareness, report_in_time, [_|_]).
-test(timeliness_passes_a_no_duty_atom_through) :-
-    sole_answer(timeliness_not_high_risk, not_a_high_risk_ai_system, [cite(eu_reg_2024_1689_art_73_1)]).
-test(an_unsure_judgement_beside_a_missing_fact_names_the_fact) :-
-    sole_answer(widespread_unsure_health_missing, indeterminate([harm_to_health]), []).
-test(an_unsure_significant_change_goes_to_a_lawyer) :-
-    sole_answer(significant_change_unsure_placed_early, needs_legal_review(open_textured(significant_change_in_design_since_that_date, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_change_in_design_since_that_date - unsure, provider_subject_to_equivalent_union_reporting_obligations - false, widespread_infringement - false])]), []).
-test(an_unsure_equivalence_goes_to_a_lawyer) :-
-    sole_answer(equivalence_unsure_without_point_c, needs_legal_review(open_textured(provider_subject_to_equivalent_union_reporting_obligations, cite(eu_reg_2024_1689_art_73_9)), _), []).
-test(input_problems_list_profile_then_date) :-
-    sole_answer(profile_and_date_problems, input_problems([wrong_type(critical_infrastructure_disruption), wrong_type(awareness_date)]), []).
-test(a_report_date_that_is_not_a_date_is_wrong_type) :-
-    sole_answer(report_date_not_a_date, input_problems([wrong_type(report_date)]), []).
-test(the_slice_status_reads_out_once) :-
-    serious_incident_reporting_profile_for(no_qualifying_harm, Profile),
-    findall(Status, serious_incident_reporting_status(duty_query(Profile, date(2028, 1, 10)), Status), Statuses),
-    Statuses == [not_a_serious_incident].
-test(the_slice_verdict_carries_a_citation) :-
-    serious_incident_reporting_profile_for(no_qualifying_harm, Profile),
-    decide_serious_incident_reporting(duty_query(Profile, date(2028, 1, 10)), serious_incident_reporting_verdict(_Status, [_FirstCitation|_OtherCitations])).
-test(the_checklist_ends_with_the_deciding_ground) :-
-    serious_incident_reporting_profile_for(device_without_point_c, Profile),
-    serious_incident_reporting_checklist(duty_query(Profile, date(2028, 1, 10)), Items),
-    last(Items, item(serious_incident, unmet(not_a_reportable_incident), _)).
+verdict_of(Subject, Status, CitationSet) :-
+    serious_incident_reporting_profile_for(Subject, Case),
+    decide_serious_incident_reporting(Case, serious_incident_reporting_verdict(Status, Citations)),
+    sort(Citations, CitationSet).
 
-cp_test_names([the_day_before_2_december_2027_is_not_applicable, on_2_december_2027_a_death_gives_ten_days, annex_i_the_day_before_2_august_2028_is_not_applicable, annex_i_on_2_august_2028_critical_infrastructure_gives_two_days, a_system_that_is_not_high_risk_has_no_duty, a_missing_classification_is_named, an_early_unchanged_system_before_2_august_2030_is_not_covered, an_early_public_authority_system_on_2_august_2030_is_covered, a_significant_change_covers_an_early_system, a_missing_placement_is_named, two_days_reach_a_leap_day, fifteen_days_cross_the_year, ten_days_from_a_leap_day, no_qualifying_harm_is_not_a_serious_incident, harm_to_property_gives_fifteen_days, a_device_without_point_c_is_not_reportable, a_device_with_point_c_goes_to_the_national_authority, equivalent_obligations_without_point_c_are_not_reportable, equivalent_obligations_with_point_c_keep_the_death_limit, a_report_on_the_last_day_made_immediately_is_in_time, a_report_the_day_after_the_last_day_is_late, a_report_not_made_immediately_is_not_immediate, a_missing_immediacy_is_named, an_unsure_immediacy_goes_to_a_lawyer, a_late_report_is_late_whatever_the_immediacy, a_report_before_awareness_is_in_time, timeliness_passes_a_no_duty_atom_through, an_unsure_judgement_beside_a_missing_fact_names_the_fact, an_unsure_significant_change_goes_to_a_lawyer, an_unsure_equivalence_goes_to_a_lawyer, input_problems_list_profile_then_date, a_report_date_that_is_not_a_date_is_wrong_type, the_slice_status_reads_out_once, the_slice_verdict_carries_a_citation, the_checklist_ends_with_the_deciding_ground]).
+same_citations(CitationSet, Expected) :-
+    sort(Expected, ExpectedSet),
+    CitationSet == ExpectedSet.
+
+test(before_the_first_date_reads_out_not_applicable) :-
+    verdict_of(awareness_before_first_application_date, Status, CitationSet),
+    Status == not_applicable_on_date,
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_i)]).
+test(on_the_first_date_reads_out_a_ten_day_report) :-
+    verdict_of(awareness_on_first_application_date, Status, CitationSet),
+    follow_up_list(FollowUp),
+    Status = report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, date(2027, 12, 12), FollowUp),
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_4), cite(eu_reg_2024_1689_art_73_6)]).
+test(annex_i_before_its_date_reads_out_not_applicable) :-
+    verdict_of(annex_i_awareness_before_application_date, Status, CitationSet),
+    Status == not_applicable_on_date,
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_113_c), cite(eu_reg_2024_1689_art_113_c_ii)]).
+test(annex_i_on_its_date_reads_out_a_report) :-
+    verdict_of(annex_i_awareness_on_application_date, Status, _),
+    Status = report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, date(2028, 8, 12), _).
+test(not_high_risk_reads_out_its_atom) :-
+    verdict_of(system_not_high_risk, Status, CitationSet),
+    Status == not_a_high_risk_ai_system,
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_1)]).
+test(an_absent_classification_reads_out_indeterminate) :-
+    verdict_of(classification_absent, Status, CitationSet),
+    Status == indeterminate([high_risk_classification]),
+    CitationSet == [].
+test(an_early_unchanged_system_reads_out_not_covered) :-
+    verdict_of(placed_early_without_significant_change, Status, CitationSet),
+    Status == not_covered_placed_before_application_date,
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_111_2)]).
+test(a_public_authority_system_on_the_compliance_date_reads_out_a_report) :-
+    verdict_of(public_authority_system_on_compliance_date, Status, CitationSet),
+    Status = report_due(_, 10, date(2030, 8, 12), _),
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_4), cite(eu_reg_2024_1689_art_73_6)]).
+test(a_public_authority_system_the_day_before_reads_out_not_covered) :-
+    verdict_of(public_authority_system_before_compliance_date, Status, _),
+    Status == not_covered_placed_before_application_date.
+test(an_unsure_public_authority_use_reads_out_a_referral) :-
+    verdict_of(public_authority_use_unsure, Status, CitationSet),
+    Status == needs_legal_review(open_textured(intended_to_be_used_by_public_authorities, cite(eu_reg_2024_1689_art_111_2)), [inputs_relied_on([significant_change_in_design_since_that_date - false, intended_to_be_used_by_public_authorities - unsure, provider_subject_to_equivalent_union_reporting_obligations - false, widespread_infringement - false])]),
+    CitationSet == [].
+test(an_absent_placement_reads_out_its_key) :-
+    verdict_of(placement_absent, Status, _),
+    Status == indeterminate([placed_before_chapter_iii_application_date]).
+test(absent_equivalence_without_point_c_reads_out_its_key) :-
+    verdict_of(equivalent_obligations_absent_without_fundamental_rights, Status, _),
+    Status == indeterminate([provider_subject_to_equivalent_union_reporting_obligations]).
+test(absent_equivalence_with_point_c_is_not_read) :-
+    verdict_of(equivalent_obligations_absent_with_fundamental_rights, Status, _),
+    Status = report_due(market_surveillance_authority_of_member_state_where_incident_occurred, 10, _, _).
+test(equivalent_obligations_without_point_c_read_out_article_73_9) :-
+    verdict_of(equivalent_obligations_without_fundamental_rights, Status, CitationSet),
+    Status == not_a_reportable_incident,
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_9), cite(eu_reg_2024_1689_art_3_49_c)]).
+test(a_device_without_point_c_reads_out_article_73_10) :-
+    verdict_of(device_without_fundamental_rights, Status, CitationSet),
+    Status == not_a_reportable_incident,
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_10), cite(eu_reg_2024_1689_art_3_49_c)]).
+test(a_device_with_point_c_reads_out_the_national_authority) :-
+    verdict_of(device_with_fundamental_rights, Status, CitationSet),
+    Status = report_due(national_competent_authority_chosen_by_member_state_where_incident_occurred, 10, date(2028, 1, 20), _),
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_4), cite(eu_reg_2024_1689_art_73_6), cite(eu_reg_2024_1689_art_73_10)]).
+test(a_device_under_the_ai_office_reads_out_the_ai_office) :-
+    verdict_of(device_under_ai_office, Status, CitationSet),
+    Status = report_due(ai_office, 10, date(2028, 1, 20), _),
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_75_1a), cite(eu_reg_2024_1689_art_73_4), cite(eu_reg_2024_1689_art_73_6), cite(eu_reg_2024_1689_art_73_10)]).
+test(no_listed_harm_reads_out_not_a_serious_incident) :-
+    verdict_of(no_listed_harm, Status, CitationSet),
+    Status == not_a_serious_incident,
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_3_49)]).
+test(property_harm_reads_out_fifteen_days) :-
+    verdict_of(property_harm_only, Status, CitationSet),
+    Status = report_due(_, 15, date(2028, 1, 25), _),
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_2), cite(eu_reg_2024_1689_art_73_6)]).
+test(an_absent_disruption_is_named_before_health) :-
+    verdict_of(critical_infrastructure_absent_without_other_harm, Status, _),
+    Status == indeterminate([critical_infrastructure_disruption]).
+test(two_days_cross_the_leap_day) :-
+    verdict_of(critical_infrastructure_disrupted_in_leap_year, Status, CitationSet),
+    Status = report_due(_, 2, date(2028, 3, 1), _),
+    same_citations(CitationSet, [cite(eu_reg_2024_1689_art_73_1), cite(eu_reg_2024_1689_art_73_3), cite(eu_reg_2024_1689_art_73_6)]).
+test(ten_days_cross_the_leap_day) :-
+    verdict_of(death_in_leap_year, Status, _),
+    Status = report_due(_, 10, date(2028, 3, 9), _).
+test(a_widespread_infringement_reads_out_two_days) :-
+    verdict_of(widespread_infringement_with_health_harm, Status, _),
+    Status = report_due(_, 2, date(2027, 12, 22), _).
+test(fifteen_days_cross_the_year_end) :-
+    verdict_of(health_harm_without_widespread_infringement, Status, _),
+    Status = report_due(_, 15, date(2028, 1, 4), _).
+test(an_absent_widespread_infringement_reads_out_its_key) :-
+    verdict_of(widespread_infringement_absent, Status, _),
+    Status == indeterminate([widespread_infringement]).
+test(an_absent_immediacy_reads_out_its_key) :-
+    verdict_of(report_immediacy_absent, Status, CitationSet),
+    Status == indeterminate([report_made_immediately]),
+    CitationSet == [].
+test(an_unsure_immediacy_reads_out_a_referral) :-
+    verdict_of(report_immediacy_unsure, Status, _),
+    Status == needs_legal_review(open_textured(report_made_immediately, cite(eu_reg_2024_1689_art_73_2)), [inputs_relied_on([provider_subject_to_equivalent_union_reporting_obligations - false, widespread_infringement - false, report_made_immediately - unsure])]).
+test(a_late_report_is_late_whatever_the_unsure_immediacy) :-
+    verdict_of(late_report_immediacy_unsure, Status, _),
+    Status == report_after_time_limit.
+test(timeliness_passes_not_applicable_through) :-
+    verdict_of(report_before_first_application_date, Status, _),
+    Status == not_applicable_on_date.
+test(a_leap_day_awareness_reads_out_a_report) :-
+    verdict_of(awareness_on_leap_day, Status, _),
+    Status = report_due(_, 10, date(2028, 3, 10), _).
+test(input_problems_read_out_their_terms) :-
+    verdict_of(duplicate_harm_key, DuplicateStatus, []),
+    DuplicateStatus == input_problems([duplicate_key(harm_to_health)]),
+    verdict_of(profile_not_a_list, ListStatus, []),
+    ListStatus == input_problems([wrong_type(profile)]),
+    verdict_of(unknown_profile_key, UnknownStatus, []),
+    UnknownStatus == input_problems([unknown_key(colour)]),
+    verdict_of(report_date_not_a_calendar_day, ReportStatus, []),
+    ReportStatus == input_problems([wrong_type(report_date)]).
+test(the_baseline_case_yields_exactly_one_status) :-
+    serious_incident_reporting_profile_for(awareness_on_first_application_date, Case),
+    findall(Status, serious_incident_reporting_status(Case, Status), Statuses),
+    Statuses = [_].
+
+cp_test_names([before_the_first_date_reads_out_not_applicable, on_the_first_date_reads_out_a_ten_day_report, annex_i_before_its_date_reads_out_not_applicable, annex_i_on_its_date_reads_out_a_report, not_high_risk_reads_out_its_atom, an_absent_classification_reads_out_indeterminate, an_early_unchanged_system_reads_out_not_covered, a_public_authority_system_on_the_compliance_date_reads_out_a_report, a_public_authority_system_the_day_before_reads_out_not_covered, an_unsure_public_authority_use_reads_out_a_referral, an_absent_placement_reads_out_its_key, absent_equivalence_without_point_c_reads_out_its_key, absent_equivalence_with_point_c_is_not_read, equivalent_obligations_without_point_c_read_out_article_73_9, a_device_without_point_c_reads_out_article_73_10, a_device_with_point_c_reads_out_the_national_authority, a_device_under_the_ai_office_reads_out_the_ai_office, no_listed_harm_reads_out_not_a_serious_incident, property_harm_reads_out_fifteen_days, an_absent_disruption_is_named_before_health, two_days_cross_the_leap_day, ten_days_cross_the_leap_day, a_widespread_infringement_reads_out_two_days, fifteen_days_cross_the_year_end, an_absent_widespread_infringement_reads_out_its_key, an_absent_immediacy_reads_out_its_key, an_unsure_immediacy_reads_out_a_referral, a_late_report_is_late_whatever_the_unsure_immediacy, timeliness_passes_not_applicable_through, a_leap_day_awareness_reads_out_a_report, input_problems_read_out_their_terms, the_baseline_case_yields_exactly_one_status]).
 cp_test_fail_names([]).
 run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
     cp_run(Fs, fail), write(cp_tests_done), nl.

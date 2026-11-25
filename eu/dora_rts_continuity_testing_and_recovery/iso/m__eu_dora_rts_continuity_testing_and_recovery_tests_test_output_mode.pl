@@ -1,0 +1,94 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__eu_dora_rts_continuity_testing_and_recovery_tests_test_output_mode, [run_tests/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(clausal_lists_extra, [clausal_msort/2]).
+:- use_module(m__eu_dora_rts_continuity_testing_and_recovery_dora_rts_continuity_testing_and_recovery, [rts_continuity_testing_and_recovery_duties_required/3, rts_continuity_testing_and_recovery_duties_complete/3, rts_continuity_testing_and_recovery_duties_outstanding/3, decide_dora_rts_continuity_testing_and_recovery/2, dora_rts_continuity_testing_and_recovery_status/2]).
+:- use_module(m__eu_dora_rts_continuity_testing_and_recovery_fixtures, [dora_rts_continuity_testing_and_recovery_profile_for/2]).
+
+fixed_citation_set(FixedSet) :-
+    clausal_msort([cite(eu_reg_2024_1774_art_25_1), cite(eu_reg_2024_1774_art_25_2), cite(eu_reg_2024_1774_art_25_3), cite(eu_reg_2024_1774_art_25_4), cite(eu_reg_2024_1774_art_25_5), cite(eu_reg_2024_1774_art_26_1), cite(eu_reg_2024_1774_art_26_2), cite(eu_reg_2024_1774_art_26_3), cite(eu_reg_2024_1774_art_26_4)], FixedSet).
+
+complete_answers(Subject, Answers) :-
+    dora_rts_continuity_testing_and_recovery_profile_for(Subject, Profile),
+    findall(Result - Citations, rts_continuity_testing_and_recovery_duties_complete(Profile, Result, Citations), Answers).
+
+outstanding_answers(Subject, Answers) :-
+    dora_rts_continuity_testing_and_recovery_profile_for(Subject, Profile),
+    findall(Result - Citations, rts_continuity_testing_and_recovery_duties_outstanding(Profile, Result, Citations), Answers).
+
+required_answers(Subject, Answers) :-
+    dora_rts_continuity_testing_and_recovery_profile_for(Subject, Profile),
+    findall(Result - Citations, rts_continuity_testing_and_recovery_duties_required(Profile, Result, Citations), Answers).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dora_rts_continuity_testing_and_recovery_profile_for(credit_institution_all_performed, Profile),
+    findall(Status, dora_rts_continuity_testing_and_recovery_status(Profile, Status), Statuses),
+    Statuses == [complete].
+test(the_verdict_carries_a_citation) :-
+    dora_rts_continuity_testing_and_recovery_profile_for(credit_institution_all_performed, Profile),
+    decide_dora_rts_continuity_testing_and_recovery(Profile, dora_rts_continuity_testing_and_recovery_verdict(complete, [_FirstCitation|_OtherCitations])).
+test(complete_reads_out_the_fixed_citations) :-
+    complete_answers(credit_institution_all_performed, [complete - Citations]),
+    clausal_msort(Citations, CitationSet),
+    fixed_citation_set(CitationSet).
+test(incomplete_reads_out_the_fixed_citations) :-
+    complete_answers(central_securities_depository_involvement_false, [incomplete - Citations]),
+    clausal_msort(Citations, CitationSet),
+    fixed_citation_set(CitationSet).
+test(the_gate_reads_out_article_16) :-
+    complete_answers(article_16_entity_all_performed, Answers),
+    Answers == [simplified_framework_entity - [cite(eu_reg_2022_2554_art_16_1)]].
+test(the_missing_trigger_is_read_out) :-
+    complete_answers(trigger_absent_provider_testing_false, Answers),
+    Answers == [indeterminate([financial_entity_uses_ict_services_of_ict_third_party_service_providers]) - []].
+test(a_key_behind_another_is_not_read_out) :-
+    complete_answers(first_duty_absent_and_trigger_absent, Answers),
+    Answers == [indeterminate([continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment]) - []].
+test(the_lone_gate_names_the_first_duty_key) :-
+    complete_answers(gate_false_alone, Answers),
+    Answers == [indeterminate([continuity_testing_takes_into_account_business_impact_analysis_and_ict_risk_assessment]) - []].
+test(required_reads_out_the_size_first) :-
+    required_answers(gate_false_alone, Answers),
+    Answers == [indeterminate([financial_entity_is_microenterprise]) - []].
+test(outstanding_reads_out_the_size_first) :-
+    outstanding_answers(gate_false_alone, Answers),
+    Answers == [indeterminate([financial_entity_is_microenterprise]) - []].
+test(required_reads_out_twenty_one_duties_and_seven_paragraphs) :-
+    required_answers(credit_institution_all_performed, [required(Duties) - Citations]),
+    length(Duties, 21),
+    length(Citations, 7).
+test(required_for_a_central_counterparty_adds_its_paragraph) :-
+    required_answers(central_counterparty_all_performed, [required(Duties) - Citations]),
+    length(Duties, 22),
+    member(involvement_of_central_counterparty_parties_in_testing, Duties),
+    member(cite(eu_reg_2024_1774_art_25_3), Citations).
+test(outstanding_reads_out_the_provider_duty_and_its_citation) :-
+    outstanding_answers(provider_user_continuity_measures_false, Answers),
+    Answers == [outstanding([continuity_measures_for_ict_third_party_service_provider_failures]) - [cite(eu_reg_2024_1774_art_26_4)]].
+test(outstanding_reads_out_the_depository_duty_with_every_point) :-
+    outstanding_answers(central_securities_depository_involvement_false, [outstanding([involvement_of_central_securities_depository_parties_in_testing]) - Citations]),
+    length(Citations, 6).
+test(the_referral_reads_out_every_present_pair_in_key_order) :-
+    complete_answers(unsure_alternative_options, [needs_legal_review(open_textured(JudgementKey, cite(eu_reg_2024_1774_art_26_3)), [inputs_relied_on([FirstPair, SecondPair|LaterPairs])]) - []]),
+    JudgementKey == response_and_recovery_plans_consider_alternative_options_where_primary_recovery_measures_may_not_be_feasible,
+    FirstPair == financial_entity_is_article_16_1_entity - false,
+    SecondPair == financial_entity_is_microenterprise - false,
+    length(LaterPairs, 25).
+test(input_problems_are_read_out_in_order) :-
+    complete_answers(duplicate_and_unknown_key, Answers),
+    Answers == [input_problems([duplicate_key(financial_entity_is_article_16_1_entity), unknown_key(unlisted_key)]) - []].
+test(a_profile_that_is_not_a_list_is_read_out) :-
+    outstanding_answers(profile_not_a_list, Answers),
+    Answers == [input_problems([wrong_type(profile)]) - []].
+
+cp_test_names([the_baseline_profile_yields_exactly_one_status, the_verdict_carries_a_citation, complete_reads_out_the_fixed_citations, incomplete_reads_out_the_fixed_citations, the_gate_reads_out_article_16, the_missing_trigger_is_read_out, a_key_behind_another_is_not_read_out, the_lone_gate_names_the_first_duty_key, required_reads_out_the_size_first, outstanding_reads_out_the_size_first, required_reads_out_twenty_one_duties_and_seven_paragraphs, required_for_a_central_counterparty_adds_its_paragraph, outstanding_reads_out_the_provider_duty_and_its_citation, outstanding_reads_out_the_depository_duty_with_every_point, the_referral_reads_out_every_present_pair_in_key_order, input_problems_are_read_out_in_order, a_profile_that_is_not_a_list_is_read_out]).
+cp_test_fail_names([]).
+run_tests :- cp_test_names(Ns), cp_run(Ns, succeed), cp_test_fail_names(Fs),
+    cp_run(Fs, fail), write(cp_tests_done), nl.
+cp_run([], _).
+cp_run([N|T], Mode) :- cp_one(Mode, N, R), writeq(cp_result(N, R)), nl, cp_run(T, Mode).
+cp_one(succeed, N, R) :- catch(( once(test(N)) -> R = pass ; R = fail ), E, R = error(E)).
+cp_one(fail, N, R) :- catch(( once(test(N, fail)) -> R = fail ; R = pass ), E, R = error(E)).

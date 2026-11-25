@@ -1,0 +1,149 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_negative_controls.clausal -- NEGATIVE CONTROLS.
+% For each route: a POSITIVE case paired with a near-miss NEGATIVE control
+% (one key changed -> a different verdict), proving the route is
+% LOAD-BEARING. A negative states no solution as `test(Name, fail)`, and
+% each is paired with the positive answer its near-miss profile DOES get,
+% so a misspelt atom shows up as a failing positive test.
+% Run: python -m clausal.testing eu/dora_rts_ict_operations_and_capacity/tests/test_negative_controls.clausal
+% =====================================================================
+:- module(test_negative_controls, []).
+:- use_module(eu/dora_rts_ict_operations_and_capacity/dora_rts_ict_operations_and_capacity, [
+    rts_ict_operations_and_capacity_duties_required/3,
+    rts_ict_operations_and_capacity_duties_complete/3,
+    rts_ict_operations_and_capacity_duties_outstanding/3,
+    dora_rts_ict_operations_and_capacity_status/2,
+    dora_rts_ict_operations_and_capacity_status_values/1
+]).
+:- use_module(eu/dora_rts_ict_operations_and_capacity/fixtures, [dora_rts_ict_operations_and_capacity_profile_for/2]).
+
+subject_status(Subject, Status) :-
+    dora_rts_ict_operations_and_capacity_profile_for(Subject, Profile),
+    dora_rts_ict_operations_and_capacity_status(Profile, Status).
+
+test(the_status_table_has_a_near_miss_atom) :-
+    dora_rts_ict_operations_and_capacity_status_values(StatusValues),
+    StatusValues = [_, _|_].
+
+test(the_status_table_names_every_final_answer) :-
+    dora_rts_ict_operations_and_capacity_status_values(StatusValues),
+    member(complete, StatusValues),
+    member(incomplete, StatusValues),
+    member(simplified_framework_entity, StatusValues).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    dora_rts_ict_operations_and_capacity_profile_for(todo_baseline_subject, Profile),
+    findall(Status, dora_rts_ict_operations_and_capacity_status(Profile, Status), [_]).
+
+test(the_baseline_profile_yields_no_other_table_status, fail) :-
+    dora_rts_ict_operations_and_capacity_profile_for(todo_baseline_subject, Profile),
+    findall(Status, dora_rts_ict_operations_and_capacity_status(Profile, Status), [BaselineStatus]),
+    dora_rts_ict_operations_and_capacity_status_values(StatusValues),
+    member(Other, StatusValues),
+    dif(Other, BaselineStatus),
+    dora_rts_ict_operations_and_capacity_status(Profile, Other).
+
+% The near-miss baseline itself: every duty performed, no production.
+test(the_near_miss_baseline_is_complete) :-
+    subject_status(every_duty_performed_without_production, complete).
+
+% Route: the gate true (DORA Art 16(1)).
+test(an_article_16_1_entity_is_the_simplified_framework) :-
+    subject_status(article_16_1_entity, simplified_framework_entity).
+test(an_entity_not_of_article_16_1_is_not_the_simplified_framework, fail) :-
+    subject_status(every_duty_performed_without_production, simplified_framework_entity).
+
+% Route: the gate absent.
+test(an_unstated_gate_is_asked) :-
+    subject_status(gate_not_stated, indeterminate([financial_entity_is_article_16_1_entity])).
+test(a_stated_gate_is_not_asked, fail) :-
+    subject_status(every_duty_performed_without_production, indeterminate(_)).
+
+% Route: a duty that always applies is not performed.
+test(a_duty_not_performed_is_incomplete) :-
+    subject_status(one_duty_not_performed, incomplete).
+test(every_duty_performed_is_not_incomplete, fail) :-
+    subject_status(every_duty_performed_without_production, incomplete).
+
+% Route: the conditional duty under PRODUCTION.
+test(security_not_ensured_in_production_is_incomplete) :-
+    subject_status(production_security_not_ensured, incomplete).
+test(security_not_ensured_without_production_is_not_incomplete, fail) :-
+    subject_status(no_production_security_not_ensured, incomplete).
+test(security_not_ensured_without_production_is_complete) :-
+    subject_status(no_production_security_not_ensured, complete).
+test(security_ensured_in_production_is_complete) :-
+    subject_status(every_duty_performed_with_production, complete).
+
+% Route: the trigger absent and deciding alone.
+test(an_unstated_trigger_over_a_false_duty_is_asked) :-
+    subject_status(production_unstated_security_not_ensured, indeterminate([development_or_testing_performed_in_production_environment])).
+test(an_unstated_trigger_over_a_true_duty_is_not_asked, fail) :-
+    subject_status(production_unstated_security_ensured, indeterminate(_)).
+test(an_unstated_trigger_over_a_true_duty_is_complete) :-
+    subject_status(production_unstated_security_ensured, complete).
+
+% Route: a duty key absent.
+test(an_unstated_duty_is_asked) :-
+    subject_status(one_duty_unstated, indeterminate([capacity_procedures_apply_resource_optimisation])).
+test(a_stated_duty_is_not_asked, fail) :-
+    subject_status(every_duty_performed_without_production, indeterminate([capacity_procedures_apply_resource_optimisation])).
+
+% Route: a false key decides before absent keys.
+test(a_false_key_decides_before_absent_keys) :-
+    subject_status(failing_duty_with_others_unstated, incomplete).
+test(a_false_key_does_not_leave_the_answer_open, fail) :-
+    subject_status(failing_duty_with_others_unstated, indeterminate(_)).
+
+% Route: an unsure judgement is referred.
+test(an_unsure_duty_is_referred) :-
+    subject_status(one_duty_unsure, needs_legal_review(open_textured(capacity_procedures_apply_resource_optimisation, cite(eu_reg_2024_1774_art_9_1_b)), _)).
+test(a_judged_duty_is_not_referred, fail) :-
+    subject_status(every_duty_performed_without_production, needs_legal_review(_, _)).
+
+% Route: input problems.
+test(an_unknown_key_is_an_input_problem) :-
+    subject_status(unknown_key_given, input_problems([unknown_key(office_colour)])).
+test(a_repeated_gate_is_an_input_problem) :-
+    subject_status(repeated_gate, input_problems([duplicate_key(financial_entity_is_article_16_1_entity)])).
+test(an_unsure_gate_is_an_input_problem) :-
+    subject_status(gate_given_unsure, input_problems([wrong_type(financial_entity_is_article_16_1_entity)])).
+test(a_well_formed_profile_is_not_an_input_problem, fail) :-
+    subject_status(every_duty_performed_without_production, input_problems(_)).
+
+% Route: the required list follows PRODUCTION.
+test(production_requires_the_security_duty) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_with_production, Profile),
+    rts_ict_operations_and_capacity_duties_required(Profile, required(Duties), _),
+    member(security_during_production_testing, Duties).
+test(no_production_does_not_require_the_security_duty, fail) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_without_production, Profile),
+    rts_ict_operations_and_capacity_duties_required(Profile, required(Duties), _),
+    member(security_during_production_testing, Duties).
+test(no_production_requires_the_policies_on_production_testing) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_without_production, Profile),
+    rts_ict_operations_and_capacity_duties_required(Profile, required(Duties), _),
+    member(development_and_testing_in_production_environments, Duties),
+    member(production_testing_instances_identified_and_approved, Duties).
+
+% Route: the outstanding list.
+test(a_duty_not_performed_is_outstanding) :-
+    dora_rts_ict_operations_and_capacity_profile_for(one_duty_not_performed, Profile),
+    rts_ict_operations_and_capacity_duties_outstanding(Profile, outstanding([backup_and_restore_requirements]), _).
+test(every_duty_performed_has_nothing_outstanding, fail) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_without_production, Profile),
+    rts_ict_operations_and_capacity_duties_outstanding(Profile, outstanding(_), _).
+test(every_duty_performed_is_none_outstanding) :-
+    dora_rts_ict_operations_and_capacity_profile_for(every_duty_performed_without_production, Profile),
+    rts_ict_operations_and_capacity_duties_outstanding(Profile, none_outstanding, _).
+test(a_duty_that_does_not_apply_is_not_outstanding, fail) :-
+    dora_rts_ict_operations_and_capacity_profile_for(no_production_security_not_ensured, Profile),
+    rts_ict_operations_and_capacity_duties_outstanding(Profile, outstanding(_), _).
+
+% The complete query on the gate true never answers incomplete.
+test(the_gate_true_is_never_incomplete, fail) :-
+    dora_rts_ict_operations_and_capacity_profile_for(article_16_1_entity, Profile),
+    rts_ict_operations_and_capacity_duties_complete(Profile, incomplete, _).
+
+:- end_module(test_negative_controls).

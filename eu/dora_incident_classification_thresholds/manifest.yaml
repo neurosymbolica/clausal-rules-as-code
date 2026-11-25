@@ -1,0 +1,255 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: eu/dora_incident_classification_thresholds
+shape_family: temporal
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "dora_incident_classification_thresholds"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES only, grouped per submodule -- kept in
+# sync with the :- module(...) export lists re-exported via the package facade
+# __init__.clausal. The zero-arity entries are the root atoms the test cases
+# read as package-root attributes (exported as facts by queries.clausal).
+public_interface:
+  # -- kernel.clausal --
+  # -- citations.clausal --
+  - "citation/2"
+  # -- dora_incident_classification_thresholds.clausal --
+  - "dora_incident_threshold_status/4"
+  - "dora_final_report_timeliness/5"
+  - "decide_dora_incident_classification_thresholds/2"
+  - "dora_incident_classification_thresholds_status/2"
+  - "dora_incident_classification_thresholds_checklist/2"
+  - "dora_incident_classification_thresholds_decision_resolvable/1"
+  - "dora_incident_classification_thresholds_status_values/1"
+  # -- queries.clausal --
+  - "dora_incident_classification_thresholds_profile_keys/1"
+  - "dora_incident_classification_thresholds_input_problems/2"
+  - "dora_incident_classification_thresholds_what_if/4"
+  - "met/0"
+  - "not_met/0"
+  - "on_time/0"
+  - "month_limit/0"
+  - "unsure/0"
+  - "critical_services_affected/0"
+  - "data_losses_malicious_access_threshold_met/0"
+  - "clients_financial_counterparts_and_transactions_threshold_met/0"
+  - "reputational_impact_threshold_met/0"
+  - "duration_and_service_downtime_threshold_met/0"
+  - "geographical_spread_threshold_met/0"
+  - "data_losses_impact_threshold_met/0"
+  - "economic_impact_threshold_met/0"
+  - "affects_ict_services_supporting_critical_or_important_functions/0"
+  - "affects_authorised_registered_or_supervised_financial_services/0"
+  - "successful_malicious_unauthorised_access/0"
+  - "access_may_result_in_data_losses/0"
+  - "affected_clients/0"
+  - "clients_using_affected_service/0"
+  - "affected_financial_counterparts/0"
+  - "financial_counterparts_of_affected_service/0"
+  - "affected_transactions_number/0"
+  - "affected_transactions_amount/0"
+  - "reference_period_transactions_number/0"
+  - "reference_period_transactions_amount/0"
+  - "reference_period_days/0"
+  - "relevant_clients_or_financial_counterparts_affected/0"
+  - "incident_reflected_in_media/0"
+  - "repetitive_complaints_from_different_clients_or_counterparts/0"
+  - "regulatory_requirements_likely_not_met/0"
+  - "material_loss_of_clients_or_counterparts_likely/0"
+  - "incident_duration_seconds/0"
+  - "critical_or_important_function_service_downtime_seconds/0"
+  - "member_states_with_impact/0"
+  - "data_impact_adverse_to_business_objectives_or_regulatory_requirements/0"
+  - "data_availability_impact/0"
+  - "data_authenticity_impact/0"
+  - "data_integrity_impact/0"
+  - "data_confidentiality_impact/0"
+  - "expropriated_funds_and_assets_cents/0"
+  - "replacement_and_relocation_costs_cents/0"
+  - "staff_costs_cents/0"
+  - "contractual_non_compliance_fees_cents/0"
+  - "redress_and_compensation_costs_cents/0"
+  - "forgone_revenue_losses_cents/0"
+  - "communication_costs_cents/0"
+  - "advisory_costs_cents/0"
+  - "costs_and_losses_likely_to_exceed_threshold/0"
+  - "final_report_weekend_extension/0"
+  - "late/1"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- fixtures.clausal --
+  - "dora_incident_classification_thresholds_subject/1"
+  - "dora_incident_classification_thresholds_profile_for/2"
+  - "dora_incident_classification_thresholds_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. It imports only kit modules (formalize_lib, kit/deadline_lib,
+# kit/query_combinators), which are not backbone packages.
+uses: []
+
+scope: >-
+  For ONE ICT-related incident of ONE financial entity: whether each of the
+  eight conditions that Article 8(1) of Commission Delegated Regulation (EU)
+  2024/1772 reads to decide a major incident is met -- the critical services
+  affected (Article 6) and the materiality thresholds of Article 9(1) to (6),
+  measured as Articles 1 to 7 say, under Article 18(1) of Regulation (EU)
+  2022/2554 (DORA) (dora_incident_threshold_status/4); and whether the final
+  report on a major ICT-related incident was submitted within the one-month
+  time limit of Article 5(1)(c) of Commission Delegated Regulation (EU)
+  2025/301, with the weekend and bank holiday rule of Article 5(4) to (6)
+  (dora_final_report_timeliness/5). It does NOT decide whether the incident is
+  major (Art 8(1) itself, formalised in the order on DORA incident reporting),
+  recurring incidents (Art 8(2)), the classification of cyber threats (DORA Art
+  18(2)), the time limits of the initial notification and intermediate report
+  and the notice of a delay (Art 5(1)(a), (b), (2), (3) of 2025/301), the
+  reporting templates of Implementing Regulation (EU) 2025/302, or whether the
+  entity is a financial entity within the scope of DORA. Every reading is the
+  drafter's, not a lawyer's.
+
+sources:
+  - "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (DORA), OJ L 333, 27.12.2022, p. 1 -- Article 18(1), points (a) to (f) (32022R2554)"
+  - "Commission Delegated Regulation (EU) 2024/1772 of 13 March 2024 supplementing Regulation (EU) 2022/2554 with regard to regulatory technical standards specifying the criteria for the classification of ICT-related incidents and cyber threats, setting out materiality thresholds and specifying the details of reports of major incidents -- Articles 1 to 7, Article 8(1) (quoted) and Article 9(1) to (6) (32024R1772)"
+  - "Commission Delegated Regulation (EU) 2025/301 supplementing Regulation (EU) 2022/2554 with regard to regulatory technical standards specifying the content and time limits for the initial notification of, and intermediate and final report on, major ICT-related incidents -- Article 5(1), lead words and point (c), and Article 5(4) to (6) (32025R0301)"
+
+query_interface:
+  2: "dora_incident_threshold_status/4"                       # eligibility: met / not_met per condition, cited
+  15: "dora_final_report_timeliness/5"                        # deadline: final report one month after the latest intermediate report
+  16: "dora_incident_classification_thresholds_what_if/4"    # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: headings
+  units:
+  - 32022R2554#art_018
+  - 32024R1772#art_008
+  - 32024R1772#art_009
+  - 32025R0301#art_005
+  reason: The headings of DORA Article 18, of Articles 8 and 9 of Delegated Regulation
+    2024/1772 and of Article 5 of Delegated Regulation 2025/301 carry no rule of their
+    own (the headings of Articles 1 to 7 of Delegated Regulation 2024/1772 share a
+    pinned unit with their text and are quoted with it).
+  consequence: None for a caller.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: cyber_threats_and_standards_mandate
+  units:
+  - 32022R2554#parag_018.002
+  - 32022R2554#parag_018.003
+  - 32022R2554#point_018.003_a
+  - 32022R2554#point_018.003_b
+  - 32022R2554#point_018.003_c
+  - 32022R2554#parag_018.004
+  reason: DORA Art 18(2) is the classification of cyber threats as significant; Art
+    18(3) and (4) give the European Supervisory Authorities the mandate to draft the
+    technical standards and the Commission the power to adopt them.
+  consequence: No answer classifies a cyber threat.
+  declaration: answered_with_caveat
+  debt: true
+  open: not formalised in this order (reading (15)).
+- what: recurring_incidents
+  units:
+  - 32024R1772#parag_008.002
+  - 32024R1772#point_008.002_a
+  - 32024R1772#point_008.002_b
+  - 32024R1772#point_008.002_c
+  reason: Art 8(2) of Delegated Regulation 2024/1772 counts recurring incidents as
+    one major incident where they meet all of its conditions; its point (c) is the
+    major-incident test of Art 8(1), which this order does not apply (reading (14)).
+  consequence: No answer says whether recurring incidents count as one major incident.
+  declaration: answered_with_caveat
+  debt: true
+  open: not formalised in any order yet; the order on DORA incident reporting also
+    defers it (open question (Q15)).
+- what: initial_and_intermediate_report_limits
+  units:
+  - 32025R0301#point_005.001_a
+  - 32025R0301#point_005.001_b
+  - 32025R0301#parag_005.002
+  - 32025R0301#parag_005.003
+  reason: Art 5(1)(a) and (b) and (2) of Delegated Regulation 2025/301 are the time
+    limits of the initial notification and the intermediate report, formalised in
+    the order on DORA incident reporting; Art 5(3) is the duty to inform the competent
+    authority of a delay.
+  consequence: No answer says whether the initial notification or the intermediate
+    report was in time, or whether a delay was notified.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised, as to Art 5(1)(a) and (b) and (2), in the order on DORA incident
+    reporting; Art 5(3) is not formalised in any order yet (reading (15)).
+- what: time_limits_lead_words
+  units:
+  - 32025R0301#parag_005.001
+  partial: true
+  reason: The lead words of Art 5(1) of Delegated Regulation 2025/301 are read for
+    the final report only (reading (12)); for the initial notification and the intermediate
+    report they are read in the order on DORA incident reporting.
+  consequence: None for the final report.
+  declaration: answered_with_caveat
+  debt: true
+  open: formalised, for the other two reports, in the order on DORA incident reporting;
+    the deferral stands for this order.
+
+excluded_set:
+- what: scope_and_entity_types
+  instrument: Regulation (EU) 2022/2554 Articles 2 and 3
+  cites:
+  - 32022R2554#art_002
+  - 32022R2554#art_003
+  reason: Not pinned in this domain. Whether the entity is a financial entity within
+    the scope of DORA is presupposed (reading (1)); Article 2 is not formalised in
+    this order.
+  consequence: The answers presuppose a financial entity within scope (open question
+    (Q13)).
+- what: major_incident_test_and_reporting
+  instrument: Regulation (EU) 2022/2554 Article 19
+  cites:
+  - 32022R2554#art_019
+  reason: Not pinned in this domain. The duty to report a major incident, and the
+    major-incident test of Art 8(1) of Delegated Regulation 2024/1772 that it reads,
+    are formalised in the order on DORA incident reporting (reading (2)).
+  consequence: No answer says whether an incident is major or must be reported.
+- what: reporting_templates
+  instrument: Commission Implementing Regulation (EU) 2025/302
+  cites:
+  - 32025R0302#art_001
+  reason: Pinned on another commit, not in this order's pin. The templates and data
+    fields of the reports carry no rule on the thresholds or on the time limit of
+    the final report.
+  consequence: No answer says whether a report used the right template or held the
+    right data fields.
+- what: periods_dates_and_time_limits
+  instrument: Regulation (EEC, Euratom) No 1182/71
+  cites:
+  - 31971R1182#art_003
+  reason: Not pinned in this domain. The month of Art 5(1)(c) of Delegated Regulation
+    2025/301 is read from its own words (reading (12)); whether Regulation 1182/71
+    governs it is a named lawyer question.
+  consequence: The end of the month rests on the order's reading only (open question
+    (Q4)).
+- what: date_of_application
+  instrument: Regulation (EU) 2022/2554 Article 64
+  cites:
+  - 32022R2554#art_064
+  reason: Not pinned in this domain. No date is read for whether DORA and the Delegated
+    Regulations apply to the incident.
+  consequence: No answer depends on a date of application (open question (Q17)).

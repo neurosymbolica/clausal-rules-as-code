@@ -1,0 +1,90 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% queries.clausal -- QUERY-COMBINATOR layer for eu/dora_information_sharing_arrangements.
+% A TOP-LAYER consumer: it imports the determination slice's PUBLIC
+% predicates it calls, and nothing else.
+%
+% Query types this domain serves (the order's list):
+%   #2 eligibility   -- decide_dora_information_sharing_arrangements/2 and
+%                       dora_information_sharing_arrangements_status/2 (the
+%                       Result of information_sharing_within_article_45/3),
+%                       defined in the determination slice;
+%   #7 justification -- dora_information_sharing_arrangements_checklist/2,
+%                       one item(Id, Status, cite(Key)) per condition of
+%                       Art 45(1) and (2), defined in the determination slice.
+% This layer adds:
+%   dora_information_sharing_arrangements_what_if/4: override one key, re-evaluate
+%     the eligibility status. The profile is an ATTRIBUTE LIST, not a dict, so
+%     kit/query_combinators override_key/4 (dict-only) does not apply; the
+%     override is a local attribute-list replacement;
+%   dora_information_sharing_arrangements_profile_keys/1: the profile key schema,
+%     in root_exports / input_contract order;
+%   dora_information_sharing_arrangements_input_problems/2: the kernel's input
+%     check, re-exported as the scaffold wrote it ([] = none);
+%   the ROOT EXPORT atoms the order's test cases read as package-root
+%   attributes: the seven profile keys, the three membership_event values
+%   and the judgement value unsure (bare 0-arity facts; never queries).
+% Open-textured judgements stay with the caller: an unsure judgement is
+% never decided here, it is referred by the slice as needs_legal_review.
+% =====================================================================
+
+:- module(queries, [
+    dora_information_sharing_arrangements_profile_keys/1,
+    dora_information_sharing_arrangements_input_problems/2,
+    dora_information_sharing_arrangements_what_if/4,
+    information_is_cyber_threat_information_and_intelligence/0,
+    sharing_aims_to_enhance_digital_operational_resilience/0,
+    sharing_takes_place_within_trusted_community_of_financial_entities/0,
+    arrangement_protects_sensitive_information_and_has_rules_of_conduct/0,
+    arrangement_defines_participation_conditions_and_appropriate_details/0,
+    membership_event/0,
+    arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1/0,
+    membership_validated/0,
+    membership_cessation_took_effect/0,
+    no_membership_event/0,
+    unsure/0
+]).
+
+:- use_module(eu/dora_information_sharing_arrangements/kernel, [dora_information_sharing_arrangements_input_problems/2]).
+:- use_module(eu/dora_information_sharing_arrangements/dora_information_sharing_arrangements, [dora_information_sharing_arrangements_status/2]).
+
+% ---- root export atoms (vocabulary, never called as queries) ----------
+% The seven profile keys, in root_exports order.
+information_is_cyber_threat_information_and_intelligence.
+sharing_aims_to_enhance_digital_operational_resilience.
+sharing_takes_place_within_trusted_community_of_financial_entities.
+arrangement_protects_sensitive_information_and_has_rules_of_conduct.
+arrangement_defines_participation_conditions_and_appropriate_details.
+membership_event.
+arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1.
+% The values of the enumeration key membership_event (reading (6)).
+membership_validated.
+membership_cessation_took_effect.
+no_membership_event.
+% The judgement value besides the atoms true and false.
+unsure.
+
+% schema of top-level profile keys: the keys of the order's typed input contract, in its order
+dora_information_sharing_arrangements_profile_keys([information_is_cyber_threat_information_and_intelligence, sharing_aims_to_enhance_digital_operational_resilience, sharing_takes_place_within_trusted_community_of_financial_entities, arrangement_protects_sensitive_information_and_has_rules_of_conduct, arrangement_defines_participation_conditions_and_appropriate_details, membership_event, arrangement_is_information_sharing_arrangement_referred_to_in_article_45_1]).
+
+% #16 what-if: re-evaluate with one key hypothetically overridden.
+% Choice (a) THE LOGIC IS WRONG: override_key/4 raised type_error(dict, ...)
+% on the attribute-list profile; the override is now done on the list itself.
+dora_information_sharing_arrangements_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    override_attribute(Profile, OverriddenKey, NewValue, Hypothesis),
+    dora_information_sharing_arrangements_status(Hypothesis, NewStatus).
+
+% override_attribute(Profile, Key, Value, Hypothesis): every attribute of Key
+% is dropped and attribute(Key, Value) is added once (list plumbing only).
+override_attribute(Profile, OverriddenKey, NewValue, [attribute(OverriddenKey, NewValue)|Kept]) :-
+    drop_attribute(Profile, OverriddenKey, Kept).
+
+drop_attribute([], _OverriddenKey, []).
+drop_attribute([attribute(ElementKey, _Value)|Elements], OverriddenKey, Kept) :-
+    ElementKey == OverriddenKey,
+    drop_attribute(Elements, OverriddenKey, Kept).
+drop_attribute([attribute(ElementKey, Value)|Elements], OverriddenKey, [attribute(ElementKey, Value)|Kept]) :-
+    ElementKey \== OverriddenKey,
+    drop_attribute(Elements, OverriddenKey, Kept).
+
+:- end_module(queries).
