@@ -1,0 +1,485 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ae_uae_pdpl_lawful_processing_and_consent_uae_pdpl_lawful_processing_and_consent, [decide_uae_pdpl_lawful_processing_and_consent/2, uae_pdpl_lawful_processing_and_consent_status/2, uae_pdpl_lawful_processing_and_consent_checklist/2, uae_pdpl_lawful_processing_and_consent_decision_resolvable/1, uae_pdpl_lawful_processing_and_consent_status_values/1, pdpl_processing_lawful_basis/3, pdpl_consent_valid/3, pdpl_processing_controls/3]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(pairs), [pairs_values/2]).
+:- use_module(library(reif), [memberd_t/3]).
+:- use_module(formalize_lib, [profile_get/3, profile_has/2, profile_lacks/2]).
+:- use_module(m__ae_uae_pdpl_lawful_processing_and_consent_kernel, [uae_pdpl_lawful_processing_and_consent_input_problems/2]).
+:- use_module(m__ae_uae_pdpl_lawful_processing_and_consent_citations, [implements/1]).
+
+uae_pdpl_lawful_processing_and_consent_status_values([allowed_with_consent, allowed_without_consent, not_allowed, not_in_force, indeterminate, needs_legal_review, input_problems]).
+
+commencement_date(date(2022, 1, 2), cite(uae_pdpl_art_31)).
+
+consent_condition(consent_given, true, false, consent_not_given, [cite(uae_pdpl_art_1_consent), cite(uae_pdpl_art_6_1)]).
+consent_condition(consent_specific_clear_and_unambiguous, true, false, consent_not_specific_clear_and_unambiguous, [cite(uae_pdpl_art_1_consent)]).
+consent_condition(controller_able_to_prove_consent, true, false, controller_cannot_prove_consent, [cite(uae_pdpl_art_6_1), cite(uae_pdpl_art_6_1_a)]).
+consent_condition(consent_clear_simple_unambiguous_and_easily_accessible, true, false, consent_not_clear_simple_and_easily_accessible, [cite(uae_pdpl_art_6_1), cite(uae_pdpl_art_6_1_b)]).
+consent_condition(consent_includes_right_to_withdraw_easily, true, false, consent_omits_easy_withdrawal_right, [cite(uae_pdpl_art_6_1), cite(uae_pdpl_art_6_1_c)]).
+consent_condition(consent_withdrawn_before_processing, false, true, consent_withdrawn, [cite(uae_pdpl_art_6_2)]).
+
+control_condition(processed_fairly_transparently_and_lawfully, true, false, control_1_fair_transparent_and_lawful, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_1)]).
+control_condition(collected_for_specific_and_clear_purpose, true, false, control_2_specific_and_clear_purpose, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_2)]).
+control_condition(later_processing_compatible_with_purpose, true, false, control_2_no_incompatible_later_processing, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_2)]).
+control_condition(sufficient_and_limited_to_what_is_necessary, true, false, control_3_sufficient_and_limited, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_3)]).
+control_condition(accurate_correct_and_updated, true, false, control_4_accurate_and_updated, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_4)]).
+control_condition(measures_taken_to_delete_or_correct_incorrect_data, true, false, control_5_incorrect_data_deleted_or_corrected, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_5)]).
+control_condition(kept_securely, true, false, control_6_kept_securely, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_6)]).
+control_condition(not_kept_after_purpose_exhausted, true, false, control_7_not_kept_after_purpose_exhausted, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_7)]).
+
+exception_case(necessary_to_protect_public_interest, public_interest, cite(uae_pdpl_art_4_1)).
+exception_case(personal_data_made_available_and_known_to_all_by_data_subject, data_made_public_by_data_subject, cite(uae_pdpl_art_4_2)).
+exception_case(necessary_for_legal_claims_defence_of_rights_or_judicial_or_security_procedures, legal_claims_and_judicial_or_security_procedures, cite(uae_pdpl_art_4_3)).
+exception_case(necessary_for_occupational_or_preventive_medicine_or_health_or_social_care, occupational_or_preventive_medicine_and_health_or_social_care, cite(uae_pdpl_art_4_4)).
+exception_case(necessary_to_protect_public_health, public_health, cite(uae_pdpl_art_4_5)).
+exception_case(necessary_for_archival_purposes_or_scientific_historical_or_statistical_studies, archival_scientific_historical_or_statistical_purposes, cite(uae_pdpl_art_4_6)).
+exception_case(necessary_to_protect_interests_of_data_subject, interests_of_data_subject, cite(uae_pdpl_art_4_7)).
+exception_case(necessary_for_employment_social_security_or_social_protection_obligations_and_rights, employment_social_security_and_social_protection, cite(uae_pdpl_art_4_8)).
+exception_case(necessary_for_contract_with_data_subject, contract_with_data_subject, cite(uae_pdpl_art_4_9)).
+exception_case(necessary_for_specific_obligations_of_controller_under_other_laws, obligations_under_other_laws, cite(uae_pdpl_art_4_10)).
+
+referral_row(pdpl_processing_lawful_basis, consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)).
+referral_row(pdpl_processing_lawful_basis, consent_clear_simple_unambiguous_and_easily_accessible, cite(uae_pdpl_art_6_1_b)).
+referral_row(pdpl_processing_lawful_basis, consent_includes_right_to_withdraw_easily, cite(uae_pdpl_art_6_1_c)).
+referral_row(pdpl_processing_lawful_basis, necessary_to_protect_public_interest, cite(uae_pdpl_art_4_1)).
+referral_row(pdpl_processing_lawful_basis, personal_data_made_available_and_known_to_all_by_data_subject, cite(uae_pdpl_art_4_2)).
+referral_row(pdpl_processing_lawful_basis, necessary_for_legal_claims_defence_of_rights_or_judicial_or_security_procedures, cite(uae_pdpl_art_4_3)).
+referral_row(pdpl_processing_lawful_basis, necessary_for_occupational_or_preventive_medicine_or_health_or_social_care, cite(uae_pdpl_art_4_4)).
+referral_row(pdpl_processing_lawful_basis, necessary_to_protect_public_health, cite(uae_pdpl_art_4_5)).
+referral_row(pdpl_processing_lawful_basis, necessary_for_archival_purposes_or_scientific_historical_or_statistical_studies, cite(uae_pdpl_art_4_6)).
+referral_row(pdpl_processing_lawful_basis, necessary_to_protect_interests_of_data_subject, cite(uae_pdpl_art_4_7)).
+referral_row(pdpl_processing_lawful_basis, necessary_for_employment_social_security_or_social_protection_obligations_and_rights, cite(uae_pdpl_art_4_8)).
+referral_row(pdpl_processing_lawful_basis, necessary_for_contract_with_data_subject, cite(uae_pdpl_art_4_9)).
+referral_row(pdpl_processing_lawful_basis, necessary_for_specific_obligations_of_controller_under_other_laws, cite(uae_pdpl_art_4_10)).
+referral_row(pdpl_consent_valid, consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)).
+referral_row(pdpl_consent_valid, consent_clear_simple_unambiguous_and_easily_accessible, cite(uae_pdpl_art_6_1_b)).
+referral_row(pdpl_consent_valid, consent_includes_right_to_withdraw_easily, cite(uae_pdpl_art_6_1_c)).
+referral_row(pdpl_processing_controls, processed_fairly_transparently_and_lawfully, cite(uae_pdpl_art_5_1)).
+referral_row(pdpl_processing_controls, collected_for_specific_and_clear_purpose, cite(uae_pdpl_art_5_2)).
+referral_row(pdpl_processing_controls, later_processing_compatible_with_purpose, cite(uae_pdpl_art_5_2)).
+referral_row(pdpl_processing_controls, sufficient_and_limited_to_what_is_necessary, cite(uae_pdpl_art_5_3)).
+referral_row(pdpl_processing_controls, accurate_correct_and_updated, cite(uae_pdpl_art_5_4)).
+referral_row(pdpl_processing_controls, measures_taken_to_delete_or_correct_incorrect_data, cite(uae_pdpl_art_5_5)).
+referral_row(pdpl_processing_controls, kept_securely, cite(uae_pdpl_art_5_6)).
+referral_row(pdpl_processing_controls, not_kept_after_purpose_exhausted, cite(uae_pdpl_art_5_7)).
+
+consent_conditions(Conditions) :-
+    implements(uae_pdpl_art_6_1),
+    implements(uae_pdpl_art_6),
+    implements(uae_pdpl_art_1),
+    implements(uae_pdpl_art_1_data_subject),
+    findall(condition(ConditionKey, MetValue, FailingValue, FailureAtom, FailureCitations), consent_condition(ConditionKey, MetValue, FailingValue, FailureAtom, FailureCitations), Conditions).
+
+control_conditions(Conditions) :-
+    implements(uae_pdpl_art_5),
+    implements(uae_pdpl_art_1_personal_data),
+    implements(uae_pdpl_art_1_processing),
+    implements(uae_pdpl_art_1_anonymization),
+    findall(condition(ConditionKey, MetValue, FailingValue, FailureAtom, FailureCitations), control_condition(ConditionKey, MetValue, FailingValue, FailureAtom, FailureCitations), Conditions).
+
+exception_cases(Cases) :-
+    implements(uae_pdpl_art_4),
+    implements(uae_pdpl_art_1_sensitive_personal_data),
+    implements(uae_pdpl_art_1_controller),
+    findall(case(CaseKey, CaseAtom, ItemCitation), exception_case(CaseKey, CaseAtom, ItemCitation), Cases).
+
+key_state(Profile, ProfileKey, absent) :-
+    profile_lacks(Profile, ProfileKey).
+key_state(Profile, ProfileKey, present(Value)) :-
+    profile_has(Profile, ProfileKey),
+    profile_get(Profile, ProfileKey, Value).
+
+date_position(date(CalendarYear, _, _), date(StartYear, _, _), before) :-
+    CalendarYear < StartYear.
+date_position(date(CalendarYear, CalendarMonth, _), date(StartYear, StartMonth, _), before) :-
+    CalendarYear =:= StartYear,
+    CalendarMonth < StartMonth.
+date_position(date(CalendarYear, CalendarMonth, DayNumber), date(StartYear, StartMonth, StartDayNumber), before) :-
+    CalendarYear =:= StartYear,
+    CalendarMonth =:= StartMonth,
+    DayNumber < StartDayNumber.
+date_position(date(CalendarYear, _, _), date(StartYear, _, _), on_or_after) :-
+    CalendarYear > StartYear.
+date_position(date(CalendarYear, CalendarMonth, _), date(StartYear, StartMonth, _), on_or_after) :-
+    CalendarYear =:= StartYear,
+    CalendarMonth > StartMonth.
+date_position(date(CalendarYear, CalendarMonth, DayNumber), date(StartYear, StartMonth, StartDayNumber), on_or_after) :-
+    CalendarYear =:= StartYear,
+    CalendarMonth =:= StartMonth,
+    DayNumber >= StartDayNumber.
+
+date_state(Profile, absent) :-
+    profile_lacks(Profile, processing_date).
+date_state(Profile, Position) :-
+    implements(uae_pdpl_art_31),
+    implements(uae_pdpl_art_28),
+    implements(uae_pdpl_art_29),
+    profile_has(Profile, processing_date),
+    profile_get(Profile, processing_date, ProcessingDate),
+    commencement_date(CommencementDate, _),
+    date_position(ProcessingDate, CommencementDate, Position).
+
+condition_state(Profile, condition(ConditionKey, MetValue, FailingValue, _, _), State) :-
+    key_state(Profile, ConditionKey, KeyState),
+    classify_condition(KeyState, MetValue, FailingValue, State).
+
+classify_condition(absent, _, _, absent).
+classify_condition(present(Value), MetValue, _, met) :-
+    Value == MetValue.
+classify_condition(present(Value), _, FailingValue, failing) :-
+    Value == FailingValue.
+classify_condition(present(Value), _, _, unsure) :-
+    Value == unsure.
+
+condition_walk([], _, all_met).
+condition_walk([Condition|Conditions], Profile, Outcome) :-
+    condition_state(Profile, Condition, State),
+    condition_walk_step(State, Condition, Conditions, Profile, Outcome).
+
+condition_walk_step(met, _, Conditions, Profile, Outcome) :-
+    condition_walk(Conditions, Profile, Outcome).
+condition_walk_step(failing, condition(_, _, _, FailureAtom, FailureCitations), _, _, decided(FailureAtom, FailureCitations)).
+condition_walk_step(absent, condition(ConditionKey, _, _, _, _), _, _, missing(ConditionKey)).
+condition_walk_step(unsure, condition(ConditionKey, _, _, _, _), Conditions, Profile, Outcome) :-
+    condition_look_after(Conditions, Profile, ConditionKey, Outcome).
+
+condition_look_after([], _, UnsureKey, referral(UnsureKey)).
+condition_look_after([Condition|Conditions], Profile, UnsureKey, Outcome) :-
+    condition_state(Profile, Condition, State),
+    condition_look_step(State, Condition, Conditions, Profile, UnsureKey, Outcome).
+
+condition_look_step(failing, _, _, _, UnsureKey, referral(UnsureKey)).
+condition_look_step(absent, condition(ConditionKey, _, _, _, _), _, _, _, missing(ConditionKey)).
+condition_look_step(met, _, Conditions, Profile, UnsureKey, Outcome) :-
+    condition_look_after(Conditions, Profile, UnsureKey, Outcome).
+condition_look_step(unsure, _, Conditions, Profile, UnsureKey, Outcome) :-
+    condition_look_after(Conditions, Profile, UnsureKey, Outcome).
+
+exception_walk([], _, all_false).
+exception_walk([Case|Cases], Profile, Outcome) :-
+    Case = case(CaseKey, _, _),
+    key_state(Profile, CaseKey, KeyState),
+    exception_step(KeyState, Case, Cases, Profile, Outcome).
+
+exception_step(present(false), _, Cases, Profile, Outcome) :-
+    exception_walk(Cases, Profile, Outcome).
+exception_step(present(true), case(_, CaseAtom, ItemCitation), _, _, case_holds(CaseAtom, ItemCitation)).
+exception_step(absent, case(CaseKey, _, _), _, _, missing(CaseKey)).
+exception_step(present(unsure), case(CaseKey, _, _), Cases, Profile, Outcome) :-
+    exception_look_after(Cases, Profile, CaseKey, Outcome).
+
+exception_look_after([], _, UnsureKey, referral(UnsureKey)).
+exception_look_after([case(CaseKey, _, _)|Cases], Profile, UnsureKey, Outcome) :-
+    key_state(Profile, CaseKey, KeyState),
+    exception_look_step(KeyState, CaseKey, Cases, Profile, UnsureKey, Outcome).
+
+exception_look_step(present(true), _, _, _, UnsureKey, referral(UnsureKey)).
+exception_look_step(absent, CaseKey, _, _, _, missing(CaseKey)).
+exception_look_step(present(false), _, Cases, Profile, UnsureKey, Outcome) :-
+    exception_look_after(Cases, Profile, UnsureKey, Outcome).
+exception_look_step(present(unsure), _, Cases, Profile, UnsureKey, Outcome) :-
+    exception_look_after(Cases, Profile, UnsureKey, Outcome).
+
+open_case_scan([], _, none).
+open_case_scan([case(CaseKey, _, _)|Cases], Profile, Outcome) :-
+    key_state(Profile, CaseKey, KeyState),
+    open_case_scan_step(KeyState, CaseKey, Cases, Profile, Outcome).
+
+open_case_scan_step(present(true), _, _, _, none).
+open_case_scan_step(absent, CaseKey, _, _, missing(CaseKey)).
+open_case_scan_step(present(false), _, Cases, Profile, Outcome) :-
+    open_case_scan(Cases, Profile, Outcome).
+open_case_scan_step(present(unsure), _, Cases, Profile, Outcome) :-
+    open_case_scan(Cases, Profile, Outcome).
+
+condition_states([], _, []).
+condition_states([Condition|Conditions], Profile, [ConditionKey - State|Pairs]) :-
+    Condition = condition(ConditionKey, _, _, _, _),
+    condition_state(Profile, Condition, State),
+    condition_states(Conditions, Profile, Pairs).
+
+first_state_key([], _, none).
+first_state_key([ConditionKey - State|_], Wanted, found(ConditionKey)) :-
+    State == Wanted.
+first_state_key([_ - State|Pairs], Wanted, Found) :-
+    State \== Wanted,
+    first_state_key(Pairs, Wanted, Found).
+
+pdpl_consent_valid(Profile, Result, Citations) :-
+    uae_pdpl_lawful_processing_and_consent_input_problems(Profile, Problems),
+    consent_valid_answer(Problems, Profile, Result, Citations).
+
+consent_valid_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+consent_valid_answer([], Profile, Result, Citations) :-
+    date_state(Profile, DateState),
+    consent_valid_on_date(DateState, Profile, Result, Citations).
+
+consent_valid_on_date(before, _, not_in_force, [cite(uae_pdpl_art_31)]) :-
+    implements(uae_pdpl_art_31).
+consent_valid_on_date(absent, _, indeterminate([processing_date]), []).
+consent_valid_on_date(on_or_after, Profile, Result, Citations) :-
+    consent_conditions(Conditions),
+    condition_walk(Conditions, Profile, Outcome),
+    consent_valid_from_walk(Outcome, Result, Citations).
+
+consent_valid_from_walk(all_met, valid, [cite(uae_pdpl_art_1_consent), cite(uae_pdpl_art_6_1), cite(uae_pdpl_art_6_1_a), cite(uae_pdpl_art_6_1_b), cite(uae_pdpl_art_6_1_c), cite(uae_pdpl_art_6_2)]) :-
+    implements(uae_pdpl_art_6_1).
+consent_valid_from_walk(decided(FailureAtom, FailureCitations), not_valid(FailureAtom), FailureCitations) :-
+    implements(uae_pdpl_art_6_1).
+consent_valid_from_walk(missing(MissingKey), indeterminate([MissingKey]), []).
+consent_valid_from_walk(referral(UnsureKey), needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on([UnsureKey - unsure])]), []) :-
+    referral_row(pdpl_consent_valid, UnsureKey, Citation).
+
+pdpl_processing_controls(Profile, Result, Citations) :-
+    uae_pdpl_lawful_processing_and_consent_input_problems(Profile, Problems),
+    controls_answer(Problems, Profile, Result, Citations).
+
+controls_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+controls_answer([], Profile, Result, Citations) :-
+    date_state(Profile, DateState),
+    controls_on_date(DateState, Profile, Result, Citations).
+
+controls_on_date(before, _, not_in_force, [cite(uae_pdpl_art_31)]) :-
+    implements(uae_pdpl_art_31).
+controls_on_date(absent, _, indeterminate([processing_date]), []).
+controls_on_date(on_or_after, Profile, Result, Citations) :-
+    control_conditions(Conditions),
+    condition_walk(Conditions, Profile, Outcome),
+    controls_from_walk(Outcome, Result, Citations).
+
+controls_from_walk(all_met, meets_listed_controls, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_1), cite(uae_pdpl_art_5_2), cite(uae_pdpl_art_5_3), cite(uae_pdpl_art_5_4), cite(uae_pdpl_art_5_5), cite(uae_pdpl_art_5_6), cite(uae_pdpl_art_5_7)]) :-
+    implements(uae_pdpl_art_5),
+    implements(uae_pdpl_art_5_8).
+controls_from_walk(decided(FailureAtom, FailureCitations), fails_control(FailureAtom), FailureCitations) :-
+    implements(uae_pdpl_art_5).
+controls_from_walk(missing(MissingKey), indeterminate([MissingKey]), []).
+controls_from_walk(referral(UnsureKey), needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on([UnsureKey - unsure])]), []) :-
+    referral_row(pdpl_processing_controls, UnsureKey, Citation).
+
+pdpl_processing_lawful_basis(Profile, Result, Citations) :-
+    uae_pdpl_lawful_processing_and_consent_input_problems(Profile, Problems),
+    lawful_answer(Problems, Profile, Result, Citations).
+
+lawful_answer([Problem|Problems], _, input_problems([Problem|Problems]), []).
+lawful_answer([], Profile, Result, Citations) :-
+    date_state(Profile, DateState),
+    lawful_on_date(DateState, Profile, Result, Citations).
+
+lawful_on_date(before, _, not_in_force, [cite(uae_pdpl_art_31)]) :-
+    implements(uae_pdpl_art_31).
+lawful_on_date(absent, _, indeterminate([processing_date]), []).
+lawful_on_date(on_or_after, Profile, Result, Citations) :-
+    consent_conditions(Conditions),
+    condition_states(Conditions, Profile, KeyStatePairs),
+    pairs_values(KeyStatePairs, States),
+    consent_summary(States, Summary),
+    lawful_by_consent(Summary, KeyStatePairs, Profile, Result, Citations).
+
+consent_summary(States, Summary) :-
+    implements(uae_pdpl_art_6_1),
+    memberd_t(failing, States, HasFailing),
+    memberd_t(absent, States, HasAbsent),
+    memberd_t(unsure, States, HasUnsure),
+    summary_of(HasFailing, HasAbsent, HasUnsure, Summary).
+
+summary_of(true, _, _, consent_fails).
+summary_of(false, false, false, consent_met).
+summary_of(false, true, _, consent_open).
+summary_of(false, false, true, consent_open).
+
+lawful_by_consent(consent_met, _, _, allowed_with_consent, [cite(uae_pdpl_art_4), cite(uae_pdpl_art_1_consent), cite(uae_pdpl_art_6_1), cite(uae_pdpl_art_6_1_a), cite(uae_pdpl_art_6_1_b), cite(uae_pdpl_art_6_1_c), cite(uae_pdpl_art_6_2)]) :-
+    implements(uae_pdpl_art_4).
+lawful_by_consent(consent_fails, _, Profile, Result, Citations) :-
+    implements(uae_pdpl_art_4),
+    exception_cases(Cases),
+    exception_walk(Cases, Profile, Outcome),
+    lawful_from_exceptions(Outcome, Result, Citations).
+lawful_by_consent(consent_open, KeyStatePairs, Profile, Result, Citations) :-
+    first_state_key(KeyStatePairs, absent, AbsentFound),
+    lawful_open(AbsentFound, KeyStatePairs, Profile, Result, Citations).
+
+lawful_from_exceptions(case_holds(CaseAtom, ItemCitation), allowed_without_consent(CaseAtom), [cite(uae_pdpl_art_4), ItemCitation]) :-
+    implements(uae_pdpl_art_4).
+lawful_from_exceptions(missing(MissingKey), indeterminate([MissingKey]), []).
+lawful_from_exceptions(referral(UnsureKey), needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on([UnsureKey - unsure])]), []) :-
+    referral_row(pdpl_processing_lawful_basis, UnsureKey, Citation).
+lawful_from_exceptions(all_false, not_allowed, [cite(uae_pdpl_art_4), cite(uae_pdpl_art_4_1), cite(uae_pdpl_art_4_2), cite(uae_pdpl_art_4_3), cite(uae_pdpl_art_4_4), cite(uae_pdpl_art_4_5), cite(uae_pdpl_art_4_6), cite(uae_pdpl_art_4_7), cite(uae_pdpl_art_4_8), cite(uae_pdpl_art_4_9), cite(uae_pdpl_art_4_10)]) :-
+    implements(uae_pdpl_art_4),
+    implements(uae_pdpl_art_4_11).
+
+lawful_open(found(AbsentKey), _, _, indeterminate([AbsentKey]), []).
+lawful_open(none, KeyStatePairs, Profile, Result, Citations) :-
+    exception_cases(Cases),
+    open_case_scan(Cases, Profile, ScanOutcome),
+    lawful_open_after_scan(ScanOutcome, KeyStatePairs, Result, Citations).
+
+lawful_open_after_scan(missing(MissingKey), _, indeterminate([MissingKey]), []).
+lawful_open_after_scan(none, KeyStatePairs, needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on([UnsureKey - unsure])]), []) :-
+    first_state_key(KeyStatePairs, unsure, found(UnsureKey)),
+    referral_row(pdpl_processing_lawful_basis, UnsureKey, Citation).
+
+decide_uae_pdpl_lawful_processing_and_consent(Profile, uae_pdpl_lawful_processing_and_consent_verdict(Result, Citations)) :-
+    pdpl_processing_lawful_basis(Profile, Result, Citations).
+
+uae_pdpl_lawful_processing_and_consent_status(Profile, Status) :-
+    decide_uae_pdpl_lawful_processing_and_consent(Profile, uae_pdpl_lawful_processing_and_consent_verdict(Status, _Citations)).
+
+uae_pdpl_lawful_processing_and_consent_checklist(Profile, [item(overall, Status, Citations)|RequirementRows]) :-
+    decide_uae_pdpl_lawful_processing_and_consent(Profile, uae_pdpl_lawful_processing_and_consent_verdict(Status, Citations)),
+    uae_pdpl_lawful_processing_and_consent_input_problems(Profile, Problems),
+    requirement_rows(Problems, Profile, RequirementRows).
+
+requirement_rows([_|_], _, []).
+requirement_rows([], Profile, RequirementRows) :-
+    date_row(Profile, DateRow),
+    consent_conditions(ConsentConditions),
+    condition_rows(ConsentConditions, Profile, ConsentRows),
+    exception_cases(Cases),
+    case_rows(Cases, Profile, CaseRows),
+    control_conditions(ControlConditions),
+    condition_rows(ControlConditions, Profile, ControlRows),
+    append([[DateRow], ConsentRows, CaseRows, ControlRows], RequirementRows).
+
+date_row(Profile, item(in_force, Status, [cite(uae_pdpl_art_31)])) :-
+    implements(uae_pdpl_art_31),
+    date_state(Profile, DateState),
+    date_row_status(DateState, Status).
+
+date_row_status(on_or_after, met).
+date_row_status(before, unmet(not_in_force)).
+date_row_status(absent, unknown([processing_date])).
+
+condition_rows([], _, []).
+condition_rows([Condition|Conditions], Profile, [item(ConditionKey, Status, FailureCitations)|Rows]) :-
+    Condition = condition(ConditionKey, _, _, _, FailureCitations),
+    condition_state(Profile, Condition, State),
+    condition_row_status(State, Condition, Status),
+    condition_rows(Conditions, Profile, Rows).
+
+condition_row_status(met, _, met).
+condition_row_status(failing, condition(_, _, _, FailureAtom, _), unmet(FailureAtom)).
+condition_row_status(absent, condition(ConditionKey, _, _, _, _), unknown([ConditionKey])).
+condition_row_status(unsure, condition(ConditionKey, _, _, _, _), unknown([ConditionKey])).
+
+case_rows([], _, []).
+case_rows([case(CaseKey, CaseAtom, ItemCitation)|Cases], Profile, [item(CaseAtom, Status, [cite(uae_pdpl_art_4), ItemCitation])|Rows]) :-
+    key_state(Profile, CaseKey, KeyState),
+    case_row_status(KeyState, CaseKey, Status),
+    case_rows(Cases, Profile, Rows).
+
+case_row_status(present(true), _, met).
+case_row_status(present(false), _, unmet(case_does_not_hold)).
+case_row_status(present(unsure), CaseKey, unknown([CaseKey])).
+case_row_status(absent, CaseKey, unknown([CaseKey])).
+
+uae_pdpl_lawful_processing_and_consent_decision_resolvable(Profile) :-
+    decide_uae_pdpl_lawful_processing_and_consent(Profile, _Verdict).
+
+consent_attributes(ProcessingDate, ConsentGiven, Specific, Proof, Accessible, Withdrawal, Withdrawn, [attribute(processing_date, ProcessingDate), attribute(consent_given, ConsentGiven), attribute(consent_specific_clear_and_unambiguous, Specific), attribute(controller_able_to_prove_consent, Proof), attribute(consent_clear_simple_unambiguous_and_easily_accessible, Accessible), attribute(consent_includes_right_to_withdraw_easily, Withdrawal), attribute(consent_withdrawn_before_processing, Withdrawn)]).
+
+valid_consent_profile(Profile) :-
+    consent_attributes(date(2023, 6, 1), true, true, true, true, true, false, Profile).
+
+all_cases_false(Attributes) :-
+    findall(attribute(CaseKey, false), exception_case(CaseKey, _, _), Attributes).
+
+all_controls_true(Attributes) :-
+    findall(attribute(ConditionKey, true), control_condition(ConditionKey, _, _, _, _), Attributes).
+
+refused_consent_profile(Profile) :-
+    consent_attributes(date(2023, 6, 1), false, true, true, true, true, false, Profile).
+
+test(valid_consent_is_valid_once) :-
+    valid_consent_profile(Profile),
+    findall(Result - Citations, pdpl_consent_valid(Profile, Result, Citations), Answers),
+    Answers = [valid - _].
+test(the_day_before_force_is_not_in_force) :-
+    consent_attributes(date(2022, 1, 1), true, true, true, true, true, false, Profile),
+    pdpl_consent_valid(Profile, not_in_force, [cite(uae_pdpl_art_31)]).
+test(the_first_day_of_force_is_read) :-
+    consent_attributes(date(2022, 1, 2), true, true, true, true, true, false, Profile),
+    pdpl_consent_valid(Profile, valid, _).
+test(a_missing_date_is_asked_for) :-
+    pdpl_consent_valid([attribute(consent_given, true)], indeterminate([processing_date]), []).
+test(a_withdrawn_consent_is_not_valid) :-
+    consent_attributes(date(2023, 6, 1), true, true, true, true, true, true, Profile),
+    pdpl_consent_valid(Profile, not_valid(consent_withdrawn), [cite(uae_pdpl_art_6_2)]).
+test(the_first_failing_condition_is_named) :-
+    consent_attributes(date(2023, 6, 1), true, true, false, false, true, true, Profile),
+    pdpl_consent_valid(Profile, not_valid(controller_cannot_prove_consent), _).
+test(unsure_judgement_names_a_later_absent_key_first) :-
+    pdpl_consent_valid([attribute(processing_date, date(2023, 6, 1)), attribute(consent_given, true), attribute(consent_specific_clear_and_unambiguous, unsure)], indeterminate([controller_able_to_prove_consent]), []).
+test(unsure_judgement_before_a_failing_value_is_referred) :-
+    pdpl_consent_valid([attribute(processing_date, date(2023, 6, 1)), attribute(consent_given, true), attribute(consent_specific_clear_and_unambiguous, unsure), attribute(controller_able_to_prove_consent, false)], Result, Citations),
+    Result == needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous - unsure])]),
+    Citations == [].
+test(an_input_problem_comes_first) :-
+    pdpl_consent_valid([attribute(consent_given, unsure)], input_problems([wrong_type(consent_given)]), []).
+test(valid_consent_allows_whatever_the_cases) :-
+    valid_consent_profile(ConsentAttributes),
+    append(ConsentAttributes, [attribute(necessary_to_protect_public_interest, true)], Profile),
+    findall(Result, pdpl_processing_lawful_basis(Profile, Result, _), Results),
+    Results == [allowed_with_consent].
+test(the_first_true_case_allows_without_consent) :-
+    refused_consent_profile(ConsentAttributes),
+    append(ConsentAttributes, [attribute(necessary_to_protect_public_interest, false), attribute(personal_data_made_available_and_known_to_all_by_data_subject, true)], Profile),
+    pdpl_processing_lawful_basis(Profile, allowed_without_consent(data_made_public_by_data_subject), [cite(uae_pdpl_art_4), cite(uae_pdpl_art_4_2)]).
+test(failed_consent_and_no_case_is_not_allowed) :-
+    refused_consent_profile(ConsentAttributes),
+    all_cases_false(CaseAttributes),
+    append(ConsentAttributes, CaseAttributes, Profile),
+    pdpl_processing_lawful_basis(Profile, not_allowed, _).
+test(failed_consent_asks_for_the_first_case) :-
+    refused_consent_profile(Profile),
+    pdpl_processing_lawful_basis(Profile, indeterminate([necessary_to_protect_public_interest]), []).
+test(an_unsure_case_before_a_true_case_is_referred) :-
+    refused_consent_profile(ConsentAttributes),
+    append(ConsentAttributes, [attribute(necessary_to_protect_public_interest, unsure), attribute(personal_data_made_available_and_known_to_all_by_data_subject, true)], Profile),
+    pdpl_processing_lawful_basis(Profile, needs_legal_review(open_textured(necessary_to_protect_public_interest, cite(uae_pdpl_art_4_1)), [inputs_relied_on([necessary_to_protect_public_interest - unsure])]), []).
+test(an_unsure_case_names_a_later_absent_case_first) :-
+    refused_consent_profile(ConsentAttributes),
+    append(ConsentAttributes, [attribute(necessary_to_protect_public_interest, unsure)], Profile),
+    pdpl_processing_lawful_basis(Profile, indeterminate([personal_data_made_available_and_known_to_all_by_data_subject]), []).
+test(open_consent_asks_for_the_first_absent_consent_key) :-
+    pdpl_processing_lawful_basis([attribute(processing_date, date(2023, 6, 1)), attribute(consent_given, true), attribute(consent_specific_clear_and_unambiguous, unsure)], indeterminate([controller_able_to_prove_consent]), []).
+test(unsure_consent_names_an_absent_case_first) :-
+    consent_attributes(date(2023, 6, 1), true, unsure, true, true, true, false, Profile),
+    pdpl_processing_lawful_basis(Profile, indeterminate([necessary_to_protect_public_interest]), []).
+test(unsure_consent_is_referred_when_a_case_holds) :-
+    consent_attributes(date(2023, 6, 1), true, unsure, true, true, true, false, ConsentAttributes),
+    append(ConsentAttributes, [attribute(necessary_to_protect_public_interest, true)], Profile),
+    pdpl_processing_lawful_basis(Profile, needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous - unsure])]), []).
+test(lawful_basis_before_force_is_not_in_force) :-
+    pdpl_processing_lawful_basis([attribute(processing_date, date(2021, 12, 31))], not_in_force, [cite(uae_pdpl_art_31)]).
+test(all_controls_met) :-
+    all_controls_true(ControlAttributes),
+    findall(Result, pdpl_processing_controls([attribute(processing_date, date(2024, 2, 29))|ControlAttributes], Result, _), Results),
+    Results == [meets_listed_controls].
+test(incompatible_later_processing_fails_its_control) :-
+    pdpl_processing_controls([attribute(processing_date, date(2024, 1, 1)), attribute(processed_fairly_transparently_and_lawfully, true), attribute(collected_for_specific_and_clear_purpose, true), attribute(later_processing_compatible_with_purpose, false)], fails_control(control_2_no_incompatible_later_processing), [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_2)]).
+test(unsure_control_names_a_later_absent_control) :-
+    pdpl_processing_controls([attribute(processing_date, date(2024, 1, 1)), attribute(processed_fairly_transparently_and_lawfully, unsure)], indeterminate([collected_for_specific_and_clear_purpose]), []).
+test(controls_ignore_consent_keys) :-
+    all_controls_true(ControlAttributes),
+    pdpl_processing_controls([attribute(processing_date, date(2024, 1, 1)), attribute(consent_given, false)|ControlAttributes], meets_listed_controls, _).
+test(the_checklist_carries_cited_rows) :-
+    valid_consent_profile(Profile),
+    uae_pdpl_lawful_processing_and_consent_checklist(Profile, [item(overall, allowed_with_consent, _)|Rows]),
+    member(item(in_force, met, [cite(uae_pdpl_art_31)]), Rows).
+test(the_status_projects_the_verdict) :-
+    valid_consent_profile(Profile),
+    uae_pdpl_lawful_processing_and_consent_status(Profile, allowed_with_consent).
+
+test(valid_consent_is_not_not_valid, fail) :-
+    valid_consent_profile(Profile),
+    pdpl_consent_valid(Profile, not_valid(_), _).
+test(failed_consent_and_no_case_is_not_allowed_with_consent, fail) :-
+    refused_consent_profile(ConsentAttributes),
+    all_cases_false(CaseAttributes),
+    append(ConsentAttributes, CaseAttributes, Profile),
+    pdpl_processing_lawful_basis(Profile, allowed_with_consent, _).
+test(incompatible_later_processing_does_not_meet_controls, fail) :-
+    pdpl_processing_controls([attribute(processing_date, date(2024, 1, 1)), attribute(processed_fairly_transparently_and_lawfully, true), attribute(collected_for_specific_and_clear_purpose, true), attribute(later_processing_compatible_with_purpose, false)], meets_listed_controls, _).

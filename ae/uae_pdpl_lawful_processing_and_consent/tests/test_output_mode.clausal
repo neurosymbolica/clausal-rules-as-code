@@ -1,0 +1,92 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_output_mode.clausal -- OUTPUT MODE: the result argument UNBOUND,
+% read out and compared whole (every solution collected, so a duplicate
+% answer fails). Every fixture subject and every query, plus the route
+% boundaries.
+% Run: python -m clausal.testing ae/uae_pdpl_lawful_processing_and_consent/tests/test_output_mode.clausal
+% =====================================================================
+:- module(test_output_mode, []).
+:- use_module(ae/uae_pdpl_lawful_processing_and_consent/uae_pdpl_lawful_processing_and_consent, [
+    decide_uae_pdpl_lawful_processing_and_consent/2,
+    uae_pdpl_lawful_processing_and_consent_status/2,
+    pdpl_processing_lawful_basis/3,
+    pdpl_consent_valid/3,
+    pdpl_processing_controls/3
+]).
+:- use_module(ae/uae_pdpl_lawful_processing_and_consent/fixtures, [
+    uae_pdpl_lawful_processing_and_consent_profile_for/2,
+    uae_pdpl_lawful_processing_and_consent_fixture_expected/3
+]).
+
+run_query(pdpl_processing_lawful_basis, Profile, Result, Citations) :-
+    pdpl_processing_lawful_basis(Profile, Result, Citations).
+run_query(pdpl_consent_valid, Profile, Result, Citations) :-
+    pdpl_consent_valid(Profile, Result, Citations).
+run_query(pdpl_processing_controls, Profile, Result, Citations) :-
+    pdpl_processing_controls(Profile, Result, Citations).
+
+answers_as_expected(Subject-Query) :-
+    uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, Query, Expected),
+    uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile),
+    findall(Result, run_query(Query, Profile, Result, _), Results),
+    Results == [Expected].
+
+lawful_results(Subject, Results) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile),
+    findall(Result, pdpl_processing_lawful_basis(Profile, Result, _), Results).
+
+test(every_subject_answers_each_query_once_as_expected) :-
+    findall(Subject-Query, uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, Query, _), Pairs),
+    Pairs = [_|_],
+    maplist(answers_as_expected, Pairs).
+
+test(the_baseline_profile_yields_exactly_one_status) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(valid_consent_no_case, Profile),
+    findall(Status, uae_pdpl_lawful_processing_and_consent_status(Profile, Status), Statuses),
+    Statuses == [allowed_with_consent].
+
+test(the_verdict_carries_a_citation) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(valid_consent_no_case, Profile),
+    decide_uae_pdpl_lawful_processing_and_consent(Profile, uae_pdpl_lawful_processing_and_consent_verdict(allowed_with_consent, [cite(uae_pdpl_art_4)|_])).
+
+% ---- the commencement boundary (Art 31) --------------------------------
+test(the_last_day_of_2021_is_not_in_force) :-
+    lawful_results(final_day_of_previous_year, Results),
+    Results == [not_in_force].
+test(the_day_before_commencement_is_not_in_force) :-
+    lawful_results(day_before_commencement, Results),
+    Results == [not_in_force].
+test(the_commencement_day_is_read) :-
+    lawful_results(commencement_day, Results),
+    Results == [allowed_with_consent].
+test(year_9999_is_read) :-
+    lawful_results(last_calendar_year, Results),
+    Results == [allowed_with_consent].
+
+% ---- enumeration: each Art 4 case alone names itself ---------------------
+case_subject_answer(Subject, Case) :-
+    member(Subject, [consent_refused_case_public_interest, consent_refused_case_data_made_public, consent_refused_case_legal_claims, consent_refused_case_medicine_and_care, consent_refused_case_public_health, consent_refused_case_archival_and_studies, consent_refused_case_interests_of_data_subject, consent_refused_case_employment_and_social_protection, consent_refused_case_contract, consent_refused_case_other_laws]),
+    lawful_results(Subject, [allowed_without_consent(Case)]).
+
+test(the_ten_cases_are_named_in_the_order_of_the_text) :-
+    findall(Case, case_subject_answer(_, Case), Cases),
+    Cases == [public_interest, data_made_public_by_data_subject, legal_claims_and_judicial_or_security_procedures, occupational_or_preventive_medicine_and_health_or_social_care, public_health, archival_scientific_historical_or_statistical_purposes, interests_of_data_subject, employment_social_security_and_social_protection, contract_with_data_subject, obligations_under_other_laws].
+
+% ---- enumeration: each control failing alone names itself ----------------
+control_subject_answer(Subject, Atom) :-
+    member(Subject, [control_fails_fairness, control_fails_purpose, control_fails_later_processing, control_fails_sufficiency, control_fails_accuracy, control_fails_correction, control_fails_security, control_fails_retention]),
+    uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile),
+    findall(Result, pdpl_processing_controls(Profile, Result, _), [fails_control(Atom)]).
+
+test(the_eight_controls_are_named_in_the_order_of_article_5) :-
+    findall(Atom, control_subject_answer(_, Atom), Atoms),
+    Atoms == [control_1_fair_transparent_and_lawful, control_2_specific_and_clear_purpose, control_2_no_incompatible_later_processing, control_3_sufficient_and_limited, control_4_accurate_and_updated, control_5_incorrect_data_deleted_or_corrected, control_6_kept_securely, control_7_not_kept_after_purpose_exhausted].
+
+% ---- the referral reads out whole --------------------------------------
+test(the_consent_referral_reads_out_whole) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(unsure_specific_consent_before_failing_proof, Profile),
+    findall(Result-Citations, pdpl_consent_valid(Profile, Result, Citations), Answers),
+    Answers == [needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous-unsure])])-[]].
+
+:- end_module(test_output_mode).

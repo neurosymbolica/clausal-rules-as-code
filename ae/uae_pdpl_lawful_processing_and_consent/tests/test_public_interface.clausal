@@ -1,0 +1,240 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% test_public_interface.clausal -- the package's PUBLIC surface, exercised
+% through the package facade and the top-layer modules (what an external
+% caller sees): each fixture subject resolves to its EXPECTED answer, once,
+% for each of the three queries; near-miss controls get the opposite answer;
+% checklists are non-empty and cited.
+% Run: python -m clausal.testing ae/uae_pdpl_lawful_processing_and_consent/tests/test_public_interface.clausal
+% =====================================================================
+:- module(test_public_interface, []).
+:- use_module(ae/uae_pdpl_lawful_processing_and_consent, [
+    decide_uae_pdpl_lawful_processing_and_consent/2,
+    uae_pdpl_lawful_processing_and_consent_status/2,
+    uae_pdpl_lawful_processing_and_consent_checklist/2,
+    uae_pdpl_lawful_processing_and_consent_decision_resolvable/1,
+    uae_pdpl_lawful_processing_and_consent_status_values/1,
+    uae_pdpl_lawful_processing_and_consent_subject/1,
+    uae_pdpl_lawful_processing_and_consent_profile_for/2,
+    uae_pdpl_lawful_processing_and_consent_assess/2
+]).
+:- use_module(ae/uae_pdpl_lawful_processing_and_consent/queries, [
+    pdpl_processing_lawful_basis/3,
+    pdpl_consent_valid/3,
+    pdpl_processing_controls/3,
+    uae_pdpl_lawful_processing_and_consent_input_problems/2,
+    uae_pdpl_lawful_processing_and_consent_what_if/4,
+    uae_pdpl_lawful_processing_and_consent_eligibility/3,
+    uae_pdpl_lawful_processing_and_consent_justification/4,
+    duplicate_key/1
+]).
+:- use_module(ae/uae_pdpl_lawful_processing_and_consent/fixtures, [uae_pdpl_lawful_processing_and_consent_fixture_expected/3]).
+
+% ---- helpers ------------------------------------------------------------
+query_answers(pdpl_processing_lawful_basis, Profile, Answers) :-
+    findall(Result-Citations, pdpl_processing_lawful_basis(Profile, Result, Citations), Answers).
+query_answers(pdpl_consent_valid, Profile, Answers) :-
+    findall(Result-Citations, pdpl_consent_valid(Profile, Result, Citations), Answers).
+query_answers(pdpl_processing_controls, Profile, Answers) :-
+    findall(Result-Citations, pdpl_processing_controls(Profile, Result, Citations), Answers).
+
+subject_answer(Subject, Query, Result, Citations) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile),
+    query_answers(Query, Profile, [Result-Citations]).
+
+expected_row_holds(Subject-Query-Expected) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile),
+    query_answers(Query, Profile, Answers),
+    Answers = [Result-_Citations],
+    Result == Expected.
+
+citation_rule_holds(Subject-Query-_Expected) :-
+    subject_answer(Subject, Query, Result, Citations),
+    citations_follow_rule(Result, Citations).
+
+final_result(allowed_with_consent).
+final_result(allowed_without_consent(_Case)).
+final_result(not_allowed).
+final_result(not_in_force).
+final_result(valid).
+final_result(not_valid(_FailureAtom)).
+final_result(meets_listed_controls).
+final_result(fails_control(_FailureAtom)).
+
+citations_follow_rule(indeterminate(_Keys), []).
+citations_follow_rule(needs_legal_review(_Reason, _Context), []).
+citations_follow_rule(input_problems(_Problems), []).
+citations_follow_rule(Result, [cite(_Key)|_Citations]) :-
+    final_result(Result).
+
+checklist_matches(Subject) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile),
+    uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, pdpl_processing_lawful_basis, Expected),
+    uae_pdpl_lawful_processing_and_consent_checklist(Profile, [item(overall, Status, _Citations)|_Rows]),
+    Status == Expected.
+
+status_in_vocabulary(Subject) :-
+    uae_pdpl_lawful_processing_and_consent_assess(Subject, uae_pdpl_lawful_processing_and_consent_verdict(Status, _Citations)),
+    uae_pdpl_lawful_processing_and_consent_status_values(StatusValues),
+    functor(Status, Name, _),
+    member(Name, StatusValues).
+
+queries_agree(Subject) :-
+    subject_answer(Subject, pdpl_processing_lawful_basis, LawfulResult, _),
+    subject_answer(Subject, pdpl_consent_valid, ConsentResult, _),
+    consistent_pair(LawfulResult, ConsentResult).
+
+consistent_pair(allowed_with_consent, valid).
+consistent_pair(LawfulResult, ConsentResult) :-
+    dif(LawfulResult, allowed_with_consent),
+    dif(ConsentResult, valid).
+
+row_cited(item(_Id, _Status, [cite(_Key)|_Citations])).
+
+same_citations(Citations, Expected) :-
+    msort(Citations, Sorted),
+    msort(Expected, Sorted).
+
+% ---- every fixture: its expected answer, exactly once ----------------------
+test(every_fixture_answer_is_its_expected_answer_exactly_once) :-
+    findall(Subject-Query-Expected, uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, Query, Expected), Rows),
+    Rows = [_|_],
+    maplist(expected_row_holds, Rows).
+test(every_fixture_answer_follows_the_citation_rule) :-
+    findall(Subject-Query-Expected, uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, Query, Expected), Rows),
+    maplist(citation_rule_holds, Rows).
+test(every_fixture_checklist_is_non_empty_and_heads_with_the_verdict) :-
+    findall(Subject, uae_pdpl_lawful_processing_and_consent_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(checklist_matches, Subjects).
+test(every_fixture_status_is_in_the_status_vocabulary) :-
+    findall(Subject, uae_pdpl_lawful_processing_and_consent_subject(Subject), Subjects),
+    maplist(status_in_vocabulary, Subjects).
+test(allowed_with_consent_exactly_when_the_consent_is_valid) :-
+    findall(Subject, uae_pdpl_lawful_processing_and_consent_subject(Subject), Subjects),
+    maplist(queries_agree, Subjects).
+
+% ---- lawful basis: consent route and its near-miss -------------------------
+test(valid_consent_is_allowed_with_consent) :-
+    subject_answer(valid_consent_no_case, pdpl_processing_lawful_basis, allowed_with_consent, Citations),
+    same_citations(Citations, [cite(uae_pdpl_art_4), cite(uae_pdpl_art_1_consent), cite(uae_pdpl_art_6_1), cite(uae_pdpl_art_6_1_a), cite(uae_pdpl_art_6_1_b), cite(uae_pdpl_art_6_1_c), cite(uae_pdpl_art_6_2)]).
+test(valid_consent_is_read_before_a_true_case) :-
+    subject_answer(valid_consent_and_public_interest, pdpl_processing_lawful_basis, allowed_with_consent, _).
+test(withdrawn_consent_is_not_allowed) :-
+    subject_answer(consent_fails_withdrawn, pdpl_processing_lawful_basis, not_allowed, Citations),
+    same_citations(Citations, [cite(uae_pdpl_art_4), cite(uae_pdpl_art_4_1), cite(uae_pdpl_art_4_2), cite(uae_pdpl_art_4_3), cite(uae_pdpl_art_4_4), cite(uae_pdpl_art_4_5), cite(uae_pdpl_art_4_6), cite(uae_pdpl_art_4_7), cite(uae_pdpl_art_4_8), cite(uae_pdpl_art_4_9), cite(uae_pdpl_art_4_10)]).
+test(withdrawn_consent_is_not_allowed_with_consent, fail) :-
+    subject_answer(consent_fails_withdrawn, pdpl_processing_lawful_basis, allowed_with_consent, _).
+
+% ---- lawful basis: case route and its near-miss ----------------------------
+test(public_health_alone_allows_without_consent) :-
+    subject_answer(consent_refused_case_public_health, pdpl_processing_lawful_basis, allowed_without_consent(public_health), Citations),
+    same_citations(Citations, [cite(uae_pdpl_art_4), cite(uae_pdpl_art_4_5)]).
+test(no_case_with_refused_consent_is_not_allowed) :-
+    subject_answer(consent_fails_given, pdpl_processing_lawful_basis, not_allowed, _).
+test(no_case_with_refused_consent_is_not_allowed_without_consent, fail) :-
+    subject_answer(consent_fails_given, pdpl_processing_lawful_basis, allowed_without_consent(_), _).
+test(the_first_true_case_is_named) :-
+    subject_answer(consent_refused_two_cases, pdpl_processing_lawful_basis, allowed_without_consent(legal_claims_and_judicial_or_security_procedures), Citations),
+    same_citations(Citations, [cite(uae_pdpl_art_4), cite(uae_pdpl_art_4_3)]).
+test(a_later_true_case_is_not_named, fail) :-
+    subject_answer(consent_refused_two_cases, pdpl_processing_lawful_basis, allowed_without_consent(contract_with_data_subject), _).
+
+% ---- commencement boundary ---------------------------------------------
+test(the_day_before_commencement_is_not_in_force_for_every_query) :-
+    subject_answer(day_before_commencement, pdpl_processing_lawful_basis, not_in_force, [cite(uae_pdpl_art_31)]),
+    subject_answer(day_before_commencement, pdpl_consent_valid, not_in_force, [cite(uae_pdpl_art_31)]),
+    subject_answer(day_before_commencement, pdpl_processing_controls, not_in_force, [cite(uae_pdpl_art_31)]).
+test(the_commencement_day_is_read) :-
+    subject_answer(commencement_day, pdpl_processing_lawful_basis, allowed_with_consent, _),
+    subject_answer(commencement_day, pdpl_consent_valid, valid, _).
+test(the_commencement_day_is_not_not_in_force, fail) :-
+    subject_answer(commencement_day, pdpl_processing_lawful_basis, not_in_force, _).
+
+% ---- consent validity ------------------------------------------------------
+test(missing_proof_of_consent_is_named) :-
+    subject_answer(consent_fails_proof, pdpl_consent_valid, not_valid(controller_cannot_prove_consent), Citations),
+    same_citations(Citations, [cite(uae_pdpl_art_6_1), cite(uae_pdpl_art_6_1_a)]).
+test(valid_consent_is_valid) :-
+    subject_answer(valid_consent_no_case, pdpl_consent_valid, valid, _).
+test(valid_consent_is_not_not_valid, fail) :-
+    subject_answer(valid_consent_no_case, pdpl_consent_valid, not_valid(_), _).
+test(an_unsure_consent_judgement_is_referred) :-
+    subject_answer(unsure_specific_consent_with_true_case, pdpl_consent_valid, Result, Citations),
+    Result == needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous-unsure])]),
+    Citations == [].
+test(an_absent_case_is_named_before_an_unsure_consent_is_referred) :-
+    subject_answer(unsure_specific_consent_cases_unstated, pdpl_processing_lawful_basis, indeterminate([necessary_to_protect_public_interest]), []).
+
+% ---- controls ---------------------------------------------------------------
+test(insecure_keeping_fails_its_control) :-
+    subject_answer(control_fails_security, pdpl_processing_controls, fails_control(control_6_kept_securely), Citations),
+    same_citations(Citations, [cite(uae_pdpl_art_5), cite(uae_pdpl_art_5_6)]).
+test(all_controls_met) :-
+    subject_answer(valid_consent_no_case, pdpl_processing_controls, meets_listed_controls, _).
+test(a_failing_control_does_not_meet_the_controls, fail) :-
+    subject_answer(control_fails_security, pdpl_processing_controls, meets_listed_controls, _).
+test(an_earlier_absent_control_is_named_before_a_later_failing_one) :-
+    subject_answer(fairness_unstated_before_failing_purpose, pdpl_processing_controls, indeterminate([processed_fairly_transparently_and_lawfully]), []).
+
+% ---- the input check -----------------------------------------------------
+test(year_zero_is_an_input_problem_for_the_query) :-
+    subject_answer(year_zero, pdpl_processing_lawful_basis, input_problems([wrong_type(processing_date)]), []).
+test(a_leap_day_is_well_formed) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(leap_day_in_force, Profile),
+    uae_pdpl_lawful_processing_and_consent_input_problems(Profile, Problems),
+    Problems == [].
+test(a_non_list_is_not_a_profile) :-
+    findall(Problems, uae_pdpl_lawful_processing_and_consent_input_problems(not_a_profile, Problems), Answers),
+    Answers == [[wrong_type(profile)]].
+test(a_repeated_contract_key_is_a_duplicate_key_problem) :-
+    findall(Result-Citations, pdpl_consent_valid([attribute(consent_given, true), attribute(consent_given, true)], Result, Citations), Answers),
+    Answers == [input_problems([duplicate_key(consent_given)])-[]].
+
+% ---- result constructors -------------------------------------------------
+test(duplicate_key_recognises_a_contract_key) :-
+    duplicate_key(consent_given).
+test(duplicate_key_refuses_a_key_outside_the_contract, fail) :-
+    duplicate_key(colour).
+
+% ---- facade: decide, status, assess, resolvable ------------------------------
+test(assess_gives_the_lawful_basis_verdict) :-
+    uae_pdpl_lawful_processing_and_consent_assess(valid_consent_no_case, uae_pdpl_lawful_processing_and_consent_verdict(allowed_with_consent, [_|_])).
+test(decide_matches_the_lawful_basis_query) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(consent_refused_case_contract, Profile),
+    decide_uae_pdpl_lawful_processing_and_consent(Profile, uae_pdpl_lawful_processing_and_consent_verdict(allowed_without_consent(contract_with_data_subject), _)).
+test(the_status_of_refused_consent_without_a_case_is_not_allowed) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(consent_fails_given, Profile),
+    uae_pdpl_lawful_processing_and_consent_status(Profile, not_allowed),
+    uae_pdpl_lawful_processing_and_consent_decision_resolvable(Profile).
+
+% ---- #2 eligibility and #7 justification -----------------------------------
+test(valid_consent_is_eligible) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(valid_consent_no_case, Profile),
+    findall(Label, uae_pdpl_lawful_processing_and_consent_eligibility(Profile, Label, _), Labels),
+    Labels == [eligible].
+test(withdrawn_consent_without_a_case_is_ineligible) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(consent_fails_withdrawn, Profile),
+    uae_pdpl_lawful_processing_and_consent_eligibility(Profile, ineligible, _).
+test(withdrawn_consent_without_a_case_is_not_eligible, fail) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(consent_fails_withdrawn, Profile),
+    uae_pdpl_lawful_processing_and_consent_eligibility(Profile, eligible, _).
+test(an_unstated_date_is_indeterminate) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(processing_date_unstated, Profile),
+    uae_pdpl_lawful_processing_and_consent_eligibility(Profile, indeterminate, _).
+test(every_requirement_row_carries_a_citation) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(valid_consent_no_case, Profile),
+    uae_pdpl_lawful_processing_and_consent_eligibility(Profile, eligible, [_Overall|Rows]),
+    Rows = [_|_],
+    maplist(row_cited, Rows).
+test(the_failing_condition_row_is_justified) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(consent_fails_withdrawn, Profile),
+    uae_pdpl_lawful_processing_and_consent_justification(Profile, consent_withdrawn_before_processing, unmet(consent_withdrawn), [cite(uae_pdpl_art_6_2)]).
+
+% ---- #16 what-if --------------------------------------------------------
+test(what_if_public_health_holds_allows_without_consent) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(consent_fails_given, Profile),
+    uae_pdpl_lawful_processing_and_consent_what_if(Profile, necessary_to_protect_public_health, true, Status),
+    Status == allowed_without_consent(public_health).
+
+:- end_module(test_public_interface).

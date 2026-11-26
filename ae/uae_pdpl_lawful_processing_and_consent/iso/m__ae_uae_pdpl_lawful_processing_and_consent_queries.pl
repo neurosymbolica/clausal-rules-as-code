@@ -1,0 +1,259 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ae_uae_pdpl_lawful_processing_and_consent_queries, [uae_pdpl_lawful_processing_and_consent_profile_keys/1, uae_pdpl_lawful_processing_and_consent_what_if/4, uae_pdpl_lawful_processing_and_consent_eligibility/3, uae_pdpl_lawful_processing_and_consent_justification/4, allowed_with_consent/0, not_allowed/0, not_in_force/0, public_interest/0, data_made_public_by_data_subject/0, legal_claims_and_judicial_or_security_procedures/0, occupational_or_preventive_medicine_and_health_or_social_care/0, public_health/0, archival_scientific_historical_or_statistical_purposes/0, interests_of_data_subject/0, employment_social_security_and_social_protection/0, contract_with_data_subject/0, obligations_under_other_laws/0, valid/0, consent_not_given/0, consent_not_specific_clear_and_unambiguous/0, controller_cannot_prove_consent/0, consent_not_clear_simple_and_easily_accessible/0, consent_omits_easy_withdrawal_right/0, consent_withdrawn/0, meets_listed_controls/0, control_1_fair_transparent_and_lawful/0, control_2_specific_and_clear_purpose/0, control_2_no_incompatible_later_processing/0, control_3_sufficient_and_limited/0, control_4_accurate_and_updated/0, control_5_incorrect_data_deleted_or_corrected/0, control_6_kept_securely/0, control_7_not_kept_after_purpose_exhausted/0, allowed_without_consent/1, not_valid/1, fails_control/1, indeterminate/1, needs_legal_review/2, open_textured/2, inputs_relied_on/1, input_problems/1, wrong_type/1, duplicate_key/1, processing_date/0, consent_given/0, consent_specific_clear_and_unambiguous/0, controller_able_to_prove_consent/0, consent_clear_simple_unambiguous_and_easily_accessible/0, consent_includes_right_to_withdraw_easily/0, consent_withdrawn_before_processing/0, necessary_to_protect_public_interest/0, personal_data_made_available_and_known_to_all_by_data_subject/0, necessary_for_legal_claims_defence_of_rights_or_judicial_or_security_procedures/0, necessary_for_occupational_or_preventive_medicine_or_health_or_social_care/0, necessary_to_protect_public_health/0, necessary_for_archival_purposes_or_scientific_historical_or_statistical_studies/0, necessary_to_protect_interests_of_data_subject/0, necessary_for_employment_social_security_or_social_protection_obligations_and_rights/0, necessary_for_contract_with_data_subject/0, necessary_for_specific_obligations_of_controller_under_other_laws/0, processed_fairly_transparently_and_lawfully/0, collected_for_specific_and_clear_purpose/0, later_processing_compatible_with_purpose/0, sufficient_and_limited_to_what_is_necessary/0, accurate_correct_and_updated/0, measures_taken_to_delete_or_correct_incorrect_data/0, kept_securely/0, not_kept_after_purpose_exhausted/0, unsure/0]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ae_uae_pdpl_lawful_processing_and_consent_kernel, [uae_pdpl_lawful_processing_and_consent_input_problems/2]).
+:- use_module(m__ae_uae_pdpl_lawful_processing_and_consent_uae_pdpl_lawful_processing_and_consent, [uae_pdpl_lawful_processing_and_consent_status/2, uae_pdpl_lawful_processing_and_consent_checklist/2, pdpl_processing_lawful_basis/3, pdpl_consent_valid/3, pdpl_processing_controls/3]).
+:- use_module(m__ae_uae_pdpl_lawful_processing_and_consent_citations, [implements/1]).
+
+uae_pdpl_lawful_processing_and_consent_profile_keys([processing_date, consent_given, consent_specific_clear_and_unambiguous, controller_able_to_prove_consent, consent_clear_simple_unambiguous_and_easily_accessible, consent_includes_right_to_withdraw_easily, consent_withdrawn_before_processing, necessary_to_protect_public_interest, personal_data_made_available_and_known_to_all_by_data_subject, necessary_for_legal_claims_defence_of_rights_or_judicial_or_security_procedures, necessary_for_occupational_or_preventive_medicine_or_health_or_social_care, necessary_to_protect_public_health, necessary_for_archival_purposes_or_scientific_historical_or_statistical_studies, necessary_to_protect_interests_of_data_subject, necessary_for_employment_social_security_or_social_protection_obligations_and_rights, necessary_for_contract_with_data_subject, necessary_for_specific_obligations_of_controller_under_other_laws, processed_fairly_transparently_and_lawfully, collected_for_specific_and_clear_purpose, later_processing_compatible_with_purpose, sufficient_and_limited_to_what_is_necessary, accurate_correct_and_updated, measures_taken_to_delete_or_correct_incorrect_data, kept_securely, not_kept_after_purpose_exhausted]).
+
+uae_pdpl_lawful_processing_and_consent_what_if(Profile, OverriddenKey, NewValue, NewStatus) :-
+    attributes_with(Profile, OverriddenKey, NewValue, Hypothesis),
+    uae_pdpl_lawful_processing_and_consent_status(Hypothesis, NewStatus).
+
+attributes_with(Attributes, OverriddenKey, NewValue, Hypothesis) :-
+    attributes_without(Attributes, OverriddenKey, Remaining),
+    append(Remaining, [attribute(OverriddenKey, NewValue)], Hypothesis).
+
+attributes_without([], _, []).
+attributes_without([attribute(ElementKey, _)|Elements], OverriddenKey, Remaining) :-
+    ElementKey == OverriddenKey,
+    attributes_without(Elements, OverriddenKey, Remaining).
+attributes_without([attribute(ElementKey, Value)|Elements], OverriddenKey, [attribute(ElementKey, Value)|Remaining]) :-
+    ElementKey \== OverriddenKey,
+    attributes_without(Elements, OverriddenKey, Remaining).
+
+status_class(allowed_with_consent, permits).
+status_class(allowed_without_consent(_Case), permits).
+status_class(not_allowed, prohibits).
+status_class(not_in_force, prohibits).
+status_class(indeterminate(_Keys), open).
+status_class(needs_legal_review(_Reason, _Context), open).
+status_class(input_problems(_Problems), open).
+
+overall_status([item(overall, Status, _Citations)|_Rows], Status).
+
+uae_pdpl_lawful_processing_and_consent_eligibility(Profile, eligible, Checklist) :-
+    implements(uae_pdpl_art_4),
+    uae_pdpl_lawful_processing_and_consent_checklist(Profile, Checklist),
+    overall_status(Checklist, Status),
+    status_class(Status, permits).
+uae_pdpl_lawful_processing_and_consent_eligibility(Profile, ineligible, Checklist) :-
+    implements(uae_pdpl_art_4),
+    uae_pdpl_lawful_processing_and_consent_checklist(Profile, Checklist),
+    overall_status(Checklist, Status),
+    status_class(Status, prohibits).
+uae_pdpl_lawful_processing_and_consent_eligibility(Profile, indeterminate, Checklist) :-
+    uae_pdpl_lawful_processing_and_consent_checklist(Profile, Checklist),
+    overall_status(Checklist, Status),
+    status_class(Status, open).
+
+uae_pdpl_lawful_processing_and_consent_justification(Profile, ItemId, Status, Citations) :-
+    uae_pdpl_lawful_processing_and_consent_checklist(Profile, Checklist),
+    member(item(ItemId, Status, Citations), Checklist).
+
+allowed_with_consent :-
+    implements(uae_pdpl_art_4).
+
+not_allowed :-
+    implements(uae_pdpl_art_4).
+
+not_in_force :-
+    implements(uae_pdpl_art_31).
+
+public_interest :-
+    implements(uae_pdpl_art_4_1).
+
+data_made_public_by_data_subject :-
+    implements(uae_pdpl_art_4_2).
+
+legal_claims_and_judicial_or_security_procedures :-
+    implements(uae_pdpl_art_4_3).
+
+occupational_or_preventive_medicine_and_health_or_social_care :-
+    implements(uae_pdpl_art_4_4).
+
+public_health :-
+    implements(uae_pdpl_art_4_5).
+
+archival_scientific_historical_or_statistical_purposes :-
+    implements(uae_pdpl_art_4_6).
+
+interests_of_data_subject :-
+    implements(uae_pdpl_art_4_7).
+
+employment_social_security_and_social_protection :-
+    implements(uae_pdpl_art_4_8).
+
+contract_with_data_subject :-
+    implements(uae_pdpl_art_4_9).
+
+obligations_under_other_laws :-
+    implements(uae_pdpl_art_4_10).
+
+valid :-
+    implements(uae_pdpl_art_6_1).
+
+consent_not_given :-
+    implements(uae_pdpl_art_1_consent).
+
+consent_not_specific_clear_and_unambiguous :-
+    implements(uae_pdpl_art_1_consent).
+
+controller_cannot_prove_consent :-
+    implements(uae_pdpl_art_6_1_a).
+
+consent_not_clear_simple_and_easily_accessible :-
+    implements(uae_pdpl_art_6_1_b).
+
+consent_omits_easy_withdrawal_right :-
+    implements(uae_pdpl_art_6_1_c).
+
+consent_withdrawn :-
+    implements(uae_pdpl_art_6_2).
+
+meets_listed_controls :-
+    implements(uae_pdpl_art_5).
+
+control_1_fair_transparent_and_lawful :-
+    implements(uae_pdpl_art_5_1).
+
+control_2_specific_and_clear_purpose :-
+    implements(uae_pdpl_art_5_2).
+
+control_2_no_incompatible_later_processing :-
+    implements(uae_pdpl_art_5_2).
+
+control_3_sufficient_and_limited :-
+    implements(uae_pdpl_art_5_3).
+
+control_4_accurate_and_updated :-
+    implements(uae_pdpl_art_5_4).
+
+control_5_incorrect_data_deleted_or_corrected :-
+    implements(uae_pdpl_art_5_5).
+
+control_6_kept_securely :-
+    implements(uae_pdpl_art_5_6).
+
+control_7_not_kept_after_purpose_exhausted :-
+    implements(uae_pdpl_art_5_7).
+
+processing_date.
+
+consent_given.
+
+consent_specific_clear_and_unambiguous.
+
+controller_able_to_prove_consent.
+
+consent_clear_simple_unambiguous_and_easily_accessible.
+
+consent_includes_right_to_withdraw_easily.
+
+consent_withdrawn_before_processing.
+
+necessary_to_protect_public_interest.
+
+personal_data_made_available_and_known_to_all_by_data_subject.
+
+necessary_for_legal_claims_defence_of_rights_or_judicial_or_security_procedures.
+
+necessary_for_occupational_or_preventive_medicine_or_health_or_social_care.
+
+necessary_to_protect_public_health.
+
+necessary_for_archival_purposes_or_scientific_historical_or_statistical_studies.
+
+necessary_to_protect_interests_of_data_subject.
+
+necessary_for_employment_social_security_or_social_protection_obligations_and_rights.
+
+necessary_for_contract_with_data_subject.
+
+necessary_for_specific_obligations_of_controller_under_other_laws.
+
+processed_fairly_transparently_and_lawfully.
+
+collected_for_specific_and_clear_purpose.
+
+later_processing_compatible_with_purpose.
+
+sufficient_and_limited_to_what_is_necessary.
+
+accurate_correct_and_updated.
+
+measures_taken_to_delete_or_correct_incorrect_data.
+
+kept_securely.
+
+not_kept_after_purpose_exhausted.
+
+unsure.
+
+allowed_without_consent(Case) :-
+    implements(uae_pdpl_art_4),
+    member(Case, [public_interest, data_made_public_by_data_subject, legal_claims_and_judicial_or_security_procedures, occupational_or_preventive_medicine_and_health_or_social_care, public_health, archival_scientific_historical_or_statistical_purposes, interests_of_data_subject, employment_social_security_and_social_protection, contract_with_data_subject, obligations_under_other_laws]).
+
+not_valid(FailureAtom) :-
+    implements(uae_pdpl_art_6_1),
+    member(FailureAtom, [consent_not_given, consent_not_specific_clear_and_unambiguous, controller_cannot_prove_consent, consent_not_clear_simple_and_easily_accessible, consent_omits_easy_withdrawal_right, consent_withdrawn]).
+
+fails_control(FailureAtom) :-
+    implements(uae_pdpl_art_5),
+    member(FailureAtom, [control_1_fair_transparent_and_lawful, control_2_specific_and_clear_purpose, control_2_no_incompatible_later_processing, control_3_sufficient_and_limited, control_4_accurate_and_updated, control_5_incorrect_data_deleted_or_corrected, control_6_kept_securely, control_7_not_kept_after_purpose_exhausted]).
+
+indeterminate([MissingKey]) :-
+    uae_pdpl_lawful_processing_and_consent_profile_keys(Keys),
+    member(MissingKey, Keys).
+
+open_textured(UnsureKey, cite(CitationKey)) :-
+    uae_pdpl_lawful_processing_and_consent_profile_keys(Keys),
+    member(UnsureKey, Keys),
+    atom(CitationKey).
+
+needs_legal_review(open_textured(UnsureKey, Citation), [inputs_relied_on(Pairs)|_Rest]) :-
+    open_textured(UnsureKey, Citation),
+    inputs_relied_on(Pairs).
+
+inputs_relied_on([_Pair|_Pairs]).
+
+input_problems([_Problem|_Problems]).
+
+wrong_type(profile).
+wrong_type(ContractKey) :-
+    uae_pdpl_lawful_processing_and_consent_profile_keys(Keys),
+    member(ContractKey, Keys).
+
+duplicate_key(ContractKey) :-
+    uae_pdpl_lawful_processing_and_consent_profile_keys(Keys),
+    member(ContractKey, Keys).
+
+query_test_profile([attribute(processing_date, date(2023, 6, 1)), attribute(consent_given, true), attribute(consent_specific_clear_and_unambiguous, true), attribute(controller_able_to_prove_consent, true), attribute(consent_clear_simple_unambiguous_and_easily_accessible, true), attribute(consent_includes_right_to_withdraw_easily, true), attribute(consent_withdrawn_before_processing, false)]).
+
+test(valid_consent_is_eligible_once) :-
+    query_test_profile(Profile),
+    findall(Label, uae_pdpl_lawful_processing_and_consent_eligibility(Profile, Label, _), Labels),
+    Labels == [eligible].
+test(an_absent_date_is_indeterminate) :-
+    uae_pdpl_lawful_processing_and_consent_eligibility([attribute(consent_given, true)], indeterminate, _).
+test(the_in_force_item_cites_article_31) :-
+    query_test_profile(Profile),
+    uae_pdpl_lawful_processing_and_consent_justification(Profile, in_force, met, [cite(uae_pdpl_art_31)]).
+test(a_case_constructor_recognises_a_case) :-
+    allowed_without_consent(public_health).
+test(the_judgement_value_is_a_root_atom) :-
+    unsure.
+test(what_if_withdrawal_makes_consent_fail) :-
+    query_test_profile(Profile),
+    findall(Status, uae_pdpl_lawful_processing_and_consent_what_if(Profile, consent_withdrawn_before_processing, true, Status), Statuses),
+    Statuses == [indeterminate([necessary_to_protect_public_interest])].
+
+test(valid_consent_is_not_ineligible, fail) :-
+    query_test_profile(Profile),
+    uae_pdpl_lawful_processing_and_consent_eligibility(Profile, ineligible, _).
+test(a_case_constructor_refuses_a_failure_atom, fail) :-
+    allowed_without_consent(consent_withdrawn).

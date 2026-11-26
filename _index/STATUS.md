@@ -13,6 +13,8 @@ The 8 domains of the first release have a provision-tracking ledger. The domains
 
 | Domain | Tests passed | Provision tracking | Citations | Parameters | Provenance |
 |---|---|---|---|---|---|
+| `ae/uae_pdpl_lawful_processing_and_consent` | 170/170 | none (no provision-tracking ledger) | pass | pass | pass |
+| `ae/uae_pdpl_scope_and_exclusions` | 191/191 | none (no provision-tracking ledger) | pass | pass | pass |
 | `ch/swiss_fadp_art24_breach_notification` | 192/192 | none (no provision-tracking ledger) | pass | pass | pass |
 | `ch/swiss_fadp_s1_international_transfers` | 193/193 | none (no provision-tracking ledger) | pass | pass | pass |
 | `ch/swiss_fadp_s2_information_duties_and_dpia` | 189/189 | none (no provision-tracking ledger) | pass | pass | pass |

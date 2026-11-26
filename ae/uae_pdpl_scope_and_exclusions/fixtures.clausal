@@ -1,0 +1,179 @@
+% SPDX-License-Identifier: EUPL-1.2
+% =====================================================================
+% fixtures.clausal -- representative profiles for ae/uae_pdpl_scope_and_exclusions.
+% A TOP-LAYER consumer: it imports only the slice predicate it calls.
+%
+% A profile is an ATTRIBUTE LIST [attribute(Key, Value), ...] (the order's typed
+% input contract); dates are date(Y, M, D) terms. Every route of pdpl_applies has
+% a positive subject and a one-unit near-miss control:
+%   - Art 31: 2 January 2022 (applies) against 1 January 2022 (not_in_force),
+%     and the contract ends, year 1 and 31 December 9999;
+%   - Art 1: processing of personal data false (does_not_apply) against true;
+%   - Art 2(1): all three ways false (does_not_apply) against one way true;
+%   - Art 2(2)(a)-(g): each exclusion true (does_not_apply) against all false;
+%   - each missing key and each unsure judgement against its filled control;
+%   - input problems: 29 February 2021 against 29 February 2024, a duplicate
+%     key and an unknown key.
+% Fixtures carry no provenance markers.
+% =====================================================================
+
+:- module(fixtures, [
+    uae_pdpl_scope_and_exclusions_subject/1,
+    uae_pdpl_scope_and_exclusions_profile_for/2,
+    uae_pdpl_scope_and_exclusions_assess/2
+]).
+
+:- use_module(ae/uae_pdpl_scope_and_exclusions/uae_pdpl_scope_and_exclusions, [decide_uae_pdpl_scope_and_exclusions/2]).
+
+% ---- Subject registry ------------------------------------------------
+uae_pdpl_scope_and_exclusions_subject(applies_on_commencement_day).
+uae_pdpl_scope_and_exclusions_subject(not_in_force_on_day_before_commencement).
+uae_pdpl_scope_and_exclusions_subject(not_in_force_in_year_one).
+uae_pdpl_scope_and_exclusions_subject(applies_on_last_contract_day).
+uae_pdpl_scope_and_exclusions_subject(not_processing_of_personal_data).
+uae_pdpl_scope_and_exclusions_subject(no_way_of_scope_met).
+uae_pdpl_scope_and_exclusions_subject(foreign_controller_with_data_subject_inside_state).
+uae_pdpl_scope_and_exclusions_subject(resident_controller_with_data_subjects_abroad).
+uae_pdpl_scope_and_exclusions_subject(government_data_excluded).
+uae_pdpl_scope_and_exclusions_subject(governmental_entity_excluded).
+uae_pdpl_scope_and_exclusions_subject(security_or_judicial_authorities_excluded).
+uae_pdpl_scope_and_exclusions_subject(personal_purposes_excluded).
+uae_pdpl_scope_and_exclusions_subject(health_data_with_own_legislation_excluded).
+uae_pdpl_scope_and_exclusions_subject(banking_or_credit_data_with_own_legislation_excluded).
+uae_pdpl_scope_and_exclusions_subject(free_zone_establishment_excluded).
+uae_pdpl_scope_and_exclusions_subject(processing_date_missing).
+uae_pdpl_scope_and_exclusions_subject(processing_judgement_missing).
+uae_pdpl_scope_and_exclusions_subject(free_zone_judgement_missing).
+uae_pdpl_scope_and_exclusions_subject(way_keys_missing).
+uae_pdpl_scope_and_exclusions_subject(controller_residence_missing).
+uae_pdpl_scope_and_exclusions_subject(processing_judgement_unsure).
+uae_pdpl_scope_and_exclusions_subject(free_zone_judgement_unsure).
+uae_pdpl_scope_and_exclusions_subject(government_data_unsure_with_free_zone_missing).
+uae_pdpl_scope_and_exclusions_subject(impossible_processing_date).
+uae_pdpl_scope_and_exclusions_subject(leap_day_processing_date).
+uae_pdpl_scope_and_exclusions_subject(duplicate_data_subject_inside_state).
+uae_pdpl_scope_and_exclusions_subject(unknown_key_colour).
+
+% ---- The applying baseline (root_exports order) ----------------------
+applying_base_profile([
+    attribute(processing_date, date(2022, 1, 2)),
+    attribute(activity_is_processing_of_personal_data, true),
+    attribute(personal_data_is_government_data, false),
+    attribute(governmental_entity_controls_or_processes, false),
+    attribute(personal_data_held_by_security_or_judicial_authorities, false),
+    attribute(data_subject_processing_own_data_for_personal_purposes, false),
+    attribute(personal_health_data_with_own_protection_legislation, false),
+    attribute(personal_banking_or_credit_data_with_own_protection_legislation, false),
+    attribute(free_zone_company_or_establishment_with_own_data_protection_legislation, false),
+    attribute(data_subject_resides_or_has_place_of_business_in_state, true),
+    attribute(controller_or_processor_resides_in_state, false),
+    attribute(data_subject_inside_state, false)
+]).
+
+% ---- List plumbing (keeps root_exports order) ------------------------
+fixture_with_value(Profile, AttributeKey, NewValue, NewProfile) :-
+    maplist(replaced_attribute(AttributeKey, NewValue), Profile, NewProfile).
+
+replaced_attribute(AttributeKey, NewValue, attribute(OtherKey, _), attribute(AttributeKey, NewValue)) :-
+    OtherKey == AttributeKey.
+replaced_attribute(AttributeKey, _, attribute(OtherKey, OldValue), attribute(OtherKey, OldValue)) :-
+    OtherKey \== AttributeKey.
+
+fixture_without_key(Profile, AttributeKey, NewProfile) :-
+    exclude(attribute_has_key(AttributeKey), Profile, NewProfile).
+
+attribute_has_key(AttributeKey, attribute(OtherKey, _)) :-
+    OtherKey == AttributeKey.
+
+base_with(AttributeKey, NewValue, Profile) :-
+    applying_base_profile(BaseProfile),
+    fixture_with_value(BaseProfile, AttributeKey, NewValue, Profile).
+
+base_without(AttributeKey, Profile) :-
+    applying_base_profile(BaseProfile),
+    fixture_without_key(BaseProfile, AttributeKey, Profile).
+
+% ---- Profiles --------------------------------------------------------
+
+% Art 31: the commencement day and the day before.
+uae_pdpl_scope_and_exclusions_profile_for(applies_on_commencement_day, Profile) :-
+    applying_base_profile(Profile).
+uae_pdpl_scope_and_exclusions_profile_for(not_in_force_on_day_before_commencement, Profile) :-
+    base_with(processing_date, date(2022, 1, 1), Profile).
+uae_pdpl_scope_and_exclusions_profile_for(not_in_force_in_year_one, Profile) :-
+    base_with(processing_date, date(1, 1, 1), Profile).
+uae_pdpl_scope_and_exclusions_profile_for(applies_on_last_contract_day, Profile) :-
+    base_with(processing_date, date(9999, 12, 31), Profile).
+
+% Art 1: not processing of personal data (control: the baseline).
+uae_pdpl_scope_and_exclusions_profile_for(not_processing_of_personal_data, Profile) :-
+    base_with(activity_is_processing_of_personal_data, false, Profile).
+
+% Art 2(1): no way met, against one way met.
+uae_pdpl_scope_and_exclusions_profile_for(no_way_of_scope_met, Profile) :-
+    base_with(data_subject_resides_or_has_place_of_business_in_state, false, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(foreign_controller_with_data_subject_inside_state, Profile) :-
+    base_with(data_subject_resides_or_has_place_of_business_in_state, false, FirstProfile),
+    fixture_with_value(FirstProfile, data_subject_inside_state, true, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(resident_controller_with_data_subjects_abroad, Profile) :-
+    base_with(data_subject_resides_or_has_place_of_business_in_state, false, FirstProfile),
+    fixture_with_value(FirstProfile, controller_or_processor_resides_in_state, true, Profile).
+
+% Art 2(2)(a)-(g): each exclusion true (control: the baseline, all false).
+uae_pdpl_scope_and_exclusions_profile_for(government_data_excluded, Profile) :-
+    base_with(personal_data_is_government_data, true, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(governmental_entity_excluded, Profile) :-
+    base_with(governmental_entity_controls_or_processes, true, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(security_or_judicial_authorities_excluded, Profile) :-
+    base_with(personal_data_held_by_security_or_judicial_authorities, true, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(personal_purposes_excluded, Profile) :-
+    base_with(data_subject_processing_own_data_for_personal_purposes, true, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(health_data_with_own_legislation_excluded, Profile) :-
+    base_with(personal_health_data_with_own_protection_legislation, true, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(banking_or_credit_data_with_own_legislation_excluded, Profile) :-
+    base_with(personal_banking_or_credit_data_with_own_protection_legislation, true, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(free_zone_establishment_excluded, Profile) :-
+    base_with(free_zone_company_or_establishment_with_own_data_protection_legislation, true, Profile).
+
+% Missing keys (control: the baseline, every key present).
+uae_pdpl_scope_and_exclusions_profile_for(processing_date_missing, Profile) :-
+    base_without(processing_date, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(processing_judgement_missing, Profile) :-
+    base_without(activity_is_processing_of_personal_data, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(free_zone_judgement_missing, Profile) :-
+    base_without(free_zone_company_or_establishment_with_own_data_protection_legislation, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(way_keys_missing, Profile) :-
+    base_without(data_subject_resides_or_has_place_of_business_in_state, FirstProfile),
+    fixture_without_key(FirstProfile, controller_or_processor_resides_in_state, SecondProfile),
+    fixture_without_key(SecondProfile, data_subject_inside_state, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(controller_residence_missing, Profile) :-
+    base_with(data_subject_resides_or_has_place_of_business_in_state, false, FirstProfile),
+    fixture_without_key(FirstProfile, controller_or_processor_resides_in_state, Profile).
+
+% Unsure judgements, and an unsure one behind a missing key.
+uae_pdpl_scope_and_exclusions_profile_for(processing_judgement_unsure, Profile) :-
+    base_with(activity_is_processing_of_personal_data, unsure, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(free_zone_judgement_unsure, Profile) :-
+    base_with(free_zone_company_or_establishment_with_own_data_protection_legislation, unsure, Profile).
+uae_pdpl_scope_and_exclusions_profile_for(government_data_unsure_with_free_zone_missing, Profile) :-
+    base_with(personal_data_is_government_data, unsure, FirstProfile),
+    fixture_without_key(FirstProfile, free_zone_company_or_establishment_with_own_data_protection_legislation, Profile).
+
+% Input problems, against a well-formed near-miss.
+uae_pdpl_scope_and_exclusions_profile_for(impossible_processing_date, Profile) :-
+    base_with(processing_date, date(2021, 2, 29), Profile).
+uae_pdpl_scope_and_exclusions_profile_for(leap_day_processing_date, Profile) :-
+    base_with(processing_date, date(2024, 2, 29), Profile).
+uae_pdpl_scope_and_exclusions_profile_for(duplicate_data_subject_inside_state, Profile) :-
+    applying_base_profile(BaseProfile),
+    append(BaseProfile, [attribute(data_subject_inside_state, true)], Profile).
+uae_pdpl_scope_and_exclusions_profile_for(unknown_key_colour, Profile) :-
+    applying_base_profile(BaseProfile),
+    append(BaseProfile, [attribute(colour, red)], Profile).
+
+% ---- Convenience wrapper ---------------------------------------------
+uae_pdpl_scope_and_exclusions_assess(Subject, Result) :-
+    uae_pdpl_scope_and_exclusions_profile_for(Subject, Profile),
+    decide_uae_pdpl_scope_and_exclusions(Profile, Result).
+
+:- end_module(fixtures).

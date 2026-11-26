@@ -41,7 +41,7 @@ ACTS = {
 }
 KEY = re.compile(r'^(eu_(?:reg|dir)_\d{4}_\d+|ch_fadp|cn_pipl|uk_gdpr|in_dpdp_act_2023)_(?:art|s)_(\d+)')
 PLACE = {'eu': 'EU', 'ch': 'Switzerland', 'cn': 'China', 'ind': 'India', 'sg': 'Singapore', 'uk': 'United Kingdom',
-         'us': 'United States'}
+         'us': 'United States', 'ae': 'United Arab Emirates'}
 
 
 def rule_set_folders():

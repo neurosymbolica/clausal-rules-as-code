@@ -1,0 +1,441 @@
+# SPDX-License-Identifier: EUPL-1.2
+id: ae/uae_pdpl_scope_and_exclusions
+shape_family: deontic
+kit_version: "0.1.0"
+# The domain's .clausal file set, in import-DAG order (determination slices
+# over a shared kernel). SINGLE SOURCE OF TRUTH for the module list: the
+# scaffold writes it, and auto/pkginit.py (package facade), auto/phases.py
+# (per-phase file lists) and auto/gates.py (atom hints) all read it from
+# here. Keep it exact -- a module you drop from this list stops being
+# re-exported by the generated package facade (__init__.clausal).
+modules:
+  - "kernel"
+  - "citations"
+  - "parameters"
+  - "uae_pdpl_scope_and_exclusions"
+  - "queries"
+  - "fixtures"
+# public_interface: name/arity PREDICATES, grouped per submodule, plus the
+# ROOT EXPORTS (bare atoms the scorer reads as package-root attributes: the
+# result atoms, the judgement value unsure and the twelve profile keys),
+# exported by queries.clausal. Keep in sync with the :- module(...) export
+# lists re-exported via the package facade __init__.clausal.
+public_interface:
+  # -- kernel.clausal --
+  - "uae_pdpl_scope_and_exclusions_input_problems/2"
+  # -- citations.clausal --
+  - "citation/2"
+  # -- uae_pdpl_scope_and_exclusions.clausal --
+  - "pdpl_applies/3"
+  - "pdpl_in_force/3"
+  - "decide_uae_pdpl_scope_and_exclusions/2"
+  - "uae_pdpl_scope_and_exclusions_status/2"
+  - "uae_pdpl_scope_and_exclusions_checklist/2"
+  - "uae_pdpl_scope_and_exclusions_decision_resolvable/1"
+  - "uae_pdpl_scope_and_exclusions_status_values/1"
+  # -- queries.clausal --
+  - "uae_pdpl_scope_and_exclusions_profile_keys/1"
+  - "uae_pdpl_scope_and_exclusions_what_if/4"
+  - "indeterminate/1"
+  - "needs_legal_review/2"
+  - "open_textured/2"
+  - "inputs_relied_on/1"
+  - "provenance/2"
+  - "input_problems/1"
+  - "unknown_key/1"
+  - "wrong_type/1"
+  - "duplicate_key/1"
+  # -- queries.clausal: root exports (bare atoms) --
+  - "applies"
+  - "does_not_apply"
+  - "not_in_force"
+  - "in_force"
+  - "unsure"
+  - "processing_date"
+  - "activity_is_processing_of_personal_data"
+  - "personal_data_is_government_data"
+  - "governmental_entity_controls_or_processes"
+  - "personal_data_held_by_security_or_judicial_authorities"
+  - "data_subject_processing_own_data_for_personal_purposes"
+  - "personal_health_data_with_own_protection_legislation"
+  - "personal_banking_or_credit_data_with_own_protection_legislation"
+  - "free_zone_company_or_establishment_with_own_data_protection_legislation"
+  - "data_subject_resides_or_has_place_of_business_in_state"
+  - "controller_or_processor_resides_in_state"
+  - "data_subject_inside_state"
+  # -- fixtures.clausal --
+  - "uae_pdpl_scope_and_exclusions_subject/1"
+  - "uae_pdpl_scope_and_exclusions_profile_for/2"
+  - "uae_pdpl_scope_and_exclusions_assess/2"
+
+# Independence classification: no external scorer yet -- the only check is a
+# same-author differential one. Upgrade when an external anchor lands.
+independence: no_external_scorer
+
+# Reuse-declaration lever: dotted module paths of shared backbone packages this
+# domain imports. None: only the kit's formalize_lib is used.
+uses: []
+
+scope: >-
+  Whether Federal Decree by Law No. (45) of 2021 Concerning the Protection of
+  Personal Data (UAE PDPL) applies to ONE processing of personal data on ONE
+  day, processing_date (a date, year 1 to 9999, both ends): pdpl_applies reads
+  Art 2(1) (three ways: a data subject residing or having a place of business
+  in the State; a controller or processor residing in the State; one residing
+  outside the State processing data of data subjects inside it) and Art 2(2)
+  (seven exclusions, each a caller judgement), with the Art 1 definitions of
+  Personal Data and Processing (a caller judgement) and Art 31 (in force as of
+  2 January 2022, that day included); pdpl_in_force reads Art 31 only. An
+  unsure judgement is handed to a lawyer (needs_legal_review, open_textured);
+  a missing key is named first. Out of scope and NAMED GAPS: Art 3 (Bureau
+  exemption), Art 28 (Executive Regulations, not known to be issued), Art 29
+  (regularisation period), Art 30 (repeals); Arts 4 to 27 are left to other
+  orders; the free-zone regimes (DIFC, ADGM) and the health, banking and credit
+  legislation of Art 2(2)(e) to (g) are not read. The English translation is
+  read; the Arabic text, which prevails, is not.
+
+sources:
+  - "Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data (UAE PDPL), English translation, UAE legislation portal https://uaelegislation.gov.ae/en/legislations/1972/download, saved 2026-11-25 (the Arabic text prevails; it is not read): Art 1 (Personal Data, Processing), Art 2(1)(a)-(c), Art 2(2)(a)-(g), Art 31"
+  - "Same instrument, quoted as named gaps and not formalised: Art 1 (other definitions), Art 3, Art 28, Art 29, Art 30"
+
+query_interface:
+  2: "pdpl_applies/3"                                  # eligibility: applies / does_not_apply / not_in_force, or a status compound
+  7: "uae_pdpl_scope_and_exclusions_checklist/2"       # justification: checklist items, each with cite(...)
+  16: "uae_pdpl_scope_and_exclusions_what_if/4"        # what_if: re-evaluate under an overridden key
+
+deferred_set:
+- what: lead_in_of_article_1
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1
+  reason: The heading of Art 1 and its lead-in words ('[quotation omitted]
+    [quotation omitted]
+    [quotation omitted]') carry the definitions; the order reads the definitions it needs through
+    the caller's keys and cites Personal Data and Processing.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: definitions_relied_on_by_readings
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_state
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_office
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_data
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_sensitive_personal_data
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_data_subject
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_establishment
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_controller
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_processor
+  reason: 'Art 1 State, Office, Data, Sensitive Personal Data, Data Subject, Establishment,
+    Controller and Processor are quoted because readings (5), (6), (8), (10), (11)
+    and (14) rely on them; no limb cites them: the caller''s keys carry the facts
+    they define.'
+  consequence: 'None for a caller: the keys of Art 2(1) and Art 2(2) carry them; reading
+    (8) and Q1 name the government-owned company point of Establishment.'
+  declaration: answered_with_caveat
+  debt: true
+- what: definitions_not_read
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_biometric_data
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_data_protection_officer
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_automated_processing
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_personal_data_security
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_pseudonymisation
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_anonymization
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_data_breach
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_profiling
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_cross_border_processing
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art1_consent
+  reason: The other definitions of Art 1 (Biometric Data, Data Protection Officer,
+    Automated Processing, Personal Data Security, Pseudonymisation, Anonymization,
+    Data Breach, Profiling, Cross-Border Processing, Consent) define words of Arts
+    4 to 27, which this order does not read; whether pseudonymised or anonymised data
+    is still personal data is read inside the judgement activity_is_processing_of_personal_data
+    (reading (2), Q7).
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  debt: true
+- what: heading_of_article_2
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art2
+  reason: The unit holds only the heading of Art [quotation omitted]
+    [quotation omitted]'); every limb cites the paragraph or item it reads. Document structure.
+  consequence: None for a caller of this order.
+  declaration: not_an_exception
+  not_formalized_because: structural
+- what: bureau_power_of_exemption
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art3
+  reason: 'Art 3 lets the Bureau [quotation omitted]
+    [quotation omitted]
+    [quotation omitted]''. The Executive
+    Regulations are not known to be issued and no Bureau decision or list is known,
+    so ''a large volume'' has no stated measure and whether an exemption was granted
+    is unknown. A NAMED GAP, not formalised: no query reads it (reading (13), Q12);
+    see the Executive Regulations.'
+  consequence: applies and in_force never say whether the Bureau has exempted an establishment
+    from part or all of the requirements.
+  declaration: answered_with_caveat
+  debt: true
+- what: lawful_processing_consent_and_controller_duties
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_5
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_6
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_7
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_8
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_9
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_10
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art4_11
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_5
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_6
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_7
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art5_8
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art6
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art6_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art6_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art6_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art6_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art6_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7_5
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7_6
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art7_7
+  reason: Arts 4 to 7 (processing without consent, processing controls, terms of consent,
+    the controller's general obligations; several duties left to the Executive Regulations)
+    are left to other orders on this Decree-Law (none yet promoted) or not formalised
+    at all; not read here.
+  consequence: applies never says that a processing is lawful or that a duty is met.
+  declaration: not_an_exception
+  debt: true
+- what: processor_breach_and_data_protection_officer
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_5
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_6
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_7
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_8
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_9
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_10
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art8_11
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_1_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_1_e
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_1_f
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art9_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art10_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11_1_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11_1_e
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art11_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art12
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art12_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art12_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art12_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art12_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art12_1_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art12_2
+  reason: Arts 8 to 12 (the processor's general obligations, reporting a personal
+    data breach, appointing the Data Protection Officer, its roles and the duties
+    towards it; several left to the Executive Regulations) are left to other orders
+    on this Decree-Law (none yet promoted) or not formalised at all; not read here.
+  consequence: None for a caller of this order beyond its scope answers.
+  declaration: not_an_exception
+  debt: true
+- what: rights_of_data_subjects
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_e
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_f
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_g
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_h
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_1_i
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_3_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_3_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_3_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art13_3_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art14
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art14_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art14_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_2_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_2_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_2_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_2_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_3_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_3_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_3_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art15_3_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_3_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_3_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_3_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_3_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art16_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art17
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art17_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art17_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art17_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18_2_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18_2_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18_2_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art18_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art19
+  reason: 'Arts 13 to 19 (the data subject''s rights: information, transfer, correction
+    or erasure, restriction, stopping processing, automated processing, contacting
+    the controller) are left to other orders on this Decree-Law (none yet promoted)
+    or not formalised at all; not read here.'
+  consequence: None for a caller of this order beyond its scope answers.
+  declaration: not_an_exception
+  debt: true
+- what: security_and_impact_assessment
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_1_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_2_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art20_2_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_2_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_2_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_3_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_3_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_3_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_3_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_4
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_5
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_6
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art21_7
+  reason: Arts 20 and 21 (personal data security and the impact assessment) are left
+    to other orders on this Decree-Law (none yet promoted) or not formalised at all;
+    not read here.
+  consequence: None for a caller of this order beyond its scope answers.
+  declaration: not_an_exception
+  debt: true
+- what: cross_border_transfer
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art22
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art22_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art22_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_1_a
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_1_b
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_1_c
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_1_d
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_1_e
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_1_f
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art23_2
+  reason: Arts 22 and 23 (cross-border transfer where an adequate protection level
+    is or is not available; part left to the Executive Regulations) are left to other
+    orders on this Decree-Law (none yet promoted) or not formalised at all; not read
+    here.
+  consequence: None for a caller of this order beyond its scope answers.
+  declaration: not_an_exception
+  debt: true
+- what: complaints_grievances_penalties_and_authorisation
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art24
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art24_1
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art24_2
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art24_3
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art25
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art26
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art27
+  reason: Arts 24 to 27 (complaints to the Bureau, grievances against its decisions,
+    administrative penalties to be set by the Council of Ministers, and authorisation)
+    are left to other orders on this Decree-Law (none yet promoted) or not formalised
+    at all; not read here.
+  consequence: None for a caller of this order beyond its scope answers.
+  declaration: not_an_exception
+  debt: true
+- what: executive_regulations
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art28
+  reason: 'Art 28 requires the Council of Ministers to issue the Executive Regulations
+    within six months of the date the Decree-Law is promulgated. They are not known
+    to be issued (a MISSING FACT); no rule of this order rests on them. A NAMED
+    GAP: see the Executive Regulations (reading (13), Q12).'
+  consequence: No answer says whether the Executive Regulations are issued.
+  declaration: answered_with_caveat
+  debt: true
+- what: regularisation_period
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art29
+  reason: 'Art 29 gives controllers and processors no more than six months from the
+    issue of the Executive Regulations to regularise their status, which the Council
+    of Ministers may extend for another similar period. As the Executive Regulations
+    are not known to be issued, the period cannot be dated. A NAMED GAP, not formalised:
+    see the Executive Regulations (reading (13), Q12).'
+  consequence: in_force and applies never say whether the regularisation period has
+    begun or ended.
+  declaration: answered_with_caveat
+  debt: true
+- what: repeals
+  units:
+  - ae-pdpl-fdl-45-2021-en-uaelegislation#art30
+  reason: Art [quotation omitted] Decree-Law;
+    the repealed provisions are not named or pinned, and no answer of this order turns
+    on them (reading (13)).
+  consequence: No answer says which other provision is repealed.
+  declaration: not_an_exception
+  debt: true

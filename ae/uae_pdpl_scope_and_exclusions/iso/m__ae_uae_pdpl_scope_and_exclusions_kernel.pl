@@ -1,0 +1,258 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ae_uae_pdpl_scope_and_exclusions_kernel, [uae_pdpl_scope_and_exclusions_input_problems/2]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(library(reif), [memberd_t/3]).
+
+uae_pdpl_scope_and_exclusions_input_problems(Profile, Problems) :-
+    attribute_list_t(Profile, IsAttributeList),
+    profile_problems(IsAttributeList, Profile, Problems).
+
+profile_problems(false, _, [wrong_type(profile)]).
+profile_problems(true, Profile, Problems) :-
+    Keys = [processing_date, activity_is_processing_of_personal_data, personal_data_is_government_data, governmental_entity_controls_or_processes, personal_data_held_by_security_or_judicial_authorities, data_subject_processing_own_data_for_personal_purposes, personal_health_data_with_own_protection_legislation, personal_banking_or_credit_data_with_own_protection_legislation, free_zone_company_or_establishment_with_own_data_protection_legislation, data_subject_resides_or_has_place_of_business_in_state, controller_or_processor_resides_in_state, data_subject_inside_state],
+    unknown_keys(Profile, Keys, UnknownKeyProblems),
+    key_problems(Keys, Profile, UnknownKeyProblems, Problems).
+
+key_type(processing_date, date).
+key_type(activity_is_processing_of_personal_data, judgement).
+key_type(personal_data_is_government_data, judgement).
+key_type(governmental_entity_controls_or_processes, judgement).
+key_type(personal_data_held_by_security_or_judicial_authorities, judgement).
+key_type(data_subject_processing_own_data_for_personal_purposes, judgement).
+key_type(personal_health_data_with_own_protection_legislation, judgement).
+key_type(personal_banking_or_credit_data_with_own_protection_legislation, judgement).
+key_type(free_zone_company_or_establishment_with_own_data_protection_legislation, judgement).
+key_type(data_subject_resides_or_has_place_of_business_in_state, boolean).
+key_type(controller_or_processor_resides_in_state, boolean).
+key_type(data_subject_inside_state, boolean).
+
+earliest_contract_year(1).
+
+latest_contract_year(9999).
+
+attribute_list_t(Term, false) :-
+    var(Term).
+attribute_list_t(Term, true) :-
+    Term == [].
+attribute_list_t(Term, T) :-
+    nonvar(Term),
+    Term = [Element|Elements],
+    attribute_t(Element, ElementIsAttribute),
+    attribute_list_t(Elements, ElementsAreAttributes),
+    truth_and(ElementIsAttribute, ElementsAreAttributes, T).
+attribute_list_t(Term, false) :-
+    nonvar(Term),
+    Term \== [],
+    Term \= [_|_].
+
+attribute_t(Element, false) :-
+    var(Element).
+attribute_t(Element, true) :-
+    nonvar(Element),
+    Element = attribute(_, _).
+attribute_t(Element, false) :-
+    nonvar(Element),
+    Element \= attribute(_, _).
+
+unknown_keys([], _, []).
+unknown_keys([attribute(Key, _)|Elements], Known, Problems) :-
+    known_t(Key, Known, IsKnown),
+    name_unknown_key(IsKnown, Key, Known, Elements, Problems).
+
+known_t(_, [], false).
+known_t(Key, [Known|_], true) :-
+    Known == Key.
+known_t(Key, [Known|Knowns], T) :-
+    Known \== Key,
+    known_t(Key, Knowns, T).
+
+name_unknown_key(true, _, Known, Elements, Problems) :-
+    unknown_keys(Elements, Known, Problems).
+name_unknown_key(false, Key, Known, Elements, [unknown_key(Key)|Problems]) :-
+    unknown_keys(Elements, [Key|Known], Problems).
+
+key_problems([], _, Problems, Problems).
+key_problems([Key|Keys], Profile, LaterProblems, Problems) :-
+    key_type(Key, Type),
+    key_occurrences(Profile, Key, Occurrences),
+    key_problems(Keys, Profile, LaterProblems, KeyProblems),
+    name_key_problem(Occurrences, Key, Type, Profile, KeyProblems, Problems).
+
+key_occurrences([], _, none).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey == Key,
+    key_occurrences(Elements, Key, RestOccurrences),
+    one_more_occurrence(RestOccurrences, Occurrences).
+key_occurrences([attribute(ElementKey, _)|Elements], Key, Occurrences) :-
+    ElementKey \== Key,
+    key_occurrences(Elements, Key, Occurrences).
+
+one_more_occurrence(none, one).
+one_more_occurrence(one, many).
+one_more_occurrence(many, many).
+
+name_key_problem(none, _, _, _, Problems, Problems).
+name_key_problem(many, Key, _, _, Problems, [duplicate_key(Key)|Problems]).
+name_key_problem(one, Key, Type, Profile, KeyProblems, Problems) :-
+    values_in_type_t(Profile, Key, Type, InType),
+    name_wrong_type(InType, Key, KeyProblems, Problems).
+
+name_wrong_type(true, _, Problems, Problems).
+name_wrong_type(false, Key, Problems, [wrong_type(Key)|Problems]).
+
+values_in_type_t([], _, _, true).
+values_in_type_t([attribute(ElementKey, Value)|Elements], Key, Type, T) :-
+    ElementKey == Key,
+    value_in_type_t(Type, Value, ValueInType),
+    values_in_type_t(Elements, Key, Type, RestInType),
+    truth_and(ValueInType, RestInType, T).
+values_in_type_t([attribute(ElementKey, _)|Elements], Key, Type, T) :-
+    ElementKey \== Key,
+    values_in_type_t(Elements, Key, Type, T).
+
+value_in_type_t(Type, Value, T) :-
+    term_variables(Value, Variables),
+    ground_value_in_type_t(Variables, Type, Value, T).
+
+ground_value_in_type_t([_|_], _, _, false).
+ground_value_in_type_t([], Type, Value, T) :-
+    in_type_t(Type, Value, T).
+
+in_type_t(judgement, Value, T) :-
+    in_type_t(one_of([boolean, enum([unsure])]), Value, T).
+in_type_t(boolean, Value, T) :-
+    memberd_t(Value, [true, false], T).
+in_type_t(date, Value, T) :-
+    calendar_date_t(Value, T).
+in_type_t(enum(Values), Value, T) :-
+    memberd_t(Value, Values, T).
+in_type_t(one_of(Types), Value, T) :-
+    in_some_type_t(Types, Value, T).
+
+truth_and(true, T, T).
+truth_and(false, _, false).
+
+in_some_type_t([], _, false).
+in_some_type_t([Type|Types], Value, T) :-
+    in_type_t(Type, Value, InType),
+    in_some_type_t(Types, Value, InAnother),
+    truth_or(InType, InAnother, T).
+
+truth_or(true, _, true).
+truth_or(false, T, T).
+
+integer_t(Value, true) :-
+    integer(Value).
+integer_t(Value, false) :-
+    float(Value).
+integer_t(Value, false) :-
+    atom(Value).
+integer_t(Value, false) :-
+    compound(Value).
+
+calendar_date_t(date(Year, Month, DayNumber), T) :-
+    integer_t(Year, YearIsInteger),
+    integer_t(Month, MonthIsInteger),
+    integer_t(DayNumber, DayNumberIsInteger),
+    truth_and(YearIsInteger, MonthIsInteger, YearAndMonthAreIntegers),
+    truth_and(YearAndMonthAreIntegers, DayNumberIsInteger, AllAreIntegers),
+    calendar_day_t(AllAreIntegers, Year, Month, DayNumber, T).
+calendar_date_t(Value, false) :-
+    Value \= date(_, _, _).
+
+calendar_day_t(false, _, _, _, false).
+calendar_day_t(true, Year, Month, DayNumber, T) :-
+    earliest_contract_year(EarliestYear),
+    latest_contract_year(LatestYear),
+    between_t(EarliestYear, LatestYear, Year, IsContractYear),
+    calendar_month_t(IsContractYear, Year, Month, DayNumber, T).
+
+calendar_month_t(false, _, _, _, false).
+calendar_month_t(true, Year, Month, DayNumber, T) :-
+    between_t(1, 12, Month, IsMonth),
+    day_of_month_t(IsMonth, Year, Month, DayNumber, T).
+
+day_of_month_t(false, _, _, _, false).
+day_of_month_t(true, Year, Month, DayNumber, T) :-
+    month_length(Year, Month, Length),
+    between_t(1, Length, DayNumber, T).
+
+between_t(Lowest, Highest, Number, true) :-
+    Number >= Lowest,
+    Number =< Highest.
+between_t(Lowest, _, Number, false) :-
+    Number < Lowest.
+between_t(_, Highest, Number, false) :-
+    Number > Highest.
+
+month_length(_, 1, 31).
+month_length(Year, 2, Length) :-
+    leap_year_t(Year, IsLeapYear),
+    february_length(IsLeapYear, Length).
+month_length(_, 3, 31).
+month_length(_, 4, 30).
+month_length(_, 5, 31).
+month_length(_, 6, 30).
+month_length(_, 7, 31).
+month_length(_, 8, 31).
+month_length(_, 9, 30).
+month_length(_, 10, 31).
+month_length(_, 11, 30).
+month_length(_, 12, 31).
+
+february_length(true, 29).
+february_length(false, 28).
+
+leap_year_t(Year, IsLeapYear) :-
+    FourYearRemainder is Year mod 4,
+    CenturyRemainder is Year mod 100,
+    FourCenturyRemainder is Year mod 400,
+    gregorian_leap_year_t(FourYearRemainder, CenturyRemainder, FourCenturyRemainder, IsLeapYear).
+
+gregorian_leap_year_t(_, _, 0, true).
+gregorian_leap_year_t(0, CenturyRemainder, _, true) :-
+    CenturyRemainder =\= 0.
+gregorian_leap_year_t(_, 0, FourCenturyRemainder, false) :-
+    FourCenturyRemainder =\= 0.
+gregorian_leap_year_t(FourYearRemainder, _, _, false) :-
+    FourYearRemainder =\= 0.
+
+test(an_empty_profile_has_no_problem) :-
+    uae_pdpl_scope_and_exclusions_input_problems([], []).
+test(the_last_contract_day_is_a_date) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(9999, 12, 31))], []).
+test(the_first_contract_day_is_a_date) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(1, 1, 1))], []).
+test(year_zero_is_wrong_type) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(0, 1, 1))], [wrong_type(processing_date)]).
+test(a_negative_year_is_wrong_type) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(-5, 1, 1))], [wrong_type(processing_date)]).
+test(year_ten_thousand_is_wrong_type) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(10000, 1, 1))], [wrong_type(processing_date)]).
+test(february_twenty_ninth_of_a_common_year_is_wrong_type) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(2021, 2, 29))], [wrong_type(processing_date)]).
+test(february_twenty_ninth_of_a_leap_year_is_a_date) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(2024, 2, 29))], []).
+test(a_crisp_key_given_unsure_is_wrong_type) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(data_subject_inside_state, unsure)], [wrong_type(data_subject_inside_state)]).
+test(a_judgement_given_unsure_is_well_typed) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(personal_data_is_government_data, unsure)], []).
+test(a_duplicate_key_is_named_once_without_wrong_type) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(data_subject_inside_state, true), attribute(data_subject_inside_state, banana)], [duplicate_key(data_subject_inside_state)]).
+test(problems_come_in_contract_order_then_unknown_keys) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(colour, red), attribute(data_subject_inside_state, maybe), attribute(processing_date, today)], [wrong_type(processing_date), wrong_type(data_subject_inside_state), unknown_key(colour)]).
+test(an_atom_is_not_an_attribute_list) :-
+    uae_pdpl_scope_and_exclusions_input_problems(profile, [wrong_type(profile)]).
+test(an_unbound_profile_is_not_an_attribute_list) :-
+    uae_pdpl_scope_and_exclusions_input_problems(_, [wrong_type(profile)]).
+test(an_unbound_value_of_a_contract_key_is_wrong_type) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, _)], [wrong_type(processing_date)]).
+test(the_input_check_has_one_answer) :-
+    findall(Problems, uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(2022, 1, 2))], Problems), Answers),
+    Answers == [[]].
+
+test(year_zero_is_not_well_typed, fail) :-
+    uae_pdpl_scope_and_exclusions_input_problems([attribute(processing_date, date(0, 1, 1))], []).

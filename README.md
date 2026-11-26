@@ -1,7 +1,7 @@
 # clausal-rules-as-code
 
 Laws written as executable logic programs. Each folder under a jurisdiction (`eu/`, `ch/`,
-`uk/`, `cn/`, `ind/`, `sg/`, `us/`) is one **domain**: one narrowly scoped legal question, drawn from
+`uk/`, `cn/`, `ind/`, `sg/`, `us/`, `ae/`) is one **domain**: one narrowly scoped legal question, drawn from
 one or a few articles (for example, *is this person a beneficial owner under AMLR Art 52?*, or
 *does this aid stay under the de minimis ceiling?*). No domain is a complete formalization of a
 statute. For each domain you get:
@@ -10,8 +10,8 @@ statute. For each domain you get:
   implements, and under `iso/` the same rules and tests as plain ISO Prolog (`*.pl`),
   generated from it;
 - the **tests** (`tests/`);
-- the **statute text it was written against** (`sources/`), pinned by URL and SHA-256 (the Singapore
-  domains carry no statute text: they link to Singapore Statutes Online instead, see `NOTICE`);
+- the **statute text it was written against** (`sources/`), pinned by URL and SHA-256 (the Singapore, Colorado, Texas and UAE
+  domains carry no statute text: they link to the official legislation sites instead, see `NOTICE`);
 - a **manifest** (`manifest.yaml`) stating the domain's scope, its public interface, and
   every provision it deliberately does not implement, with the reason and the consequence;
 - a **provision-tracking ledger** (`provisions.yaml`), for the eight domains listed below
@@ -32,7 +32,7 @@ Every domain folder added on 2026-11-16, 2026-11-18, 2026-11-21, 2026-11-22 or 2
 
 ## What is in it
 
-149 domains and 29,605 tests (29,574 in the domains, 31 in the shared procurement vocabulary),
+151 domains and 29,966 tests (29,935 in the domains, 31 in the shared procurement vocabulary),
 all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in force.
 
 | Area | Domains |
@@ -57,6 +57,7 @@ all passing on Clausal Prolog, Scryer Prolog and Trealla Prolog. All are law in 
 | India: Digital Personal Data Protection Act 2023 and Rules 2025 | 5 |
 | Singapore: GST registration, PDPA data breach notification, corporate service providers, small-company audit exemption, payment services licensing, securities offer exemptions | 6 |
 | United States: Virginia Consumer Data Protection Act, Colorado Privacy Act, Texas Data Privacy and Security Act | 3 |
+| United Arab Emirates: Personal Data Protection Law (Federal Decree-Law 45 of 2021): scope and exclusions, lawful processing and consent | 2 |
 
 `_index/STATUS.md` lists every domain with its test count and the result of each check.
 
@@ -91,6 +92,8 @@ accounts for how much of the statute each one covers, and no side-by-side report
 On 2026-11-20 6 Singapore domains were added. They quote no Singapore legislation: each citation record carries a label and a link to [Singapore Statutes Online](https://sso.agc.gov.sg), where the text can be read, and no statute text is pinned in the domain folder.
 
 The Colorado Privacy Act and Texas Data Privacy and Security Act domains, added on 2026-11-21, are published the same way: they quote no Colorado or Texas law, and their citation records give a label and a link to the Colorado Secretary of State and to the Texas Statutes site.
+
+The two United Arab Emirates domains (Personal Data Protection Law, Federal Decree-Law 45 of 2021: scope and exclusions; lawful processing and consent), added on 2026-11-26, are published the same way: they quote no UAE legislation beyond titles, headings and short terms used as citation labels, and their citation records give a label and a link to the [UAE Legislation portal](https://uaelegislation.gov.ae), where the text can be read.
 
 Licence: EUPL-1.2 (see `LICENSE`). The legal texts quoted here are not official
 versions of the law; see `NOTICE`.

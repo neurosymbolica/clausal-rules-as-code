@@ -10,6 +10,8 @@ The eight domains of the first release have a provision-tracking ledger and a si
 
 | Domain | Question |
 |---|---|
+| [`ae/uae_pdpl_lawful_processing_and_consent`](ae-uae_pdpl_lawful_processing_and_consent.md) | UAE Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data (PDPL), English translation from uaelegislation.gov.ae (the Arabic text prevails ... |
+| [`ae/uae_pdpl_scope_and_exclusions`](ae-uae_pdpl_scope_and_exclusions.md) | Whether Federal Decree by Law No. (45) of 2021 Concerning the Protection of Personal Data (UAE PDPL) applies to ONE processing of personal data on ONE day, ... |
 | [`ch/swiss_fadp_art24_breach_notification`](ch-swiss_fadp_art24_breach_notification.md) | Swiss law in force (drafter's reading, not a lawyer's): the breach-reporting duties of the Federal Act on Data Protection (DSG, SR 235.1, German text, fedlex ... |
 | [`ch/swiss_fadp_s1_international_transfers`](ch-swiss_fadp_s1_international_transfers.md) | Swiss law in force (drafter's reading, not a lawyer's). Whether a disclosure of personal data abroad is permitted under the Swiss Federal Act on Data Protection (DSG, SR ... |
 | [`ch/swiss_fadp_s2_information_duties_and_dpia`](ch-swiss_fadp_s2_information_duties_and_dpia.md) | Swiss Federal Act on Data Protection (DSG, SR 235.1, German text, fedlex consolidation Stand 7 July 2025) Art 19 paras 1 to 4 (the controller's duty to inform the data ... |

@@ -1,0 +1,280 @@
+% SPDX-License-Identifier: EUPL-1.2
+:- module(m__ae_uae_pdpl_lawful_processing_and_consent_fixtures, [uae_pdpl_lawful_processing_and_consent_subject/1, uae_pdpl_lawful_processing_and_consent_profile_for/2, uae_pdpl_lawful_processing_and_consent_assess/2, uae_pdpl_lawful_processing_and_consent_fixture_expected/3]).
+:- use_module(library(lists)).
+:- use_module(library(iso_ext)).
+:- use_module(library(between)).
+:- use_module(library(dif)).
+:- use_module(m__ae_uae_pdpl_lawful_processing_and_consent_uae_pdpl_lawful_processing_and_consent, [decide_uae_pdpl_lawful_processing_and_consent/2]).
+
+consent_keys([consent_given, consent_specific_clear_and_unambiguous, controller_able_to_prove_consent, consent_clear_simple_unambiguous_and_easily_accessible, consent_includes_right_to_withdraw_easily, consent_withdrawn_before_processing]).
+
+case_keys([necessary_to_protect_public_interest, personal_data_made_available_and_known_to_all_by_data_subject, necessary_for_legal_claims_defence_of_rights_or_judicial_or_security_procedures, necessary_for_occupational_or_preventive_medicine_or_health_or_social_care, necessary_to_protect_public_health, necessary_for_archival_purposes_or_scientific_historical_or_statistical_studies, necessary_to_protect_interests_of_data_subject, necessary_for_employment_social_security_or_social_protection_obligations_and_rights, necessary_for_contract_with_data_subject, necessary_for_specific_obligations_of_controller_under_other_laws]).
+
+control_keys([processed_fairly_transparently_and_lawfully, collected_for_specific_and_clear_purpose, later_processing_compatible_with_purpose, sufficient_and_limited_to_what_is_necessary, accurate_correct_and_updated, measures_taken_to_delete_or_correct_incorrect_data, kept_securely, not_kept_after_purpose_exhausted]).
+
+reference_date(date(2023, 6, 1)).
+
+valid_consent([true, true, true, true, true, false]).
+
+refused_consent([false, true, true, true, true, false]).
+
+no_case(Values) :-
+    length(Values, 10),
+    maplist(=(false), Values).
+
+unstated_cases(Values) :-
+    length(Values, 10),
+    maplist(=(omitted), Values).
+
+controls_met(Values) :-
+    length(Values, 8),
+    maplist(=(true), Values).
+
+one_case_holds(Position, Values) :-
+    numlist(1, 10, Positions),
+    maplist(case_value(Position), Positions, Values).
+
+case_value(Position, Position, true).
+case_value(Position, OtherPosition, false) :-
+    dif(Position, OtherPosition).
+
+one_control_fails(Position, Values) :-
+    numlist(1, 8, Positions),
+    maplist(control_value(Position), Positions, Values).
+
+control_value(Position, Position, false).
+control_value(Position, OtherPosition, true) :-
+    dif(Position, OtherPosition).
+
+one_consent_condition_fails(Position, Values) :-
+    valid_consent(BaseValues),
+    numlist(1, 6, Positions),
+    maplist(consent_value(Position), Positions, BaseValues, Values).
+
+consent_value(Position, Position, BaseValue, FailingValue) :-
+    opposite(BaseValue, FailingValue).
+consent_value(Position, OtherPosition, BaseValue, BaseValue) :-
+    dif(Position, OtherPosition).
+
+opposite(true, false).
+opposite(false, true).
+
+consent_failure_fixture(consent_fails_given, 1, consent_not_given).
+consent_failure_fixture(consent_fails_specific, 2, consent_not_specific_clear_and_unambiguous).
+consent_failure_fixture(consent_fails_proof, 3, controller_cannot_prove_consent).
+consent_failure_fixture(consent_fails_accessible, 4, consent_not_clear_simple_and_easily_accessible).
+consent_failure_fixture(consent_fails_withdrawal_right, 5, consent_omits_easy_withdrawal_right).
+consent_failure_fixture(consent_fails_withdrawn, 6, consent_withdrawn).
+
+case_fixture(consent_refused_case_public_interest, 1, public_interest).
+case_fixture(consent_refused_case_data_made_public, 2, data_made_public_by_data_subject).
+case_fixture(consent_refused_case_legal_claims, 3, legal_claims_and_judicial_or_security_procedures).
+case_fixture(consent_refused_case_medicine_and_care, 4, occupational_or_preventive_medicine_and_health_or_social_care).
+case_fixture(consent_refused_case_public_health, 5, public_health).
+case_fixture(consent_refused_case_archival_and_studies, 6, archival_scientific_historical_or_statistical_purposes).
+case_fixture(consent_refused_case_interests_of_data_subject, 7, interests_of_data_subject).
+case_fixture(consent_refused_case_employment_and_social_protection, 8, employment_social_security_and_social_protection).
+case_fixture(consent_refused_case_contract, 9, contract_with_data_subject).
+case_fixture(consent_refused_case_other_laws, 10, obligations_under_other_laws).
+
+control_failure_fixture(control_fails_fairness, 1, control_1_fair_transparent_and_lawful).
+control_failure_fixture(control_fails_purpose, 2, control_2_specific_and_clear_purpose).
+control_failure_fixture(control_fails_later_processing, 3, control_2_no_incompatible_later_processing).
+control_failure_fixture(control_fails_sufficiency, 4, control_3_sufficient_and_limited).
+control_failure_fixture(control_fails_accuracy, 5, control_4_accurate_and_updated).
+control_failure_fixture(control_fails_correction, 6, control_5_incorrect_data_deleted_or_corrected).
+control_failure_fixture(control_fails_security, 7, control_6_kept_securely).
+control_failure_fixture(control_fails_retention, 8, control_7_not_kept_after_purpose_exhausted).
+
+fixture(Subject, Date, Consent, Cases, Controls) :-
+    consent_failure_fixture(Subject, Position, _),
+    reference_date(Date),
+    one_consent_condition_fails(Position, Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(Subject, Date, Consent, Cases, Controls) :-
+    case_fixture(Subject, Position, _),
+    reference_date(Date),
+    refused_consent(Consent),
+    one_case_holds(Position, Cases),
+    controls_met(Controls).
+fixture(Subject, Date, Consent, Cases, Controls) :-
+    control_failure_fixture(Subject, Position, _),
+    reference_date(Date),
+    valid_consent(Consent),
+    no_case(Cases),
+    one_control_fails(Position, Controls).
+fixture(valid_consent_no_case, Date, Consent, Cases, Controls) :-
+    reference_date(Date),
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(valid_consent_and_public_interest, Date, Consent, Cases, Controls) :-
+    reference_date(Date),
+    valid_consent(Consent),
+    one_case_holds(1, Cases),
+    controls_met(Controls).
+fixture(consent_refused_two_cases, Date, Consent, [false, false, true, false, false, false, false, false, true, false], Controls) :-
+    reference_date(Date),
+    refused_consent(Consent),
+    controls_met(Controls).
+fixture(final_day_of_previous_year, date(2021, 12, 31), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(day_before_commencement, date(2022, 1, 1), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(commencement_day, date(2022, 1, 2), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(leap_day_in_force, date(2024, 2, 29), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(february_twenty_ninth_in_common_year, date(2023, 2, 29), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(first_calendar_year, date(1, 1, 1), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(last_calendar_year, date(9999, 12, 31), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(year_zero, date(0, 1, 1), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(year_after_last_calendar_year, date(10000, 1, 1), Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(processing_date_unstated, omitted, Consent, Cases, Controls) :-
+    valid_consent(Consent),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(unsure_specific_consent_before_failing_proof, Date, [true, unsure, false, true, true, false], Cases, Controls) :-
+    reference_date(Date),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(unsure_specific_consent_with_true_case, Date, [true, unsure, true, true, true, false], Cases, Controls) :-
+    reference_date(Date),
+    one_case_holds(1, Cases),
+    controls_met(Controls).
+fixture(unsure_specific_consent_cases_unstated, Date, [true, unsure, true, true, true, false], Cases, Controls) :-
+    reference_date(Date),
+    unstated_cases(Cases),
+    controls_met(Controls).
+fixture(proof_of_consent_unstated, Date, [true, true, omitted, true, true, false], Cases, Controls) :-
+    reference_date(Date),
+    no_case(Cases),
+    controls_met(Controls).
+fixture(consent_refused_cases_unstated, Date, Consent, Cases, Controls) :-
+    reference_date(Date),
+    refused_consent(Consent),
+    unstated_cases(Cases),
+    controls_met(Controls).
+fixture(unsure_public_interest_before_true_case, Date, Consent, [unsure, true, false, false, false, false, false, false, false, false], Controls) :-
+    reference_date(Date),
+    refused_consent(Consent),
+    controls_met(Controls).
+fixture(unsure_public_interest_next_case_unstated, Date, Consent, [unsure, omitted, false, false, false, false, false, false, false, false], Controls) :-
+    reference_date(Date),
+    refused_consent(Consent),
+    controls_met(Controls).
+fixture(unsure_fairness_before_failing_purpose, Date, Consent, Cases, [unsure, false, true, true, true, true, true, true]) :-
+    reference_date(Date),
+    valid_consent(Consent),
+    no_case(Cases).
+fixture(unsure_fairness_next_control_unstated, Date, Consent, Cases, [unsure, omitted, true, true, true, true, true, true]) :-
+    reference_date(Date),
+    valid_consent(Consent),
+    no_case(Cases).
+fixture(fairness_unstated_before_failing_purpose, Date, Consent, Cases, [omitted, false, true, true, true, true, true, true]) :-
+    reference_date(Date),
+    valid_consent(Consent),
+    no_case(Cases).
+fixture(crisp_consent_given_unsure, Date, [unsure, true, true, true, true, false], Cases, Controls) :-
+    reference_date(Date),
+    no_case(Cases),
+    controls_met(Controls).
+
+expected_results(Subject, not_allowed, not_valid(FailureAtom), meets_listed_controls) :-
+    consent_failure_fixture(Subject, _, FailureAtom).
+expected_results(Subject, allowed_without_consent(CaseAtom), not_valid(consent_not_given), meets_listed_controls) :-
+    case_fixture(Subject, _, CaseAtom).
+expected_results(Subject, allowed_with_consent, valid, fails_control(FailureAtom)) :-
+    control_failure_fixture(Subject, _, FailureAtom).
+expected_results(valid_consent_no_case, allowed_with_consent, valid, meets_listed_controls).
+expected_results(valid_consent_and_public_interest, allowed_with_consent, valid, meets_listed_controls).
+expected_results(consent_refused_two_cases, allowed_without_consent(legal_claims_and_judicial_or_security_procedures), not_valid(consent_not_given), meets_listed_controls).
+expected_results(final_day_of_previous_year, not_in_force, not_in_force, not_in_force).
+expected_results(day_before_commencement, not_in_force, not_in_force, not_in_force).
+expected_results(commencement_day, allowed_with_consent, valid, meets_listed_controls).
+expected_results(leap_day_in_force, allowed_with_consent, valid, meets_listed_controls).
+expected_results(february_twenty_ninth_in_common_year, input_problems([wrong_type(processing_date)]), input_problems([wrong_type(processing_date)]), input_problems([wrong_type(processing_date)])).
+expected_results(first_calendar_year, not_in_force, not_in_force, not_in_force).
+expected_results(last_calendar_year, allowed_with_consent, valid, meets_listed_controls).
+expected_results(year_zero, input_problems([wrong_type(processing_date)]), input_problems([wrong_type(processing_date)]), input_problems([wrong_type(processing_date)])).
+expected_results(year_after_last_calendar_year, input_problems([wrong_type(processing_date)]), input_problems([wrong_type(processing_date)]), input_problems([wrong_type(processing_date)])).
+expected_results(processing_date_unstated, indeterminate([processing_date]), indeterminate([processing_date]), indeterminate([processing_date])).
+expected_results(unsure_specific_consent_before_failing_proof, not_allowed, needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous - unsure])]), meets_listed_controls).
+expected_results(unsure_specific_consent_with_true_case, needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous - unsure])]), needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous - unsure])]), meets_listed_controls).
+expected_results(unsure_specific_consent_cases_unstated, indeterminate([necessary_to_protect_public_interest]), needs_legal_review(open_textured(consent_specific_clear_and_unambiguous, cite(uae_pdpl_art_1_consent)), [inputs_relied_on([consent_specific_clear_and_unambiguous - unsure])]), meets_listed_controls).
+expected_results(proof_of_consent_unstated, indeterminate([controller_able_to_prove_consent]), indeterminate([controller_able_to_prove_consent]), meets_listed_controls).
+expected_results(consent_refused_cases_unstated, indeterminate([necessary_to_protect_public_interest]), not_valid(consent_not_given), meets_listed_controls).
+expected_results(unsure_public_interest_before_true_case, needs_legal_review(open_textured(necessary_to_protect_public_interest, cite(uae_pdpl_art_4_1)), [inputs_relied_on([necessary_to_protect_public_interest - unsure])]), not_valid(consent_not_given), meets_listed_controls).
+expected_results(unsure_public_interest_next_case_unstated, indeterminate([personal_data_made_available_and_known_to_all_by_data_subject]), not_valid(consent_not_given), meets_listed_controls).
+expected_results(unsure_fairness_before_failing_purpose, allowed_with_consent, valid, needs_legal_review(open_textured(processed_fairly_transparently_and_lawfully, cite(uae_pdpl_art_5_1)), [inputs_relied_on([processed_fairly_transparently_and_lawfully - unsure])])).
+expected_results(unsure_fairness_next_control_unstated, allowed_with_consent, valid, indeterminate([collected_for_specific_and_clear_purpose])).
+expected_results(fairness_unstated_before_failing_purpose, allowed_with_consent, valid, indeterminate([processed_fairly_transparently_and_lawfully])).
+expected_results(crisp_consent_given_unsure, input_problems([wrong_type(consent_given)]), input_problems([wrong_type(consent_given)]), input_problems([wrong_type(consent_given)])).
+
+uae_pdpl_lawful_processing_and_consent_subject(Subject) :-
+    expected_results(Subject, _, _, _).
+
+uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, pdpl_processing_lawful_basis, Result) :-
+    expected_results(Subject, Result, _, _).
+uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, pdpl_consent_valid, Result) :-
+    expected_results(Subject, _, Result, _).
+uae_pdpl_lawful_processing_and_consent_fixture_expected(Subject, pdpl_processing_controls, Result) :-
+    expected_results(Subject, _, _, Result).
+
+uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile) :-
+    fixture(Subject, Date, Consent, Cases, Controls),
+    consent_keys(ConsentKeys),
+    case_keys(CaseKeys),
+    control_keys(ControlKeys),
+    append([[processing_date], ConsentKeys, CaseKeys, ControlKeys], Keys),
+    append([[Date], Consent, Cases, Controls], Values),
+    attributes_from(Keys, Values, Profile).
+
+attributes_from([], [], []).
+attributes_from([_|Keys], [omitted|Values], Attributes) :-
+    attributes_from(Keys, Values, Attributes).
+attributes_from([Key|Keys], [Value|Values], [attribute(Key, Value)|Attributes]) :-
+    dif(Value, omitted),
+    attributes_from(Keys, Values, Attributes).
+
+uae_pdpl_lawful_processing_and_consent_assess(Subject, Result) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile),
+    decide_uae_pdpl_lawful_processing_and_consent(Profile, Result).
+
+test(every_subject_has_exactly_one_profile) :-
+    findall(Subject, uae_pdpl_lawful_processing_and_consent_subject(Subject), Subjects),
+    Subjects = [_|_],
+    maplist(one_profile, Subjects).
+test(an_omitted_date_is_absent) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(processing_date_unstated, [attribute(consent_given, true)|_]).
+
+test(an_unregistered_subject_has_no_profile, fail) :-
+    uae_pdpl_lawful_processing_and_consent_profile_for(no_such_subject, _).
+
+one_profile(Subject) :-
+    findall(Profile, uae_pdpl_lawful_processing_and_consent_profile_for(Subject, Profile), Profiles),
+    length(Profiles, 1).
